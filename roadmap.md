@@ -6,18 +6,20 @@ How to use this file:
 - Each goal ends with a local commit. Pushing to `main` deploys (from Goal 3 on), so push when you want it live.
 - `plan.md` is the spec, including the technical decisions and names (repo, image).
 
+**Current focus: local development.** Do Goal 1, then Goals 4 to 14 on your machine. Everything marked **Later** (0.4 VPS, 0.5 DNS, Goals 2 and 3, preparing the VPS, first deploy) and 0.6 Resend can wait until the VPS is bought; do them before Goal 15. Nothing is deployed until Goal 3 exists, so pushing to `main` is safe in the meantime.
+
 ---
 
 ## Overview
 
 | # | Step | Type | Result |
 |---|---|---|---|
-| 0 | Accounts, purchases, keys | You | Everything external exists |
+| 0 | Accounts, purchases, keys | You | Everything external exists (local tools, repo, Docker Hub done) |
 | 1 | Scaffold | Goal | Next.js + Postgres running locally, schema, tests |
-| 2 | Server config | Goal | VPS setup script, prod compose, Nginx, SSL, backups |
-| — | Prepare the VPS | You | VPS hardened, DNS live, first certificate |
-| 3 | CI/CD | Goal | Push to `main` → Docker Hub → VPS |
-| — | First deploy | You | https://diogomota.com is live |
+| 2 | Server config | Goal | **Later.** VPS setup script, prod compose, Nginx, SSL, backups |
+| — | Prepare the VPS | You | **Later.** VPS hardened, DNS live, first certificate |
+| 3 | CI/CD | Goal | **Later.** Push to `main` → Docker Hub → VPS |
+| — | First deploy | You | **Later.** https://diogomota.com is live |
 | 4 | Landing + hub | Goal | `/` and `/apps` (logged-out) |
 | 5 | Auth + account | Goal | Signup, login, account settings, protected routes |
 | 6 | Password reset | Goal | Reset emails through Resend |
@@ -37,23 +39,7 @@ How to use this file:
 
 Do these first; some (DNS, Resend verification) take time to propagate.
 
-### 0.1 Local machine
-- [ ] Install **Node.js 22 LTS** and **Docker Desktop** (check: `node -v`, `docker compose version`).
-- [ ] Create an SSH key for the VPS if you have none: `ssh-keygen -t ed25519 -C "diogomota-vps"`.
-
-### 0.2 Git repo for this folder
-This folder currently sits inside a git repo whose root is `C:\Users\diogo` (your whole home folder, commit `b6a8efa`). Give the website its own repo:
-- [ ] In `C:\Users\diogo\Desktop\diogomota.com`: `git init -b main`.
-- [ ] (Recommended) Check whether the home-folder repo (`C:\Users\diogo\.git`) is intentional. If not, remove it, or every tool sees your whole home folder as one repo.
-- [ ] On GitHub, create a **private** repo `diogomota.com` (no README, no .gitignore — the scaffold adds them).
-- [ ] `git remote add origin git@github.com:diogofrmota/diogomota.com.git`
-- [ ] Do the first commit/push after Goal 1 (an empty repo can't be pushed).
-
-### 0.3 Docker Hub
-- [ ] Create a Docker Hub account (or sign in).
-- [ ] Create a **private** repository `diogofrmota/diogomota-com` (Docker Hub names can't contain dots).
-- [ ] Account settings → Personal access tokens → create one with **Read & Write** scope, named `github-actions`. Save it for step 3.
-- [ ] Create a second token with **Read-only** scope, named `vps-pull`. Save it for the VPS step.
+Already done: Node.js 22 and Docker Desktop installed, SSH key, this folder's own git repo (the stray home-folder repo was removed; `main`, pushed to GitHub with `plan.md` and `roadmap.md`), Docker Hub repo `diogofrmota/diogomota-com` and its two tokens (`github-actions` read & write, `vps-pull` read-only; both in the local `.env`, which is git-ignored). TMDB token, local `AUTH_SECRET` and Postgres password are in `.env` too. The production `.env` on the VPS is created at deploy time with freshly generated secrets (`openssl rand -base64 32`), not the local ones. Step numbers below are unchanged because other sections refer to them.
 
 ### 0.4 OVH VPS
 - [ ] Order a VPS (the smallest current range is above the "comfortable" specs in plan.md: 2+ vCPU, 4+ GB RAM, 40+ GB SSD).
@@ -75,21 +61,11 @@ This folder currently sits inside a git repo whose root is `C:\Users\diogo` (you
 - [ ] (Recommended) Add DMARC: `TXT _dmarc  v=DMARC1; p=none;`
 - [ ] Wait for **Verified** in Resend, then create an API key (Sending access, domain `diogomota.com`). Needed by Goal 6.
 
-### 0.7 TMDB
-- [ ] Create an account at themoviedb.org → Settings → API → request a key (Developer, personal/non-commercial use; a short description is enough).
-- [ ] Copy the **API Read Access Token** (v4, the long one). Needed by Goal 11.
-
-### 0.8 Secrets
-- [ ] Generate an auth secret: `npx auth secret` or `openssl rand -base64 32`.
-- [ ] Choose a strong Postgres password.
-- [ ] Keep all secrets in a password manager. They go into `.env` files and GitHub secrets, never into git.
-
 ---
 
 ## Goal 1 — Scaffold
 
-Before:
-- [ ] 0.1 and 0.2 done (local tools, `git init` in this folder)
+Before: nothing left (local tools and the git repo are done).
 
 ```
 /goal Scaffold the diogomota.com project in this folder. Read plan.md and roadmap.md first.
@@ -110,7 +86,7 @@ Done when: `docker compose up -d` starts postgres healthy; `npm run migrate` app
 ```
 
 After:
-- [ ] `git push -u origin main` (no deploy yet; the workflow comes in Goal 3).
+- [ ] `git push` (the upstream is already set; no deploy yet, the workflow comes in Goal 3).
 
 ---
 
@@ -139,7 +115,7 @@ Done when: every script passes `bash -n` and shellcheck (run shellcheck via the 
 ## [You] Prepare the VPS
 
 Before:
-- [ ] Goal 2 done, 0.3 (Docker Hub tokens) and 0.5 (DNS resolves to the VPS) done
+- [ ] Goal 2 done, 0.5 (DNS resolves to the VPS) done
 
 - [ ] Follow `docs/deploy.md` up to and including the certificate step. The app container can't start yet (no image on Docker Hub), so stop at nginx + certbot if the runbook says so.
 - [ ] Check: `ssh deploy@<vps-ip>` works, `ssh root@…` and password login fail, `sudo ufw status` shows 22/80/443 only.
@@ -153,7 +129,7 @@ Before:
 - [ ] VPS prepared (above)
 - [ ] GitHub repo → Settings → Secrets and variables → Actions → add:
   - `DOCKERHUB_USERNAME` = `diogofrmota`
-  - `DOCKERHUB_TOKEN` = the Read & Write token from 0.3
+  - `DOCKERHUB_TOKEN` = the Read & Write token (`DOCKERHUB_TOKEN` in your local `.env`)
   - `VPS_HOST` = VPS IPv4
   - `VPS_USER` = `deploy`
   - `VPS_SSH_KEY` = a **new** private key made only for deploys (`ssh-keygen -t ed25519 -f deploy_key -C github-actions`); add `deploy_key.pub` to `/home/deploy/.ssh/authorized_keys` on the VPS
@@ -186,7 +162,7 @@ Done when: actionlint (via its Docker image) reports no errors for both workflow
 ## Goal 4 — Landing + app hub
 
 Before:
-- [ ] First deploy works
+- [ ] Goal 1 done (the deploy is not needed yet; develop and test locally)
 
 ```
 /goal Build the landing page (/) and the app hub (/apps) for diogomota.com, logged-out state only (auth comes in the next goal). Read plan.md (Pages, General UI/UX Rules) and roadmap.md first.
@@ -233,7 +209,7 @@ After:
 ## Goal 6 — Password reset (Resend)
 
 Before:
-- [ ] 0.6 done: Resend domain **Verified**, API key created
+- [ ] Optional for now: 0.6 (Resend domain **Verified**, API key created). Without `RESEND_API_KEY` the reset link is logged to the server console in development, so you can build and test this goal without it.
 - [ ] Put `RESEND_API_KEY` and `MAIL_FROM="diogomota.com <no-reply@diogomota.com>"` in `app/.env.local` and in `/opt/diogomota/.env` on the VPS
 
 ```
@@ -332,7 +308,7 @@ After:
 ## Goal 11 — Shows: TMDB + Discover
 
 Before:
-- [ ] 0.7 done: put `TMDB_READ_TOKEN` in `app/.env.local` and `/opt/diogomota/.env`
+- [ ] Copy `TMDB_READ_TOKEN` from the local `.env` into `app/.env.local` and `/opt/diogomota/.env` (it must be the long v4 **API Read Access Token**)
 
 ```
 /goal Build the TMDB integration and the Discover view of the Shows app on diogomota.com. Read plan.md (App 2 — Shows Tracker: TMDB Integration, Discover, UI/UX Details) and roadmap.md first.
@@ -404,6 +380,9 @@ Done when lint, typecheck, build and the full e2e suite pass on both projects wi
 ---
 
 ## Goal 15 — Launch checks
+
+Before:
+- [ ] The **Later** items are done: VPS bought (0.4), DNS (0.5), Resend (0.6), Goals 2 and 3, VPS prepared, first deploy live.
 
 ```
 /goal Prepare diogomota.com operations for launch. Read docs/deploy.md, infra/ and roadmap.md first. Nothing here connects to the VPS; give me the commands to run.

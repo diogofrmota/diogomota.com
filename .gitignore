@@ -1,0 +1,36 @@
+# Secrets
+.env*
+!.env.example
+!.env.production.example
+deploy_key
+deploy_key.pub
+*.pem
+
+# Dependencies and build output
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Tests
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Backups
+backups/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
