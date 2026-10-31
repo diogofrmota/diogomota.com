@@ -1,0 +1,10 @@
+# Crontab of the deploy user on the VPS. Install (replaces deploy's whole crontab):
+#   crontab /opt/diogomota/infra/crontab
+# Times are the server's time zone (UTC on a fresh OVH image). Output goes to
+# /opt/diogomota/logs/, created by infra/setup-vps.sh.
+
+# Certificate renewal twice daily; certbot only renews within 30 days of expiry.
+17 3,15 * * * bash /opt/diogomota/infra/renew-cert.sh >> /opt/diogomota/logs/renew-cert.log 2>&1
+
+# Database dump at 03:00 every 3 days; dumps older than 14 days are deleted.
+0 3 */3 * * bash /opt/diogomota/infra/backup.sh >> /opt/diogomota/logs/backup.log 2>&1

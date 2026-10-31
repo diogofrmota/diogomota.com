@@ -42,3 +42,7 @@ docker build --build-context migrations=db/migrations -t diogomota-com ./app
 ```
 
 `db/migrations` is outside `./app`, so `--build-context` is how it gets into the image. Inside a container, `npm run migrate` applies the migrations and `node server.js` starts the app on port 3000.
+
+## Production
+
+The VPS runs [docker-compose.prod.yml](docker-compose.prod.yml) (Postgres, app, Nginx, Certbot) in `/opt/diogomota`. Server setup, TLS, backups and restores are scripts in [infra/](infra/). The ordered setup steps are in [docs/deploy.md](docs/deploy.md).
