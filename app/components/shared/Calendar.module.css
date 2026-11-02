@@ -1,0 +1,74 @@
+.calendar { max-width: 90rem; margin: auto; }
+.calendar h1 { font-size: 1.75rem; margin: 0; letter-spacing: -.04em; }
+.calendar h2 { font-size: 1.2rem; font-weight: 550; margin: 0; }
+.heading, .toolbar, .subbar, .actions, .dialogHeader { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.heading, .subbar, .dialogHeader { justify-content: space-between; }
+.heading { margin-bottom: 1.5rem; }
+.muted { color: var(--muted); margin: 0; font-size: .875rem; }
+.toolbar { gap: 1rem; margin-bottom: .75rem; }
+.calendar button, .dialog button, .dialog a { min-height: 44px; border: 1px solid var(--border); background: var(--surface); border-radius: .5rem; padding: .5rem .85rem; cursor: pointer; }
+.calendar button:hover, .dialog button:hover { background: var(--hover); }
+.calendar .primary, .dialog .primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 650; }
+.calendar .primary:hover, .dialog .primary:hover { filter: brightness(.93); background: var(--accent); }
+.switcher { display: flex; margin-left: auto; padding: 3px; border-radius: .65rem; background: var(--hover); }
+.switcher button { border: 0; background: transparent; }
+.switcher button[aria-pressed="true"] { background: var(--surface); box-shadow: 0 1px 4px #0002; color: var(--accent); }
+.subbar { font-size: .8rem; color: var(--muted); }
+.subbar a { min-height: 44px; display: inline-flex; align-items: center; }
+.legend { display: flex; gap: .5rem 1rem; flex-wrap: wrap; font-size: .75rem; color: var(--muted); margin: .5rem 0 1rem; }
+.legend span { display: flex; align-items: center; gap: .4rem; overflow-wrap: anywhere; }
+.legend i { height: .6rem; width: .6rem; border-radius: 50%; flex-shrink: 0; }
+.groupDot { background: var(--muted); }
+.groupBadge { border: 1px solid var(--muted); border-radius: .2rem; padding: 0 .15rem; }
+.empty { padding: 1rem; background: var(--accent-soft); border-radius: .75rem; color: var(--accent); }
+.scroller { border: 1px solid var(--border); border-radius: .75rem; overflow: auto; max-height: 72vh; }
+.month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.weekday { position: sticky; top: 0; z-index: 2; background: var(--surface); padding: .75rem .25rem; text-align: center; color: var(--muted); font-size: .8rem; border-bottom: 1px solid var(--border); }
+.cell { min-height: 120px; min-width: 0; padding: .2rem; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.outside { background: var(--hover); }
+.calendar .dayNumber { display: block; border: 0; background: transparent; padding: .25rem; width: 44px; margin: 0 auto .25rem; font-size: .85rem; border-radius: 50%; }
+.calendar .today { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.calendar .event { display: flex; flex-direction: column; text-align: left; width: 100%; min-height: 44px; margin-bottom: .2rem; padding: .25rem .35rem; background: color-mix(in srgb, var(--event-color) 15%, var(--surface)); color: var(--text); border: 1px solid var(--border); border-left: 4px solid var(--event-color); border-radius: .3rem; overflow: hidden; }
+.calendar .event:hover { background: color-mix(in srgb, var(--event-color) 30%, var(--surface)); }
+.eventTitle { font-size: .8rem; font-weight: 600; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eventMeta { font-size: .65rem; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timeGrid { display: grid; grid-template-columns: 50px repeat(var(--days), minmax(0, 1fr)); }
+.week { min-width: 700px; }
+.calendar .timeHead, .timeHead { position: sticky; top: 0; z-index: 3; min-height: 50px; border: 0; border-bottom: 1px solid var(--border); background: var(--surface); border-radius: 0; text-align: center; font-size: .85rem; }
+.hours { height: 1440px; }
+.hours span { display: block; height: 60px; font-size: .65rem; color: var(--muted); padding: .2rem; text-align: right; }
+.dayColumn { position: relative; height: 1440px; border-left: 1px solid var(--border); }
+.hour { height: 60px; border-bottom: 1px solid var(--border); }
+.dialog { margin: auto; width: min(540px, calc(100% - 2rem)); max-height: 90dvh; overflow-y: auto; padding: 1.5rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface); color: var(--text); box-shadow: 0 24px 90px #0006; }
+.dialog::backdrop { background: #0008; }
+.dialogHeader { flex-wrap: nowrap; align-items: flex-start; margin-bottom: 1rem; }
+.dialogHeader h2 { margin: .3rem 0; overflow-wrap: anywhere; font-size: 1.4rem; }
+.dialogHeader button { flex-shrink: 0; }
+.form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 1rem; }
+.form label { display: grid; gap: .35rem; font-size: .875rem; min-width: 0; }
+.form input, .form select, .form textarea { font: inherit; font-size: 1rem; width: 100%; min-width: 0; min-height: 44px; padding: .6rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: .4rem; }
+.form textarea { resize: vertical; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.details { display: grid; gap: 1rem; }
+.details p { margin: 0; }
+.details a { display: inline-flex; align-items: center; font-size: .85rem; }
+.badge { width: fit-content; padding: .25rem .6rem; border-radius: .4rem; background: var(--hover); }
+.notes { white-space: pre-wrap; overflow-wrap: anywhere; }
+.error { color: var(--text); border-left: 3px solid #ee6677; padding: .5rem .75rem; }
+.confirm { border: 1px solid var(--border); border-radius: .5rem; padding: .75rem; }
+.confirm .actions { margin-top: .75rem; }
+.dialog button:disabled { opacity: .6; cursor: wait; }
+@media (max-width: 47.99rem) {
+  .heading { margin-bottom: 1rem; }
+  .toolbar { gap: .5rem; }
+  .toolbar h2 { flex: 1; text-align: right; font-size: 1rem; }
+  .switcher { width: 100%; margin: .5rem 0 0; }
+  .switcher button { flex: 1; }
+  .cell { min-height: 90px; padding: 1px; }
+  .calendar .event { padding: .15rem; border-left-width: 3px; }
+  .eventTitle { font-size: .65rem; }
+  .eventMeta { font-size: .6rem; }
+  .calendar .dayNumber { width: 100%; max-width: 44px; }
+  .weekday { font-size: .7rem; }
+  .dialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); border-radius: 1rem 1rem 0 0; }
+}

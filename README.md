@@ -39,6 +39,14 @@ Add a new file `db/migrations/NNN_name.sql`, and never edit one that has already
 
 The authenticated JSON API uses `/api/shared/spaces`: `GET` reads your space, `POST {name}` creates one, and `POST /join {code}` joins. `GET /:id` reads a space, `PATCH /:id {name}` renames it, `POST /:id/invites {}` generates a single-use 24-hour code, and `POST /:id/leave {}` leaves. Responses contain `data` or an `error` message. Reads and mutations check current database membership; renaming and inviting require ownership. Join attempts are limited to 20 per 15 minutes per user. Migration `004_space_membership.sql` records join times and enforces unique member colors within a space.
 
+## Shared calendar
+
+Calendar has month, week and day views, member-colored events and a neutral Group badge. Click a date to open its day; use Add event to plan something. Week view scrolls horizontally on narrow screens. Event details use a desktop modal or mobile bottom sheet; Escape and browser Back close it.
+
+Times are entered and displayed in `Europe/Lisbon`, regardless of the device time zone, and stored in PostgreSQL `timestamptz` as UTC instants. Events can span dates. Nonexistent spring-forward times are rejected; repeated autumn times offer first/second occurrence choices. Export calendar includes every event in the space, across all dates; each event also has an `.ics` download and an Add to Google Calendar link. Downloads use UTC timestamps, escaped text, CRLF and UTF-8 line folding per [RFC 5545](https://www.rfc-editor.org/rfc/rfc5545).
+
+`/api/shared/events`: `GET` lists your space's events, `POST` creates one; `GET /:id`, `PATCH /:id` and `DELETE /:id` read, replace and delete an event. Create/replace accepts `{title, notes, startsAt, endsAt, isGroup, assigneeId}`; timestamps must be ISO UTC strings ending in `Z`, end must follow start, and assignee must be a current member (or `null` for a group). All space members can manage events. `GET /export` and `GET /:id/export` download calendars. Every operation checks current membership inside the same transaction as the read/write. A departing member's events remain labeled Former member until reassigned; they cannot access their previous space. No new migration is needed for Calendar.
+
 ## Docker image
 
 From the repo root:
@@ -67,7 +75,7 @@ The workflow needs these repository secrets (Settings → Secrets and variables 
 
 ### Versions
 
-Every deploy gets the next patch version, `vX.Y.Z`. `app/package.json` holds `X.Y.0`, and the image job sets the patch to one more than the newest `vX.Y.*` git tag (`0` if there is none yet). To move to a new minor (or major), e.g. when a roadmap goal starts, run `npm version 0.8.0 --no-git-tag-version` in `app/` and commit: the next deploy is `v0.8.0`, then `v0.8.1`, and so on. A version other than `X.Y.0` in `package.json` fails the image job.
+Every deploy gets the next patch version, `vX.Y.Z`. `app/package.json` holds `X.Y.0`, and the image job sets the patch to one more than the newest `vX.Y.*` git tag (`0` if there is none yet). To move to a new minor (or major), e.g. when a roadmap goal starts, run `npm version 0.9.0 --no-git-tag-version` in `app/` and commit: the next deploy is `v0.9.0`, then `v0.9.1`, and so on. A version other than `X.Y.0` in `package.json` fails the image job.
 
 A failed build doesn't use up a number, because the git tag is only added once the image is on Docker Hub. Run `git fetch --tags` to get the tags locally.
 
