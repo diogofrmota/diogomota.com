@@ -4,22 +4,27 @@ import { redirect } from "next/navigation";
 import { appsWithNext } from "@/lib/next-path";
 import { verifyPassword } from "@/lib/password";
 import { clientIp, loginLimit } from "@/lib/rate-limit";
-import { findUserById, findUserForLogin } from "@/lib/users";
+import { findSessionUser, findUserForLogin } from "@/lib/users";
 
 // What the session (a signed, encrypted JWT in a cookie) holds: the user's id and
-// username, nothing else.
+// username, and when the password was last changed as of logging in. Only the id
+// and username reach the app.
 declare module "next-auth" {
   interface Session {
     user: { id: string; username: string };
   }
   interface User {
     username: string;
+    /** users.password_changed_at in milliseconds, null if never changed. */
+    passwordChangedAt: number | null;
   }
 }
 
 declare module "@auth/core/jwt" {
   interface JWT {
     username?: string;
+    /** Missing in sessions from before password changes ended sessions; same as null. */
+    passwordChangedAt?: number | null;
   }
 }
 
@@ -46,20 +51,36 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
         }
         const user = await findUserForLogin(login.trim());
         const valid = await verifyPassword(password, user?.passwordHash ?? null);
-        return user && valid ? { id: user.id, username: user.username } : null;
+        if (!user || !valid) return null;
+        return {
+          id: user.id,
+          username: user.username,
+          passwordChangedAt: user.passwordChangedAt?.getTime() ?? null,
+        };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
-      if (user) token.username = user.username;
-      // unstable_update() after a username change. The data sent with an update
-      // can come from the browser (POST /api/auth/session), so it is ignored and
-      // the username is read from the database instead.
-      if (trigger === "update" && token.sub) {
-        const current = await findUserById(token.sub);
-        if (current) token.username = current.username;
+    async jwt({ token, user }) {
+      // Logging in starts a new session.
+      if (user) {
+        token.username = user.username;
+        token.passwordChangedAt = user.passwordChangedAt;
+        return token;
       }
+
+      // Every later read checks the session against the database. Null ends it
+      // (and clears the cookie): the account is gone, or its password changed
+      // after this session started, which is how a password change or reset
+      // logs out other devices.
+      const current = token.sub ? await findSessionUser(token.sub) : null;
+      const changedAt = current?.passwordChangedAt?.getTime() ?? null;
+      if (!current || changedAt !== (token.passwordChangedAt ?? null)) return null;
+
+      // Keeps the username current, e.g. for unstable_update() after a username
+      // change. Data sent with an update can come from the browser (POST
+      // /api/auth/session), so it is never used.
+      token.username = current.username;
       return token;
     },
     session({ session, token }) {

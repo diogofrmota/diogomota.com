@@ -35,6 +35,10 @@ export const loginLimit = rateLimit("login", 10, 15 * MINUTE);
 export const signUpLimit = rateLimit("signup", 5, 60 * MINUTE);
 /** Current-password checks in account settings, per user. */
 export const passwordCheckLimit = rateLimit("password", 10, 15 * MINUTE);
+/** Password reset requests (that pass validation) per client IP. */
+export const resetRequestLimit = rateLimit("reset", 5, 60 * MINUTE);
+/** Password reset emails per address (lowercase), whether or not an account has it. */
+export const resetEmailLimit = rateLimit("reset-email", 3, 60 * MINUTE);
 
 // nginx sets X-Forwarded-For to exactly the client address (nginx/nginx.conf), so
 // in production its first entry can be trusted. In development it is whatever the

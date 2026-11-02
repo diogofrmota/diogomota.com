@@ -80,10 +80,14 @@ test("change username", async ({ page }) => {
   await expect(accountButton(page, renamed)).toBeVisible();
 });
 
-test("change password", async ({ page }) => {
+test("change password, which logs out every device", async ({ page, browser }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
+  const otherDevice = await browser.newContext();
+  const other = await otherDevice.newPage();
+  await logIn(other, user.username, user.password);
+  await expect(other).toHaveURL("/apps");
   await page.goto("/account");
 
   const form = section(page, "Change password");
@@ -105,14 +109,17 @@ test("change password", async ({ page }) => {
   await expect(form.getByText("Use at least 10 characters.")).toBeVisible();
 
   await submit(user.password, newPassword, newPassword);
-  await expect(form.getByRole("status")).toHaveText("Password changed.");
-  await expect(form.getByLabel("Current password")).toHaveValue("");
+  await expect(page).toHaveURL("/login?password=changed&next=%2Faccount");
+  await expect(page.getByRole("main")).toContainText("Your password was changed. Log in with the new one.");
+  await other.goto("/shared");
+  await expect(other).toHaveURL("/apps?next=%2Fshared");
+  await otherDevice.close();
 
-  await logOut(page, user.username);
   await logIn(page, user.username, user.password);
   await expect(formAlert(page)).toHaveText("Wrong username/email or password.");
-  await logIn(page, user.username, newPassword);
-  await expect(page).toHaveURL("/apps");
+  // Back to account settings.
+  await logIn(page, user.username, newPassword, "/login?next=%2Faccount");
+  await expect(page).toHaveURL("/account");
 });
 
 test("theme preference persists after logging in again", async ({ page }) => {
@@ -142,16 +149,16 @@ test("theme preference persists after logging in again", async ({ page }) => {
   await expect(app).toHaveCSS("background-color", "rgb(255, 255, 255)");
 });
 
-test("forgot password is a placeholder until reset by email exists", async ({ page }) => {
+test("forgot password in account settings opens the reset by email", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
-  await expect(section(page, "Forgot password")).toContainText(`Coming soon: reset your password with a link sent to ${user.email}.`);
 
-  await logOut(page, user.username);
-  await page.goto("/login");
-  await expect(page.getByRole("main")).toContainText("Forgot your password? Resetting it by email is coming soon.");
+  const forgot = section(page, "Forgot password");
+  await expect(forgot).toContainText(`Reset it with a link sent to ${user.email}.`);
+  await forgot.getByRole("link", { name: "Reset by email" }).click();
+  await expect(page).toHaveURL("/forgot-password");
 });
 
 test("logged out, /account redirects to /apps and Login comes back to it", async ({ page }) => {

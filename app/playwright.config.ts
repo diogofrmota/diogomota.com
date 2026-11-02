@@ -20,9 +20,13 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   globalTeardown: "./e2e/global-teardown.ts",
   // Needs the docker compose database running and DATABASE_URL in .env.local.
+  // E2E_TEST_HOOKS keeps emails in memory for the tests instead of sending them
+  // (lib/email.ts). A dev server you started yourself is reused, so start it with
+  // E2E_TEST_HOOKS=1 too, or the password reset tests fail before sending anything.
   webServer: {
     command: "npm run dev",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
+    env: { E2E_TEST_HOOKS: "1" },
   },
 });

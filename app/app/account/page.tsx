@@ -47,13 +47,17 @@ export default async function AccountPage() {
           <PasswordForm />
         </section>
 
-        {/* Goal 6 replaces this with the reset-by-email flow. */}
         <section aria-labelledby="forgot-heading" className={styles.section}>
           <h2 id="forgot-heading" className={styles.heading}>
             Forgot password
           </h2>
           <p className={site.muted}>
-            Coming soon: reset your password with a link sent to {user.email}.
+            Don&apos;t know your current password? Reset it with a link sent to {user.email}.
+          </p>
+          <p className={styles.action}>
+            <Link href="/forgot-password" className={site.bracket}>
+              <Brackets>Reset by email</Brackets>
+            </Link>
           </p>
         </section>
 

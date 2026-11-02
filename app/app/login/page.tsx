@@ -12,16 +12,23 @@ export const metadata: Metadata = { title: "login", robots: { index: false } };
 export const viewport = siteViewport;
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const next = safeNextPath((await searchParams).next);
+  const params = await searchParams;
+  const next = safeNextPath(params.next);
   if (await auth()) redirect(next ?? "/apps");
 
   return (
-    <AuthPage title="login" form={<LoginForm next={next} />}>
+    <AuthPage
+      title="login"
+      // Where a password reset or change sends the user, logged out everywhere.
+      intro={params.password === "changed" ? "Your password was changed. Log in with the new one." : undefined}
+      form={<LoginForm next={next} />}
+    >
       <p>
         No account yet? <Link href={authHref("/signup", next)}>Sign up</Link>
       </p>
-      {/* Goal 6 turns this into a "Forgot password?" link to the email reset flow. */}
-      <p>Forgot your password? Resetting it by email is coming soon.</p>
+      <p>
+        <Link href="/forgot-password">Forgot password?</Link>
+      </p>
     </AuthPage>
   );
 }

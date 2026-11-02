@@ -12,13 +12,19 @@ export type User = {
 
 const userColumns = `id, username, email, theme_preference AS "themePreference"`;
 
+type LoginUser = {
+  id: string;
+  username: string;
+  passwordHash: string;
+  passwordChangedAt: Date | null;
+};
+
 // username and email are citext, so lookups ignore case. Usernames can't contain
 // "@", so one value never matches a username and a different account's email.
-export async function findUserForLogin(
-  login: string,
-): Promise<{ id: string; username: string; passwordHash: string } | null> {
-  const { rows } = await query<{ id: string; username: string; passwordHash: string }>(
-    `SELECT id, username, password_hash AS "passwordHash" FROM users WHERE username = $1 OR email = $1`,
+export async function findUserForLogin(login: string): Promise<LoginUser | null> {
+  const { rows } = await query<LoginUser>(
+    `SELECT id, username, password_hash AS "passwordHash", password_changed_at AS "passwordChangedAt"
+     FROM users WHERE username = $1 OR email = $1`,
     [login],
   );
   return rows[0] ?? null;
@@ -26,6 +32,23 @@ export async function findUserForLogin(
 
 export async function findUserById(id: string): Promise<User | null> {
   const { rows } = await query<User>(`SELECT ${userColumns} FROM users WHERE id = $1`, [id]);
+  return rows[0] ?? null;
+}
+
+export async function findUserByEmail(email: string): Promise<User | null> {
+  const { rows } = await query<User>(`SELECT ${userColumns} FROM users WHERE email = $1`, [email]);
+  return rows[0] ?? null;
+}
+
+// What every read of a session is checked against (app/auth.ts).
+// passwordChangedAt is null until the password is first changed.
+export async function findSessionUser(
+  id: string,
+): Promise<{ username: string; passwordChangedAt: Date | null } | null> {
+  const { rows } = await query<{ username: string; passwordChangedAt: Date | null }>(
+    `SELECT username, password_changed_at AS "passwordChangedAt" FROM users WHERE id = $1`,
+    [id],
+  );
   return rows[0] ?? null;
 }
 
@@ -63,8 +86,12 @@ export async function updateUsername(id: string, username: string): Promise<bool
   }
 }
 
+// Also ends the user's sessions (see findSessionUser).
 export async function updatePasswordHash(id: string, passwordHash: string): Promise<void> {
-  await query(`UPDATE users SET password_hash = $2 WHERE id = $1`, [id, passwordHash]);
+  await query(`UPDATE users SET password_hash = $2, password_changed_at = now() WHERE id = $1`, [
+    id,
+    passwordHash,
+  ]);
 }
 
 export async function updateThemePreference(id: string, theme: Theme): Promise<void> {

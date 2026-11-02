@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
-const pages = ["/", "/apps", "/login", "/signup", "/no-such-page"];
+// /reset-password without a token shows its "link expired" message.
+const pages = ["/", "/apps", "/login", "/signup", "/forgot-password", "/reset-password", "/no-such-page"];
 
 async function expectNoHorizontalScroll(page: Page) {
   await page.evaluate(() => document.fonts.ready);

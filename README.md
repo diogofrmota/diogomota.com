@@ -10,7 +10,7 @@ Personal site plus two small apps for friends (Shared, Shows), built with Next.j
 ## Local setup
 
 1. `cp .env.example .env` and fill in the values. Docker Compose reads this file.
-2. Create `app/.env.local` with the app variables from `.env` (at least `DATABASE_URL` and `AUTH_SECRET`). Next.js and `npm run migrate` read this file.
+2. Create `app/.env.local` with the app variables from `.env` (at least `DATABASE_URL` and `AUTH_SECRET`). Next.js and `npm run migrate` read this file. With `RESEND_API_KEY` and `MAIL_FROM` set, password reset emails are really sent; without `RESEND_API_KEY`, the dev server prints them (and their link) to its console instead.
 3. `docker compose up -d` starts Postgres 16 on `localhost:5432`. Wait until `docker compose ps` shows it as healthy.
 4. `cd app && npm ci && npm run migrate`
 5. `npm run dev`, then open http://localhost:3000 (the health check is at `/api/health`).
@@ -26,7 +26,7 @@ Before your first e2e run, install the test browser with `npx playwright install
 | `npm run start` | Serves the production build locally. Next.js warns about standalone mode; that is expected, because the image runs `server.js` directly. |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Generates route types, then runs `tsc` |
-| `npm run test:e2e` | Playwright tests. Starts the dev server and needs Postgres running. The accounts they create (usernames starting with `e2e_`) are deleted at the end. |
+| `npm run test:e2e` | Playwright tests. Starts the dev server and needs Postgres running. The accounts they create (usernames starting with `e2e_`) are deleted at the end. The dev server gets `E2E_TEST_HOOKS=1`, which keeps emails in memory for the tests (`/api/test/outbox`) instead of sending them; it has no effect in production. If a dev server is already running on port 3000 the tests reuse it, so stop it first or start it with `E2E_TEST_HOOKS=1`. |
 | `npm run migrate` | Applies pending `db/migrations/*.sql` |
 
 ## Migrations

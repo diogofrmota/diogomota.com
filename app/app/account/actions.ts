@@ -15,14 +15,14 @@ import {
 } from "@/lib/users";
 
 // Actions are reachable by anyone who can send a POST, so each one checks the session.
-async function currentUserId(): Promise<string> {
+async function currentUser(): Promise<{ id: string; username: string }> {
   const session = await auth();
   if (!session) redirect(appsWithNext("/account"));
-  return session.user.id;
+  return session.user;
 }
 
 export async function changeUsername(_previous: FormState, formData: FormData): Promise<FormState> {
-  const userId = await currentUserId();
+  const { id: userId } = await currentUser();
   const username = normalizeUsername(formData.get("username"));
   const values = { username };
 
@@ -39,7 +39,7 @@ export async function changeUsername(_previous: FormState, formData: FormData): 
 }
 
 export async function changePassword(_previous: FormState, formData: FormData): Promise<FormState> {
-  const userId = await currentUserId();
+  const { id: userId } = await currentUser();
   const currentPassword = formPassword(formData.get("currentPassword"));
   const newPassword = formPassword(formData.get("newPassword"));
   const confirmPassword = formPassword(formData.get("confirmPassword"));
@@ -60,11 +60,14 @@ export async function changePassword(_previous: FormState, formData: FormData): 
   }
 
   await updatePasswordHash(userId, await hashPassword(newPassword));
-  return { success: "Password changed." };
+  // That ended every session of the account (app/auth.ts): other devices, and
+  // this one too. Logging in with the new password comes back here.
+  await signOut({ redirectTo: `/login?${new URLSearchParams({ password: "changed", next: "/account" })}` });
+  return {};
 }
 
 export async function saveTheme(_previous: FormState, formData: FormData): Promise<FormState> {
-  const userId = await currentUserId();
+  const { id: userId } = await currentUser();
   const theme = formData.get("theme");
   if (theme !== "light" && theme !== "dark") return { error: "Choose light or dark." };
 

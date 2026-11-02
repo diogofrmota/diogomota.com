@@ -1,0 +1,24 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { AuthPage } from "@/components/auth/AuthPage";
+import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
+import { siteViewport } from "@/lib/site";
+
+export const metadata: Metadata = { title: "forgot password", robots: { index: false } };
+
+export const viewport = siteViewport;
+
+// Open logged in too: /account links here for users who forgot their current password.
+export default function ForgotPasswordPage() {
+  return (
+    <AuthPage
+      title="forgot password"
+      intro="Enter the email of your account and we'll send you a link to choose a new password."
+      form={<ForgotPasswordForm />}
+    >
+      <p>
+        Remembered it? <Link href="/login">Log in</Link>
+      </p>
+    </AuthPage>
+  );
+}
