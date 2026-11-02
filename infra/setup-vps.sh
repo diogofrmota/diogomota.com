@@ -239,5 +239,4 @@ cat <<EOF
 
 Before closing this session, check in a NEW terminal that key login works:
   ssh $DEPLOY_USER@$(hostname -I | awk '{print $1}') 'id; docker ps'
-Then continue with docs/deploy.md.
 EOF

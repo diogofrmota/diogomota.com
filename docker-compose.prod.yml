@@ -1,4 +1,4 @@
-# Production stack on the VPS, in /opt/diogomota (runbook: docs/deploy.md).
+# Production stack on the VPS, in /opt/diogomota.
 # Values come from .env next to this file (template: .env.production.example),
 # which also sets COMPOSE_FILE so plain `docker compose ...` there uses this file.
 name: diogomota
