@@ -52,9 +52,9 @@
 
 ## To-do
 
-### [You] Goals 11 and 12 — Push
+### [You] Goal 12 — Push
 
-- [ ] Push. Pushing both commits at once deploys only the newest, as `v0.12.0`, and applies `005_show_rating.sql` and `006_library_updated_at.sql` (to deploy `v0.11.0` first, `git push origin 09a30c1:main`, wait for the deploy, then `git push`).
+- [ ] Push (Goal 11 is already pushed, as `v0.11.0` with `005_show_rating.sql`). The deploy is `v0.12.0` and applies `006_library_updated_at.sql`.
 - [ ] On your phone, Discover: both TV Shows and Movies, search from Home and Profile, open a title and add it as Watching.
 - [ ] On your phone, Home: the welcome on an empty library; add a few titles; long-press a card to change its status and rate it; open a show, Next episode a few times, pick the last episode and Mark as completed; favourite one; remove one; switch to Movies.
 
