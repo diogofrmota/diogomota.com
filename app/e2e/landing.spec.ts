@@ -15,10 +15,11 @@ test("landing shows the intro and no navbar or footer", async ({ page }) => {
 
 test("landing links go to Richemont and to /apps", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Richemont" })).toHaveAttribute(
-    "href",
-    "https://www.richemont.com/",
-  );
+  const richemont = page.getByRole("link", { name: "Richemont" });
+  await expect(richemont).toHaveAttribute("href", "https://www.richemont.com/");
+  await expect(richemont).toHaveAttribute("target", "_blank");
+  await expect(richemont).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(richemont).toHaveAccessibleName("Richemont (opens in a new tab)");
 
   await page.getByRole("link", { name: "Check Apps" }).click();
   await expect(page).toHaveURL("/apps");

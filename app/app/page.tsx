@@ -19,8 +19,13 @@ export default function Home() {
         <h1 className={styles.name}>diogo mota</h1>
         <p className={site.muted}>
           devops engineer @{" "}
-          <a href="https://www.richemont.com/" className={styles.employer}>
-            Richemont
+          <a
+            href="https://www.richemont.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.employer}
+          >
+            Richemont<span className={site.visuallyHidden}> (opens in a new tab)</span>
           </a>
         </p>
         <p className={site.muted}>currently based in Lisbon, PT</p>
