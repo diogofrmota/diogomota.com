@@ -111,7 +111,7 @@ docker build --build-context migrations=db/migrations -t diogomota-com ./app
 
 ## Production
 
-The VPS runs [docker-compose.prod.yml](docker-compose.prod.yml) (Postgres, app, Nginx, Certbot) in `/opt/diogomota`. Server setup, TLS, backups and restores are scripts in [infra/](infra/).
+The VPS runs [docker-compose.prod.yml](docker-compose.prod.yml) (Postgres, app, Nginx, Certbot) in `/opt/diogomota`. Server setup, TLS, backups and restores are scripts in [infra/](infra/). Running it day to day (health checks, restarts, rollbacks, restoring a backup with a dry run first, the optional offsite backup, rotating secrets, certificates) is in [docs/operations.md](docs/operations.md).
 
 ### Deploys
 

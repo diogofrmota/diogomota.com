@@ -8,3 +8,7 @@
 
 # Database dump at 03:00 every 3 days; dumps older than 14 days are deleted.
 0 3 */3 * * bash /opt/diogomota/infra/backup.sh >> /opt/diogomota/logs/backup.log 2>&1
+
+# Optional: the newest dump copied offsite half an hour later. Uncomment once
+# infra/offsite-backup.sh is set up (docs/operations.md, Offsite backup).
+#30 3 */3 * * bash /opt/diogomota/infra/offsite-backup.sh >> /opt/diogomota/logs/offsite-backup.log 2>&1

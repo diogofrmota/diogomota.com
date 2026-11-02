@@ -62,29 +62,15 @@
 
 - Phone checks, polish (2026-11-02), on https://diogomota.com: Add to Home Screen from `/apps` (`>_` icon and its name, opens without browser bars on `/apps`), dialogs in both apps close with their × and with a tap outside; in airplane mode every Shared and Shows view says it can't reach the server and offers Retry, which works once back online
 
+- Goal 15, Launch checks (2026-11-02): version `1.0.0`, so the next deploy is `v1.0.0`. `docs/operations.md` (linked from README, Production): health and logs, restarts, rollback to an image tag, backups, restore step by step (dry run, inspecting a dump by hand, undo, onto a new VPS), the optional offsite backup with costs, rotating `AUTH_SECRET`, the database password, Resend, TMDB, both Docker Hub tokens and the deploy key, certificates, a monthly check. `infra/restore.sh --dry-run` loads a dump into `<db>_dryrun`, prints its rows per table beside the live database's and drops it again; a restore now also works when the database was dropped. Optional `infra/offsite-backup.sh`: the newest dump to an rclone remote (the `rclone/rclone:1.75.2` image), target `OFFSITE_DEST` at the top (refuses to run while `CHANGE-ME`), offsite copies kept 90 days, an error and no pruning when the newest dump is over 4 days old; a commented-out cron line at 03:30 in `infra/crontab`. Checked locally: on the dev stack, rows in every table, dump, dry run, then rows deleted and a table dropped → restore, and the whole database dropped → restore: every table's rows (md5) and the schema identical each time; a truncated or failing dump refused with the live data untouched; the dev data put back as it was. On a local copy of the production stack (own project name, self-signed certificate): a restore with the app running (stopped, swapped, migrated, started), an older dump getting `006` applied again, the database password and `AUTH_SECRET` procedures from the doc; headers on every kind of response (pages, API, 401, 404, static assets, nginx's error page, redirects): HSTS, `nosniff`, `X-Frame-Options`, `Referrer-Policy` and a CSP with `frame-ancestors 'none'` once each, no `X-Powered-By` or nginx version. The offsite script against an encrypted crypt remote. Secret scan clean: none of the local secret values in the working tree, any commit (all refs) or commit message, or the image's history, config or any of its 10 layers; no key- or token-shaped strings. shellcheck clean (committed on main, not pushed)
+
 ## To-do
-
-### Goal 15 — Launch checks
-
-Before:
-- [x] Goal 3 and First deploy done
-
-```
-/goal Prepare diogomota.com operations for launch. Read README.md (Production), docker-compose.prod.yml, infra/ and roadmap.md first. Nothing here connects to the VPS; give me the commands to run.
-
-- First bump the version: `npm version 1.0.0 --no-git-tag-version` in app/ (README.md, Versions), so the launch deploys as v1.0.0.
-- docs/operations.md: how to check health and logs, restart, roll back to a previous image tag, restore a backup (step by step, including a dry run into a scratch database), rotate secrets (AUTH_SECRET, DB password, Resend, TMDB, Docker Hub, deploy key), and renew/inspect certificates.
-- Optional offsite backup: a script and cron line that copies the latest dump to an external location of my choice (leave the target as a clearly marked variable), with a note on what it costs.
-- Verify the backup and restore scripts work locally against the dev compose stack: dump, drop, restore, data is back.
-- Check headers on the production config (HSTS, X-Content-Type-Options, Referrer-Policy, frame-ancestors) and that no secret appears in the repo or the built image (`git grep` and image history).
-
-Done when the local backup/restore round-trip succeeds, docs/operations.md references only files that exist, and the secret scan is clean. Commit on main (do not push).
-```
 
 ### [You] Launch
 
-- [ ] Push and confirm the deploy is green.
+- [ ] Push; it deploys as `v1.0.0` (no migration). Confirm the deploy is green and `/apps` shows `v1.0.0`. `infra/crontab` only gained a commented-out line, so reinstalling it can wait for the offsite setup.
 - [ ] On the VPS: run a real backup, then the restore dry run from `docs/operations.md`.
+- [ ] Optional: the offsite backup (`docs/operations.md`, Offsite backup): pick a provider, `rclone config`, save the crypt passwords, set `OFFSITE_DEST`, uncomment the cron line, push, `crontab infra/crontab`.
 - [ ] Do a full pass on your phone: sign up a second account, Shared with two people, Shows with a friend.
-- [ ] Set a calendar reminder to check backups and `docker system df` monthly.
+- [ ] Set a calendar reminder for the monthly check in `docs/operations.md`.
 - [ ] Send friends the link.
