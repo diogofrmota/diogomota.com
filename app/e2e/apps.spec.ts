@@ -11,7 +11,7 @@ test("/apps shows a card for Shared and for Shows", async ({ page }) => {
   await page.goto("/apps");
   await expect(page).toHaveTitle("apps · diogo mota");
   // "dev" unless APP_VERSION is set, as it is in the Docker image.
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^apps - (dev|v\d+\.\d+\.\d+)$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^apps \((dev|v\d+\.\d+\.\d+)\)$/);
   expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows"]);
   await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(apps.length);
 

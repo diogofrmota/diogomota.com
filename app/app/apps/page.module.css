@@ -9,3 +9,9 @@
   font-size: 1.5rem;
   font-weight: 400;
 }
+
+/* Same grey as the site's secondary text (#a3a3a3 on black is 8.6:1). */
+.version {
+  font-size: 0.875rem;
+  color: #a3a3a3;
+}

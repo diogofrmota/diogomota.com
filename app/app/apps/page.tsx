@@ -34,7 +34,9 @@ export default async function AppsPage({ searchParams }: PageProps<"/apps">) {
     <SitePage>
       <TopBar username={username} next={next} />
       <main className={styles.main}>
-        <h1 className={styles.title}>apps - {version}</h1>
+        <h1 className={styles.title}>
+          apps <span className={styles.version}>({version})</span>
+        </h1>
         <AppList apps={apps} loggedIn={username !== null} prompted={prompted?.href} />
       </main>
     </SitePage>

@@ -41,7 +41,7 @@ From the repo root:
 docker build --build-context migrations=db/migrations -t diogomota-com ./app
 ```
 
-`db/migrations` is outside `./app`, so `--build-context` is how it gets into the image. Inside a container, `npm run migrate` applies the migrations and `node server.js` starts the app on port 3000. The `/apps` title shows the image's version, `apps - dev` unless you add `--build-arg APP_VERSION=v0.6.0` (also `dev` with `npm run dev`).
+`db/migrations` is outside `./app`, so `--build-context` is how it gets into the image. Inside a container, `npm run migrate` applies the migrations and `node server.js` starts the app on port 3000. The `/apps` title shows the image's version, `apps (dev)` unless you add `--build-arg APP_VERSION=v0.6.0` (also `dev` with `npm run dev`).
 
 ## Production
 
