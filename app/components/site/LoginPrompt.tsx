@@ -3,14 +3,10 @@
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
 import type { AppInfo } from "@/lib/apps";
+import { authHref } from "@/lib/next-path";
 import { Brackets } from "./SitePage";
 import site from "./site.module.css";
 import styles from "./LoginPrompt.module.css";
-
-// Login or sign-up page that sends the user on to `next` afterwards.
-export function authHref(page: "/login" | "/signup", next: string) {
-  return `${page}?${new URLSearchParams({ next })}`;
-}
 
 // Shown instead of an app while logged out. A native modal <dialog>: it keeps
 // focus inside, closes on Escape and hands focus back to the card on close.

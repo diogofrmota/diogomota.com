@@ -12,7 +12,9 @@
     "migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "next": "16.4.3",
+    "next-auth": "5.0.0-beta.32",
     "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"

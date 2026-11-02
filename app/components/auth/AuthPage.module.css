@@ -1,0 +1,30 @@
+/* SitePage centers this column; its text stays left-aligned. */
+.main {
+  width: min(22rem, 100vw - 2.5rem);
+  text-align: left;
+}
+
+.title {
+  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+.links {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.links p {
+  margin: 0;
+}
+
+.links a {
+  color: #fff;
+}
+
+.back {
+  margin: 1.5rem 0 0 -0.375rem;
+}

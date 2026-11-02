@@ -24,32 +24,14 @@
 - First deploy (2026-11-02): image `cff752c` live. The first attempt failed because the `VPS_USER` secret was missing; it worked after adding the secret and re-running the failed job. `001_initial.sql` applied, `IMAGE_TAG=cff752c` pinned in `/opt/diogomota/.env`, `/api/health` returns `{"status":"ok"}`, placeholder page loads, `https://www`, `http://` and `http://www` redirect (301) to `https://diogomota.com/`, security headers present. From now on every push to `main` deploys; rollback and logs: README.md, Production
 - Goal 4, landing + app hub (2026-11-02): `/` (black; four white lines of one size, left-aligned in a block centered on the screen, like portfolio-diogomota.com; IBM Plex Mono self-hosted with `next/font/local` and applied by `components/site/SitePage`, not the root layout; Richemont link opens in a new tab; `[Check Apps]` → `/apps`; title, description, Open Graph tags and a generated preview image in the same layout). `/apps`: top bar `Login | Sign Up` → placeholder pages `/login` and `/signup`; cards for Shared and Shows from the typed list in `app/lib/apps.ts`; logged out, a card opens a login prompt (`components/site/LoginPrompt.tsx`) whose links carry `?next=/shared` or `?next=/shows`. `/shared` and `/shows` don't exist yet (404). Favicon, touch icon, styled 404. Playwright: 27 tests, axe scan clean (committed `f83bb71`, `19185a7` and `29890a3`, not pushed)
 - Sign-up policy decided: open to anyone, no sign-up code
+- Goal 5, auth + account (2026-11-02): Auth.js (`next-auth@5.0.0-beta.32`, credentials provider) in `app/auth.ts`; JWT session cookie holding only user id and username. Sign up (`/signup`: username 3-20 `[a-z0-9_]`, saved lowercase; email; password 10+ characters and at most 72 bytes, bcryptjs cost 12) logs straight in; log in (`/login`) by username or email in any case. One message for wrong password or unknown account, and one for a taken username or email (sign-up can't hide existence completely without email verification). In-memory rate limits: login 10 per 15 min per IP, sign-up 5 per hour per IP, current-password checks 10 per 15 min per user; the IP is the first `X-Forwarded-For` entry, which nginx sets. `proxy.ts` (Next 16's name for middleware) guards `/shared`, `/shows`, `/account` (redirect to `/apps?next=...`, which opens that app's login prompt) and `/api/shared`, `/api/shows` (401); `next` only accepts same-site paths. `/apps` logged in: username + account menu (Account settings, Logout), cards open the apps. `/account`: change username (unique), change password (current + new + confirm), theme light/dark in `users.theme_preference`, "Forgot password" placeholder (also on `/login`), logout. `/shared` and `/shows` placeholders show "signed in as <username>" in the saved theme. `002_username_format.sql` makes the database enforce the username rule. Playwright: 47 tests (20 new for auth and account); each test sends its own `X-Forwarded-For` so rate limits don't collide, and a global teardown deletes the `e2e_` accounts. `AUTH_SECRET` copied into `app/.env.local` (committed, not pushed)
 
 ## To-do
 
-### Goal 5 — Auth + account
+### [You] Goal 5 — Push
 
-Before:
-- [x] Goal 4 done
-
-```
-/goal Add authentication and account settings to diogomota.com with NextAuth (Auth.js) credentials provider. Read plan.md (Authentication Flow, Account Settings, Pages) and roadmap.md first. Sign-up is open to anyone (no sign-up code).
-
-- Sign up with username + email + password (validate: username 3-20 chars [a-z0-9_], valid email, password >= 10 chars); hash with bcrypt (bcryptjs) or argon2. Login by username or email. JWT sessions containing user id and username. Generic error messages that do not reveal whether an account exists.
-- Basic rate limiting on login and sign-up (in-memory per IP is enough at this scale).
-- Login and Sign Up as modals or pages reachable from the /apps top bar; after login, return to /apps or to the app the user tried to open.
-- Logged-in top bar on /apps: username + account dropdown (Account settings, Logout). Cards go straight into the apps.
-- Account settings (from the dropdown): change username (unique), change password (requires current password), theme preference light/dark stored in users.theme_preference, logout. Leave a clear placeholder for "Forgot password" (next goal).
-- Middleware protects /shared and /shows (and their API routes): unauthenticated page requests redirect to /apps, API requests get 401.
-- Placeholder pages for /shared and /shows that show "signed in as <username>".
-- Any schema change goes in a new db/migrations file.
-- Playwright tests: sign up, log out, log in, wrong password, protected-route redirect, change username, change password, theme preference persists after re-login.
-
-Done when lint, typecheck, build and all e2e tests pass against the local docker compose database. Commit on main (do not push).
-```
-
-After:
-- [ ] Push. (`AUTH_SECRET` and `AUTH_URL=https://diogomota.com` are already in `/opt/diogomota/.env` on the VPS.)
+- [ ] Push. (`AUTH_SECRET` and `AUTH_URL=https://diogomota.com` are already in `/opt/diogomota/.env` on the VPS.) The deploy applies `002_username_format.sql`.
+- [ ] On https://diogomota.com: sign up your own account, log out, log in, open `/shared`, and set your theme in Account settings.
 
 ---
 

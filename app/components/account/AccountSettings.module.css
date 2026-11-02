@@ -1,0 +1,27 @@
+.fieldset {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset p {
+  margin: 0 0 0.25rem;
+}
+
+/* The whole row is the tap target. */
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.radio input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: #fff;
+}
