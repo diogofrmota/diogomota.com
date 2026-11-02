@@ -1,0 +1,60 @@
+import type { Locator, Page } from "@playwright/test";
+import { expect, newUser, signUp } from "./fixtures";
+import { withDatabase } from "./db";
+
+// Helpers for the Shows app tests. The dev server runs with test hooks, so the
+// app's server asks a fake TMDB (lib/tmdb-mock.ts) and never the real one;
+// fixtures.ts fakes the poster images. The fake's ids start above this
+// (lib/tmdb-mock.ts can't be imported here: it is server-only).
+export const mockBase = 2_100_000_000;
+
+/** Signs up a new account straight into /shows. */
+export async function openShows(page: Page) {
+  const user = newUser();
+  await signUp(page, user, "/signup?next=/shows");
+  await expect(page).toHaveURL("/shows");
+  return user;
+}
+
+export const tab = (page: Page, view: string) =>
+  page.getByRole("navigation", { name: "Shows", exact: true }).getByRole("button", { name: view, exact: true });
+export const viewHeading = (page: Page) => page.getByRole("main").getByRole("heading", { level: 1 });
+export const section = (page: Page, heading: string) => page.getByRole("region", { name: heading, exact: true });
+export const grid = (scope: Page | Locator, name: string) => scope.getByRole("list", { name, exact: true });
+/** A card by its title: cards are named "<title>, <year>, ...". */
+export const card = (scope: Page | Locator, title: string) =>
+  scope.getByRole("button", { name: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")},`) });
+export const typeSwitch = (page: Page, name: "TV Shows" | "Movies") =>
+  page.getByRole("group", { name: "Show" }).getByRole("button", { name, exact: true });
+
+/** The requests the fake TMDB answered for this path, e.g. "/tv/top_rated". */
+export async function tmdbRequests(page: Page, path: string): Promise<{ path: string; query: string | null; authorized: boolean }[]> {
+  return (await (await page.request.get(`/api/test/tmdb?${new URLSearchParams({ path })}`)).json()).requests;
+}
+
+export type LibraryRow = {
+  type: "tv" | "movie"; tmdb_id: number; status: string; rating: number | null;
+  current_season: number | null; current_episode: number | null; is_favourite: boolean;
+};
+
+/** The user's user_shows rows, TV shows first, by TMDB id. */
+export async function libraryRows(username: string): Promise<LibraryRow[]> {
+  const { rows } = await withDatabase((client) => client.query(
+    `SELECT s.type, s.tmdb_id, us.status, us.rating, us.current_season, us.current_episode, us.is_favourite
+     FROM user_shows us JOIN users u ON u.id = us.user_id JOIN shows s ON s.id = us.show_id
+     WHERE u.username = $1 ORDER BY s.type DESC, s.tmdb_id`, [username]));
+  return rows;
+}
+
+/** A library row as added from Discover, with `fields` changed. */
+export const row = (type: "tv" | "movie", tmdbId: number, fields: Partial<LibraryRow> = {}): LibraryRow => ({
+  type, tmdb_id: tmdbId, status: "watching", rating: null, current_season: null, current_episode: null, is_favourite: false, ...fields,
+});
+
+export async function expectNoHorizontalScroll(page: Page) {
+  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+}

@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { DatabaseError } from "pg";
 import { auth } from "@/auth";
 import { query } from "./db";
@@ -6,9 +7,14 @@ import { showsRequestLimit } from "./rate-limit";
 import {
   addStatuses,
   discoverSections,
+  hasEpisode,
+  libraryStatuses,
   mediaTypes,
+  titleKey,
   type DiscoverSection,
   type LibraryEntry,
+  type LibraryItem,
+  type LibraryStatus,
   type MediaType,
   type TitleDetail,
   type TitleSummary,
@@ -117,6 +123,121 @@ export async function addToLibrary(userId: string, body: Record<string, unknown>
   }
 }
 
+// Library titles whose copy is being fetched from TMDB again, so two loads at
+// once don't fetch the same title twice.
+const refreshing = new Set<string>();
+
+// Fetches stale library titles from TMDB again, one at a time, after the
+// library was answered with the old copies. TMDB allows keeping its data for
+// at most 6 months, and titles in a library may never be opened again. Stops at
+// the first failure: the next load tries again.
+async function refreshTitles(titles: Pick<TitleSummary, "type" | "tmdbId">[]) {
+  for (const title of titles) {
+    const key = titleKey(title);
+    if (refreshing.has(key)) continue;
+    refreshing.add(key);
+    try {
+      await saveTitle(await fetchTitle(title.type, title.tmdbId));
+    } catch (error) {
+      console.warn(`Kept the old copy of ${key}: refreshing it from TMDB failed`, error);
+      return;
+    } finally {
+      refreshing.delete(key);
+    }
+  }
+}
+
+/** The user's library, the latest added or changed first. */
+export async function readLibrary(userId: string): Promise<LibraryItem[]> {
+  const { rows } = await query<LibraryItem & { stale: boolean }>(
+    `SELECT s.type, s.tmdb_id AS "tmdbId", s.title, s.year, s.poster_url AS "posterPath",
+       s.vote_average::float8 AS rating,
+       json_build_object('id', us.id, 'status', us.status, 'rating', us.rating, 'currentSeason', us.current_season,
+         'currentEpisode', us.current_episode, 'isFavourite', us.is_favourite) AS library,
+       s.last_updated < now() - interval '${refreshAfter}' AS stale
+     FROM user_shows us JOIN shows s ON s.id = us.show_id
+     WHERE us.user_id = $1 ORDER BY us.updated_at DESC, us.id`,
+    [userId],
+  );
+  const stale = rows.filter((row) => row.stale);
+  if (stale.length) after(() => refreshTitles(stale));
+  return rows.map((row) => ({ type: row.type, tmdbId: row.tmdbId, title: row.title, year: row.year,
+    posterPath: row.posterPath, rating: row.rating, library: row.library }));
+}
+
+// The user's entry for a title, with what is needed to check a change of it.
+async function libraryRow(userId: string, type: MediaType, id: number) {
+  const { rows } = await query<{ id: string; episodesPerSeason: number[] | null }>(
+    `SELECT us.id, s.episodes_per_season AS "episodesPerSeason"
+     FROM user_shows us JOIN shows s ON s.id = us.show_id
+     WHERE us.user_id = $1 AND s.type = $2 AND s.tmdb_id = $3`,
+    [userId, type, id],
+  );
+  if (!rows[0]) throw new ShowsError("This title isn't in your library.", 404);
+  return rows[0];
+}
+
+/**
+ * Changes the user's entry for a title: any of status, rating (1-5 or null),
+ * isFavourite, and the progress of a TV show (currentSeason and currentEpisode
+ * together: an episode it has, or both null).
+ */
+export async function updateLibraryEntry(userId: string, type: MediaType, id: number, body: Record<string, unknown>): Promise<LibraryEntry> {
+  const entry = await libraryRow(userId, type, id);
+  const values: unknown[] = [entry.id];
+  const columns: string[] = [];
+  const set = (column: string, value: unknown) => {
+    values.push(value);
+    columns.push(`${column} = $${values.length}`);
+  };
+
+  if ("status" in body) {
+    if (!libraryStatuses.includes(body.status as LibraryStatus)) throw new ShowsError("Choose Watching, Planned or Completed.");
+    set("status", body.status);
+  }
+  if ("rating" in body) {
+    const { rating } = body;
+    if (rating !== null && !(Number.isInteger(rating) && (rating as number) >= 1 && (rating as number) <= 5)) {
+      throw new ShowsError("Rate it from 1 to 5 stars.");
+    }
+    set("rating", rating);
+  }
+  if ("isFavourite" in body) {
+    if (typeof body.isFavourite !== "boolean") throw new ShowsError("Mark it as a favourite or not.");
+    set("is_favourite", body.isFavourite);
+  }
+  if ("currentSeason" in body || "currentEpisode" in body) {
+    const { currentSeason: season, currentEpisode: episode } = body;
+    if (type === "movie") throw new ShowsError("Movies have no episodes.");
+    if ((season !== null || episode !== null) &&
+      !hasEpisode(entry.episodesPerSeason ?? [], { season: season as number, episode: episode as number })) {
+      throw new ShowsError("This show has no such episode.");
+    }
+    set("current_season", season);
+    set("current_episode", episode);
+  }
+  if (!columns.length) throw new ShowsError("Nothing to change.");
+
+  const { rows } = await query<LibraryEntry>(
+    `UPDATE user_shows SET ${columns.join(", ")}, updated_at = now() WHERE id = $1 RETURNING ${entryColumns}`,
+    values,
+  );
+  // Removed meanwhile.
+  if (!rows[0]) throw new ShowsError("This title isn't in your library.", 404);
+  return rows[0];
+}
+
+/** Removes a title from the user's library, with its progress and rating. */
+export async function removeFromLibrary(userId: string, type: MediaType, id: number): Promise<null> {
+  const { rowCount } = await query(
+    `DELETE FROM user_shows us USING shows s
+     WHERE s.id = us.show_id AND us.user_id = $1 AND s.type = $2 AND s.tmdb_id = $3`,
+    [userId, type, id],
+  );
+  if (!rowCount) throw new ShowsError("This title isn't in your library.", 404);
+  return null;
+}
+
 // Titles of this type in the libraries of the user's accepted friends, the ones
 // most of them have first.
 async function friendsTitles(userId: string, type: MediaType): Promise<TitleSummary[]> {
@@ -166,7 +287,7 @@ export async function showsResponse(
     }
     if (!showsRequestLimit(session.user.id)) throw new ShowsError("Too many requests. Wait a minute and try again.", 429);
     let body: unknown = {};
-    if (request.method === "POST") {
+    if (request.method === "POST" || request.method === "PATCH") {
       if (!request.headers.get("content-type")?.includes("application/json")) throw new ShowsError("Send a JSON request.", 415);
       body = await request.json().catch(() => null);
       if (!body || typeof body !== "object" || Array.isArray(body)) throw new ShowsError("Invalid JSON request.");

@@ -1,12 +1,12 @@
 "use client";
-import { useId, useState } from "react";
-import { addStatuses, formatRuntime, titleKey, type LibraryEntry, type LibraryStatus, type TitleDetail, type TitleSummary } from "@/lib/show-types";
+import { useEffect, useId, useRef, useState } from "react";
+import { addStatuses, formatRuntime, statusNames, titleKey, type LibraryStatus, type TitleDetail, type TitleSummary } from "@/lib/show-types";
 import { Dialog } from "./Dialog";
-import { seenTitle, ShowsRequestError, showsRequest, useShowsData } from "./shows-data";
+import { useLibrary } from "./library";
+import { LibraryControls } from "./LibraryControls";
+import { seenTitle, useShowsData } from "./shows-data";
 import { LoadError, Poster, titleFacts } from "./TitleGrid";
 import styles from "./Shows.module.css";
-
-const statusNames: Record<LibraryStatus, string> = { watching: "Watching", planned: "Planned", completed: "Completed" };
 
 function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
@@ -21,28 +21,28 @@ function lengthFacts(detail: TitleDetail): string {
     detail.episodeRuntime && `${detail.episodeRuntime} min episodes`].filter(Boolean).join(" · ");
 }
 
-/** A title's detail panel (panel id "title:tv:123"), with Add to Library. */
+/** A title's detail panel (panel id "title:tv:123"): Add to Library, or the library controls once it is there. */
 export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "type" | "tmdbId">; onClose: () => void }) {
   const headingId = useId();
   const addId = useId();
   const key = titleKey(title);
+  const library = useLibrary();
   const { data: detail, error, retry } = useShowsData<TitleDetail>(`/titles/${title.type}/${title.tmdbId}`, false);
-  // Set once added here; until then the entry is the one loaded with the details.
-  const [added, setAdded] = useState<LibraryEntry | null>(null);
   const [adding, setAdding] = useState<LibraryStatus | null>(null);
   const [addError, setAddError] = useState("");
+  const [removed, setRemoved] = useState(false);
+  const firstAdd = useRef<HTMLButtonElement>(null);
+  // The focused Remove button is gone: on to adding it again.
+  useEffect(() => { if (removed) firstAdd.current?.focus(); }, [removed]);
   const shown: TitleSummary | undefined = detail ?? seenTitle(key);
-  const entry = added ?? detail?.library ?? null;
+  const item = library.find(title);
 
-  async function add(status: LibraryStatus) {
-    setAdding(status); setAddError("");
+  async function add(status: (typeof addStatuses)[number]) {
+    setAdding(status); setAddError(""); setRemoved(false);
     try {
-      const result = await showsRequest<TitleDetail>("/library", { method: "POST", body: { type: title.type, tmdbId: title.tmdbId, status } });
-      setAdded(result.library);
+      await library.add(title, status);
     } catch (err) {
       setAddError((err as Error).message);
-      // Already there (added in another tab): load it again to show its status.
-      if (err instanceof ShowsRequestError && err.status === 409) retry();
     } finally { setAdding(null); }
   }
 
@@ -66,11 +66,15 @@ export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "typ
         {[1, 2, 3].map((line) => <span key={line} className={`${styles.skeletonLine} ${styles.skeleton}`} />)}
       </div> : <>
         <p className={styles.overview}>{detail.overview || "No overview on TMDB yet."}</p>
-        {entry ? <p role="status" className={styles.inLibrary}>✓ In your library · {statusNames[entry.status]}</p>
+        {!library.items ? (library.loadError ? <LoadError message={library.loadError} onRetry={library.reload} />
+          : <span className={`${styles.skeletonLine} ${styles.skeleton}`} />)
+          : item ? <LibraryControls item={item} detail={detail} onRemoved={() => setRemoved(true)} />
           : <div className={styles.addGroup} role="group" aria-labelledby={addId}>
+            {removed && <p role="status" className={styles.muted}>Removed from your library.</p>}
             <h3 id={addId}>Add to Library</h3>
             <div className={styles.addButtons}>
-              {addStatuses.map((status) => <button key={status} type="button" className={styles.primary} disabled={adding !== null}
+              {addStatuses.map((status, i) => <button key={status} type="button" className={styles.primary} disabled={adding !== null}
+                ref={i === 0 ? firstAdd : undefined}
                 onClick={() => add(status)}>{adding === status ? "Adding…" : statusNames[status]}</button>)}
             </div>
           </div>}

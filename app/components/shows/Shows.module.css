@@ -1,16 +1,23 @@
 /* The Shows app. The dialogs are rendered inside the AppShell, so its theme
    variables reach them too. */
-.view { --danger: #f87171; max-width: 72rem; margin: auto; } /* --danger: 6.3:1 on --surface */
-:global([data-theme="light"]) .view, :global([data-theme="light"]) .dialog { --danger: #b91c1c; }
-.dialog { --danger: #f87171; }
+/* --danger: 6.3:1 on --surface. --star-off: 3.9:1 on --surface (light: 3.5:1). */
+.view, .dialog { --danger: #f87171; --star: #fbbf24; --star-off: #737373; }
+.view { max-width: 72rem; margin: auto; }
+:global([data-theme="light"]) .view, :global([data-theme="light"]) .dialog { --danger: #b91c1c; --star: #d97706; --star-off: #8a8a8a; }
 .heading { font-size: 1.75rem; margin: 0 0 1rem; letter-spacing: -.04em; }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 .view button, .dialog button { min-height: 44px; border: 1px solid var(--border); background: var(--surface); border-radius: .5rem; padding: .5rem .85rem; cursor: pointer; }
 .view button:disabled, .dialog button:disabled { opacity: .6; cursor: wait; }
 @media (hover: hover) { .view button:hover, .dialog button:hover { background: var(--hover); } }
-.dialog .primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 650; }
-@media (hover: hover) { .dialog .primary:hover { background: var(--accent); filter: brightness(.93); } }
+.view .primary, .dialog .primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 650; }
+.dialog .danger { background: var(--danger); border-color: var(--danger); color: var(--bg); font-weight: 650; }
+@media (hover: hover) {
+  .view .primary:hover, .dialog .primary:hover { background: var(--accent); filter: brightness(.93); }
+  .dialog .danger:hover { background: var(--danger); filter: brightness(.93); }
+}
+.muted { margin: 0; color: var(--muted); }
+.label { font-weight: 600; }
 
 /* Top bar search button, styled like the theme toggle next to it. */
 .searchButton { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; padding: 0; border: 0; border-radius: .5rem; background: none; color: var(--muted); cursor: pointer; }
@@ -29,6 +36,17 @@
 .view .more { margin-top: 1rem; }
 .error { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; padding: .5rem .5rem .5rem .75rem; border-left: 3px solid var(--danger); border-radius: .4rem; background: var(--hover); }
 .error p, p.error { margin: 0; }
+.viewError { margin-bottom: 1rem; }
+
+/* Home */
+.section .sectionHeader { display: flex; align-items: baseline; gap: .5rem; margin: 0 0 .85rem; }
+.section .sectionHeader h2 { margin: 0; }
+.count { color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.view .inlineLink { min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: .15em; }
+@media (hover: hover) { .view .inlineLink:hover { background: none; text-decoration-thickness: 2px; } }
+.welcome { max-width: 36rem; padding: 1.75rem 1.5rem; border-radius: 1rem; background: var(--accent-soft); }
+.welcome h2 { margin: 0 0 .5rem; font-size: 1.35rem; color: var(--accent); }
+.welcome p { margin: 0 0 1.25rem; line-height: 1.6; }
 
 /* Poster grid: about three across on a phone, more on wider screens. */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.25rem, 1fr)); gap: 1.1rem .75rem; margin: 0; padding: 0; list-style: none; }
@@ -44,9 +62,34 @@
 .cardTitle { margin-top: .35rem; font-size: .875rem; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .cardMeta { color: var(--muted); font-size: .75rem; }
 
+/* A library card: its status on the poster, a heart if it is a favourite, and
+   a quick actions button that shows on hover (or focus) where there is a mouse.
+   Touch screens open the same menu with a long press, so there the button is
+   only there for screen readers. */
+.libraryCard { position: relative; }
+.libraryCard .card, .libraryCard img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.posterFrame { position: relative; display: block; }
+.badge, .favouriteMark { position: absolute; color: #fff; box-shadow: 0 1px 3px #0005; }
+.badge { top: .4rem; left: .4rem; padding: .1rem .45rem; border-radius: 999px; font-size: .68rem; font-weight: 700; letter-spacing: .02em; }
+.badge.watching { background: #1d4ed8; } /* white text: 6.7:1 */
+.badge.planned { background: #525252; } /* 7.8:1 */
+.badge.completed { background: #15803d; } /* 5:1 */
+.favouriteMark { right: .4rem; bottom: .4rem; display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: #000c; color: #f87171; font-size: .85rem; line-height: 1; }
+.cardStars .starOn { color: var(--star); letter-spacing: .05em; }
+.cardStars .starOff { color: var(--star-off); letter-spacing: .05em; }
+.view .cardMenu { position: absolute; top: .3rem; right: .3rem; z-index: 1; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: #000c; color: #fff; font-size: 1.25rem; line-height: 1; opacity: 0; transition: opacity .15s; }
+@media (hover: hover) {
+  .libraryCard:hover .cardMenu, .libraryCard:focus-within .cardMenu { opacity: 1; }
+  .view .cardMenu:hover { background: #000; }
+}
+@media (hover: none) {
+  .view .cardMenu:not(:focus-visible) { width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .view .cardMenu:focus-visible { opacity: 1; }
+}
+
 .skeleton { background: linear-gradient(90deg, var(--hover) 25%, var(--border) 50%, var(--hover) 75%); background-size: 300% 100%; animation: shimmer 1.4s ease-in-out infinite; box-shadow: none; }
 @keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
-@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } .poster { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } .poster, .view .cardMenu { transition: none; } }
 .skeletonLine { display: block; height: .8rem; margin-top: .5rem; border-radius: .25rem; }
 .skeletonShort { width: 55%; }
 
@@ -89,18 +132,64 @@
 .addGroup h3, .seasons h3 { margin: 0 0 .5rem; font-size: 1rem; }
 .addButtons { display: flex; gap: .5rem; flex-wrap: wrap; }
 .addButtons button { flex: 1 1 8rem; }
-.dialog p.error { margin-bottom: 1rem; }
+.dialog .error { margin-bottom: 1rem; }
 .seasons ol { margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: .6rem; }
 .seasons li { display: flex; justify-content: space-between; gap: 1rem; padding: .6rem .85rem; font-size: .9rem; }
 .seasons li + li { border-top: 1px solid var(--border); }
 .seasons li span:last-child { color: var(--muted); }
 
+/* A title in the library: status, progress, rating, favourite, remove. */
+.library { margin-bottom: 1.5rem; }
+.libraryHeader { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.libraryHeader .inLibrary { margin: 0; }
+.favourite span { font-size: 1.1rem; line-height: 1; }
+.dialog .favourite[aria-pressed="true"] { border-color: var(--danger); color: var(--danger); font-weight: 600; }
+.statusPicker { display: flex; margin-bottom: 1rem; padding: 3px; border-radius: .65rem; background: var(--hover); }
+.dialog .statusPicker button { flex: 1 1 auto; padding-inline: .6rem; border: 0; background: transparent; white-space: nowrap; }
+.dialog .statusPicker button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 650; box-shadow: 0 1px 4px #0003; }
+.rating { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem .75rem; margin: 0 0 1rem; }
+.stars { display: flex; }
+.dialog .star { min-width: 44px; padding: 0; border: 0; background: none; color: var(--star-off); font-size: 1.75rem; line-height: 1; }
+.dialog .star[data-filled="true"] { color: var(--star); }
+@media (hover: hover) {
+  .dialog .star:hover { background: none; }
+  .stars:hover .star { color: var(--star); }
+  .stars .star:hover ~ .star { color: var(--star-off); }
+}
+.progress { display: grid; gap: .75rem; margin: 0 0 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: .75rem; }
+.progressHeader { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin: 0; }
+.progressValue { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pickers { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.pickers > span { display: grid; gap: .25rem; min-width: 0; }
+.pickers label { color: var(--muted); font-size: .85rem; }
+.pickers select { min-width: 0; min-height: 44px; padding: .5rem .6rem; font: inherit; font-size: 1rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: .5rem; }
+.pickers select:disabled { opacity: .6; }
+.dialog .nextEpisode { display: flex; align-items: center; justify-content: center; gap: .5rem; }
+.nextEpisode span { font-weight: 500; opacity: .85; }
+.offer, .confirm { padding: .85rem 1rem; border-radius: .6rem; }
+.offer { background: var(--accent-soft); }
+.offer p, .confirm p { margin: 0 0 .65rem; }
+.offerButtons { display: flex; flex-wrap: wrap; gap: .5rem; }
+.dialog .remove { padding-inline: 0; border-color: transparent; background: none; color: var(--danger); font-weight: 600; }
+@media (hover: hover) { .dialog .remove:hover { background: none; text-decoration: underline; } }
+.confirm { margin-top: .25rem; border-left: 3px solid var(--danger); border-radius: .4rem; background: var(--hover); }
+
+/* Quick actions: a small menu beside the card on desktop (placed by
+   QuickActions.tsx; centered when it has no anchor), a bottom sheet on phones. */
+.menuDialog { width: min(21rem, calc(100% - 2rem)); }
+.menuDialog .dialogBody { padding: 1rem 1.1rem 1.1rem; }
+.menuDialog .dialogHeader { align-items: center; margin-bottom: .75rem; }
+.menuDialog .dialogHeader h2 { font-size: 1.1rem; }
+.menuDialog .rating { margin-bottom: 0; }
+.anchored { inset: auto; margin: 0; box-shadow: 0 12px 40px #0005; }
+.anchored::backdrop { background: transparent; }
+
 @media (max-width: 47.99rem) {
   .heading { margin-bottom: .75rem; }
   .switcher { width: 100%; }
   .view .switcher button { flex: 1; }
-  .titleDialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-radius: 1rem 1rem 0 0; border-bottom: 0; }
-  .titleDialog .dialogBody { padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
+  .titleDialog, .menuDialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-radius: 1rem 1rem 0 0; border-bottom: 0; }
+  .titleDialog .dialogBody, .menuDialog .dialogBody { padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
   .searchDialog { margin: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
   .searchDialog .dialogBody { padding: 1rem max(1rem, env(safe-area-inset-right)) calc(1.5rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
   .searchDialog .searchBar { top: -1rem; margin: -1rem -1rem 1rem; padding: calc(.75rem + env(safe-area-inset-top)) 1rem .75rem; }

@@ -46,15 +46,20 @@ export function SearchLauncher() {
   </button>;
 }
 
+/** The TV Shows | Movies switch at the top of Discover and Home. */
+export function TypeSwitch({ type, onChange }: { type: MediaType; onChange: (type: MediaType) => void }) {
+  return <div className={styles.switcher} role="group" aria-label="Show">
+    <button type="button" aria-pressed={type === "tv"} onClick={() => onChange("tv")}>TV Shows</button>
+    <button type="button" aria-pressed={type === "movie"} onClick={() => onChange("movie")}>Movies</button>
+  </div>;
+}
+
 export function Discover() {
   const [type, setType] = useState<MediaType>("tv");
   return <div className={styles.view}>
     <h1 className={styles.heading}>Discover</h1>
     <SearchLauncher />
-    <div className={styles.switcher} role="group" aria-label="Show">
-      <button type="button" aria-pressed={type === "tv"} onClick={() => setType("tv")}>TV Shows</button>
-      <button type="button" aria-pressed={type === "movie"} onClick={() => setType("movie")}>Movies</button>
-    </div>
+    <TypeSwitch type={type} onChange={setType} />
     {/* Keyed by type, so each list starts collapsed. */}
     {sections.map((section) => <Section key={`${type}/${section.id}`} type={type} section={section.id} heading={section.heading} />)}
     <TmdbAttribution />

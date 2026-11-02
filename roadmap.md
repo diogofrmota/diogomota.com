@@ -48,30 +48,15 @@
 
 - Goal 11, Shows: TMDB + Discover (2026-11-02): version `0.11.0`. `lib/tmdb.ts` (server-only): Bearer `TMDB_READ_TOKEN`, 8 s timeout, typed responses checked field by field, `tmdbImageUrl` (TMDB's closest size, `w92` to `w780`); top rated and popular kept in memory 10 minutes, searches 5. Opening or adding a title upserts it into `shows` (seasons without specials, episode runtime with the latest episode's as fallback, movie runtime, TMDB rating in the new `vote_average` from `005_show_rating.sql`), fetched again once older than 7 days, the old copy kept if TMDB fails. Discover: TV Shows | Movies switch over Top Rated, Popular and Added by Friends (accepted friends' libraries, most shared first; empty state until there are friends), poster grids of 12 with Show all 20, skeleton posters while loading, errors with Retry, TMDB logo (their file) and notice at the bottom. Search: a button in the top bar of every Shows view (AppShell gained an `actions` slot and dialogs as children) and a field at the top of Discover open a search panel (full screen on phones) searching TV shows and movies together, 300 ms after typing stops. Detail panel (bottom sheet on phones, Back/Escape close it, stacks over search): overview, seasons and episodes or runtime, Add to Library as Watching or Planned. API: `/api/shows/discover/...`, `/api/shows/titles/:type/:id`, `POST /api/shows/library`; 120 requests a minute per user. Tests use an in-process fake TMDB (`lib/tmdb-mock.ts`, test hooks only, `/api/test/tmdb` logs its requests) and fake poster images in the browser, so nothing reaches TMDB. Playwright: 97 tests (7 new in `shows-discover.spec.ts`: Discover sections and skeletons, search from every view with debounce, errors and Retry, phone detail sheet and add to library with the rows checked, phone search panel, API validation and 401s, the 7-day refresh and memory caches, Added by Friends with accepted vs pending friends). Lint, typecheck, production build and all e2e tests pass (committed on main, not pushed).
 
+- Goal 12, Shows: Home (2026-11-02): version `0.12.0`. Home is the library: TV Shows | Movies switch (shared with Discover) over Watching, Planned and Completed, each with the latest change first (12 until Show all) and a count; empty library shows "Start by discovering shows!" (Go to Discover, Search), empty sections link to Discover. Cards: poster, status badge, heart for favourites, title, year, `S2 E5`/Not started for TV being watched, stars for rated completed titles. Quick actions (status and rating) from a ⋯ button shown on hover/focus with a mouse, a right click, or a half-second long press on touch (menu beside the card on desktop, bottom sheet on phones; Back/Escape close it; the finger lifting doesn't close it). Detail panel: Favourite, status, progress (season and episode pickers, Next episode across seasons), 1–5 stars (same star or Clear removes), Remove from library (asks first, then offers to add again); reaching the last episode offers Mark as completed / Not yet. One library state (`components/shows/library.tsx`) for Home, Discover, search and the panels, with optimistic changes sent in order and undone with a message if refused (Tasks' model). API: `GET /api/shows/library`, `PATCH`/`DELETE /api/shows/library/{type}/{tmdbId}` (validated: statuses, 1–5, booleans, episodes the cached show has, no progress for movies; 404 outside your library). `006_library_updated_at.sql` adds `user_shows.updated_at`. Loading the library refreshes titles older than 7 days from TMDB after answering (`after()`), as Goal 11 left to do. Shows e2e helpers moved to `e2e/shows.ts`. Playwright: 103 tests (6 new in `shows-home.spec.ts`: welcome, add from Discover and the switch; detail panel status, progress, last-episode offer, rating, favourite, remove; quick actions with ⋯, right click and a refused change undone; phone long press and bottom sheets; API validation and ownership; the stale-title refresh). Lint, typecheck, production build and all e2e tests pass (committed on main, not pushed).
+
 ## To-do
 
-### [You] Goal 11 — Push
+### [You] Goals 11 and 12 — Push
 
-- [ ] Copy `TMDB_READ_TOKEN` from the root `.env` into `app/.env.local`: it isn't there yet, so `npm run dev` shows "TMDB isn't answering" in Discover (the e2e tests don't need it).
-- [ ] Push. The deploy is `v0.11.0` and applies `005_show_rating.sql`. Then on your phone: Discover in both TV Shows and Movies, search from Home and Profile, open a title and add it as Watching.
-
----
-
-### Goal 12 — Shows: Home
-
-```
-/goal Build the Home (library) view of the Shows app on diogomota.com. Read plan.md (App 2 — Shows Tracker: Home, UI/UX Details) and roadmap.md first.
-
-- First bump the version: `npm version 0.12.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.12.x.
-- TV Shows | Movies toggle filtering all sections; sections Watching (with progress like S2 E5), Planned, Completed (with rating).
-- Cards: poster, title, year, status badge. Long press (mobile) or a menu (desktop) for quick status change and rating.
-- Detail panel: overview, rating, seasons/episodes (TV) or runtime (movie); change status, set progress (season/episode pickers, "next episode" button), rate 1-5 stars, mark favourite, remove from library.
-- Completing the last episode offers to mark the show completed.
-- Empty states as in plan.md.
-- Playwright tests (TMDB mocked): add, change status, progress, rate, favourite, remove, toggle filter.
-
-Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not push).
-```
+- [ ] Push. Pushing both commits at once deploys only the newest, as `v0.12.0`, and applies `005_show_rating.sql` and `006_library_updated_at.sql` (to deploy `v0.11.0` first, `git push origin 09a30c1:main`, wait for the deploy, then `git push`).
+- [ ] On your phone, Discover: both TV Shows and Movies, search from Home and Profile, open a title and add it as Watching.
+- [ ] On your phone, Home: the welcome on an empty library; add a few titles; long-press a card to change its status and rate it; open a show, Next episode a few times, pick the last episode and Mark as completed; favourite one; remove one; switch to Movies.
 
 ---
 

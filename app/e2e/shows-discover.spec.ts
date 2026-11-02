@@ -1,55 +1,16 @@
 import { randomBytes, randomInt } from "node:crypto";
-import type { Locator, Page } from "@playwright/test";
 import { expect, newUser, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
+import { card, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, row, section, tab, tmdbRequests, typeSwitch, viewHeading } from "./shows";
 
-// The dev server runs with test hooks, so the app's server asks a fake TMDB
-// (lib/tmdb-mock.ts) and never the real one; fixtures.ts fakes the poster images.
-// The fake's ids start above this (lib/tmdb-mock.ts can't be imported here: it
-// is server-only).
-const mockBase = 2_100_000_000;
 const contextOptions = () => ({ extraHTTPHeaders: { "X-Forwarded-For": `10.${[...randomBytes(3)].join(".")}` } });
 
-async function openShows(page: Page) {
-  const user = newUser();
-  await signUp(page, user, "/signup?next=/shows");
-  await expect(page).toHaveURL("/shows");
-  return user;
-}
-const tab = (page: Page, view: string) =>
-  page.getByRole("navigation", { name: "Shows", exact: true }).getByRole("button", { name: view, exact: true });
-const viewHeading = (page: Page) => page.getByRole("main").getByRole("heading", { level: 1 });
-const section = (page: Page, heading: string) => page.getByRole("region", { name: heading, exact: true });
-const grid = (scope: Page | Locator, name: string) => scope.getByRole("list", { name, exact: true });
-const card = (scope: Locator, title: string) =>
-  scope.getByRole("button", { name: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")},`) });
-const typeSwitch = (page: Page, name: "TV Shows" | "Movies") =>
-  page.getByRole("group", { name: "Show" }).getByRole("button", { name, exact: true });
-
-/** The requests the fake TMDB answered for this path, e.g. "/tv/top_rated". */
-async function tmdbRequests(page: Page, path: string): Promise<{ path: string; query: string | null; authorized: boolean }[]> {
-  return (await (await page.request.get(`/api/test/tmdb?${new URLSearchParams({ path })}`)).json()).requests;
-}
-async function libraryRows(username: string) {
-  const { rows } = await withDatabase((client) => client.query(
-    `SELECT s.type, s.tmdb_id, us.status, us.rating, us.current_season, us.current_episode, us.is_favourite
-     FROM user_shows us JOIN users u ON u.id = us.user_id JOIN shows s ON s.id = us.show_id
-     WHERE u.username = $1 ORDER BY s.type DESC, s.tmdb_id`, [username]));
-  return rows;
-}
 async function cachedShow(type: "tv" | "movie", tmdbId: number) {
   const { rows } = await withDatabase((client) => client.query(
     `SELECT title, year, poster_url, vote_average::float8 AS rating, overview, runtime, episode_runtime,
        episodes_per_season, last_updated > now() - interval '1 minute' AS just_updated
      FROM shows WHERE type = $1 AND tmdb_id = $2`, [type, tmdbId]));
   return rows[0];
-}
-async function expectNoHorizontalScroll(page: Page) {
-  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
-    scrollWidth: document.documentElement.scrollWidth,
-    clientWidth: document.documentElement.clientWidth,
-  }));
-  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
 test("Discover shows Top Rated, Popular and Added by Friends, the same for TV shows and movies", async ({ page, context }) => {
@@ -227,17 +188,17 @@ test.describe("on a phone", () => {
     expect(await libraryRows(user.username)).toEqual([]);
 
     await detail.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Watching" }).tap();
-    await expect(detail.getByRole("status")).toHaveText("✓ In your library · Watching");
+    await expect(detail.getByRole("status")).toHaveText("✓ In your library");
+    await expect(detail.getByRole("group", { name: "Status" }).getByRole("button", { name: "Watching" })).toHaveAttribute("aria-pressed", "true");
     await expect(detail.getByRole("group", { name: "Add to Library" })).toHaveCount(0);
-    expect(await libraryRows(user.username)).toEqual([{
-      type: "tv", tmdb_id: mockBase + 101, status: "watching", rating: null, current_season: null, current_episode: null, is_favourite: false,
-    }]);
+    expect(await libraryRows(user.username)).toEqual([row("tv", mockBase + 101)]);
 
     // Back closes it; opened again, it knows the title is in the library.
     await page.goBack();
     await expect(detail).toBeHidden();
     await card(grid(page, "Popular TV shows"), "Harbor Lights").tap();
-    await expect(detail.getByRole("status")).toHaveText("✓ In your library · Watching");
+    await expect(detail.getByRole("status")).toHaveText("✓ In your library");
+    await expect(detail.getByRole("group", { name: "Status" }).getByRole("button", { name: "Watching" })).toHaveAttribute("aria-pressed", "true");
     await detail.getByRole("button", { name: "Close", exact: true }).tap();
     await expect(detail).toBeHidden();
 
@@ -247,14 +208,12 @@ test.describe("on a phone", () => {
     await expect(movie).toContainText("Movie · 1994 · ★ 8.9");
     await expect(movie).toContainText("2h 8m");
     await movie.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Planned" }).tap();
-    await expect(movie.getByRole("status")).toHaveText("✓ In your library · Planned");
+    await expect(movie.getByRole("status")).toHaveText("✓ In your library");
+    await expect(movie.getByRole("group", { name: "Status" }).getByRole("button", { name: "Planned" })).toHaveAttribute("aria-pressed", "true");
     expect(await cachedShow("movie", mockBase + 201)).toMatchObject({
       title: "Paper Moons", year: 1994, runtime: 128, episode_runtime: null, episodes_per_season: null,
     });
-    expect(await libraryRows(user.username)).toEqual([
-      { type: "tv", tmdb_id: mockBase + 101, status: "watching", rating: null, current_season: null, current_episode: null, is_favourite: false },
-      { type: "movie", tmdb_id: mockBase + 201, status: "planned", rating: null, current_season: null, current_episode: null, is_favourite: false },
-    ]);
+    expect(await libraryRows(user.username)).toEqual([row("tv", mockBase + 101), row("movie", mockBase + 201, { status: "planned" })]);
     await page.keyboard.press("Escape");
     await expect(movie).toBeHidden();
     await expectNoHorizontalScroll(page);
@@ -296,9 +255,7 @@ test("the library API checks what it adds, and who asks", async ({ page, baseURL
   expect((await unknown.json()).error).toBe("TMDB doesn't have this title.");
   expect((await add({ type: "tv", tmdbId: mockBase + 3, status: "planned" }, { Origin: "https://evil.example" })).status()).toBe(403);
   expect((await page.request.post("/api/shows/library", { data: "not json", headers: { "Content-Type": "text/plain" } })).status()).toBe(415);
-  expect(await libraryRows(user.username)).toEqual([
-    { type: "tv", tmdb_id: mockBase + 2, status: "planned", rating: null, current_season: null, current_episode: null, is_favourite: false },
-  ]);
+  expect(await libraryRows(user.username)).toEqual([row("tv", mockBase + 2, { status: "planned" })]);
 
   for (const path of ["/discover/tv/upcoming", "/discover/anime/popular", "/discover/tv", "/titles/book/1", "/titles/tv/abc"]) {
     expect((await page.request.get(`/api/shows${path}`)).status(), path).toBe(404);
