@@ -1,0 +1,146 @@
+# Deploys main to https://diogomota.com: check (ci.yml), build and push the image
+# to Docker Hub, then copy the stack files to the VPS and run infra/deploy.sh there.
+# Rollback: run it by hand on main with image_tag set to an older short SHA, which
+# skips check and image (README.md, Production).
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Rollback: an existing image tag (7-character short SHA) to deploy without building. Leave empty to build and deploy main."
+        type: string
+        required: false
+        default: ""
+
+# One run at a time and never cancelled midway: a newer push waits for the running
+# deploy, so images are pushed and deployed in commit order.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: diogofrmota/diogomota-com
+
+jobs:
+  check:
+    # Only main is built and deployed; a rollback skips the build.
+    if: github.ref == 'refs/heads/main' && !inputs.image_tag
+    uses: ./.github/workflows/ci.yml
+
+  image:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Short commit SHA
+        id: tag
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./app
+          # db/migrations is outside ./app; the Dockerfile copies it from this named context.
+          build-contexts: migrations=db/migrations
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: image
+    # After a successful build, or on its own for a rollback (check and image skipped).
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' &&
+      (needs.image.result == 'success' || inputs.image_tag != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TAG: ${{ inputs.image_tag || needs.image.outputs.tag }}
+      APP_DIR: /opt/diogomota
+      HEALTH_URL: https://diogomota.com/api/health
+    steps:
+      - name: Check the image tag
+        run: |
+          if [[ ! $TAG =~ ^[0-9a-f]{7}$ ]]; then
+            echo "::error::image_tag must be a 7-character short commit SHA, e.g. 14210eb"
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure SSH
+        id: ssh
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          # tr: secrets pasted on Windows can have CRLF line endings, which ssh rejects.
+          (umask 077 && printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key)
+          printf '%s\n' "$VPS_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host vps
+            HostName $VPS_HOST
+            User $VPS_USER
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            # Only the host keys in VPS_KNOWN_HOSTS are accepted.
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ~/.ssh/known_hosts
+            BatchMode yes
+            ConnectTimeout 20
+            ServerAliveInterval 15
+          EOF
+
+      - name: Copy the stack files
+        # Overwrites these paths in $APP_DIR; .env, backups/ and logs/ there are untouched.
+        run: tar -czf - docker-compose.prod.yml nginx infra db/migrations | ssh vps tar -xzf - -C "$APP_DIR"
+
+      - name: Deploy ${{ env.TAG }}
+        run: |
+          # shellcheck disable=SC2029 # expands on the runner on purpose; TAG was checked in the first step
+          ssh vps "bash $APP_DIR/infra/deploy.sh $TAG"
+
+      - name: Wait for the health check
+        run: |
+          deadline=$((SECONDS + 60))
+          until [[ $(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$HEALTH_URL") == 200 ]]; do
+            if (( SECONDS >= deadline )); then
+              echo "::error::$HEALTH_URL did not return 200 within 60 s"
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "$HEALTH_URL returned 200"
+          echo "Image tag \`$TAG\` is live, $HEALTH_URL returns 200." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show containers and app logs
+        if: failure() && steps.ssh.outcome == 'success'
+        run: |
+          # shellcheck disable=SC2029 # expands on the runner on purpose
+          ssh vps "cd $APP_DIR && docker compose ps && docker compose logs --tail 100 app"
