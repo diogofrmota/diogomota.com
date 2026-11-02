@@ -27,12 +27,14 @@ export default async function AppsPage({ searchParams }: PageProps<"/apps">) {
   const username = session?.user.username ?? null;
   const next = username ? null : safeNextPath((await searchParams).next);
   const prompted = apps.find((app) => next === app.href || next?.startsWith(`${app.href}/`));
+  // The image's Docker Hub version tag (Dockerfile, deploy.yml); unset outside the image.
+  const version = process.env.APP_VERSION ?? "dev";
 
   return (
     <SitePage>
       <TopBar username={username} next={next} />
       <main className={styles.main}>
-        <h1 className={styles.title}>apps</h1>
+        <h1 className={styles.title}>apps - {version}</h1>
         <AppList apps={apps} loggedIn={username !== null} prompted={prompted?.href} />
       </main>
     </SitePage>

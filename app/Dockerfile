@@ -38,6 +38,11 @@ COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 COPY --from=builder /app/scripts ./scripts
 COPY --from=migrations / ./db/migrations/
 
+# The image's version tag (vX.Y.Z), passed in by deploy.yml and shown on /apps.
+# Set last so a new version doesn't invalidate the layers above.
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
+
 USER node
 EXPOSE 3000
 CMD ["node", "server.js"]

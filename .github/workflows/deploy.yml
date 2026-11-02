@@ -37,16 +37,34 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write # to tag the commit with its version
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The existing vX.Y.Z tags, to pick the next version.
+          fetch-tags: true
 
       - name: Short commit SHA
         id: tag
         run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Version
+        id: version
+        # app/package.json holds X.Y.0 and its X.Y is bumped by hand. The patch is one
+        # more than the newest vX.Y.* git tag, or 0 for the first build of X.Y.
+        run: |
+          base=$(jq -r .version app/package.json)
+          if [[ ! $base =~ ^([0-9]+\.[0-9]+)\.0$ ]]; then
+            echo "::error::app/package.json version must be X.Y.0 (CI sets the patch), not $base"
+            exit 1
+          fi
+          line=${BASH_REMATCH[1]}
+          last=$(git tag --list "v$line.*" | sed -nE 's/^v[0-9]+\.[0-9]+\.([0-9]+)$/\1/p' | sort -n | tail -n 1)
+          echo "version=v$line.$((${last:--1} + 1))" >> "$GITHUB_OUTPUT"
 
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
@@ -60,12 +78,24 @@ jobs:
           context: ./app
           # db/migrations is outside ./app; the Dockerfile copies it from this named context.
           build-contexts: migrations=db/migrations
+          build-args: APP_VERSION=${{ steps.version.outputs.version }}
           push: true
           tags: |
             ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # After the push, so a failed build doesn't use up a version.
+      - name: Tag the commit ${{ steps.version.outputs.version }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$VERSION" -f sha="$GITHUB_SHA" --silent
+          echo "Image \`$IMAGE:$VERSION\` (also \`:$TAG\` and \`:latest\`) pushed, commit tagged \`$VERSION\`." >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
     needs: image

@@ -27,6 +27,7 @@
 - Goal 5, auth + account (2026-11-02): Auth.js (`next-auth@5.0.0-beta.32`, credentials provider) in `app/auth.ts`; JWT session cookie holding only user id and username. Sign up (`/signup`: username 3-20 `[a-z0-9_]`, saved lowercase; email; password 10+ characters and at most 72 bytes, bcryptjs cost 12) logs straight in; log in (`/login`) by username or email in any case. One message for wrong password or unknown account, and one for a taken username or email (sign-up can't hide existence completely without email verification). In-memory rate limits: login 10 per 15 min per IP, sign-up 5 per hour per IP, current-password checks 10 per 15 min per user; the IP is the first `X-Forwarded-For` entry, which nginx sets. `proxy.ts` (Next 16's name for middleware) guards `/shared`, `/shows`, `/account` (redirect to `/apps?next=...`, which opens that app's login prompt) and `/api/shared`, `/api/shows` (401); `next` only accepts same-site paths. `/apps` logged in: username + account menu (Account settings, Logout), cards open the apps. `/account`: change username (unique), change password (current + new + confirm), theme light/dark in `users.theme_preference`, "Forgot password" placeholder (also on `/login`), logout. `/shared` and `/shows` placeholders show "signed in as <username>" in the saved theme. `002_username_format.sql` makes the database enforce the username rule. Playwright: 47 tests (20 new for auth and account); each test sends its own `X-Forwarded-For` so rate limits don't collide, and a global teardown deletes the `e2e_` accounts. `AUTH_SECRET` copied into `app/.env.local` (`267d5d9`, pushed)
 - Goal 5 live (2026-11-02): pushed `267d5d9` (also deploying Goal 4); the deploy applied `002_username_format.sql`. On https://diogomota.com: own account signed up, logout and login work, `/shared` opens, theme set in Account settings. Logged out, `/shared` redirects to `/apps?next=%2Fshared` and `/api/shared/*` returns 401; `/api/health` ok
 - Goal 6, password reset (2026-11-02): "Forgot password?" on `/login` and "Reset by email" in Account settings open `/forgot-password` (email → one answer whether or not an account has it; the lookup and the email run after the response with `after()`, so the timing doesn't tell either). 32-byte random token, only its SHA-256 stored in `password_resets`, 1 hour, single use; a new request invalidates the account's earlier links. Rate limits: 5 requests per hour per IP (error message), 3 emails per hour per address (silent: same answer, nothing sent). Email through the `resend` package from `MAIL_FROM` (plain text + minimal HTML, link built on `AUTH_URL`, never the Host header); in development without `RESEND_API_KEY` it is printed to the dev server console. `/reset-password` shows "Choose a new password for <username>" (new + confirm, sign-up rules) or "link expired"; setting the password uses up the token in the same SQL statement. `003_password_changed_at.sql`: a password reset or change sets `users.password_changed_at`; each session carries the value it logged in under and `auth.ts` checks it on every read, so both log out every device, this one included, and send the user to `/login?password=changed` (a change in Account settings returns to `/account` after logging in). Test hook: with `E2E_TEST_HOOKS=1` (set by `playwright.config.ts`, ignored in production) emails go to an in-memory outbox at `/api/test/outbox` instead of being sent. Playwright: 59 tests (8 new for reset; expired links are made by moving `expires_at` in the database) (committed, not pushed)
+- Versions (2026-11-02): images are also tagged `vX.Y.Z` on Docker Hub and the `/apps` title shows it (`apps - v0.6.0`; `apps - dev` locally). `app/package.json` holds `X.Y.0` (now `0.6.0`, one minor per finished goal, `1.0.0` at launch) and is bumped by hand; the image job sets the patch from the newest `vX.Y.*` git tag and tags the commit after the push. README.md, Versions (not committed)
 
 ## To-do
 
@@ -43,6 +44,7 @@
 ```
 /goal Build the shared app shell used by every app on diogomota.com. Read plan.md (Pages "/(app_name)", General UI/UX Rules) and roadmap.md first.
 
+- First bump the version: `npm version 0.7.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.7.x.
 - components/common: AppShell with a Sidebar (desktop) and BottomNav (mobile) driven by a list of tabs, a top bar with a back-to-/apps link and the same account dropdown as /apps, ThemeToggle.
 - Typography inside apps: Inter or the system font stack (not IBM Plex Mono).
 - Theme: CSS variables for light and dark, applied from the user's saved preference without a flash on load; toggling saves to the database.
@@ -60,6 +62,7 @@ Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not 
 ```
 /goal Build the Spaces system of the Shared app (/shared) on diogomota.com. Read plan.md (App 1 — Shared: Core Concept, Settings, UI/UX Details) and roadmap.md first.
 
+- First bump the version: `npm version 0.8.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.8.x.
 - First visit with no space: "Create a Space" (name) or "Join with Code". One space per user.
 - Invites: owner generates a code (short, unambiguous characters, e.g. 8 chars), expires after 24 h, single use. Joining with an invalid, expired or used code shows a clear error.
 - Each member gets a distinct color from a fixed accessible palette on join.
@@ -78,6 +81,7 @@ Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not 
 ```
 /goal Build the Calendar view of the Shared app on diogomota.com. Read plan.md (App 1 — Shared: Calendar) and roadmap.md first.
 
+- First bump the version: `npm version 0.9.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.9.x.
 - Month, week and day views, Google Calendar-like, usable on mobile (use FullCalendar's MIT-licensed plugins or a custom implementation; style it to match the app theme in light and dark).
 - Add/edit/delete events: title, date, start/end time, optional notes, assignee = one member or the whole group. Event color = assignee's member color; group events use a neutral color plus a group badge/icon.
 - Click an event to view, edit or delete it (modal on desktop, bottom sheet on mobile; back button closes it).
@@ -96,6 +100,7 @@ Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not 
 ```
 /goal Build the Tasks view of the Shared app on diogomota.com. Read plan.md (App 1 — Shared: Tasks) and roadmap.md first.
 
+- First bump the version: `npm version 0.10.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.10.x.
 - Multiple lists per space (create, rename, delete, reorder lists).
 - Tasks: title, optional due date and notes, assignee (member or unassigned, shown with member color), checkbox to complete. Completed tasks go to a collapsible "Done" section at the bottom.
 - Drag and drop reorder within a list with dnd-kit, working with touch and keyboard; positions persisted.
@@ -121,6 +126,7 @@ Before:
 ```
 /goal Build the TMDB integration and the Discover view of the Shows app on diogomota.com. Read plan.md (App 2 — Shows Tracker: TMDB Integration, Discover, UI/UX Details) and roadmap.md first.
 
+- First bump the version: `npm version 0.11.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.11.x.
 - lib/tmdb.ts: server-only client using TMDB_READ_TOKEN (Bearer), typed responses, timeouts, image URL helper. The token never reaches the browser.
 - Caching: when a title is added to a library or opened in detail, upsert it into the shows table (including seasons, episode counts, episode runtime). Re-fetch if last_updated is older than 7 days. Cache TMDB list endpoints (top rated, popular, search) in memory for a short time.
 - Discover with a TV Shows | Movies switch, identical layout for both: Top Rated, Popular, Added by Friends (titles in accepted friends' libraries; empty until friends exist). Cards: poster, title, year, average rating.
@@ -139,6 +145,7 @@ Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not 
 ```
 /goal Build the Home (library) view of the Shows app on diogomota.com. Read plan.md (App 2 — Shows Tracker: Home, UI/UX Details) and roadmap.md first.
 
+- First bump the version: `npm version 0.12.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.12.x.
 - TV Shows | Movies toggle filtering all sections; sections Watching (with progress like S2 E5), Planned, Completed (with rating).
 - Cards: poster, title, year, status badge. Long press (mobile) or a menu (desktop) for quick status change and rating.
 - Detail panel: overview, rating, seasons/episodes (TV) or runtime (movie); change status, set progress (season/episode pickers, "next episode" button), rate 1-5 stars, mark favourite, remove from library.
@@ -156,6 +163,7 @@ Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not 
 ```
 /goal Build the Profile view and the friends system of the Shows app on diogomota.com. Read plan.md (App 2 — Shows Tracker: Profile, friendships table) and roadmap.md first.
 
+- First bump the version: `npm version 0.13.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.13.x.
 - Favourites grid from the user's library.
 - Stats: titles completed (TV and movies), hours watched (episodes watched x episode runtime + completed movie runtimes).
 - Friends: add by username (sends a pending request), incoming requests with accept/decline, remove friend. Only accepted friends see each other's libraries.
@@ -173,6 +181,7 @@ Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not 
 ```
 /goal Polish diogomota.com for launch. Read plan.md (General UI/UX Rules, Phase 5) and roadmap.md first.
 
+- First bump the version: `npm version 0.14.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.14.x.
 - Mobile pass on every view at 375x812 and 390x844 plus desktop 1280x800: no horizontal scroll, tap targets >= 44 px, safe-area insets for the bottom nav, inputs don't trigger iOS zoom.
 - Every list/section has an empty state and every async load has a skeleton or spinner; errors show a friendly message with retry.
 - Back button behaviour consistent in both apps (views, modals, panels).
@@ -195,6 +204,7 @@ Before:
 ```
 /goal Prepare diogomota.com operations for launch. Read README.md (Production), docker-compose.prod.yml, infra/ and roadmap.md first. Nothing here connects to the VPS; give me the commands to run.
 
+- First bump the version: `npm version 1.0.0 --no-git-tag-version` in app/ (README.md, Versions), so the launch deploys as v1.0.0.
 - docs/operations.md: how to check health and logs, restart, roll back to a previous image tag, restore a backup (step by step, including a dry run into a scratch database), rotate secrets (AUTH_SECRET, DB password, Resend, TMDB, Docker Hub, deploy key), and renew/inspect certificates.
 - Optional offsite backup: a script and cron line that copies the latest dump to an external location of my choice (leave the target as a clearly marked variable), with a note on what it costs.
 - Verify the backup and restore scripts work locally against the dev compose stack: dump, drop, restore, data is back.

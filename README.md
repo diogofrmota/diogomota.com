@@ -41,7 +41,7 @@ From the repo root:
 docker build --build-context migrations=db/migrations -t diogomota-com ./app
 ```
 
-`db/migrations` is outside `./app`, so `--build-context` is how it gets into the image. Inside a container, `npm run migrate` applies the migrations and `node server.js` starts the app on port 3000.
+`db/migrations` is outside `./app`, so `--build-context` is how it gets into the image. Inside a container, `npm run migrate` applies the migrations and `node server.js` starts the app on port 3000. The `/apps` title shows the image's version, `apps - dev` unless you add `--build-arg APP_VERSION=v0.6.0` (also `dev` with `npm run dev`).
 
 ## Production
 
@@ -52,16 +52,22 @@ The VPS runs [docker-compose.prod.yml](docker-compose.prod.yml) (Postgres, app, 
 Every push to `main` runs [.github/workflows/deploy.yml](.github/workflows/deploy.yml), one run at a time:
 
 1. **check**: `npm ci`, lint, typecheck and build in `app/`. This is [.github/workflows/ci.yml](.github/workflows/ci.yml), which also runs on every pull request.
-2. **image**: builds the image and pushes it to Docker Hub as `diogofrmota/diogomota-com:<tag>` and `:latest`. The tag is the short commit SHA, its first 7 characters.
+2. **image**: builds the image and pushes it to Docker Hub as `diogofrmota/diogomota-com:<tag>`, `:<version>` and `:latest`. The tag is the short commit SHA, its first 7 characters; the version (see [Versions](#versions)) is also shown on `/apps` and added to the commit as a git tag.
 3. **deploy**: over SSH as `deploy`, copies `docker-compose.prod.yml`, `nginx/`, `infra/` and `db/migrations/` to `/opt/diogomota` and runs [infra/deploy.sh](infra/deploy.sh) `<tag>` there. That pulls the image, applies pending migrations, sets `IMAGE_TAG=<tag>` in `.env`, runs `docker compose up -d app nginx`, reloads nginx and deletes old app images (it keeps the deployed one and the two newest others). The job then waits up to 60 s for https://diogomota.com/api/health to return 200; if it doesn't, the run fails and prints the app's logs.
 
 The app container is replaced in place, so expect a few seconds of 502s. Apart from `IMAGE_TAG`, the deploy never touches `.env`, `backups/` or `logs/` on the VPS. A changed `infra/crontab` is copied but not installed: run `crontab infra/crontab` there.
 
 The workflow needs these repository secrets (Settings → Secrets and variables → Actions): `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` (read & write), `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` and `VPS_KNOWN_HOSTS`. GitHub masks secret values in logs, so the Docker Hub username, the VPS address and the word `deploy` show up as `***`.
 
+### Versions
+
+Every deploy gets the next patch version, `vX.Y.Z`. `app/package.json` holds `X.Y.0`, and the image job sets the patch to one more than the newest `vX.Y.*` git tag (`0` if there is none yet). To move to a new minor (or major), e.g. when a roadmap goal starts, run `npm version 0.7.0 --no-git-tag-version` in `app/` and commit: the next deploy is `v0.7.0`, then `v0.7.1`, and so on. A version other than `X.Y.0` in `package.json` fails the image job.
+
+A failed build doesn't use up a number, because the git tag is only added once the image is on Docker Hub. Run `git fetch --tags` to get the tags locally.
+
 ### Rollback
 
-GitHub → Actions → Deploy → Run workflow, on `main`, with `image_tag` set to the 7-character short SHA of an older commit (`git log --oneline`, or the tags on Docker Hub). This skips check and image and deploys that existing image, using the compose, nginx and infra files of the current `main`. Migrations only go forward and are never undone, so the older image has to work with the current schema.
+GitHub → Actions → Deploy → Run workflow, on `main`, with `image_tag` set to the 7-character short SHA of an older commit (`git log --oneline`, the tags on Docker Hub, or `git rev-parse --short v0.6.3` for a version). This skips check and image and deploys that existing image, using the compose, nginx and infra files of the current `main`. Migrations only go forward and are never undone, so the older image has to work with the current schema.
 
 The rollback holds until the next push to `main`, or a run with an empty `image_tag`, which deploys the newest commit again. Without GitHub, the same thing works by hand: `ssh deploy@162.19.252.190`, then `bash /opt/diogomota/infra/deploy.sh <tag>`. To see which tag is live, check the summary of the last Deploy run, or run `grep IMAGE_TAG /opt/diogomota/.env` on the VPS.
 

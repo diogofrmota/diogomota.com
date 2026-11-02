@@ -1,0 +1,6 @@
+# New files get LF line endings, matching .gitattributes. JetBrains IDEs read this
+# file natively; VS Code needs the EditorConfig extension (or "files.eol": "\n").
+root = true
+
+[*]
+end_of_line = lf

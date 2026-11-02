@@ -1,9 +1,11 @@
-# Files that run on Linux (the VPS, containers) keep LF line endings, also in a
-# Windows checkout with core.autocrlf, so they still work after being copied with scp.
-*.sh           text eol=lf
-*.conf         text eol=lf
-*.yml          text eol=lf
-*.yaml         text eol=lf
-*.sql          text eol=lf
-.env*.example  text eol=lf
-infra/crontab  text eol=lf
+# Every text file has LF line endings, in the repo and in every checkout, also on
+# Windows with core.autocrlf=true (the Git for Windows default). Scripts and configs
+# run on Linux (the VPS, containers), and the tooling writes LF, so a CRLF working
+# copy only produces "LF will be replaced by CRLF" warnings.
+* text=auto eol=lf
+
+# Binary, never converted.
+*.png   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
