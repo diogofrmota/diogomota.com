@@ -1,17 +1,36 @@
-.main p {
-  margin: 0;
+/* Every line the same size and white, left-aligned in a block as wide as the
+   longest line. SitePage's grid centers that block on the screen. */
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  line-height: 1.625;
+  text-align: left;
 }
 
-.name {
-  margin: 0 0 0.5rem;
-  font-size: clamp(1.5rem, 6vw, 2rem);
+.main h1,
+.main p {
+  margin: 0;
+  font-size: 1rem;
   font-weight: 400;
 }
 
-.employer {
-  color: #fff;
+.main a {
+  transition: opacity 150ms ease;
 }
 
-.main .action {
-  margin-top: 2rem;
+@media (hover: hover) {
+  .main a:hover {
+    opacity: 0.7;
+  }
+}
+
+.checkApps {
+  text-decoration: none;
+}
+
+@media (min-width: 48rem) {
+  .main {
+    gap: 1rem;
+  }
 }

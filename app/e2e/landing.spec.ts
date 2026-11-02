@@ -13,6 +13,29 @@ test("landing shows the intro and no navbar or footer", async ({ page }) => {
   await expect(page.getByRole("contentinfo")).toHaveCount(0);
 });
 
+test("landing lines are one size and white, left-aligned in a centered block", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const main = page.getByRole("main");
+
+  const lines = await main.locator("h1, p, a").evaluateAll((elements) =>
+    elements.map((element) => {
+      const style = getComputedStyle(element);
+      return { fontSize: style.fontSize, color: style.color, textAlign: style.textAlign };
+    }),
+  );
+  expect(lines).toHaveLength(6); // 4 lines, 2 links
+  for (const line of lines) {
+    expect(line).toEqual({ fontSize: "16px", color: "rgb(255, 255, 255)", textAlign: "left" });
+  }
+
+  // The block is as wide as its longest line and sits in the middle of the screen.
+  const box = (await main.boundingBox())!;
+  expect(box.width).toBeLessThan(400);
+  expect(Math.abs(box.x - (1280 - box.x - box.width))).toBeLessThanOrEqual(1);
+});
+
 test("landing links go to Richemont and to /apps", async ({ page }) => {
   await page.goto("/");
   const richemont = page.getByRole("link", { name: "Richemont" });

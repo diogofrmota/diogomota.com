@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Brackets, SitePage } from "@/components/site/SitePage";
-import site from "@/components/site/site.module.css";
 import { baseOpenGraph, siteDescription, siteName, siteViewport } from "@/lib/site";
 import styles from "./page.module.css";
 
@@ -16,21 +15,22 @@ export default function Home() {
   return (
     <SitePage centered>
       <main className={styles.main}>
-        <h1 className={styles.name}>diogo mota</h1>
-        <p className={site.muted}>
+        <h1>diogo mota</h1>
+        <p>
           devops engineer @{" "}
+          {/* An aria-label rather than hidden text, so copying the line doesn't pick it up. */}
           <a
             href="https://www.richemont.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className={styles.employer}
+            aria-label="Richemont (opens in a new tab)"
           >
-            Richemont<span className={site.visuallyHidden}> (opens in a new tab)</span>
+            Richemont
           </a>
         </p>
-        <p className={site.muted}>currently based in Lisbon, PT</p>
-        <p className={styles.action}>
-          <Link href="/apps" className={site.bracket}>
+        <p>currently based in Lisbon, PT</p>
+        <p>
+          <Link href="/apps" className={styles.checkApps}>
             <Brackets>Check Apps</Brackets>
           </Link>
         </p>

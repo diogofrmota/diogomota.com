@@ -18,19 +18,21 @@ export default function OpenGraphImage() {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           background: "#000",
-          color: "#a3a3a3",
+          color: "#fff",
           fontFamily: "IBM Plex Mono",
-          fontSize: 36,
-          lineHeight: 1.6,
+          fontSize: 44,
+          lineHeight: 1.625,
         }}
       >
-        <div style={{ color: "#fff", fontSize: 72, marginBottom: 24 }}>diogo mota</div>
-        <div>devops engineer @ Richemont</div>
-        <div>currently based in Lisbon, PT</div>
+        {/* Like the landing page: equal white lines, left-aligned in a centered block. */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 44 }}>
+          <div>diogo mota</div>
+          <div>devops engineer @ Richemont</div>
+          <div>currently based in Lisbon, PT</div>
+        </div>
       </div>
     ),
     { ...size, fonts: [{ name: "IBM Plex Mono", data: plexMono, weight: 400, style: "normal" }] },

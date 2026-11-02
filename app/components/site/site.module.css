@@ -43,16 +43,6 @@
   color: #a3a3a3;
 }
 
-/* Read by screen readers, not shown. */
-.visuallyHidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 /* "[Label]" links and buttons. At least 44px tall for touch. */
 .bracket {
   display: inline-flex;
