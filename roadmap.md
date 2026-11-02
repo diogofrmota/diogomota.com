@@ -30,23 +30,14 @@
 - Goal 6 live (2026-11-02): pushed (the deploy applied `003_password_changed_at.sql`). On https://diogomota.com: reset with own email worked, the email landed in the inbox (not spam). Decided: a password change in Account settings keeps logging out every device, the current one included
 - Versions (2026-11-02): images are also tagged `vX.Y.Z` on Docker Hub and the `/apps` title shows it (`apps (v0.6.0)`, the version small and grey; `apps (dev)` locally). `app/package.json` holds `X.Y.0` (now `0.6.0`, one minor per finished goal, `1.0.0` at launch) and is bumped by hand; the image job sets the patch from the newest `vX.Y.*` git tag and tags the commit after the push. README.md, Versions (not committed)
 
+- Goal 7, app shell (2026-11-02): `app/package.json` at `0.7.0`. `components/common/AppShell` takes the app's tabs (`{ id, label, icon, view }`, the first is the default) and shows a sticky top bar (`‹ Apps` back to `/apps`, the app's name, `ThemeToggle`, the same `AccountMenu` as `/apps`, its colors now from `--menu-*` variables with the site's as defaults, long usernames cut off with an ellipsis), the tabs as `Sidebar` (768 px and wider, sticky on the left) or `BottomNav` (narrower, fixed to the bottom, clear of the home indicator with `viewport-fit=cover` and safe-area insets), and the current view. Views switched away from stay mounted but hidden (React `<Activity>`). System font stack. Theme: CSS variables on the shell, switched by `data-theme`, which the server renders from `users.theme_preference`, so there is no flash on load; `<meta name="theme-color">` follows it. The toggle saves through the `setThemePreference` server action and switches back if that fails; both theme actions call `revalidatePath("/", "layout")`, so pages reached with back or forward aren't still in the old theme. `hooks/useAppView.ts`: the view and a stack of open panels are React state, each change is a `history.pushState` entry (under `appView` in `history.state`, beside Next.js's keys) and `popstate` restores it; `closePanel()` is `history.back()`; a reload starts on the default view. Next.js replaces the current entry's state when it refreshes (e.g. a server action that revalidates), so the hook stamps it again after every render; back pressed before hydration is caught with the Navigation API. Views read it with `useAppView()`. `/shared` (Calendar | Tasks | Settings) and `/shows` (Home | Discover | Profile) use the shell with placeholder views; `AppPlaceholder` removed. Test page `/test/app-shell` (test hooks only, 404 in production) has panels and a router refresh. Playwright: 74 tests (15 new in `app-shell.spec.ts`) (committed, not pushed)
+
 ## To-do
 
-### Goal 7 — App shell
+### [You] Goal 7 — Push
 
-```
-/goal Build the shared app shell used by every app on diogomota.com. Read plan.md (Pages "/(app_name)", General UI/UX Rules) and roadmap.md first.
-
-- First bump the version: `npm version 0.7.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.7.x.
-- components/common: AppShell with a Sidebar (desktop) and BottomNav (mobile) driven by a list of tabs, a top bar with a back-to-/apps link and the same account dropdown as /apps, ThemeToggle.
-- Typography inside apps: Inter or the system font stack (not IBM Plex Mono).
-- Theme: CSS variables for light and dark, applied from the user's saved preference without a flash on load; toggling saves to the database.
-- SPA navigation hook (hooks/useAppView or similar): the URL stays /<app>, the current view lives in React state, history.pushState/popstate make the browser back button move between views and close open modals/panels.
-- Wire /shared (Calendar | Tasks | Settings) and /shows (Home | Discover | Profile) to the shell with empty placeholder views.
-- Playwright tests: tabs switch views without URL change, back button returns to the previous view, bottom nav at 375 px and sidebar at 1280 px, theme persists across reloads.
-
-Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not push).
-```
+- [ ] Push. No migration; the deploy is `v0.7.0`.
+- [ ] On your phone at https://diogomota.com: open Shared and Shows, switch tabs, go back through the views with the back gesture or button and on out to `/apps`, switch the theme and reload. The bottom bar should sit clear of the home indicator.
 
 ---
 

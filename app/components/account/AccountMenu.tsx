@@ -48,7 +48,7 @@ export function AccountMenu({ username }: { username: string }) {
         aria-controls={listId}
         onClick={() => setOpen((value) => !value)}
       >
-        {username}
+        <span className={styles.name}>{username}</span>
         <span aria-hidden="true" className={styles.caret}>
           ▾
         </span>

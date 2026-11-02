@@ -70,7 +70,7 @@ test("change username", async ({ page }) => {
   // The session has the new name too.
   await expect(accountButton(page, renamed)).toBeVisible();
   await page.goto("/shows");
-  await expect(page.getByRole("main")).toContainText(`signed in as ${renamed}`);
+  await expect(accountButton(page, renamed)).toBeVisible();
 
   await logOut(page, renamed);
   await logIn(page, user.username, user.password);

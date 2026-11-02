@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth, signOut, unstable_update } from "@/auth";
 import { formPassword, normalizeUsername, passwordError, usernameError } from "@/lib/account-rules";
@@ -9,6 +10,7 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { passwordCheckLimit } from "@/lib/rate-limit";
 import {
   getPasswordHash,
+  type Theme,
   updatePasswordHash,
   updateThemePreference,
   updateUsername,
@@ -71,8 +73,25 @@ export async function saveTheme(_previous: FormState, formData: FormData): Promi
   const theme = formData.get("theme");
   if (theme !== "light" && theme !== "dark") return { error: "Choose light or dark." };
 
-  await updateThemePreference(userId, theme);
+  await saveThemePreference(userId, theme);
   return { success: "Theme saved.", values: { theme } };
+}
+
+// The theme toggle in the apps' top bar (hooks/useTheme.ts). Returns whether it
+// was saved; without a session it isn't, and the toggle switches back.
+export async function setThemePreference(theme: Theme): Promise<boolean> {
+  const session = await auth();
+  if (!session || (theme !== "light" && theme !== "dark")) return false;
+
+  await saveThemePreference(session.user.id, theme);
+  return true;
+}
+
+async function saveThemePreference(userId: string, theme: Theme): Promise<void> {
+  await updateThemePreference(userId, theme);
+  // The browser keeps the pages it has shown for back and forward, each still in
+  // the theme it was rendered with. This makes them render again when next shown.
+  revalidatePath("/", "layout");
 }
 
 export async function logOut(): Promise<void> {

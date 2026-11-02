@@ -1,11 +1,16 @@
+/* Colors default to the site's (black); the apps set the --menu-* variables
+   from their theme (components/common/AppShell.module.css). */
+
 .root {
   position: relative;
+  min-width: 0;
 }
 
 .button {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  max-width: 100%;
   min-height: 2.75rem;
   padding: 0;
   border: 0;
@@ -19,8 +24,15 @@
   }
 }
 
+/* Cut off with an ellipsis when the top bar is too narrow for it. */
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .caret {
-  color: #a3a3a3;
+  color: var(--menu-muted, #a3a3a3);
   font-size: 0.75em;
 }
 
@@ -32,8 +44,8 @@
   min-width: 13rem;
   margin: 0;
   padding: 0.25rem 0;
-  border: 1px solid #444;
-  background: #0a0a0a;
+  border: 1px solid var(--menu-border, #444);
+  background: var(--menu-bg, #0a0a0a);
   list-style: none;
 }
 
@@ -62,7 +74,7 @@
 
 @media (hover: hover) {
   .item:hover {
-    background: #fff;
-    color: #000;
+    background: var(--menu-hover-bg, #fff);
+    color: var(--menu-hover-text, #000);
   }
 }

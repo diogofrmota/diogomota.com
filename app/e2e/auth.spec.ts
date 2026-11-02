@@ -17,7 +17,7 @@ test("sign up logs the new user in, and the cards go straight into the apps", as
 
   await page.getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
-  await expect(page.getByRole("main")).toContainText(`signed in as ${user.username}`);
+  await expect(accountButton(page, user.username)).toBeVisible();
 });
 
 test("sign up explains what is wrong with each field", async ({ page }) => {
@@ -120,7 +120,7 @@ test("logged out, the apps redirect to /apps, which logs in and goes back", asyn
   await page.getByLabel("Password", { exact: true }).fill(user.password);
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL("/shows");
-  await expect(page.getByRole("main")).toContainText(`signed in as ${user.username}`);
+  await expect(accountButton(page, user.username)).toBeVisible();
 });
 
 test("logged out, the apps' API routes answer 401", async ({ page }) => {
