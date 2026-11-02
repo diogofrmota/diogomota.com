@@ -36,6 +36,8 @@
 
 - Goal 9, Shared calendar (2026-11-02): version `0.9.0`; custom month, week and day views (no FullCalendar), styled with the app theme in light and dark, week view scrolls sideways on phones. Add, view, edit and delete events (title, start/end date and time, notes, one member or the whole group); member-colored events, group events neutral with a Group badge, a color legend. Details in a `<dialog>`: modal on desktop, bottom sheet on mobile; Escape and Back close it (`useAppView` panel). Times entered and shown in `Europe/Lisbon` whatever the device zone, stored as UTC `timestamptz`; spring-forward gaps rejected, repeated autumn times offer first/second occurrence. `.ics` per event and for the whole calendar (RFC 5545 escaping, CRLF, UTF-8 folding) and an Add to Google Calendar link per event. `/api/shared/events` checks current membership in the same transaction; a member who leaves loses their assignments (shown as Former member). No migration (uses the `events` and `event_assignees` tables from `001_initial.sql`). Playwright: 85 tests (5 new in `calendar.spec.ts`: desktop and mobile lifecycle, cross-space isolation, time zones and DST, iCalendar format). Lint, typecheck, production build and all e2e tests pass (committed on main, not pushed).
 
+- Goal 10, Shared tasks (2026-11-02): version `0.10.0`; any number of lists per space as chips (the open one remembered per device), Edit lists to create, rename, reorder and delete them (deleting asks first, and takes the tasks with it). Tasks with title, optional due date (Today/Tomorrow/Overdue, Lisbon dates) and notes, and an assignee shown with their member color and name, or unassigned; ticked-off tasks go to a collapsed Done section and come back at the end of the list. Reorder tasks and lists with dnd-kit (`@dnd-kit/core` 6.3.1, `@dnd-kit/sortable` 10) by a drag handle, with mouse, touch or keyboard, announced to screen readers by name and position. Delete with a bin button where there is a mouse, by swiping left on touch screens, or from the task dialog (modal on desktop, bottom sheet on mobile, Back closes it), with 5 seconds of Undo before the delete is sent. Optimistic updates: clients choose the UUIDs of what they create, changes are sent one at a time in order, and a refused change is dropped from the pending ones, which rolls it back, with a message (and a reload on 404/409). `/api/shared/tasks` checks current membership in the same transaction, another space's ids answer 404, moves renumber positions. No migration (uses `task_lists` and `tasks` from `001_initial.sql`). Empty states for no lists, an empty list and an all-done list. Playwright: 90 tests (5 new in `tasks.spec.ts`: lists lifecycle, tasks lifecycle with mouse and keyboard reorder persisting after reload, phone touch drag and swipe with undo, optimistic rollback, API scoping and validation). Lint, typecheck, production build and all e2e tests pass (committed on main, not pushed).
+
 ## To-do
 
 ### [You] Goals 7–9 — Push
@@ -45,26 +47,9 @@
 
 ---
 
-### Goal 10 — Shared: tasks
+### [You] Goal 10 — Push
 
-```
-/goal Build the Tasks view of the Shared app on diogomota.com. Read plan.md (App 1 — Shared: Tasks) and roadmap.md first.
-
-- First bump the version: `npm version 0.10.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.10.x.
-- Multiple lists per space (create, rename, delete, reorder lists).
-- Tasks: title, optional due date and notes, assignee (member or unassigned, shown with member color), checkbox to complete. Completed tasks go to a collapsible "Done" section at the bottom.
-- Drag and drop reorder within a list with dnd-kit, working with touch and keyboard; positions persisted.
-- Delete by swipe on mobile and a button on desktop, with undo for a few seconds.
-- Optimistic updates with rollback on API error.
-- API routes under /api/shared/tasks, scoped to the user's space.
-- Friendly empty states.
-- Playwright tests: create list, add tasks, reorder (persists after reload), complete, delete, assign.
-
-Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not push).
-```
-
-After:
-- [ ] Push and try the Shared app on your phone with a second account.
+- [ ] Push. The deploy is `v0.10.0` (no migration). Then try the Shared app on your phone with a second account: add tasks, assign one, drag one by its handle, swipe one away and undo.
 
 ---
 

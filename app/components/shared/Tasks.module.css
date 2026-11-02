@@ -1,0 +1,95 @@
+/* The dialogs are rendered inside .tasks, so these rules and variables reach them too. */
+.tasks { --danger: #f87171; --swipe: #b91c1c; max-width: 44rem; margin: auto; } /* --danger: 6.3:1 on --surface */
+:global([data-theme="light"]) .tasks { --danger: #b91c1c; } /* 6.5:1 on --surface */
+.tasks h1 { font-size: 1.75rem; margin: 0; letter-spacing: -.04em; }
+.tasks h2 { font-size: 1.2rem; font-weight: 600; margin: 0; overflow-wrap: anywhere; }
+.heading, .headingActions, .listHeader, .actions, .dialogHeader, .add, .alert, .toast, .inputRow, .addList, .listRow { display: flex; align-items: center; gap: .5rem; }
+.heading, .listHeader, .dialogHeader, .alert { justify-content: space-between; }
+.heading { margin-bottom: 1.25rem; }
+.muted { color: var(--muted); margin: 0; font-size: .875rem; }
+.saving { color: var(--muted); font-size: .875rem; animation: appear .2s .4s both; } /* only for slow saves */
+@keyframes appear { from { opacity: 0; } }
+.tasks button { min-height: 44px; border: 1px solid var(--border); background: var(--surface); border-radius: .5rem; padding: .5rem .85rem; cursor: pointer; }
+.tasks button:hover { background: var(--hover); }
+.tasks .primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 650; }
+.tasks .primary:hover { background: var(--accent); filter: brightness(.93); }
+.tasks .danger { color: var(--danger); }
+.tasks input, .tasks select, .tasks textarea { font: inherit; font-size: 1rem; width: 100%; min-width: 0; min-height: 44px; padding: .6rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: .4rem; }
+.tasks input[type="checkbox"] { width: 1.25rem; height: 1.25rem; min-height: 0; margin: 0; padding: 0; accent-color: var(--accent); cursor: pointer; }
+.tasks textarea { resize: vertical; }
+.alert { margin-bottom: 1rem; padding: .25rem .25rem .25rem .75rem; border-left: 3px solid var(--danger); border-radius: .4rem; background: var(--hover); }
+.alert p, .error { margin: 0; }
+.error { border-left: 3px solid var(--danger); padding: .5rem .75rem; }
+.alert button { flex-shrink: 0; }
+
+.card, .form { display: grid; gap: 1rem; }
+.card { padding: 1.25rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface); }
+.card label, .form label { display: grid; gap: .35rem; font-size: .875rem; min-width: 0; }
+.card button { justify-self: start; }
+
+.chips { display: flex; gap: .5rem; overflow-x: auto; margin: 0 -4px 1rem; padding: 4px; scrollbar-width: none; }
+.tasks .chips button { flex-shrink: 0; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 999px; }
+.tasks .chips button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.tasks .chips .newList { border-style: dashed; color: var(--muted); }
+
+.list { padding: .75rem .5rem; border: 1px solid var(--border); border-radius: .75rem; background: var(--surface); }
+.listHeader { padding: 0 .5rem .5rem; }
+.listHeader span { flex-shrink: 0; }
+.items { list-style: none; margin: 0; padding: 0; }
+.task { position: relative; overflow: hidden; border-radius: .5rem; }
+.task + .task { box-shadow: 0 -1px 0 var(--border); }
+.dragging { z-index: 2; box-shadow: 0 8px 28px #0005, 0 0 0 1px var(--border); }
+.dragging .row, .listRow.dragging { background: var(--hover); }
+.row { position: relative; align-items: flex-start; display: flex; background: var(--surface); touch-action: pan-y; transition: transform .2s ease; }
+.swiping { transition: none; }
+.swipeBehind { position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; gap: .4rem; padding: 0 1.25rem; background: var(--swipe); color: #fff; font-weight: 600; }
+.swipeBehind svg { width: 20px; height: 20px; }
+.tasks .handle, .check, .tasks .rowDelete, .tasks .iconButton { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: var(--muted); }
+.tasks .handle { cursor: grab; touch-action: none; }
+.tasks .handle:active { cursor: grabbing; }
+.check { cursor: pointer; }
+.tasks .rowDelete:hover, .tasks .iconButton:hover { color: var(--danger); }
+.handle svg, .rowDelete svg, .iconButton svg { width: 20px; height: 20px; }
+/* Phones and tablets swipe instead (the task dialog can delete too). */
+@media (hover: none) and (pointer: coarse) { .tasks .rowDelete { display: none; } }
+.tasks .open { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: .1rem; padding: .6rem .25rem; border: 0; background: transparent; text-align: left; }
+.title { max-width: 100%; overflow-wrap: anywhere; line-height: 1.35; }
+.complete .title { color: var(--muted); text-decoration: line-through; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: .1rem .75rem; color: var(--muted); font-size: .8rem; }
+.overdue { color: var(--danger); font-weight: 600; }
+.assignee { display: inline-flex; align-items: center; gap: .35rem; overflow-wrap: anywhere; }
+.assignee i { flex-shrink: 0; width: .65rem; height: .65rem; border-radius: 50%; background: var(--member-color); }
+.notes { max-width: 100%; overflow: hidden; color: var(--muted); font-size: .8rem; text-overflow: ellipsis; white-space: nowrap; }
+.empty { margin: .25rem .5rem .5rem; padding: 1rem; border-radius: .75rem; background: var(--accent-soft); color: var(--accent); }
+.add { padding: .5rem .5rem 0; }
+.add button { flex-shrink: 0; }
+.done { margin-top: .75rem; padding-top: .25rem; border-top: 1px solid var(--border); }
+.done summary { padding: .6rem .5rem; color: var(--muted); font-weight: 600; cursor: pointer; }
+
+.toast { position: fixed; z-index: 30; left: 50%; bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + .75rem); transform: translateX(-50%); width: max-content; max-width: calc(100% - 2rem); padding: .25rem .25rem .25rem 1rem; border-radius: .75rem; background: var(--text); color: var(--bg); box-shadow: 0 8px 30px #0005; }
+.toast span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tasks .toast button { flex-shrink: 0; border: 0; background: transparent; color: inherit; font-weight: 700; }
+.tasks .toast button:hover { background: #8884; }
+@media (min-width: 48rem) { .toast { bottom: 1.5rem; } }
+
+.dialog { margin: auto; width: min(540px, calc(100% - 2rem)); max-height: 90dvh; overflow-y: auto; padding: 1.5rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface); color: var(--text); box-shadow: 0 24px 90px #0006; }
+.dialog::backdrop { background: #0008; }
+.dialogHeader { align-items: flex-start; margin-bottom: 1rem; }
+.dialogHeader h2 { margin: .3rem 0; }
+.dialogHeader button { flex-shrink: 0; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.inputRow button { flex-shrink: 0; }
+.swatch { flex-shrink: 0; width: 1rem; height: 1rem; border-radius: 50%; outline: 1px solid var(--muted); outline-offset: 2px; }
+.actions { flex-wrap: wrap; }
+.listRows { list-style: none; margin: 0; padding: 0; display: grid; gap: .25rem; }
+.listRow { position: relative; gap: .25rem; border-radius: .5rem; background: var(--surface); }
+.listRow form { flex: 1; min-width: 0; }
+.confirm { flex: 1; padding: .75rem; border: 1px solid var(--border); border-radius: .5rem; }
+.confirm p { margin: 0 0 .75rem; overflow-wrap: anywhere; }
+.addList { align-items: flex-end; }
+.addList label { flex: 1; }
+.addList button { flex-shrink: 0; }
+@media (max-width: 47.99rem) {
+  .dialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); border-radius: 1rem 1rem 0 0; }
+  .fields { grid-template-columns: 1fr; }
+}
