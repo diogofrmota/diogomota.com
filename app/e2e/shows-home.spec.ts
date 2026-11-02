@@ -327,6 +327,7 @@ test("the library API lists, changes and removes titles, and checks every change
   expect(await titles()).toEqual(["Paper Moons", "Harbor Lights", "The Quiet Orchard"]);
   expect((await library())[1]).toEqual({
     type: "tv", tmdbId: harbor.tmdbId, title: "Harbor Lights", year: 2021, posterPath: `/e2e-poster-${harbor.tmdbId}.jpg`, rating: 7.8,
+    runtime: null, episodeRuntime: 52, episodesPerSeason: [10, 8],
     library: { id: expect.any(String), status: "watching", rating: null, currentSeason: null, currentEpisode: null, isFavourite: false },
   });
 

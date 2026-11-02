@@ -34,21 +34,31 @@ export type LibraryEntry = {
   isFavourite: boolean;
 };
 
+/** A library entry without its id, as a friend sees it. */
+export type SharedEntry = Omit<LibraryEntry, "id">;
+
 /** What a library entry's PATCH can change. Progress is both fields or neither. */
-export type LibraryChange = Partial<Omit<LibraryEntry, "id">>;
+export type LibraryChange = Partial<SharedEntry>;
 
-/** A title in the user's library, as on a Home card. */
-export type LibraryItem = TitleSummary & { library: LibraryEntry };
-
-/** A title as shown in the detail panel, from the shows table (the TMDB cache). */
-export type TitleDetail = TitleSummary & {
-  overview: string;
+/** How long a title is, from the shows table (the TMDB cache). */
+export type TitleLengths = {
   /** Movie: minutes. */
   runtime: number | null;
   /** TV: typical episode length in minutes. */
   episodeRuntime: number | null;
   /** TV: episode count of each regular season, season 1 first. */
   episodesPerSeason: number[] | null;
+};
+
+/** A title in the user's library, as on a Home card, with its lengths for the stats. */
+export type LibraryItem = TitleSummary & TitleLengths & { library: LibraryEntry };
+
+/** A title in a friend's library, as on a card in their profile. */
+export type FriendItem = TitleSummary & { library: SharedEntry };
+
+/** A title as shown in the detail panel, from the shows table (the TMDB cache). */
+export type TitleDetail = TitleSummary & TitleLengths & {
+  overview: string;
   library: LibraryEntry | null;
 };
 
@@ -79,7 +89,7 @@ export function tmdbImageUrl(path: string, width: number): string {
 export type Episode = { season: number; episode: number };
 
 /** The progress of a library entry, or null before the first episode. */
-export const progressOf = (entry: LibraryEntry): Episode | null =>
+export const progressOf = (entry: Pick<LibraryEntry, "currentSeason" | "currentEpisode">): Episode | null =>
   entry.currentSeason && entry.currentEpisode ? { season: entry.currentSeason, episode: entry.currentEpisode } : null;
 
 /** "S2 E5" */
@@ -111,3 +121,59 @@ export function formatRuntime(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   return hours ? `${hours}h${minutes % 60 ? ` ${minutes % 60}m` : ""}` : `${minutes}m`;
 }
+
+const sum = (counts: readonly number[]) => counts.reduce((total, count) => total + count, 0);
+
+/** What the stats need of a title in a library. */
+type StatsItem = Pick<TitleSummary, "type"> & TitleLengths & { library: Pick<LibraryEntry, "status" | "currentSeason" | "currentEpisode"> };
+
+/**
+ * The episodes of a TV show in the library that count as watched: every
+ * episode of a completed show, up to the progress of one being watched (the
+ * last episode watched included), none of a planned one.
+ */
+export function episodesWatched(item: StatsItem): number {
+  const seasons = item.episodesPerSeason ?? [];
+  if (item.library.status === "completed") return sum(seasons);
+  const progress = item.library.status === "watching" ? progressOf(item.library) : null;
+  return progress ? sum(seasons.slice(0, progress.season - 1)) + progress.episode : 0;
+}
+
+export type LibraryStats = {
+  tvCompleted: number;
+  moviesCompleted: number;
+  /** TV episodes watched (episodesWatched). */
+  episodesWatched: number;
+  /** The episodes watched at each show's episode runtime, plus the runtimes of the completed movies. */
+  minutesWatched: number;
+};
+
+/** A library's stats. Titles TMDB gives no runtime count as 0 minutes. */
+export function libraryStats(items: readonly StatsItem[]): LibraryStats {
+  const stats: LibraryStats = { tvCompleted: 0, moviesCompleted: 0, episodesWatched: 0, minutesWatched: 0 };
+  for (const item of items) {
+    const completed = item.library.status === "completed";
+    if (item.type === "movie") {
+      if (completed) { stats.moviesCompleted++; stats.minutesWatched += item.runtime ?? 0; }
+      continue;
+    }
+    if (completed) stats.tvCompleted++;
+    const episodes = episodesWatched(item);
+    stats.episodesWatched += episodes;
+    stats.minutesWatched += episodes * (item.episodeRuntime ?? 0);
+  }
+  return stats;
+}
+
+/** Hours with at most one decimal, e.g. "1,234.5". */
+export const formatHours = (minutes: number) =>
+  (Math.round(minutes / 6) / 10).toLocaleString("en-GB", { maximumFractionDigits: 1 });
+
+/** A friend, a request someone sent the user, or one the user sent. */
+export type Person = { id: string; username: string };
+
+/** The user's friends and pending friend requests, each by username. */
+export type FriendsState = { friends: Person[]; incoming: Person[]; outgoing: Person[] };
+
+/** A friend's profile: what they're watching, what they've completed, their favourites and their stats. */
+export type FriendProfile = Person & { stats: LibraryStats; items: FriendItem[] };

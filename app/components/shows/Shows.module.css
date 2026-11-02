@@ -11,10 +11,10 @@
 .view button:disabled, .dialog button:disabled { opacity: .6; cursor: wait; }
 @media (hover: hover) { .view button:hover, .dialog button:hover { background: var(--hover); } }
 .view .primary, .dialog .primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 650; }
-.dialog .danger { background: var(--danger); border-color: var(--danger); color: var(--bg); font-weight: 650; }
+.view .danger, .dialog .danger { background: var(--danger); border-color: var(--danger); color: var(--bg); font-weight: 650; }
 @media (hover: hover) {
   .view .primary:hover, .dialog .primary:hover { background: var(--accent); filter: brightness(.93); }
-  .dialog .danger:hover { background: var(--danger); filter: brightness(.93); }
+  .view .danger:hover, .dialog .danger:hover { background: var(--danger); filter: brightness(.93); }
 }
 .muted { margin: 0; color: var(--muted); }
 .label { font-weight: 600; }
@@ -33,7 +33,7 @@
 .section { margin-top: 2rem; }
 .section h2 { font-size: 1.2rem; font-weight: 650; margin: 0 0 .85rem; }
 .empty { margin: 0; padding: 1rem; border-radius: .75rem; background: var(--accent-soft); color: var(--accent); }
-.view .more { margin-top: 1rem; }
+.view .more, .dialog .more { margin-top: 1rem; }
 .error { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; padding: .5rem .5rem .5rem .75rem; border-left: 3px solid var(--danger); border-radius: .4rem; background: var(--hover); }
 .error p, p.error { margin: 0; }
 .viewError { margin-bottom: 1rem; }
@@ -117,7 +117,7 @@
 .dialog .textButton { flex-shrink: 0; border-color: transparent; background: none; color: var(--accent); font-weight: 600; }
 .hint { margin: 0; color: var(--muted); }
 .results { min-height: 12rem; }
-.searchDialog .attribution { margin-top: 2rem; }
+.searchDialog .attribution, .friendDialog .attribution { margin-top: 2rem; }
 
 .detail { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 1rem; align-items: start; }
 @media (min-width: 48rem) { .detail { grid-template-columns: 11rem minmax(0, 1fr); } }
@@ -170,9 +170,51 @@
 .offer { background: var(--accent-soft); }
 .offer p, .confirm p { margin: 0 0 .65rem; }
 .offerButtons { display: flex; flex-wrap: wrap; gap: .5rem; }
-.dialog .remove { padding-inline: 0; border-color: transparent; background: none; color: var(--danger); font-weight: 600; }
-@media (hover: hover) { .dialog .remove:hover { background: none; text-decoration: underline; } }
+.view .remove, .dialog .remove { padding-inline: 0; border-color: transparent; background: none; color: var(--danger); font-weight: 600; }
+@media (hover: hover) { .view .remove:hover, .dialog .remove:hover { background: none; text-decoration: underline; } }
 .confirm { margin-top: .25rem; border-left: 3px solid var(--danger); border-radius: .4rem; background: var(--hover); }
+
+/* Profile: friend requests, stats, favourites and friends. */
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; max-width: 42rem; margin: 0; }
+.stats > div, .statSkeleton { display: flex; flex-direction: column; gap: .15rem; min-width: 0; padding: .85rem 1rem; border-radius: .75rem; background: var(--hover); }
+.stats > :first-child { grid-column: 1 / -1; }
+@media (min-width: 48rem) {
+  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stats > :first-child { grid-column: auto; }
+}
+/* The number first, then what it counts. */
+.stats dt { order: 1; color: var(--muted); font-size: .85rem; }
+.stats dd { margin: 0; font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.stats .statDetail { order: 2; font-size: .8rem; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+.statSkeleton { min-height: 5rem; }
+.statsNote { max-width: 42rem; margin: .75rem 0 0; color: var(--muted); font-size: .8rem; line-height: 1.5; }
+
+.people { max-width: 36rem; margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: .75rem; }
+div.people { padding: .25rem 1rem .75rem; }
+.people > li { padding: .4rem .5rem .4rem .75rem; }
+.people > li + li { border-top: 1px solid var(--border); }
+.people .confirm { margin: .25rem 0 .35rem; }
+.personRow { display: flex; align-items: center; gap: .75rem; }
+.personName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.personActions { display: flex; flex-shrink: 0; gap: .5rem; }
+.avatar { display: grid; place-items: center; flex-shrink: 0; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 700; text-transform: uppercase; }
+.view .personLink { display: flex; flex: 1; align-items: center; gap: .75rem; min-width: 0; padding: .25rem .5rem .25rem 0; border: 0; background: none; color: inherit; text-align: left; }
+@media (hover: hover) { .view .personLink:hover { background: none; } .personLink:hover .personName { text-decoration: underline; } }
+.chevron { color: var(--muted); font-size: 1.4rem; line-height: 1; }
+.view .personRow .remove { flex-shrink: 0; padding-inline: .5rem; }
+.pending { margin-left: .35rem; color: var(--muted); font-size: .8rem; font-weight: 500; }
+.subheading { margin: 1.25rem 0 .5rem; font-size: 1rem; }
+.addFriend { display: grid; gap: .4rem; max-width: 36rem; margin-bottom: 1rem; }
+.addFriendRow { display: flex; gap: .5rem; }
+.addFriendRow input { flex: 1; min-width: 0; min-height: 44px; padding: .5rem .75rem; font: inherit; font-size: 1rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: .5rem; }
+.addFriend .hint { font-size: .85rem; }
+.notice { max-width: 36rem; margin: 0 0 1rem; }
+.success { padding: .6rem .85rem; border-radius: .5rem; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+/* A friend's profile: a large modal on desktop, the whole screen on a phone. */
+.friendDialog { width: min(60rem, calc(100% - 2rem)); height: min(52rem, 90dvh); }
+.friendDialog .dialogHeader { margin-bottom: 0; }
+.friendDialog .dialogHeader + .section { margin-top: 1rem; }
 
 /* Quick actions: a small menu beside the card on desktop (placed by
    QuickActions.tsx; centered when it has no anchor), a bottom sheet on phones. */
@@ -190,7 +232,8 @@
   .view .switcher button { flex: 1; }
   .titleDialog, .menuDialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-radius: 1rem 1rem 0 0; border-bottom: 0; }
   .titleDialog .dialogBody, .menuDialog .dialogBody { padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
-  .searchDialog { margin: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
+  .searchDialog, .friendDialog { margin: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
   .searchDialog .dialogBody { padding: 1rem max(1rem, env(safe-area-inset-right)) calc(1.5rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
+  .friendDialog .dialogBody { padding: calc(1rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) calc(1.5rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
   .searchDialog .searchBar { top: -1rem; margin: -1rem -1rem 1rem; padding: calc(.75rem + env(safe-area-inset-top)) 1rem .75rem; }
 }

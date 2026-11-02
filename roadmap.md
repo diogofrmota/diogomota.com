@@ -50,31 +50,16 @@
 
 - Goal 12, Shows: Home (2026-11-02): version `0.12.0`. Home is the library: TV Shows | Movies switch (shared with Discover) over Watching, Planned and Completed, each with the latest change first (12 until Show all) and a count; empty library shows "Start by discovering shows!" (Go to Discover, Search), empty sections link to Discover. Cards: poster, status badge, heart for favourites, title, year, `S2 E5`/Not started for TV being watched, stars for rated completed titles. Quick actions (status and rating) from a ⋯ button shown on hover/focus with a mouse, a right click, or a half-second long press on touch (menu beside the card on desktop, bottom sheet on phones; Back/Escape close it; the finger lifting doesn't close it). Detail panel: Favourite, status, progress (season and episode pickers, Next episode across seasons), 1–5 stars (same star or Clear removes), Remove from library (asks first, then offers to add again); reaching the last episode offers Mark as completed / Not yet. One library state (`components/shows/library.tsx`) for Home, Discover, search and the panels, with optimistic changes sent in order and undone with a message if refused (Tasks' model). API: `GET /api/shows/library`, `PATCH`/`DELETE /api/shows/library/{type}/{tmdbId}` (validated: statuses, 1–5, booleans, episodes the cached show has, no progress for movies; 404 outside your library). `006_library_updated_at.sql` adds `user_shows.updated_at`. Loading the library refreshes titles older than 7 days from TMDB after answering (`after()`), as Goal 11 left to do. Shows e2e helpers moved to `e2e/shows.ts`. Playwright: 103 tests (6 new in `shows-home.spec.ts`: welcome, add from Discover and the switch; detail panel status, progress, last-episode offer, rating, favourite, remove; quick actions with ⋯, right click and a refused change undone; phone long press and bottom sheets; API validation and ownership; the stale-title refresh). Lint, typecheck, production build and all e2e tests pass (committed on main, not pushed).
 
+- Goal 13, Shows: Profile + friends (2026-11-02): version `0.13.0`. Profile: friend requests received with Accept/Decline at the top (only when there are any), Stats, Favourites (TV and movies together, latest change first, Home's quick actions), Friends (add by username in any case, with or without `@`; friends list; sent requests with Cancel; Remove asks first). Messages in the section acted in, focus moved to them when the button left with its row. Stats: hours watched (episodes watched × episode runtime + completed movies' runtimes, one decimal) with the episode and movie counts, TV shows and movies completed; a show being watched counts up to its current episode, a completed one in full, a planned one none; `libraryStats` in `lib/show-types.ts` serves the browser (own stats follow every change at once, from library items that now carry their runtimes) and the server (a friend's). Friend profile: a panel (full screen on phones, Back closes it), read-only stats, Watching, Completed and Favourites (planned non-favourites left out, of the API too, no entry ids); cards open the title panel on top for your own library. Friendships in the existing `friendships` table (no migration): pending until accepted, decline/cancel/remove delete the row, asking someone who asked you accepts in one `INSERT … ON CONFLICT` statement. API `/api/shows/friends` (`GET`, `POST {username}`, `POST /{id}/accept|decline|cancel`, `DELETE /{id}`, `GET /{id}` for a friend's profile, 404 for anyone else); friend requests limited to 20 per 15 minutes per user. Added by Friends loads again after Profile sees the friends change. `PlaceholderView` removed (Profile was the last one). Playwright: 108 tests (5 new in `shows-profile.spec.ts`: stats math and favourites; request, accept, friend library and remove with two people; decline, cancel, a withdrawn request, asking each other; the API refusing non-friends, every check and the rate limit; phone layout); the Added by Friends test now makes friendships through the API. Lint, typecheck, production build and all e2e tests pass (committed on main, not pushed).
+
 ## To-do
 
-### [You] Goal 12 — Push
+### [You] Goals 12 and 13 — Push
 
-- [ ] Push (Goal 11 is already pushed, as `v0.11.0` with `005_show_rating.sql`). The deploy is `v0.12.0` and applies `006_library_updated_at.sql`.
+- [ ] Push (Goal 11 is already pushed, as `v0.11.0` with `005_show_rating.sql`). Goals 12 and 13 go out together as `v0.13.0` (no `v0.12.x`); the deploy applies `006_library_updated_at.sql` (Goal 13 has no migration).
 - [ ] On your phone, Discover: both TV Shows and Movies, search from Home and Profile, open a title and add it as Watching.
 - [ ] On your phone, Home: the welcome on an empty library; add a few titles; long-press a card to change its status and rate it; open a show, Next episode a few times, pick the last episode and Mark as completed; favourite one; remove one; switch to Movies.
-
----
-
-### Goal 13 — Shows: Profile + friends
-
-```
-/goal Build the Profile view and the friends system of the Shows app on diogomota.com. Read plan.md (App 2 — Shows Tracker: Profile, friendships table) and roadmap.md first.
-
-- First bump the version: `npm version 0.13.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.13.x.
-- Favourites grid from the user's library.
-- Stats: titles completed (TV and movies), hours watched (episodes watched x episode runtime + completed movie runtimes).
-- Friends: add by username (sends a pending request), incoming requests with accept/decline, remove friend. Only accepted friends see each other's libraries.
-- Friend view: their watching/completed/favourites/stats, read-only.
-- Wire "Added by Friends" in Discover to accepted friends only.
-- Playwright tests with two users: request, accept, view friend library, decline, remove, a non-friend cannot read a library via the API, stats math.
-
-Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not push).
-```
+- [ ] On your phone, Profile, with a second account: send a friend request by username, accept it on the other account, open each other's profiles (stats, Watching, Completed, Favourites) and Back out; check Added by Friends in Discover; remove the friend.
 
 ---
 

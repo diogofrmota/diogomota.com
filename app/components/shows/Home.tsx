@@ -1,16 +1,13 @@
 "use client";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { useAppView } from "@/hooks/useAppView";
 import { libraryStatuses, statusNames, type LibraryItem, type LibraryStatus, type MediaType } from "@/lib/show-types";
 import { TypeSwitch } from "./Discover";
 import { ChangeError, useLibrary } from "./library";
-import { LibraryGrid } from "./LibraryGrid";
-import { LoadError, SkeletonGrid } from "./TitleGrid";
+import { LibrarySection } from "./LibraryGrid";
+import { LoadError } from "./TitleGrid";
 import { TmdbAttribution } from "./TmdbAttribution";
 import styles from "./Shows.module.css";
-
-// A section shows this many titles until "Show all", like Discover.
-const collapsedCount = 12;
 
 function DiscoverLink({ children }: { children: React.ReactNode }) {
   const { setView } = useAppView();
@@ -19,31 +16,16 @@ function DiscoverLink({ children }: { children: React.ReactNode }) {
 
 function Empty({ status, type }: { status: LibraryStatus; type: MediaType }) {
   const kind = type === "tv" ? "shows" : "movies";
-  return <p className={styles.empty}>
-    {status === "watching" ? <>You&rsquo;re not watching any {kind} yet — <DiscoverLink>explore Discover!</DiscoverLink></>
-      : status === "planned" ? <>No {kind} planned yet — <DiscoverLink>explore Discover!</DiscoverLink></>
-      : `No ${kind} completed yet. Finished one? Mark it as Completed from its card.`}
-  </p>;
+  return status === "watching" ? <>You&rsquo;re not watching any {kind} yet — <DiscoverLink>explore Discover!</DiscoverLink></>
+    : status === "planned" ? <>No {kind} planned yet — <DiscoverLink>explore Discover!</DiscoverLink></>
+    : `No ${kind} completed yet. Finished one? Mark it as Completed from its card.`;
 }
 
 function Section({ status, type, items }: { status: LibraryStatus; type: MediaType; items: LibraryItem[] | null }) {
-  const id = useId();
-  const [expanded, setExpanded] = useState(false);
   const heading = statusNames[status];
   const kind = type === "tv" ? "TV shows" : "movies";
-  return <section className={styles.section} aria-labelledby={id} aria-busy={!items}>
-    <div className={styles.sectionHeader}>
-      <h2 id={id}>{heading}</h2>
-      {!!items?.length && <span className={styles.count} aria-hidden="true">{items.length}</span>}
-    </div>
-    {!items ? <SkeletonGrid count={6} label={`Loading your ${heading.toLowerCase()} ${kind}…`} />
-      : !items.length ? <Empty status={status} type={type} />
-      : <>
-        <LibraryGrid items={expanded ? items : items.slice(0, collapsedCount)} label={`${heading} ${kind}`} />
-        {items.length > collapsedCount && <button type="button" className={styles.more} aria-expanded={expanded}
-          onClick={() => setExpanded(!expanded)}>{expanded ? "Show fewer" : `Show all ${items.length}`}</button>}
-      </>}
-  </section>;
+  return <LibrarySection heading={heading} label={`${heading} ${kind}`} loadingLabel={`Loading your ${heading.toLowerCase()} ${kind}…`}
+    items={items} empty={<Empty status={status} type={type} />} />;
 }
 
 // The first visit, and a library emptied again.

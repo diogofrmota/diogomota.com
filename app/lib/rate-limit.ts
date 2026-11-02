@@ -41,6 +41,8 @@ export const resetRequestLimit = rateLimit("reset", 5, 60 * MINUTE);
 export const resetEmailLimit = rateLimit("reset-email", 3, 60 * MINUTE);
 /** Short invite code guesses, per authenticated user. */
 export const spaceJoinLimit = rateLimit("space-join", 20, 15 * MINUTE);
+/** Friend requests (that pass validation), per authenticated user: each one says whether a username exists. */
+export const friendRequestLimit = rateLimit("friend-request", 20, 15 * MINUTE);
 /** Shows API requests (each may call TMDB with the site's token), per authenticated user. */
 export const showsRequestLimit = rateLimit("shows", 120, MINUTE);
 

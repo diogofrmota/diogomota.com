@@ -1,9 +1,7 @@
 import { randomBytes, randomInt } from "node:crypto";
-import { expect, newUser, signUp, test } from "./fixtures";
+import { expect, test } from "./fixtures";
 import { withDatabase } from "./db";
-import { card, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, row, section, tab, tmdbRequests, typeSwitch, viewHeading } from "./shows";
-
-const contextOptions = () => ({ extraHTTPHeaders: { "X-Forwarded-For": `10.${[...randomBytes(3)].join(".")}` } });
+import { card, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, otherPerson, row, section, tab, tmdbRequests, typeSwitch, userId, viewHeading } from "./shows";
 
 async function cachedShow(type: "tv" | "movie", tmdbId: number) {
   const { rows } = await withDatabase((client) => client.query(
@@ -317,34 +315,28 @@ test("details are cached in the shows table and fetched again after 7 days; list
 
 test("Added by Friends shows the titles in accepted friends' libraries", async ({ page, browser }) => {
   const me = await openShows(page);
+  const meId = await userId(me.username);
   // A friend (Harbor Lights, Northern Line, Paper Moons), and someone whose
   // friend request is still pending (The Quiet Orchard, Paper Moons).
   const libraries: [string, number][][] = [
     [["tv", mockBase + 101], ["movie", mockBase + 301], ["movie", mockBase + 201]],
     [["tv", mockBase + 1], ["movie", mockBase + 201]],
   ];
-  const people: string[] = [];
+  const people = [];
   for (const titles of libraries) {
-    const context = await browser.newContext(contextOptions());
-    const other = await context.newPage();
-    const user = newUser();
-    await signUp(other, user);
-    await expect(other).toHaveURL("/apps");
+    const person = await otherPerson(browser);
     for (const [type, tmdbId] of titles) {
-      expect((await other.request.post("/api/shows/library", { data: { type, tmdbId, status: "watching" } })).status()).toBe(201);
+      expect((await person.page.request.post("/api/shows/library", { data: { type, tmdbId, status: "watching" } })).status()).toBe(201);
     }
-    people.push(user.username);
-    await context.close();
+    people.push(person);
   }
   const friends = (type: string) => page.request.get(`/api/shows/discover/${type}/friends`).then(async (r) => (await r.json()).data);
   expect(await friends("tv")).toEqual([]);
 
-  // Friendships are made in the database until Profile can (Goal 13).
-  const befriend = (from: string, to: string, status: string) => withDatabase((client) => client.query(
-    `INSERT INTO friendships (user_id, friend_id, status)
-     SELECT a.id, b.id, $3 FROM users a, users b WHERE a.username = $1 AND b.username = $2`, [from, to, status]));
-  await befriend(people[0], me.username, "accepted");
-  await befriend(me.username, people[1], "pending");
+  // The first asked me and I accepted; I asked the second, who hasn't answered.
+  expect((await people[0].page.request.post("/api/shows/friends", { data: { username: me.username } })).status()).toBe(201);
+  expect((await page.request.post(`/api/shows/friends/${people[0].id}/accept`, { data: {} })).status()).toBe(200);
+  expect((await page.request.post("/api/shows/friends", { data: { username: people[1].user.username } })).status()).toBe(201);
 
   await tab(page, "Discover").click();
   const friendsSection = section(page, "Added by Friends");
@@ -359,9 +351,9 @@ test("Added by Friends shows the titles in accepted friends' libraries", async (
 
   // Once accepted, the second friend's titles count too. The ones most friends
   // have come first (Paper Moons, in both libraries), then by title.
-  await withDatabase((client) => client.query(
-    "UPDATE friendships SET status = 'accepted' WHERE friend_id = (SELECT id FROM users WHERE username = $1)", [people[1]]));
+  expect((await people[1].page.request.post(`/api/shows/friends/${meId}/accept`, { data: {} })).status()).toBe(200);
   const titles = async (type: string) => (await friends(type)).map((title: { title: string }) => title.title);
   expect(await titles("movie")).toEqual(["Paper Moons", "Northern Line"]);
   expect(await titles("tv")).toEqual(["Harbor Lights", "The Quiet Orchard"]);
+  for (const person of people) await person.context.close();
 });

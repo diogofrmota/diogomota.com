@@ -8,12 +8,15 @@ import {
   addStatuses,
   discoverSections,
   hasEpisode,
+  libraryStats,
   libraryStatuses,
   mediaTypes,
   titleKey,
   type DiscoverSection,
+  type FriendItem,
   type LibraryEntry,
   type LibraryItem,
+  type LibraryStats,
   type LibraryStatus,
   type MediaType,
   type TitleDetail,
@@ -147,22 +150,50 @@ async function refreshTitles(titles: Pick<TitleSummary, "type" | "tmdbId">[]) {
   }
 }
 
-/** The user's library, the latest added or changed first. */
-export async function readLibrary(userId: string): Promise<LibraryItem[]> {
+// A user's library titles that match `where` (a fixed SQL condition on us,
+// never anything from a request), the latest added or changed first. Stale
+// titles are fetched from TMDB again after the response.
+async function libraryItems(userId: string, where = "true"): Promise<LibraryItem[]> {
   const { rows } = await query<LibraryItem & { stale: boolean }>(
     `SELECT s.type, s.tmdb_id AS "tmdbId", s.title, s.year, s.poster_url AS "posterPath",
-       s.vote_average::float8 AS rating,
+       s.vote_average::float8 AS rating, s.runtime, s.episode_runtime AS "episodeRuntime",
+       s.episodes_per_season AS "episodesPerSeason",
        json_build_object('id', us.id, 'status', us.status, 'rating', us.rating, 'currentSeason', us.current_season,
          'currentEpisode', us.current_episode, 'isFavourite', us.is_favourite) AS library,
        s.last_updated < now() - interval '${refreshAfter}' AS stale
      FROM user_shows us JOIN shows s ON s.id = us.show_id
-     WHERE us.user_id = $1 ORDER BY us.updated_at DESC, us.id`,
+     WHERE us.user_id = $1 AND (${where}) ORDER BY us.updated_at DESC, us.id`,
     [userId],
   );
   const stale = rows.filter((row) => row.stale);
   if (stale.length) after(() => refreshTitles(stale));
   return rows.map((row) => ({ type: row.type, tmdbId: row.tmdbId, title: row.title, year: row.year,
-    posterPath: row.posterPath, rating: row.rating, library: row.library }));
+    posterPath: row.posterPath, rating: row.rating, runtime: row.runtime, episodeRuntime: row.episodeRuntime,
+    episodesPerSeason: row.episodesPerSeason, library: row.library }));
+}
+
+/** The user's library, the latest added or changed first. */
+export function readLibrary(userId: string): Promise<LibraryItem[]> {
+  return libraryItems(userId);
+}
+
+/**
+ * What a friend sees of a user's library: the titles they're watching or have
+ * completed and their favourites (planned titles stay out unless they are
+ * favourites), with the stats of the whole library. Planned titles add nothing
+ * to the stats, so these titles are enough to work them out.
+ */
+export async function sharedLibrary(userId: string): Promise<{ stats: LibraryStats; items: FriendItem[] }> {
+  const items = await libraryItems(userId, "us.status IN ('watching', 'completed') OR us.is_favourite");
+  return {
+    stats: libraryStats(items),
+    // Only these fields: the entry's id stays private.
+    items: items.map((item) => {
+      const { status, rating, currentSeason, currentEpisode, isFavourite } = item.library;
+      return { type: item.type, tmdbId: item.tmdbId, title: item.title, year: item.year, posterPath: item.posterPath,
+        rating: item.rating, library: { status, rating, currentSeason, currentEpisode, isFavourite } };
+    }),
+  };
 }
 
 // The user's entry for a title, with what is needed to check a change of it.

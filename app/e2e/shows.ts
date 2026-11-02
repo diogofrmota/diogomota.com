@@ -1,5 +1,6 @@
-import type { Locator, Page } from "@playwright/test";
-import { expect, newUser, signUp } from "./fixtures";
+import { randomBytes } from "node:crypto";
+import type { Browser, Locator, Page } from "@playwright/test";
+import { expect, fakeTmdbImages, newUser, signUp } from "./fixtures";
 import { withDatabase } from "./db";
 
 // Helpers for the Shows app tests. The dev server runs with test hooks, so the
@@ -16,10 +17,24 @@ export async function openShows(page: Page) {
   return user;
 }
 
+/** Someone else, in a browser context of their own (from their own address), signed up into /shows. */
+export async function otherPerson(browser: Browser, options: Parameters<Browser["newContext"]>[0] = {}) {
+  const context = await browser.newContext({ ...options, extraHTTPHeaders: { "X-Forwarded-For": `10.${[...randomBytes(3)].join(".")}` } });
+  await fakeTmdbImages(context);
+  const page = await context.newPage();
+  const user = await openShows(page);
+  return { context, page, user, id: await userId(user.username) };
+}
+
+export async function userId(username: string): Promise<string> {
+  const { rows } = await withDatabase((client) => client.query("SELECT id FROM users WHERE username = $1", [username]));
+  return rows[0].id;
+}
+
 export const tab = (page: Page, view: string) =>
   page.getByRole("navigation", { name: "Shows", exact: true }).getByRole("button", { name: view, exact: true });
 export const viewHeading = (page: Page) => page.getByRole("main").getByRole("heading", { level: 1 });
-export const section = (page: Page, heading: string) => page.getByRole("region", { name: heading, exact: true });
+export const section = (scope: Page | Locator, heading: string) => scope.getByRole("region", { name: heading, exact: true });
 export const grid = (scope: Page | Locator, name: string) => scope.getByRole("list", { name, exact: true });
 /** A card by its title: cards are named "<title>, <year>, ...". */
 export const card = (scope: Page | Locator, title: string) =>

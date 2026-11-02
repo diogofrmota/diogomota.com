@@ -1,12 +1,14 @@
 "use client";
-import { useEffect, useRef, type MouseEvent, type PointerEvent } from "react";
-import { formatEpisode, progressOf, statusNames, titleKey, type LibraryItem } from "@/lib/show-types";
+import { useEffect, useId, useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import { formatEpisode, progressOf, statusNames, titleKey, type SharedEntry, type TitleSummary } from "@/lib/show-types";
 import { useOpenActions } from "./QuickActions";
 import { useOpenTitle } from "./shows-data";
-import { Poster } from "./TitleGrid";
+import { Poster, SkeletonGrid } from "./TitleGrid";
 import styles from "./Shows.module.css";
 
 const longPressMs = 500;
+// A section shows this many titles until "Show all", like Discover.
+const collapsedCount = 12;
 
 // Holding a finger (or pen) still on a card for half a second, or a right click,
 // calls onLongPress instead of the browser's own menu; the click that may follow
@@ -48,8 +50,11 @@ function useLongPress(onLongPress: (x: number, y: number) => void) {
   };
 }
 
+/** A title in the user's library, or in a friend's. */
+type CardItem = TitleSummary & { library: SharedEntry };
+
 /** "Watching, season 2 episode 5" and "S2 E5", or the user's rating of a completed title. */
-function libraryFacts(item: LibraryItem) {
+function libraryFacts(item: CardItem) {
   const { status, rating } = item.library;
   const progress = item.type === "tv" && status === "watching" ? progressOf(item.library) : undefined;
   const rated = status === "completed" && rating !== null;
@@ -64,14 +69,16 @@ function libraryFacts(item: LibraryItem) {
 
 const cardSizes = "(min-width: 48rem) 160px, 34vw";
 
-function LibraryCard({ item }: { item: LibraryItem }) {
+// A friend's titles are read-only: a card opens the detail panel, which is
+// about the user's own library, and has no quick actions.
+function LibraryCard({ item, readOnly }: { item: CardItem; readOnly: boolean }) {
   const openTitle = useOpenTitle();
   const openActions = useOpenActions();
   const longPress = useLongPress((x, y) => openActions(item, { left: x, right: x, top: y, bottom: y }));
   const facts = libraryFacts(item);
   const { status, rating, isFavourite } = item.library;
   return <div className={styles.libraryCard}>
-    <button type="button" className={styles.card} aria-label={facts.label} onClick={() => openTitle(item)} {...longPress}>
+    <button type="button" className={styles.card} aria-label={facts.label} onClick={() => openTitle(item)} {...(readOnly ? {} : longPress)}>
       <span className={styles.posterFrame}>
         <Poster title={item} sizes={cardSizes} />
         <span className={`${styles.badge} ${styles[status]}`} aria-hidden="true">{statusNames[status]}</span>
@@ -85,15 +92,43 @@ function LibraryCard({ item }: { item: LibraryItem }) {
         </span>}
       </span>
     </button>
-    <button type="button" className={styles.cardMenu} aria-label={`Quick actions for ${item.title}`} aria-haspopup="dialog"
+    {!readOnly && <button type="button" className={styles.cardMenu} aria-label={`Quick actions for ${item.title}`} aria-haspopup="dialog"
       onClick={(e) => openActions(item, e.currentTarget.getBoundingClientRect())}>
       <span aria-hidden="true">⋯</span>
-    </button>
+    </button>}
   </div>;
 }
 
-export function LibraryGrid({ items, label }: { items: readonly LibraryItem[]; label: string }) {
+export function LibraryGrid({ items, label, readOnly = false }: { items: readonly CardItem[]; label: string; readOnly?: boolean }) {
   return <ul className={styles.grid} aria-label={label}>
-    {items.map((item) => <li key={titleKey(item)}><LibraryCard item={item} /></li>)}
+    {items.map((item) => <li key={titleKey(item)}><LibraryCard item={item} readOnly={readOnly} /></li>)}
   </ul>;
+}
+
+/** A section of library titles with its heading and count: the first 12 until Show all. */
+export function LibrarySection({ heading, label, loadingLabel, items, empty, readOnly }: {
+  heading: string;
+  /** Names the grid, e.g. "Watching TV shows". */
+  label: string;
+  loadingLabel: string;
+  /** null while loading. */
+  items: readonly CardItem[] | null;
+  empty: React.ReactNode;
+  readOnly?: boolean;
+}) {
+  const id = useId();
+  const [expanded, setExpanded] = useState(false);
+  return <section className={styles.section} aria-labelledby={id} aria-busy={!items}>
+    <div className={styles.sectionHeader}>
+      <h2 id={id}>{heading}</h2>
+      {!!items?.length && <span className={styles.count} aria-hidden="true">{items.length}</span>}
+    </div>
+    {!items ? <SkeletonGrid count={6} label={loadingLabel} />
+      : !items.length ? <p className={styles.empty}>{empty}</p>
+      : <>
+        <LibraryGrid items={expanded ? items : items.slice(0, collapsedCount)} label={label} readOnly={readOnly} />
+        {items.length > collapsedCount && <button type="button" className={styles.more} aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}>{expanded ? "Show fewer" : `Show all ${items.length}`}</button>}
+      </>}
+  </section>;
 }

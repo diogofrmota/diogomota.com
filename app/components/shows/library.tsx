@@ -100,7 +100,8 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       try {
         const detail = await showsRequest<TitleDetail>("/library", { method: "POST", body: { type: title.type, tmdbId: title.tmdbId, status } });
         const item: LibraryItem = { type: detail.type, tmdbId: detail.tmdbId, title: detail.title, year: detail.year,
-          posterPath: detail.posterPath, rating: detail.rating, library: detail.library! };
+          posterPath: detail.posterPath, rating: detail.rating, runtime: detail.runtime, episodeRuntime: detail.episodeRuntime,
+          episodesPerSeason: detail.episodesPerSeason, library: detail.library! };
         // Not loaded yet (it failed): load it, with the new title.
         if (loaded.current) setConfirmed((current) => current && [item, ...current.filter((i) => !same(i, item))]);
         else reload();

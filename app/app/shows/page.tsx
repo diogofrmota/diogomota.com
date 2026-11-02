@@ -5,8 +5,7 @@ import { ShowsApp } from "@/components/shows/ShowsApp";
 import { appViewport } from "@/lib/apps";
 import { findUserById } from "@/lib/users";
 
-// The Shows app. proxy.ts keeps logged-out users out. Home and Profile are
-// placeholders until they are built.
+// The Shows app. proxy.ts keeps logged-out users out.
 export const metadata: Metadata = { title: "Shows", robots: { index: false } };
 
 export const viewport = appViewport;

@@ -29,11 +29,19 @@ function keep(path: string, data: unknown) {
 }
 
 /**
+ * Forgets the loaded answers of the paths that pass `test`, e.g. Added by
+ * Friends after a friendship changed: they load again when next shown.
+ */
+export function forgetShowsData(test: (path: string) => boolean) {
+  for (const path of loaded.keys()) if (test(path)) loaded.delete(path);
+}
+
+/**
  * GETs /api/shows{path} (nothing while it is null). With `reuse`, an answer this
  * page already loaded for the same path is shown at once instead.
  */
 export function useShowsData<T>(path: string | null, reuse = true) {
-  const [result, setResult] = useState<{ path: string; data?: T; error?: string } | null>(null);
+  const [result, setResult] = useState<{ path: string; data?: T; error?: string; status?: number } | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (path === null || (reuse && loaded.has(path))) return;
@@ -41,7 +49,9 @@ export function useShowsData<T>(path: string | null, reuse = true) {
     showsRequest<T>(path, { signal: controller.signal }).then((data) => {
       if (reuse) keep(path, data);
       setResult({ path, data });
-    }).catch((error: Error) => { if (!controller.signal.aborted) setResult({ path, error: error.message }); });
+    }).catch((error: Error) => {
+      if (!controller.signal.aborted) setResult({ path, error: error.message, status: (error as ShowsRequestError).status });
+    });
     return () => controller.abort();
   }, [path, reuse, attempt]);
   const current = result?.path === path ? result : null;
@@ -49,6 +59,8 @@ export function useShowsData<T>(path: string | null, reuse = true) {
   const error = data === undefined ? current?.error : undefined;
   return {
     data, error,
+    /** The HTTP status of the error (0: the server couldn't be reached). */
+    errorStatus: error === undefined ? undefined : current?.status,
     loading: path !== null && data === undefined && !error,
     retry: () => { setResult(null); setAttempt((n) => n + 1); },
   };
