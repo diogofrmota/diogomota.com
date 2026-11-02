@@ -17,7 +17,14 @@ export default defineConfig({
     baseURL,
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // Every test runs on both. Tests that set their own viewport run the same way on
+  // each; the few that need a mouse, or a touch screen, skip the other project.
+  // The phone is an iPhone 13 (its whole 390x844 screen, touch input), in
+  // Chromium, the browser the tests install.
+  projects: [
+    { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } } },
+    { name: "mobile", use: { ...devices["iPhone 13"], browserName: "chromium", viewport: { width: 390, height: 844 } } },
+  ],
   globalTeardown: "./e2e/global-teardown.ts",
   // Needs the docker compose database running and DATABASE_URL in .env.local.
   // E2E_TEST_HOOKS keeps emails in memory for the tests instead of sending them

@@ -1,7 +1,7 @@
 import { randomBytes, randomInt } from "node:crypto";
 import { expect, test } from "./fixtures";
 import { withDatabase } from "./db";
-import { card, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, otherPerson, row, section, tab, tmdbRequests, typeSwitch, userId, viewHeading } from "./shows";
+import { card, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, otherPerson, row, section, tab, tmdbRequests, typeSwitch, userId, viewHeading, wholeCard } from "./shows";
 
 async function cachedShow(type: "tv" | "movie", tmdbId: number) {
   const { rows } = await withDatabase((client) => client.query(
@@ -35,7 +35,7 @@ test("Discover shows Top Rated, Popular and Added by Friends, the same for TV sh
   const first = topList.getByRole("button").first();
   await expect(first).toHaveAccessibleName("The Quiet Orchard, 2016, rated 9.1 out of 10");
   await expect(first).toContainText("The Quiet Orchard");
-  await expect(first).toContainText("2016 · ★ 9.1");
+  await expect(wholeCard(first)).toContainText("2016 · ★ 9.1");
   // The poster comes from TMDB's image server, in one of its sizes.
   await expect.poll(() => first.locator("img").evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
   expect(await first.locator("img").evaluate((img: HTMLImageElement) => img.currentSrc))

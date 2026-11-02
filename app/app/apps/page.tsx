@@ -3,13 +3,10 @@ import { auth } from "@/auth";
 import { AppList } from "@/components/site/AppList";
 import { SitePage } from "@/components/site/SitePage";
 import { TopBar } from "@/components/site/TopBar";
-import { apps } from "@/lib/apps";
+import { apps, appsDescription as description } from "@/lib/apps";
 import { safeNextPath } from "@/lib/next-path";
 import { baseOpenGraph, siteName, siteViewport } from "@/lib/site";
 import styles from "./page.module.css";
-
-const names = new Intl.ListFormat("en", { type: "conjunction" }).format(apps.map((app) => app.name));
-const description = `Small apps for friends: ${names}.`;
 
 export const metadata: Metadata = {
   title: "apps",

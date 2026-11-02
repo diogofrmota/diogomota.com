@@ -25,7 +25,12 @@
   }
 }
 
+/* 44px tall for touch; the negative margins keep its line as tall as the others. */
 .checkApps {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  margin-block: calc((1.625em - 2.75rem) / 2);
   text-decoration: none;
 }
 

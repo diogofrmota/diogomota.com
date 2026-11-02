@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description: siteDescription,
   openGraph: { ...baseOpenGraph, title: siteName, description: siteDescription },
   twitter: { card: "summary_large_image" },
+  // The name under the home screen icon on iPhones (the rest is in app/manifest.ts).
+  appleWebApp: { title: siteName },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

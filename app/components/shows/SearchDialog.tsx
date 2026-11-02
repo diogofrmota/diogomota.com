@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
+import { Dialog } from "@/components/common/Dialog";
 import { SearchIcon } from "@/components/common/icons";
 import { useAppView } from "@/hooks/useAppView";
 import type { TitleSummary } from "@/lib/show-types";
-import { Dialog } from "./Dialog";
 import { useDebounced, useOpenTitle, useShowsData } from "./shows-data";
 import { LoadError, SkeletonGrid, TitleGrid } from "./TitleGrid";
 import { TmdbAttribution } from "./TmdbAttribution";

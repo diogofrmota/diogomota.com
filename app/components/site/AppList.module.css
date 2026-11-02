@@ -59,3 +59,33 @@
   font-size: 0.875rem;
   line-height: 1.5;
 }
+
+/* A fixed-size ring that only shows, and turns, while the app loads. */
+.pending {
+  display: inline-block;
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-left: 0.625rem;
+  border: 2px solid #444;
+  border-top-color: #fff;
+  border-radius: 50%;
+  vertical-align: -0.125rem;
+  opacity: 0;
+}
+
+.active {
+  opacity: 1;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .active {
+    animation-duration: 3s;
+  }
+}

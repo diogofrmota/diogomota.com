@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, type CSSProperties } from "react";
+import { Spinner } from "@/components/common/Spinner";
 import { useAppView } from "@/hooks/useAppView";
 import { calendarZone, dateLabel, datePlus, localParts, type CalendarEvent } from "@/lib/calendar";
 import type { Space } from "@/lib/space-types";
@@ -67,7 +68,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
     const who = event.isGroup ? "Group" : member?.username ?? "Former member";
     return <button key={event.id} className={styles.event} style={{ ...style, "--event-color": event.isGroup ? "var(--muted)" : member?.color ?? "var(--muted)" } as CSSProperties}
       aria-label={`${event.title}, ${localParts(event.startsAt).time}, ${who}`} onClick={() => openPanel(`event:${event.id}`)}>
-      <span className={styles.eventTitle}>{event.title}</span><span className={styles.eventMeta}>{localParts(event.startsAt).time} · {event.isGroup ? <span className={styles.groupBadge}>Group</span> : who}</span>
+      <span className={styles.eventTitle}>{event.title}</span>{" "}<span className={styles.eventMeta}>{localParts(event.startsAt).time} · {event.isGroup ? <span className={styles.groupBadge}>Group</span> : who}</span>
     </button>;
   }
   return <section className={styles.calendar} aria-label="Shared calendar">
@@ -76,18 +77,18 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
     <div className={styles.toolbar}><div className={styles.actions}>
       <button aria-label="Previous period" onClick={() => navigate(-1)}>‹</button><button onClick={() => setDate(today)}>Today</button><button aria-label="Next period" onClick={() => navigate(1)}>›</button>
     </div><h2 aria-live="polite">{view === "day" ? dateLabel(date, { day: "numeric", month: "long", year: "numeric" }) : view === "week" ? `${dateLabel(first, { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short", year: "numeric" })}` : dateLabel(date, { month: "long", year: "numeric" })}</h2>
-      <div className={styles.switcher} aria-label="Calendar view">{(["month", "week", "day"] as const).map((item) => <button key={item} aria-pressed={view === item} onClick={() => setView(item)}>{item[0].toUpperCase() + item.slice(1)}</button>)}</div>
+      <div className={styles.switcher} role="group" aria-label="Calendar view">{(["month", "week", "day"] as const).map((item) => <button key={item} aria-pressed={view === item} onClick={() => setView(item)}>{item[0].toUpperCase() + item.slice(1)}</button>)}</div>
     </div>
     <div className={styles.subbar}><span>{calendarZone}</span><a href="/api/shared/events/export" download>Export calendar .ics</a></div>
-    <div className={styles.legend} aria-label="Event colors">{space.members.map((m) => <span key={m.id}><i style={{ background: m.color }} />{m.username}</span>)}<span><i className={styles.groupDot} />Group</span></div>
-    {loading && <p role="status">Loading calendar…</p>}
-    {error && <div role="alert"><p>{error}</p><button onClick={() => { setLoading(true); setRevision((r) => r + 1); }}>Retry</button></div>}
+    <ul className={styles.legend} aria-label="Event colors">{space.members.map((m) => <li key={m.id}><i style={{ background: m.color }} />{m.username}</li>)}<li><i className={styles.groupDot} />Group</li></ul>
+    {loading && <Spinner label="Loading calendar…" />}
+    {error && <div role="alert" className={styles.alert}><p>{error}</p><button onClick={() => { setError(""); setLoading(true); setRevision((r) => r + 1); }}>Retry</button></div>}
     {!loading && !error && events.length === 0 && <p className={styles.empty}>Nothing planned yet — add your first event!</p>}
     <div className={styles.scroller} tabIndex={0} role="region" aria-label={`${view} calendar`}>
       {view === "month" ? <div className={styles.month}>
         {days.slice(0, 7).map((day) => <div className={styles.weekday} key={day}>{dateLabel(day, { weekday: "short" })}</div>)}
         {days.map((day) => <div key={day} className={`${styles.cell} ${day.slice(0, 7) !== date.slice(0, 7) ? styles.outside : ""}`}>
-          <button className={`${styles.dayNumber} ${day === today ? styles.today : ""}`} aria-label={`Open ${day}`} onClick={() => { setDate(day); setView("day"); }}>{Number(day.slice(-2))}</button>
+          <button className={`${styles.dayNumber} ${day === today ? styles.today : ""}`} aria-label={dateLabel(day, { weekday: "long", day: "numeric", month: "long" })} onClick={() => { setDate(day); setView("day"); }}>{Number(day.slice(-2))}</button>
           {eventsOn(day).map((event) => eventButton(event))}
         </div>)}
       </div> : <div className={`${styles.timeGrid} ${view === "week" ? styles.week : ""}`} style={{ "--days": days.length } as CSSProperties}>

@@ -12,9 +12,10 @@ export const metadata: Metadata = { title: "App shell test", robots: { index: fa
 
 export const viewport = appViewport;
 
-// For the e2e tests (e2e/app-shell.spec.ts): an app shell whose views open
-// panels and refresh the router, which the real apps' placeholder views don't
-// yet. Not found unless test hooks are on, so never in production.
+// For the e2e tests (e2e/app-shell.spec.ts): an app shell with nothing else in
+// it, whose views open stacking panels and refresh the router, so the history
+// handling is tested on its own. Not found unless test hooks are on, so never
+// in production.
 export default function AppShellTestPage() {
   if (!testHooksEnabled()) notFound();
 

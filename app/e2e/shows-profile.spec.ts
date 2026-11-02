@@ -71,7 +71,8 @@ test("Profile shows the user's favourites and stats, and the stats add up", asyn
   await expect(statValues(page)).toHaveText(["29.3", "32 episodes · 2 movies", "1", "2"]);
 
   // Completed from its card's quick actions: all 18 episodes (1,966 minutes).
-  await favourites.getByRole("button", { name: "Quick actions for Harbor Lights" }).click();
+  // With the keyboard: the ⋯ button only shows where there is a mouse (phones long-press, see shows-home.spec.ts).
+  await favourites.getByRole("button", { name: "Quick actions for Harbor Lights" }).press("Enter");
   const menu = page.getByRole("dialog", { name: "Harbor Lights" });
   await menu.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" }).click();
   await page.keyboard.press("Escape");

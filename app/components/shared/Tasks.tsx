@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
+import { Spinner } from "@/components/common/Spinner";
 import { useAppView } from "@/hooks/useAppView";
 import { localParts } from "@/lib/calendar";
 import type { Space } from "@/lib/space-types";
@@ -62,7 +63,7 @@ export function Tasks({ space }: { space: Space }) {
     </div>
     {error && <div role="alert" className={styles.alert}><p>{error}</p><button type="button" aria-label="Dismiss" onClick={dismissError}>×</button></div>}
     {loadError && <div role="alert" className={styles.alert}><p>{loadError}</p><button type="button" onClick={reload}>Retry</button></div>}
-    {!lists && !loadError && <p role="status">Loading tasks…</p>}
+    {!lists && !loadError && <Spinner label="Loading tasks…" />}
     {lists?.length === 0 && <form className={styles.card} onSubmit={(e) => { const name = submitted(e, "name"); if (name) select(actions.createList(name)); }}>
       <h2>No lists yet — start your first one!</h2>
       <p className={styles.muted}>Groceries, chores, a trip: everyone in {space.name} can add and tick off tasks.</p>

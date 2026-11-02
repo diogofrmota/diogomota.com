@@ -8,7 +8,7 @@
 .card p { margin: 0; }
 .card input { min-width: 0; width: 100%; min-height: 2.75rem; padding: 0.65rem 0.75rem; font: inherit; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--bg); color: var(--text); }
 .card button { align-self: flex-start; min-height: 2.75rem; padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--accent-soft); color: var(--accent); cursor: pointer; }
-.card button:hover { filter: brightness(1.15); }
+@media (hover: hover) { .card button:hover { filter: brightness(1.15); } }
 .card button:disabled { opacity: 0.6; cursor: wait; }
 .note { font-size: 0.875rem; }
 .members { list-style: none; padding: 0; margin: 0; }
@@ -19,5 +19,8 @@
 .role { margin-left: auto; color: var(--muted); font-size: 0.875rem; }
 .invite, .confirm { display: flex; flex-direction: column; gap: 0.75rem; }
 .invite input { font-family: monospace; letter-spacing: 0.2em; font-size: 1.25rem; }
+.alert { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.alert p { margin: 0; color: var(--text); }
+.alert button { flex-shrink: 0; min-height: 2.75rem; padding: .6rem 1rem; border: 1px solid var(--border); border-radius: .5rem; background: var(--accent-soft); color: var(--accent); cursor: pointer; }
 .view [role="alert"] { color: var(--text); border-left: 3px solid var(--accent); padding-left: 1rem; }
 @media (min-width: 60rem) { .options { grid-template-columns: 1fr 1fr; } }

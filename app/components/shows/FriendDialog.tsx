@@ -1,8 +1,8 @@
 "use client";
 import { useId } from "react";
+import { Dialog } from "@/components/common/Dialog";
 import { useAppView } from "@/hooks/useAppView";
 import type { FriendProfile, Person } from "@/lib/show-types";
-import { Dialog } from "./Dialog";
 import { LibrarySection } from "./LibraryGrid";
 import { useShowsData } from "./shows-data";
 import { StatsSection } from "./Stats";

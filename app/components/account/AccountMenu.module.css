@@ -11,6 +11,7 @@
   align-items: center;
   gap: 0.5rem;
   max-width: 100%;
+  min-width: 2.75rem;
   min-height: 2.75rem;
   padding: 0;
   border: 0;

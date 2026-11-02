@@ -2,7 +2,7 @@ import { randomBytes, randomInt } from "node:crypto";
 import type { Locator, Page } from "@playwright/test";
 import { expect, newUser, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
-import { card, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, row, section, tab, tmdbRequests, typeSwitch, viewHeading } from "./shows";
+import { card, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, row, section, tab, tmdbRequests, typeSwitch, viewHeading, wholeCard } from "./shows";
 
 // Titles of the fake TMDB (lib/tmdb-mock.ts). Its TV shows all have two seasons,
 // of 10 and 8 episodes.
@@ -61,8 +61,8 @@ test("Home starts with a welcome, fills up from Discover, and the TV Shows | Mov
   await expect(grid(watching, "Watching TV shows").getByRole("listitem")).toHaveCount(1);
   const harborCard = card(watching, "Harbor Lights");
   await expect(harborCard).toHaveAccessibleName("Harbor Lights, 2021, Watching, not started");
-  await expect(harborCard).toContainText("Watching");
-  await expect(harborCard).toContainText("2021 · Not started");
+  await expect(wholeCard(harborCard)).toContainText("Watching");
+  await expect(wholeCard(harborCard)).toContainText("2021 · Not started");
   await expect(harborCard.locator("img")).toHaveAttribute("src", new RegExp(`/e2e-poster-${harbor.tmdbId}\\.jpg$`));
   await expect(section(page, "Planned")).toHaveText(/No shows planned yet — explore Discover!/);
   await expect(section(page, "Completed")).toHaveText(/No shows completed yet\./);
@@ -171,7 +171,7 @@ test("the detail panel changes status, progress, rating and favourite, and remov
   await expect(section(page, "Watching")).toHaveText(/not watching any shows yet/);
   const completed = card(section(page, "Completed"), "Harbor Lights");
   await expect(completed).toHaveAccessibleName("Harbor Lights, 2021, Completed, rated 4 out of 5, favourite");
-  await expect(completed).toContainText("2021 · ★★★★★");
+  await expect(wholeCard(completed)).toContainText("2021 · ★★★★★");
   await page.reload();
   await expect(completed).toHaveAccessibleName("Harbor Lights, 2021, Completed, rated 4 out of 5, favourite");
 
@@ -201,7 +201,8 @@ test("the detail panel changes status, progress, rating and favourite, and remov
   await expect(page.getByRole("main").getByRole("heading", { name: "Start by discovering shows!" })).toBeVisible();
 });
 
-test("the quick actions menu changes status and rating from a card, and undoes a refused change", async ({ page }) => {
+test("the quick actions menu changes status and rating from a card, and undoes a refused change", async ({ page, isMobile }) => {
+  test.skip(isMobile, "The ⋯ button and the menu beside the card are for a mouse; phones long-press (\"on a phone\" below).");
   const user = await openShows(page);
   await add(page, harbor, "watching");
   await add(page, orchard, "planned");
@@ -306,7 +307,7 @@ test.describe("on a phone", () => {
     await expectNoHorizontalScroll(page);
     await page.goBack();
     await expect(card(section(page, "Watching"), "Harbor Lights")).toHaveAccessibleName("Harbor Lights, 2021, Watching, season 1 episode 1");
-    await expect(card(section(page, "Watching"), "Harbor Lights")).toContainText("2021 · S1 E1");
+    await expect(wholeCard(card(section(page, "Watching"), "Harbor Lights"))).toContainText("2021 · S1 E1");
   });
 });
 

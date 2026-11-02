@@ -27,18 +27,22 @@ export function titleFacts(title: TitleSummary, withType = false) {
 // Card width: about a third of a phone screen, 9rem or so on desktop.
 const cardSizes = "(min-width: 48rem) 160px, 34vw";
 
+// A card's button is its poster and title; the facts under them are outside it
+// but covered by it, so a tap there opens the card too (Shows.module.css). Its
+// label says the facts in words, and what a control shows has to be in its
+// label, in order, for speech input (WCAG 2.5.3).
 export function TitleGrid({ titles, label, withType = false, onOpen }: {
   titles: readonly TitleSummary[]; label: string; withType?: boolean; onOpen: (title: TitleSummary) => void;
 }) {
   return <ul className={styles.grid} aria-label={label}>
     {titles.map((title) => {
       const facts = titleFacts(title, withType);
-      return <li key={titleKey(title)}>
+      return <li key={titleKey(title)} className={styles.cardItem}>
         <button type="button" className={styles.card} aria-label={facts.label} onClick={() => onOpen(title)}>
           <Poster title={title} sizes={cardSizes} />
           <span className={styles.cardTitle}>{title.title}</span>
-          <span className={styles.cardMeta}>{facts.text}</span>
         </button>
+        <span className={styles.cardMeta}>{facts.text}</span>
       </li>;
     })}
   </ul>;

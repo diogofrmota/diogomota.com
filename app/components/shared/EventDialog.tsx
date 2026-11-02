@@ -1,23 +1,19 @@
 "use client";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import { Dialog } from "@/components/common/Dialog";
+import { apiRequest } from "@/lib/api-request";
 import { calendarZone, googleCalendarLink, localInstants, localParts, type CalendarEvent } from "@/lib/calendar";
 import type { Space } from "@/lib/space-types";
 import styles from "./Calendar.module.css";
 
-export async function eventRequest<T>(path = "", method = "GET", body?: object, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`/api/shared/events${path}`, { method, signal, cache: "no-store",
-    ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),
-  });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error ?? "Could not reach your calendar. Try again.");
-  return result.data;
+export function eventRequest<T>(path = "", method = "GET", body?: object, signal?: AbortSignal): Promise<T> {
+  return apiRequest<T>(`/api/shared/events${path}`, { method, body, signal, fallback: "Could not reach your calendar. Try again." });
 }
 
 export function EventDialog({ event, date, space, userId, onClose, onSaved, onDeleted }: {
   event?: CalendarEvent; date: string; space: Space; userId: string;
   onClose: () => void; onSaved: (event: CalendarEvent) => void; onDeleted: (id: string) => void;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
   const [editing, setEditing] = useState(!event);
   const [deleting, setDeleting] = useState(false);
   const [pending, setPending] = useState(false);
@@ -30,14 +26,6 @@ export function EventDialog({ event, date, space, userId, onClose, onSaved, onDe
   const [endTime, setEndTime] = useState(end.time);
   const startOptions = localInstants(startDate, startTime);
   const endOptions = localInstants(endDate, endTime);
-  useEffect(() => {
-    const dialog = ref.current!;
-    const previous = document.activeElement as HTMLElement | null;
-    dialog.showModal();
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { dialog.close(); document.body.style.overflow = overflow; previous?.focus(); };
-  }, []);
 
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -70,14 +58,14 @@ export function EventDialog({ event, date, space, userId, onClose, onSaved, onDe
     setError(""); setEditing(false);
   }
   const assignee = event?.isGroup ? "Whole group" : space.members.find((m) => m.id === event?.assigneeId)?.username ?? "Former member";
-  return <dialog ref={ref} className={styles.dialog} aria-labelledby="event-heading"
-    onCancel={(e) => { e.preventDefault(); onClose(); }}>
+  return <Dialog className={styles.dialog} aria-labelledby="event-heading" onClose={onClose}><div className={styles.dialogBody}>
     <div className={styles.dialogHeader}><h2 id="event-heading">{editing ? event ? "Edit event" : "New event" : event?.title}</h2>
       <button type="button" aria-label="Close event" onClick={onClose}>×</button></div>
     {error && <p role="alert" className={styles.error}>{error}</p>}
     {editing ? <form onSubmit={save} className={styles.form}>
       <fieldset disabled={pending}>
-        <label>Title<input name="title" required maxLength={200} defaultValue={event?.title} autoFocus /></label>
+        {/* data-autofocus when the dialog opens on the form (a new event), autoFocus when Edit event shows it. */}
+        <label>Title<input name="title" required maxLength={200} defaultValue={event?.title} autoFocus data-autofocus /></label>
         <div className={styles.fields}>
           <label>Date<input type="date" required value={startDate} onChange={(e) => { setStartDate(e.target.value); if (endDate === startDate) setEndDate(e.target.value); }} /></label>
           <label>End date<input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
@@ -111,5 +99,5 @@ export function EventDialog({ event, date, space, userId, onClose, onSaved, onDe
       <div className={styles.actions}><a href={`/api/shared/events/${event.id}/export`} download>Download event .ics</a>
         <a href={googleCalendarLink(event)} target="_blank" rel="noopener noreferrer">Add to Google Calendar ↗</a></div>
     </div>}
-  </dialog>;
+  </div></Dialog>;
 }

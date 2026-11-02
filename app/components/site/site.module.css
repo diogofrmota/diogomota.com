@@ -1,4 +1,4 @@
-/* Public pages (/, /apps, their placeholders, 404): black, IBM Plex Mono. */
+/* The site's own pages (/, /apps, account, login and the like, 404): black, IBM Plex Mono. */
 
 /* Black behind the page too, so overscroll on mobile doesn't flash white. */
 :global(html):has(.page) {

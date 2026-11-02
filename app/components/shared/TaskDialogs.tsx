@@ -1,30 +1,19 @@
 "use client";
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
+import { Dialog } from "@/components/common/Dialog";
 import { GripIcon, TrashIcon } from "@/components/common/icons";
 import type { Space } from "@/lib/space-types";
 import type { Task, TaskFields, TaskList } from "@/lib/task-types";
 import { SortableList, useSortableItem } from "./Sortable";
 import styles from "./Tasks.module.css";
 
-// A modal dialog, a sheet from the bottom on phones. Escape closes it, and so
-// does Back: it is shown for a useAppView panel. Focus starts on the element
-// marked data-autofocus, if any (showModal ignores React's autoFocus).
+// A modal dialog with a title and a close button, a sheet from the bottom on phones.
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  const ref = useRef<HTMLDialogElement>(null);
   const heading = useId();
-  useEffect(() => {
-    const dialog = ref.current!;
-    const previous = document.activeElement as HTMLElement | null;
-    dialog.showModal();
-    dialog.querySelector<HTMLElement>("[data-autofocus]")?.focus();
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { dialog.close(); document.body.style.overflow = overflow; previous?.focus(); };
-  }, []);
-  return <dialog ref={ref} className={styles.dialog} aria-labelledby={heading} onCancel={(e) => { e.preventDefault(); onClose(); }}>
+  return <Dialog className={styles.dialog} aria-labelledby={heading} onClose={onClose}><div className={styles.dialogBody}>
     <div className={styles.dialogHeader}><h2 id={heading}>{title}</h2><button type="button" aria-label="Close" onClick={onClose}>×</button></div>
     {children}
-  </dialog>;
+  </div></Dialog>;
 }
 
 export function TaskDialog({ task, list, space, onClose, onSave, onDelete }: {

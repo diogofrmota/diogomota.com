@@ -1,10 +1,12 @@
 "use client";
 import { useId, useState } from "react";
+import { Dialog } from "@/components/common/Dialog";
+import { Spinner } from "@/components/common/Spinner";
 import { useAppView } from "@/hooks/useAppView";
 import { titleKey, type MediaType, type TitleSummary } from "@/lib/show-types";
-import { Dialog } from "./Dialog";
 import { ChangeError, useLibrary } from "./library";
 import { StarRating, StatusPicker } from "./LibraryControls";
+import { LoadError } from "./TitleGrid";
 import styles from "./Shows.module.css";
 
 type Anchor = Pick<DOMRect, "left" | "right" | "top" | "bottom">;
@@ -46,14 +48,16 @@ export function QuickActions({ title }: { title: { type: MediaType; tmdbId: numb
     aria-labelledby={headingId} onClose={closePanel}>
     <div className={styles.dialogBody}>
       <div className={styles.dialogHeader}>
-        <h2 id={headingId}>{item?.title ?? "Not in your library"}</h2>
+        <h2 id={headingId}>{item?.title ?? (library.items ? "Not in your library" : "Quick actions")}</h2>
         <button type="button" className={styles.close} aria-label="Close" onClick={closePanel}>×</button>
       </div>
       <ChangeError className={styles.error} />
       {item ? <>
         <StatusPicker status={item.library.status} onChange={(status) => library.change(item, { status })} />
         <StarRating rating={item.library.rating} onChange={(rating) => library.change(item, { rating })} />
-      </> : <p className={styles.muted}>{library.items ? "This title isn't in your library anymore." : "Loading your library…"}</p>}
+      </> : library.items ? <p className={styles.muted}>This title isn&rsquo;t in your library anymore.</p>
+        : library.loadError ? <LoadError message={library.loadError} onRetry={library.reload} />
+        : <Spinner label="Loading your library…" />}
     </div>
   </Dialog>;
 }

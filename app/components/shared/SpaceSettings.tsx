@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
+import { Spinner } from "@/components/common/Spinner";
 import { memberColors, type Invite, type Space } from "@/lib/space-types";
 import { spaceRequest } from "./space-request";
 import styles from "./Spaces.module.css";
@@ -10,14 +11,16 @@ export function SpaceSettings({ space, userId, onChange }: { space: Space; userI
   const [message, setMessage] = useState("");
   const [invite, setInvite] = useState<Invite | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [attempt, setAttempt] = useState(0);
   const owner = space.ownerId === userId;
   // Activity resumes this effect whenever Settings is shown again.
   useEffect(() => {
     let active = true;
-    spaceRequest<Space | null>().then((current) => { if (active) onChange(current); })
-      .catch(() => { if (active) setError("Could not refresh members. Reopen Settings to try again."); });
+    spaceRequest<Space | null>().then((current) => { if (active) { setLoadError(""); onChange(current); } })
+      .catch((err) => { if (active) setLoadError((err as Error).message); });
     return () => { active = false; };
-  }, [onChange]);
+  }, [onChange, attempt]);
   async function run(action: () => Promise<void>) {
     setBusy(true); setError(""); setMessage("");
     try { await action(); }
@@ -31,6 +34,8 @@ export function SpaceSettings({ space, userId, onChange }: { space: Space; userI
   }
   return <section className={styles.view}>
     <p className={styles.eyebrow}>{space.name}</p><h1>Settings</h1>
+    {loadError && <div role="alert" className={styles.alert}><p>{loadError}</p>
+      <button onClick={() => { setLoadError(""); setAttempt((n) => n + 1); }}>Retry</button></div>}
     <form className={styles.card} onSubmit={rename}>
       <h2>Your space</h2><label htmlFor="edit-space-name">Space name</label>
       <input key={space.name} id="edit-space-name" name="name" defaultValue={space.name} required maxLength={80} disabled={!owner || busy} />
@@ -60,6 +65,6 @@ export function SpaceSettings({ space, userId, onChange }: { space: Space; userI
         <button disabled={busy} onClick={() => setConfirmLeave(false)}>Cancel</button>
       </div> : <button disabled={busy} onClick={() => setConfirmLeave(true)}>Leave space</button>}
     </section>
-    {busy && <p role="status">Saving…</p>}{message && <p role="status">{message}</p>}{error && <p role="alert">{error}</p>}
+    {busy && <Spinner label="Saving…" />}{message && <p role="status">{message}</p>}{error && <p role="alert">{error}</p>}
   </section>;
 }

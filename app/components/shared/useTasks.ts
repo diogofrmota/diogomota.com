@@ -1,21 +1,13 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ApiError, apiRequest } from "@/lib/api-request";
 import { moveBefore, type Task, type TaskFields, type TaskList } from "@/lib/task-types";
 
 export const undoSeconds = 5;
 
-class TaskRequestError extends Error {
-  constructor(message: string, public status: number) { super(message); }
-}
-
-async function taskRequest<T>(path = "", method = "GET", body?: object): Promise<T> {
+function taskRequest<T>(path = "", method = "GET", body?: object): Promise<T> {
   // keepalive: a change made just before leaving the page still gets there.
-  const response = await fetch(`/api/shared/tasks${path}`, { method, cache: "no-store", keepalive: method !== "GET",
-    ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),
-  }).catch(() => { throw new TaskRequestError("Could not reach the server. Check your connection.", 0); });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new TaskRequestError(result.error ?? "Could not reach your tasks. Try again.", response.status);
-  return result.data;
+  return apiRequest<T>(`/api/shared/tasks${path}`, { method, body, keepalive: method !== "GET", fallback: "Could not reach your tasks. Try again." });
 }
 
 // A random v4 UUID. crypto.randomUUID() would need a secure context, which the
@@ -72,7 +64,7 @@ export function useTasks() {
       } catch (err) {
         setError(`${(err as Error).message} Your change was undone.`);
         // Someone else changed or deleted it meanwhile: show what is there now.
-        if (err instanceof TaskRequestError && [403, 404, 409].includes(err.status)) reload();
+        if (err instanceof ApiError && [403, 404, 409].includes(err.status)) reload();
       } finally {
         setPending((current) => current.filter((c) => c !== next));
       }

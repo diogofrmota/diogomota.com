@@ -70,7 +70,8 @@ function libraryFacts(item: CardItem) {
 const cardSizes = "(min-width: 48rem) 160px, 34vw";
 
 // A friend's titles are read-only: a card opens the detail panel, which is
-// about the user's own library, and has no quick actions.
+// about the user's own library, and has no quick actions. As in TitleGrid, the
+// button is the poster and the title, and covers the status badge and the facts.
 function LibraryCard({ item, readOnly }: { item: CardItem; readOnly: boolean }) {
   const openTitle = useOpenTitle();
   const openActions = useOpenActions();
@@ -81,17 +82,17 @@ function LibraryCard({ item, readOnly }: { item: CardItem; readOnly: boolean }) 
     <button type="button" className={styles.card} aria-label={facts.label} onClick={() => openTitle(item)} {...(readOnly ? {} : longPress)}>
       <span className={styles.posterFrame}>
         <Poster title={item} sizes={cardSizes} />
-        <span className={`${styles.badge} ${styles[status]}`} aria-hidden="true">{statusNames[status]}</span>
         {isFavourite && <span className={styles.favouriteMark} aria-hidden="true">♥</span>}
       </span>
       <span className={styles.cardTitle}>{item.title}</span>
-      <span className={styles.cardMeta}>
-        {[item.year, facts.meta].filter(Boolean).join(" · ")}
-        {facts.rated && <span className={styles.cardStars}>{item.year ? " · " : ""}
-          <span className={styles.starOn}>{"★".repeat(rating!)}</span><span className={styles.starOff}>{"★".repeat(5 - rating!)}</span>
-        </span>}
-      </span>
     </button>
+    <span className={`${styles.badge} ${styles[status]}`} aria-hidden="true">{statusNames[status]}</span>
+    <span className={styles.cardMeta}>
+      {[item.year, facts.meta].filter(Boolean).join(" · ")}
+      {facts.rated && <span className={styles.cardStars}>{item.year ? " · " : ""}
+        <span className={styles.starOn}>{"★".repeat(rating!)}</span><span className={styles.starOff}>{"★".repeat(5 - rating!)}</span>
+      </span>}
+    </span>
     {!readOnly && <button type="button" className={styles.cardMenu} aria-label={`Quick actions for ${item.title}`} aria-haspopup="dialog"
       onClick={(e) => openActions(item, e.currentTarget.getBoundingClientRect())}>
       <span aria-hidden="true">⋯</span>

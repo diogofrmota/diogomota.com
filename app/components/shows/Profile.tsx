@@ -1,10 +1,11 @@
 "use client";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { ApiError } from "@/lib/api-request";
 import { libraryStats, type FriendsState, type Person } from "@/lib/show-types";
 import { useOpenFriend } from "./FriendDialog";
 import { ChangeError, useLibrary } from "./library";
 import { LibrarySection } from "./LibraryGrid";
-import { forgetShowsData, ShowsRequestError, showsRequest } from "./shows-data";
+import { forgetShowsData, showsRequest } from "./shows-data";
 import { StatsSection } from "./Stats";
 import { LoadError } from "./TitleGrid";
 import { TmdbAttribution } from "./TmdbAttribution";
@@ -44,7 +45,7 @@ function useFriends() {
       return next;
     } catch (err) {
       // Changed meanwhile (by them, or in another tab): show what is there now.
-      if (err instanceof ShowsRequestError && [404, 409].includes(err.status)) load();
+      if (err instanceof ApiError && [404, 409].includes(err.status)) load();
       throw err;
     }
   }), [enqueue, show, load]);

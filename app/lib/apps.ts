@@ -27,6 +27,10 @@ export const apps: readonly AppInfo[] = [
   },
 ];
 
+const names = new Intl.ListFormat("en", { type: "conjunction" }).format(apps.map((app) => app.name));
+/** What /apps is, for its description and the web app manifest. */
+export const appsDescription = `Small apps for friends: ${names}.`;
+
 // Viewport of the app pages: edge to edge on phones with a notch or home
 // indicator, so the app shell can keep its bars clear of them itself
 // (env(safe-area-inset-*)). The theme color comes from the shell.

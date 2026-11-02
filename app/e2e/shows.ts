@@ -39,6 +39,8 @@ export const grid = (scope: Page | Locator, name: string) => scope.getByRole("li
 /** A card by its title: cards are named "<title>, <year>, ...". */
 export const card = (scope: Page | Locator, title: string) =>
   scope.getByRole("button", { name: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")},`) });
+/** All of a card: its button (the poster and title), with its status badge and the facts under it. */
+export const wholeCard = (cardButton: Locator) => cardButton.locator("..");
 export const typeSwitch = (page: Page, name: "TV Shows" | "Movies") =>
   page.getByRole("group", { name: "Show" }).getByRole("button", { name, exact: true });
 

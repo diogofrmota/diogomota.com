@@ -1,23 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useAppView } from "@/hooks/useAppView";
+import { apiRequest, type ApiError } from "@/lib/api-request";
 import { titleKey, type TitleSummary } from "@/lib/show-types";
 
-export class ShowsRequestError extends Error {
-  constructor(message: string, public status: number) { super(message); }
-}
-
-/** Calls /api/shows{path} and returns its data, or throws its error message. */
-export async function showsRequest<T>(path: string, { method = "GET", body, signal }: { method?: string; body?: object; signal?: AbortSignal } = {}): Promise<T> {
-  const response = await fetch(`/api/shows${path}`, { method, signal, cache: "no-store",
-    ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),
-  }).catch((error) => {
-    if (signal?.aborted) throw error;
-    throw new ShowsRequestError("Could not reach the server. Check your connection.", 0);
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new ShowsRequestError(result.error ?? "Something went wrong. Try again.", response.status);
-  return result.data;
+/** Calls /api/shows{path} and returns its data, or throws an ApiError with its message. */
+export function showsRequest<T>(path: string, options: { method?: string; body?: object; signal?: AbortSignal } = {}): Promise<T> {
+  return apiRequest<T>(`/api/shows${path}`, { ...options, fallback: "Something went wrong. Try again." });
 }
 
 // Answers already loaded on this page, so switching back to a list or search
@@ -50,7 +39,7 @@ export function useShowsData<T>(path: string | null, reuse = true) {
       if (reuse) keep(path, data);
       setResult({ path, data });
     }).catch((error: Error) => {
-      if (!controller.signal.aborted) setResult({ path, error: error.message, status: (error as ShowsRequestError).status });
+      if (!controller.signal.aborted) setResult({ path, error: error.message, status: (error as ApiError).status });
     });
     return () => controller.abort();
   }, [path, reuse, attempt]);

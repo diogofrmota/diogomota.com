@@ -55,6 +55,11 @@
   background: #fff;
 }
 
+/* No scrolling the page behind an open dialog (components/common/Dialog). */
+:global(html):has(.shell dialog[open]) {
+  overflow: hidden;
+}
+
 /* Element defaults. :where() keeps them at zero specificity, so any class wins. */
 :where(.shell) button {
   font: inherit;

@@ -1,7 +1,8 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { ApiError } from "@/lib/api-request";
 import { type LibraryChange, type LibraryItem, type LibraryStatus, type TitleDetail, type TitleSummary } from "@/lib/show-types";
-import { ShowsRequestError, showsRequest } from "./shows-data";
+import { showsRequest } from "./shows-data";
 
 type TitleRef = Pick<TitleSummary, "type" | "tmdbId">;
 const entryPath = (title: TitleRef) => `/library/${title.type}/${title.tmdbId}`;
@@ -74,7 +75,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         setError(`${(err as Error).message} Your change was undone.`);
         // Changed or removed elsewhere meanwhile (another tab or device): show what is there now.
-        if (err instanceof ShowsRequestError && [404, 409].includes(err.status)) reload();
+        if (err instanceof ApiError && [404, 409].includes(err.status)) reload();
       } finally {
         setPending((current) => current.filter((c) => c !== next));
       }
@@ -108,7 +109,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
         setError("");
       } catch (err) {
         // Already there (added in another tab or device): load the library again to show it.
-        if (err instanceof ShowsRequestError && err.status === 409) reload();
+        if (err instanceof ApiError && err.status === 409) reload();
         throw err;
       }
     }),

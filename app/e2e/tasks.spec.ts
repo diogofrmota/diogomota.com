@@ -148,7 +148,7 @@ test("lists: empty state, create, rename, reorder with the keyboard and delete, 
   await expect(page).toHaveURL("/shared");
 });
 
-test("tasks: add, reorder with mouse and keyboard (persists after reload), complete, assign and delete with undo", async ({ page, browser }) => {
+test("tasks: add, reorder with mouse and keyboard (persists after reload), complete, assign and delete with undo", async ({ page, browser, isMobile }) => {
   const space = await setup(page);
   const friend = newUser();
   const context = await browser.newContext(contextOptions());
@@ -234,17 +234,23 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await expect(row(page, "Buy milk")).not.toContainText("Due");
   expect((await readLists(page))[0].tasks.find((t) => t.title === "Buy milk")).toMatchObject({ assigneeId: null, dueDate: null });
 
-  // Delete with undo: nothing is sent until the undo window closes.
+  // Delete with undo: nothing is sent until the undo window closes. With the bin
+  // button where there is a mouse; phones swipe (the phone test) or use the dialog.
+  const deleteTask = async (title: string) => {
+    if (!isMobile) return row(page, title).getByRole("button", { name: `Delete ${title}` }).click();
+    await row(page, title).getByRole("button", { name: new RegExp(`^${title}`) }).click();
+    await dialog.getByRole("button", { name: "Delete task" }).click();
+  };
   const deletes: string[] = [];
   page.on("request", (r) => { if (r.method() === "DELETE") deletes.push(r.url()); });
-  await row(page, "Water plants").getByRole("button", { name: "Delete Water plants" }).click();
+  await deleteTask("Water plants");
   await expect.poll(() => todoTitles(page)).toEqual(["Buy milk", "Fix the door"]);
   const toast = page.getByRole("status").filter({ hasText: "Deleted “Water plants”" });
   await toast.getByRole("button", { name: "Undo" }).click();
   await expect(toast).toHaveCount(0);
   await expect.poll(() => todoTitles(page)).toEqual(["Buy milk", "Water plants", "Fix the door"]);
   expect(deletes).toEqual([]);
-  await row(page, "Water plants").getByRole("button", { name: "Delete Water plants" }).click();
+  await deleteTask("Water plants");
   const gone = saved(page, /\/tasks\/[^/]+$/, "DELETE");
   await expect(toast).toBeVisible();
   await gone;

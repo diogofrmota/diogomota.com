@@ -1,12 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { useId, useState } from "react";
 import type { AppInfo } from "@/lib/apps";
 import { authHref } from "@/lib/next-path";
 import { LoginPrompt } from "./LoginPrompt";
 import styles from "./AppList.module.css";
+
+// Turns beside the app's name from the click until the app has loaded (the
+// card stays until then: the apps have no loading screen, as their theme is
+// only known once the server has rendered them).
+function PendingHint() {
+  const { pending } = useLinkStatus();
+  return (
+    <span aria-hidden="true" className={`${styles.pending} ${pending ? styles.active : ""}`} />
+  );
+}
 
 // The app cards on /apps. Logged in, a card goes straight into its app. Logged
 // out, it opens the login prompt instead; its href is then the login page, for
@@ -37,6 +47,7 @@ export function AppList({
                 {loggedIn ? (
                   <Link href={app.href} className={styles.link} aria-describedby={`${id}-${i}`}>
                     {app.name}
+                    <PendingHint />
                   </Link>
                 ) : (
                   <Link

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
+import { Dialog } from "@/components/common/Dialog";
 import { addStatuses, formatRuntime, statusNames, titleKey, type LibraryStatus, type TitleDetail, type TitleSummary } from "@/lib/show-types";
-import { Dialog } from "./Dialog";
 import { useLibrary } from "./library";
 import { LibraryControls } from "./LibraryControls";
 import { seenTitle, useShowsData } from "./shows-data";

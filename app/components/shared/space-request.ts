@@ -1,9 +1,6 @@
-export async function spaceRequest<T>(path = "", method = "GET", body?: object): Promise<T> {
-  const response = await fetch(`/api/shared/spaces${path}`, {
-    method, cache: "no-store",
-    ...(method !== "GET" ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) } : {}),
-  });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error ?? "Could not reach your space. Try again.");
-  return result.data;
+import { apiRequest } from "@/lib/api-request";
+
+// Changes send a JSON body, an empty one when there is nothing to say: the API takes nothing else.
+export function spaceRequest<T>(path = "", method = "GET", body?: object): Promise<T> {
+  return apiRequest<T>(`/api/shared/spaces${path}`, { method, body: method === "GET" ? undefined : body ?? {}, fallback: "Could not reach your space. Try again." });
 }

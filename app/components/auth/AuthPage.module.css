@@ -17,7 +17,6 @@
 
 .links {
   display: grid;
-  gap: 0.5rem;
   margin-top: 1.5rem;
   font-size: 0.875rem;
 }
@@ -26,7 +25,11 @@
   margin: 0;
 }
 
+/* 44px tall for touch, also inside a sentence. */
 .links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   color: #fff;
 }
 

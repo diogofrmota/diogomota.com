@@ -30,7 +30,8 @@ test("the account menu opens settings, and closes with Escape or a click outside
 
   await button.click();
   await expect(settings).toBeVisible();
-  await page.getByRole("heading", { level: 1, name: "apps" }).click();
+  // Its left end: on a phone, the open menu covers the rest of the heading.
+  await page.getByRole("heading", { level: 1, name: "apps" }).click({ position: { x: 5, y: 5 } });
   await expect(settings).toBeHidden();
 
   await button.click();

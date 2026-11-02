@@ -1,5 +1,6 @@
 "use client";
 import { useState, type FormEvent } from "react";
+import { Spinner } from "@/components/common/Spinner";
 import type { Space } from "@/lib/space-types";
 import { spaceRequest } from "./space-request";
 import styles from "./Spaces.module.css";
@@ -32,7 +33,7 @@ export function SpaceWelcome({ onJoined }: { onJoined: (space: Space) => void })
         <button disabled={busy}>Join with Code</button>
       </form>
     </div>
-    {busy && <p role="status">Opening your space…</p>}{error && <p role="alert">{error}</p>}
+    {busy && <Spinner label="Opening your space…" />}{error && <p role="alert">{error}</p>}
     <p className={styles.note}>You can belong to one space at a time.</p>
   </section>;
 }
