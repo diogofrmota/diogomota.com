@@ -1,7 +1,17 @@
 import { randomBytes } from "node:crypto";
-import { test as base, expect, type Page } from "@playwright/test";
+import { test as base, expect, type BrowserContext, type Page } from "@playwright/test";
 
 export { expect };
+
+// No test reaches TMDB. The app's server talks to a fake TMDB (lib/tmdb-mock.ts)
+// when test hooks are on; the posters, which browsers load from TMDB's image
+// server, are drawn here instead. Call this for contexts made with newContext().
+export async function fakeTmdbImages(context: BrowserContext) {
+  await context.route("https://image.tmdb.org/**", (route) => route.fulfill({
+    contentType: "image/svg+xml",
+    body: '<svg xmlns="http://www.w3.org/2000/svg" width="342" height="513"><rect width="342" height="513" fill="#4b6584"/></svg>',
+  }));
+}
 
 // Every test comes from its own made-up client address. The app rate-limits
 // login and sign-up per IP, read from X-Forwarded-For (set by nginx in
@@ -12,6 +22,10 @@ export const test = base.extend({
   extraHTTPHeaders: async ({}, provide) => {
     const [a, b, c] = randomBytes(3);
     await provide({ "X-Forwarded-For": `10.${a}.${b}.${c}` });
+  },
+  context: async ({ context }, provide) => {
+    await fakeTmdbImages(context);
+    await provide(context);
   },
 });
 

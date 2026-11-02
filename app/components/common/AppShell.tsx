@@ -42,6 +42,8 @@ export function AppShell({
   username,
   theme: savedTheme,
   hideNavigation = false,
+  actions,
+  children,
 }: {
   name: string;
   /** The first tab is the default view. */
@@ -49,6 +51,10 @@ export function AppShell({
   username: string;
   theme: Theme;
   hideNavigation?: boolean;
+  /** The app's own buttons in the top bar, before the theme toggle. */
+  actions?: React.ReactNode;
+  /** Shown over every view, such as the app's dialogs; can use useAppView(). */
+  children?: React.ReactNode;
 }) {
   const ids = useMemo(() => tabs.map((tab) => tab.id), [tabs]);
   const appView = useAppViewHistory(ids);
@@ -71,6 +77,7 @@ export function AppShell({
           </Link>
           <span className={styles.appName}>{name}</span>
           <div className={styles.actions}>
+            {actions}
             <ThemeToggle theme={theme} onChange={setTheme} />
             <nav aria-label="Account" className={styles.account}>
               <AccountMenu username={username} />
@@ -86,6 +93,7 @@ export function AppShell({
           ))}
         </main>
         {!hideNavigation && <BottomNav label={name} tabs={tabs} current={appView.view} onSelect={selectTab} />}
+        {children}
       </div>
     </AppViewContext>
   );

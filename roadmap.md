@@ -46,24 +46,14 @@
 
 - `TMDB_READ_TOKEN` (the v4 API Read Access Token) copied into `app/.env.local`; the VPS `.env` already had it
 
+- Goal 11, Shows: TMDB + Discover (2026-11-02): version `0.11.0`. `lib/tmdb.ts` (server-only): Bearer `TMDB_READ_TOKEN`, 8 s timeout, typed responses checked field by field, `tmdbImageUrl` (TMDB's closest size, `w92` to `w780`); top rated and popular kept in memory 10 minutes, searches 5. Opening or adding a title upserts it into `shows` (seasons without specials, episode runtime with the latest episode's as fallback, movie runtime, TMDB rating in the new `vote_average` from `005_show_rating.sql`), fetched again once older than 7 days, the old copy kept if TMDB fails. Discover: TV Shows | Movies switch over Top Rated, Popular and Added by Friends (accepted friends' libraries, most shared first; empty state until there are friends), poster grids of 12 with Show all 20, skeleton posters while loading, errors with Retry, TMDB logo (their file) and notice at the bottom. Search: a button in the top bar of every Shows view (AppShell gained an `actions` slot and dialogs as children) and a field at the top of Discover open a search panel (full screen on phones) searching TV shows and movies together, 300 ms after typing stops. Detail panel (bottom sheet on phones, Back/Escape close it, stacks over search): overview, seasons and episodes or runtime, Add to Library as Watching or Planned. API: `/api/shows/discover/...`, `/api/shows/titles/:type/:id`, `POST /api/shows/library`; 120 requests a minute per user. Tests use an in-process fake TMDB (`lib/tmdb-mock.ts`, test hooks only, `/api/test/tmdb` logs its requests) and fake poster images in the browser, so nothing reaches TMDB. Playwright: 97 tests (7 new in `shows-discover.spec.ts`: Discover sections and skeletons, search from every view with debounce, errors and Retry, phone detail sheet and add to library with the rows checked, phone search panel, API validation and 401s, the 7-day refresh and memory caches, Added by Friends with accepted vs pending friends). Lint, typecheck, production build and all e2e tests pass (committed on main, not pushed).
+
 ## To-do
 
-### Goal 11 — Shows: TMDB + Discover
+### [You] Goal 11 — Push
 
-```
-/goal Build the TMDB integration and the Discover view of the Shows app on diogomota.com. Read plan.md (App 2 — Shows Tracker: TMDB Integration, Discover, UI/UX Details) and roadmap.md first.
-
-- First bump the version: `npm version 0.11.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.11.x.
-- lib/tmdb.ts: server-only client using TMDB_READ_TOKEN (Bearer), typed responses, timeouts, image URL helper. The token never reaches the browser.
-- Caching: when a title is added to a library or opened in detail, upsert it into the shows table (including seasons, episode counts, episode runtime). Re-fetch if last_updated is older than 7 days. Cache TMDB list endpoints (top rated, popular, search) in memory for a short time.
-- Discover with a TV Shows | Movies switch, identical layout for both: Top Rated, Popular, Added by Friends (titles in accepted friends' libraries; empty until friends exist). Cards: poster, title, year, average rating.
-- Search bar reachable from every Shows view, debounced.
-- Detail panel with "Add to Library" (Watching or Planned).
-- Poster-heavy grid, skeleton loaders, TMDB attribution as required by their terms.
-- Playwright tests with TMDB responses mocked at the API route level (no real TMDB calls in tests): Discover sections render, search works, add to library creates the rows.
-
-Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not push).
-```
+- [ ] Copy `TMDB_READ_TOKEN` from the root `.env` into `app/.env.local`: it isn't there yet, so `npm run dev` shows "TMDB isn't answering" in Discover (the e2e tests don't need it).
+- [ ] Push. The deploy is `v0.11.0` and applies `005_show_rating.sql`. Then on your phone: Discover in both TV Shows and Movies, search from Home and Profile, open a title and add it as Watching.
 
 ---
 

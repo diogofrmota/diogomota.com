@@ -1,0 +1,107 @@
+/* The Shows app. The dialogs are rendered inside the AppShell, so its theme
+   variables reach them too. */
+.view { --danger: #f87171; max-width: 72rem; margin: auto; } /* --danger: 6.3:1 on --surface */
+:global([data-theme="light"]) .view, :global([data-theme="light"]) .dialog { --danger: #b91c1c; }
+.dialog { --danger: #f87171; }
+.heading { font-size: 1.75rem; margin: 0 0 1rem; letter-spacing: -.04em; }
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+.view button, .dialog button { min-height: 44px; border: 1px solid var(--border); background: var(--surface); border-radius: .5rem; padding: .5rem .85rem; cursor: pointer; }
+.view button:disabled, .dialog button:disabled { opacity: .6; cursor: wait; }
+@media (hover: hover) { .view button:hover, .dialog button:hover { background: var(--hover); } }
+.dialog .primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 650; }
+@media (hover: hover) { .dialog .primary:hover { background: var(--accent); filter: brightness(.93); } }
+
+/* Top bar search button, styled like the theme toggle next to it. */
+.searchButton { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; padding: 0; border: 0; border-radius: .5rem; background: none; color: var(--muted); cursor: pointer; }
+@media (hover: hover) { .searchButton:hover { background: var(--hover); color: var(--text); } }
+
+.view .launcher { display: flex; align-items: center; gap: .6rem; width: 100%; max-width: 36rem; margin-bottom: 1rem; padding: .5rem .9rem; border-radius: 999px; background: var(--hover); border-color: transparent; color: var(--muted); text-align: left; }
+.launcher svg { flex-shrink: 0; width: 1.25rem; height: 1.25rem; }
+
+.switcher { display: flex; width: fit-content; padding: 3px; border-radius: .65rem; background: var(--hover); }
+.view .switcher button { border: 0; background: transparent; padding-inline: 1.1rem; }
+.view .switcher button[aria-pressed="true"] { background: var(--surface); box-shadow: 0 1px 4px #0003; color: var(--accent); font-weight: 600; }
+
+.section { margin-top: 2rem; }
+.section h2 { font-size: 1.2rem; font-weight: 650; margin: 0 0 .85rem; }
+.empty { margin: 0; padding: 1rem; border-radius: .75rem; background: var(--accent-soft); color: var(--accent); }
+.view .more { margin-top: 1rem; }
+.error { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; padding: .5rem .5rem .5rem .75rem; border-left: 3px solid var(--danger); border-radius: .4rem; background: var(--hover); }
+.error p, p.error { margin: 0; }
+
+/* Poster grid: about three across on a phone, more on wider screens. */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.25rem, 1fr)); gap: 1.1rem .75rem; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 48rem) { .grid { grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 1.5rem 1rem; } }
+.grid li { min-width: 0; }
+.view .card, .dialog .card { display: flex; flex-direction: column; gap: .2rem; width: 100%; padding: 0; border: 0; background: none; border-radius: .5rem; text-align: left; color: inherit; }
+@media (hover: hover) {
+  .view .card:hover, .dialog .card:hover { background: none; }
+  .card:hover .poster { filter: brightness(1.08); box-shadow: 0 6px 20px #0004; }
+}
+.poster { display: block; width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .5rem; background: var(--hover); box-shadow: 0 1px 3px #0003; transition: filter .15s, box-shadow .15s; }
+.noPoster { display: flex; align-items: center; justify-content: center; padding: .5rem; color: var(--muted); font-size: .8rem; font-weight: 600; text-align: center; overflow: hidden; border: 1px solid var(--border); }
+.cardTitle { margin-top: .35rem; font-size: .875rem; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cardMeta { color: var(--muted); font-size: .75rem; }
+
+.skeleton { background: linear-gradient(90deg, var(--hover) 25%, var(--border) 50%, var(--hover) 75%); background-size: 300% 100%; animation: shimmer 1.4s ease-in-out infinite; box-shadow: none; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } .poster { transition: none; } }
+.skeletonLine { display: block; height: .8rem; margin-top: .5rem; border-radius: .25rem; }
+.skeletonShort { width: 55%; }
+
+.attribution { display: flex; align-items: center; gap: .5rem 1rem; flex-wrap: wrap; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .75rem; }
+.attribution p { margin: 0; flex: 1 1 16rem; }
+.tmdbLink { display: inline-flex; align-items: center; min-height: 44px; }
+.tmdbLink img { display: block; }
+
+/* Dialogs: a modal on desktop, a bottom sheet (detail) or the whole screen
+   (search) on a phone. Their content fills them, so a click on the dialog itself
+   is on the backdrop (Dialog.tsx). */
+.dialog { margin: auto; width: min(36rem, calc(100% - 2rem)); max-height: 90dvh; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface); color: var(--text); box-shadow: 0 24px 90px #0006; }
+.dialog[open] { display: flex; flex-direction: column; }
+.dialog::backdrop { background: #0009; }
+:global(html):has(.dialog[open]) { overflow: hidden; }
+.dialogBody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1.5rem; }
+.dialogHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; margin-bottom: 1rem; }
+.dialogHeader h2 { margin: .3rem 0; font-size: 1.4rem; overflow-wrap: anywhere; }
+.dialog .close { flex-shrink: 0; width: 44px; padding: 0; font-size: 1.5rem; line-height: 1; }
+
+.searchDialog { width: min(60rem, calc(100% - 2rem)); height: min(48rem, 90dvh); margin-top: 5vh; }
+.searchBar { position: sticky; top: -1.5rem; z-index: 1; display: flex; align-items: center; gap: .5rem; margin: -1.5rem -1.5rem 1.25rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--surface); }
+.searchBar svg { flex-shrink: 0; color: var(--muted); }
+.searchBar input { flex: 1; min-width: 0; min-height: 44px; padding: .5rem .75rem; font: inherit; font-size: 1rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: .5rem; }
+.dialog .textButton { flex-shrink: 0; border-color: transparent; background: none; color: var(--accent); font-weight: 600; }
+.hint { margin: 0; color: var(--muted); }
+.results { min-height: 12rem; }
+.searchDialog .attribution { margin-top: 2rem; }
+
+.detail { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 1rem; align-items: start; }
+@media (min-width: 48rem) { .detail { grid-template-columns: 11rem minmax(0, 1fr); } }
+.detailPoster { border-radius: .6rem; }
+.facts { display: grid; gap: .35rem; }
+.facts p { margin: 0; }
+.source { color: var(--muted); font-size: .75rem; }
+.overview { margin: 1.25rem 0; line-height: 1.6; white-space: pre-line; }
+.overviewSkeleton { margin: 1.25rem 0; }
+.inLibrary { width: fit-content; margin: 0 0 1rem; padding: .5rem .85rem; border-radius: .5rem; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.addGroup { margin-bottom: 1rem; }
+.addGroup h3, .seasons h3 { margin: 0 0 .5rem; font-size: 1rem; }
+.addButtons { display: flex; gap: .5rem; flex-wrap: wrap; }
+.addButtons button { flex: 1 1 8rem; }
+.dialog p.error { margin-bottom: 1rem; }
+.seasons ol { margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: .6rem; }
+.seasons li { display: flex; justify-content: space-between; gap: 1rem; padding: .6rem .85rem; font-size: .9rem; }
+.seasons li + li { border-top: 1px solid var(--border); }
+.seasons li span:last-child { color: var(--muted); }
+
+@media (max-width: 47.99rem) {
+  .heading { margin-bottom: .75rem; }
+  .switcher { width: 100%; }
+  .view .switcher button { flex: 1; }
+  .titleDialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-radius: 1rem 1rem 0 0; border-bottom: 0; }
+  .titleDialog .dialogBody { padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
+  .searchDialog { margin: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
+  .searchDialog .dialogBody { padding: 1rem max(1rem, env(safe-area-inset-right)) calc(1.5rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
+  .searchDialog .searchBar { top: -1rem; margin: -1rem -1rem 1rem; padding: calc(.75rem + env(safe-area-inset-top)) 1rem .75rem; }
+}
