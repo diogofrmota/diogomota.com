@@ -38,48 +38,10 @@
 
 ## To-do
 
-### [You] Goal 7 — Push
+### [You] Goals 7–9 — Push
 
-- [ ] Push. No migration; the deploy is `v0.7.0`.
+- [ ] Push. The deploy is `v0.9.0` and applies `004_space_membership.sql`.
 - [ ] On your phone at https://diogomota.com: open Shared and Shows, switch tabs, go back through the views with the back gesture or button and on out to `/apps`, switch the theme and reload. The bottom bar should sit clear of the home indicator.
-
----
-
-### Goal 8 — Shared: spaces
-
-```
-/goal Build the Spaces system of the Shared app (/shared) on diogomota.com. Read plan.md (App 1 — Shared: Core Concept, Settings, UI/UX Details) and roadmap.md first.
-
-- First bump the version: `npm version 0.8.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.8.x.
-- First visit with no space: "Create a Space" (name) or "Join with Code". One space per user.
-- Invites: owner generates a code (short, unambiguous characters, e.g. 8 chars), expires after 24 h, single use. Joining with an invalid, expired or used code shows a clear error.
-- Each member gets a distinct color from a fixed accessible palette on join.
-- Settings view: edit space name (owner), members list with role (owner/member) and color, invite (show code + copy button + expiry), leave space. If the owner leaves, ownership passes to the oldest remaining member; the space is deleted when the last member leaves.
-- API routes under /api/shared/spaces with server-side checks that the user belongs to the space for every operation.
-- Returning users land on their space's Calendar view.
-- Playwright tests with two users: create, invite, join, rename, leave, ownership transfer, expired/used code errors, a user cannot read another space's data via the API.
-
-Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not push).
-```
-
----
-
-### Goal 9 — Shared: calendar
-
-```
-/goal Build the Calendar view of the Shared app on diogomota.com. Read plan.md (App 1 — Shared: Calendar) and roadmap.md first.
-
-- First bump the version: `npm version 0.9.0 --no-git-tag-version` in app/ (README.md, Versions), so this goal deploys as v0.9.x.
-- Month, week and day views, Google Calendar-like, usable on mobile (use FullCalendar's MIT-licensed plugins or a custom implementation; style it to match the app theme in light and dark).
-- Add/edit/delete events: title, date, start/end time, optional notes, assignee = one member or the whole group. Event color = assignee's member color; group events use a neutral color plus a group badge/icon.
-- Click an event to view, edit or delete it (modal on desktop, bottom sheet on mobile; back button closes it).
-- Export: download an .ics file for a single event and for the whole calendar, and an "Add to Google Calendar" link per event. Correct time zone handling (Europe/Lisbon default, stored in UTC).
-- API routes under /api/shared/events, scoped to the user's space.
-- Empty state: "Nothing planned yet — add your first event!"
-- Playwright tests: create personal and group events, edit, delete, switch views, .ics download contains the event, a member of another space cannot see the events.
-
-Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not push).
-```
 
 ---
 
