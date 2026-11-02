@@ -16,75 +16,24 @@
 - Resend DNS records in Porkbun: TXT `resend._domainkey`, CNAMEs `send` and `rsend`, TXT `_dmarc` (`v=DMARC1; p=none;`)
 - Resend API key (sending access), in the local `.env` and `app/.env.local`
 - Goal 1, scaffold: Next.js app, Postgres schema, migration runner, Dockerfile, Playwright smoke test (pushed)
-- Goal 2, server config: VPS setup script, production compose, nginx, TLS, backup and restore scripts, VPS runbook (committed, not pushed; the runbook was deleted once the VPS was prepared)
+- Goal 2, server config: VPS setup script, production compose, nginx, TLS, backup and restore scripts, VPS runbook (pushed; the runbook was deleted once the VPS was prepared)
 - Prepare the VPS (2026-11-01): `setup-vps.sh` run and rebooted onto the new kernel; `deploy` key login works, root and password login refused; UFW 22/80/443 only; fail2ban `sshd` jail on; stack files in `/opt/diogomota`; Docker Hub login with `vps-pull`; production `.env` complete (generated `POSTGRES_PASSWORD` and `AUTH_SECRET`, plus `RESEND_API_KEY` and `TMDB_READ_TOKEN`); Postgres healthy; nginx with a Let's Encrypt certificate for `diogomota.com` and `www` (expires 2027-01-30), `www` and `http` redirect to `https://diogomota.com/`; cron jobs for certificate renewal (03:17 and 15:17) and backups (03:00 every 3 days), first backup taken. No app yet (`/api/health` is 502): the first CI deploy runs the migrations and starts it
+- Goal 3, CI/CD (2026-11-02): `.github/workflows/ci.yml` (lint, typecheck, build on pull requests) and `.github/workflows/deploy.yml` (push to `main`: check, then image `diogofrmota/diogomota-com:<short SHA>` + `latest`, then copy the stack files to `/opt/diogomota` over SSH and run `infra/deploy.sh`, then wait up to 60 s for `/api/health`; Run workflow with `image_tag` rolls back). Each deploy pins `IMAGE_TAG` in the VPS `.env`. README Production section covers deploys, rollback and logs. actionlint clean, deploy script tested against a local copy of the stack (pushed)
+- Docker Hub repo `diogofrmota/diogomota-com` made private (2026-11-02); the VPS still pulls with `vps-pull` (Read-only scope)
+- GitHub Actions secrets set: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` (Read & Write), `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (deploy-only key `C:\Users\diogo\.ssh\diogomota_deploy`, comment `github-actions`, in `/home/deploy/.ssh/authorized_keys`), `VPS_KNOWN_HOSTS` (`ssh-keyscan 162.19.252.190`)
+- First deploy (2026-11-02): image `cff752c` live. The first attempt failed because the `VPS_USER` secret was missing; it worked after adding the secret and re-running the failed job. `001_initial.sql` applied, `IMAGE_TAG=cff752c` pinned in `/opt/diogomota/.env`, `/api/health` returns `{"status":"ok"}`, placeholder page loads, `https://www`, `http://` and `http://www` redirect (301) to `https://diogomota.com/`, security headers present. From now on every push to `main` deploys; rollback and logs: README.md, Production
+- Goal 4, landing + app hub (2026-11-02): `/` (black; four white lines of one size, left-aligned in a block centered on the screen, like portfolio-diogomota.com; IBM Plex Mono self-hosted with `next/font/local` and applied by `components/site/SitePage`, not the root layout; Richemont link opens in a new tab; `[Check Apps]` → `/apps`; title, description, Open Graph tags and a generated preview image in the same layout). `/apps`: top bar `Login | Sign Up` → placeholder pages `/login` and `/signup`; cards for Shared and Shows from the typed list in `app/lib/apps.ts`; logged out, a card opens a login prompt (`components/site/LoginPrompt.tsx`) whose links carry `?next=/shared` or `?next=/shows`. `/shared` and `/shows` don't exist yet (404). Favicon, touch icon, styled 404. Playwright: 27 tests, axe scan clean (committed `f83bb71`, `19185a7` and `29890a3`, not pushed)
+- Sign-up policy decided: open to anyone, no sign-up code
 
 ## To-do
-
-### Goal 3 — CI/CD
-
-Before:
-- [x] VPS prepared
-- [ ] Decide whether the Docker Hub repo `diogofrmota/diogomota-com` should be private. It's public now, so anyone can pull the images CI pushes. Docker Hub → the repo → Settings (free accounts get one private repo).
-- [ ] GitHub repo → Settings → Secrets and variables → Actions → add:
-  - `DOCKERHUB_USERNAME` = `diogofrmota`
-  - `DOCKERHUB_TOKEN` = the Read & Write token (`DOCKERHUB_TOKEN` in your local `.env`)
-  - `VPS_HOST` = `162.19.252.190`
-  - `VPS_USER` = `deploy`
-  - `VPS_SSH_KEY` = a **new** private key made only for deploys (`ssh-keygen -t ed25519 -f deploy_key -C github-actions`); add `deploy_key.pub` to `/home/deploy/.ssh/authorized_keys` on the VPS
-  - `VPS_KNOWN_HOSTS` = output of `ssh-keyscan 162.19.252.190`
-
-```
-/goal Create the GitHub Actions pipeline for diogomota.com. Read plan.md (Deployment Strategy), roadmap.md, docker-compose.prod.yml and infra/ first.
-
-The VPS is already set up by infra/setup-vps.sh: the stack lives in /opt/diogomota, owned by deploy. Its .env (template: .env.production.example) sets COMPOSE_FILE, so plain `docker compose` there uses docker-compose.prod.yml. deploy is logged in to Docker Hub with a read-only token. postgres and nginx (with its certificate) are running. The app has never run, so the first deploy applies 001_initial.sql.
-
-.github/workflows/deploy.yml:
-- Trigger: push to main, plus workflow_dispatch with an optional image_tag input for rollbacks (skips the build and deploys that tag).
-- Job check: npm ci, lint, typecheck, build in app/.
-- Job image (needs check): docker/login-action with DOCKERHUB_USERNAME/DOCKERHUB_TOKEN, buildx with GitHub Actions cache, build ./app with `build-contexts: migrations=db/migrations` (db/migrations is outside the app/ context; see the app/Dockerfile header), push diogofrmota/diogomota-com tagged with the short commit SHA and latest.
-- Job deploy (needs image): using VPS_HOST, VPS_USER, VPS_SSH_KEY and VPS_KNOWN_HOSTS (strict host key checking, no third-party SSH actions unless pinned to a commit SHA), copy docker-compose.prod.yml, nginx/, db/migrations and infra/ to /opt/diogomota, then on the VPS: pull the new tag, run migrations with `docker compose run --rm app npm run migrate` (or the equivalent node command in the image), `docker compose up -d app nginx`, then poll https://diogomota.com/api/health until 200 or fail the job after 60 s.
-- concurrency group so two deploys never overlap. Least-privilege permissions block.
-Also a small workflow .github/workflows/ci.yml running the check job on pull requests.
-Add to the Production section of README.md: how a deploy works, how to roll back (workflow_dispatch with an older SHA tag), and where to see logs.
-
-Done when: actionlint (via its Docker image) reports no errors for both workflows; the deploy steps use only files that exist in the repo and paths that match docker-compose.prod.yml and /opt/diogomota; secrets are referenced only by the names listed in roadmap.md Goal 3. Then commit on main (do not push).
-```
-
-### [You] First deploy
-
-- [ ] `git push`. Watch the run in GitHub → Actions.
-- [ ] Check https://diogomota.com/api/health returns `{"status":"ok"}` and the placeholder page loads.
-- [ ] Check https://www.diogomota.com and http://diogomota.com both redirect to https://diogomota.com.
-- [ ] From now on, every push to `main` deploys.
-
----
-
-### Goal 4 — Landing + app hub
-
-```
-/goal Build the landing page (/) and the app hub (/apps) for diogomota.com, logged-out state only (auth comes in the next goal). Read plan.md (Pages, General UI/UX Rules) and roadmap.md first.
-
-- Self-host IBM Plex Mono Regular with next/font (no Google Fonts request at runtime). It is used only on / and /apps.
-- /: full black background, centered text exactly as in plan.md, the Richemont link opens https://www.richemont.com/, [Check Apps] links to /apps. No navbar, no footer. Proper <title>, description and Open Graph tags.
-- /apps: black background, top bar with Login | Sign Up buttons (they open placeholder routes for now), cards for Shared (/shared) and Shows (/shows) with logo (simple SVGs in public/logos), name and short description. Logged out, clicking a card opens the login prompt instead of the app. Keep the app list in one typed array so adding an app is one entry.
-- Mobile-first, works from 320 px wide to desktop, keyboard focus visible, sufficient contrast.
-- Favicon and a 404 page in the same style.
-- Playwright tests: landing content and link targets, /apps shows both cards, clicking a card while logged out opens the login prompt, no horizontal scroll at 375 px.
-
-Done when lint, typecheck, build and all e2e tests pass. Commit on main (do not push).
-```
-
----
 
 ### Goal 5 — Auth + account
 
 Before:
-- [ ] Goal 4 done
-- [ ] Decide: is sign-up **open to anyone**, or gated by a shared **sign-up code** (a `SIGNUP_CODE` env var)? Add your choice to the prompt below where it says `<SIGNUP>`.
+- [x] Goal 4 done
 
 ```
-/goal Add authentication and account settings to diogomota.com with NextAuth (Auth.js) credentials provider. Read plan.md (Authentication Flow, Account Settings, Pages) and roadmap.md first. Sign-up policy: <SIGNUP>.
+/goal Add authentication and account settings to diogomota.com with NextAuth (Auth.js) credentials provider. Read plan.md (Authentication Flow, Account Settings, Pages) and roadmap.md first. Sign-up is open to anyone (no sign-up code).
 
 - Sign up with username + email + password (validate: username 3-20 chars [a-z0-9_], valid email, password >= 10 chars); hash with bcrypt (bcryptjs) or argon2. Login by username or email. JWT sessions containing user id and username. Generic error messages that do not reveal whether an account exists.
 - Basic rate limiting on login and sign-up (in-memory per IP is enough at this scale).
@@ -279,7 +228,7 @@ Done when lint, typecheck, build and the full e2e suite pass on both projects wi
 ### Goal 15 — Launch checks
 
 Before:
-- [ ] Goal 3 and First deploy done
+- [x] Goal 3 and First deploy done
 
 ```
 /goal Prepare diogomota.com operations for launch. Read README.md (Production), docker-compose.prod.yml, infra/ and roadmap.md first. Nothing here connects to the VPS; give me the commands to run.
