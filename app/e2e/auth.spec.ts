@@ -130,10 +130,10 @@ test("logged out, the apps' API routes answer 401", async ({ page }) => {
     expect(await response.json()).toEqual({ error: "Unauthorized" });
   }
 
-  // With a session they get past the check: 404 until those routes exist.
+  // With a session the Spaces endpoint returns the user's current space.
   await signUp(page, newUser());
   await expect(page).toHaveURL("/apps");
-  expect((await page.request.get("/api/shared/spaces")).status()).toBe(404);
+  expect(await (await page.request.get("/api/shared/spaces")).json()).toEqual({ data: null });
 });
 
 test("sign up returns to the app the user tried to open", async ({ page }) => {

@@ -1,0 +1,23 @@
+.view { max-width: 52rem; }
+.view h1 { font-size: clamp(1.75rem, 5vw, 2.25rem); margin: 0 0 1rem; letter-spacing: -0.035em; }
+.view h2 { font-size: 1.125rem; margin: 0; }
+.view p { color: var(--muted); }
+.eyebrow { font-size: 0.875rem; margin: 0 0 0.5rem; }
+.options { display: grid; gap: 1rem; margin-top: 2rem; }
+.card { display: flex; flex-direction: column; align-items: stretch; gap: 0.875rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface); padding: 1.25rem; margin-bottom: 1.25rem; min-width: 0; }
+.card p { margin: 0; }
+.card input { min-width: 0; width: 100%; min-height: 2.75rem; padding: 0.65rem 0.75rem; font: inherit; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--bg); color: var(--text); }
+.card button { align-self: flex-start; min-height: 2.75rem; padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--accent-soft); color: var(--accent); cursor: pointer; }
+.card button:hover { filter: brightness(1.15); }
+.card button:disabled { opacity: 0.6; cursor: wait; }
+.note { font-size: 0.875rem; }
+.members { list-style: none; padding: 0; margin: 0; }
+.members li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; }
+.swatch { width: 1.25rem; height: 1.25rem; flex-shrink: 0; border-radius: 50%; outline: 1px solid var(--muted); outline-offset: 2px; }
+.memberName { min-width: 0; overflow-wrap: anywhere; }
+.memberName small { display: block; color: var(--muted); }
+.role { margin-left: auto; color: var(--muted); font-size: 0.875rem; }
+.invite, .confirm { display: flex; flex-direction: column; gap: 0.75rem; }
+.invite input { font-family: monospace; letter-spacing: 0.2em; font-size: 1.25rem; }
+.view [role="alert"] { color: var(--text); border-left: 3px solid var(--accent); padding-left: 1rem; }
+@media (min-width: 60rem) { .options { grid-template-columns: 1fr 1fr; } }

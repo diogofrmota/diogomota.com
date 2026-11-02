@@ -39,6 +39,8 @@ export const passwordCheckLimit = rateLimit("password", 10, 15 * MINUTE);
 export const resetRequestLimit = rateLimit("reset", 5, 60 * MINUTE);
 /** Password reset emails per address (lowercase), whether or not an account has it. */
 export const resetEmailLimit = rateLimit("reset-email", 3, 60 * MINUTE);
+/** Short invite code guesses, per authenticated user. */
+export const spaceJoinLimit = rateLimit("space-join", 20, 15 * MINUTE);
 
 // nginx sets X-Forwarded-For to exactly the client address (nginx/nginx.conf), so
 // in production its first entry can be trusted. In development it is whatever the

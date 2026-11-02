@@ -41,12 +41,14 @@ export function AppShell({
   tabs,
   username,
   theme: savedTheme,
+  hideNavigation = false,
 }: {
   name: string;
   /** The first tab is the default view. */
   tabs: readonly AppTab[];
   username: string;
   theme: Theme;
+  hideNavigation?: boolean;
 }) {
   const ids = useMemo(() => tabs.map((tab) => tab.id), [tabs]);
   const appView = useAppViewHistory(ids);
@@ -59,7 +61,7 @@ export function AppShell({
 
   return (
     <AppViewContext value={appView}>
-      <div className={styles.shell} data-theme={theme}>
+      <div className={`${styles.shell} ${hideNavigation ? styles.withoutNav : ""}`} data-theme={theme}>
         {/* Browser UI color on mobile. React moves it into <head>. */}
         <meta name="theme-color" content={theme === "light" ? "#ffffff" : "#0a0a0a"} />
         <header className={styles.topBar}>
@@ -75,7 +77,7 @@ export function AppShell({
             </nav>
           </div>
         </header>
-        <Sidebar label={name} tabs={tabs} current={appView.view} onSelect={selectTab} />
+        {!hideNavigation && <Sidebar label={name} tabs={tabs} current={appView.view} onSelect={selectTab} />}
         <main className={styles.main}>
           {tabs.map((tab) => (
             <Activity key={tab.id} mode={tab.id === appView.view ? "visible" : "hidden"}>
@@ -83,7 +85,7 @@ export function AppShell({
             </Activity>
           ))}
         </main>
-        <BottomNav label={name} tabs={tabs} current={appView.view} onSelect={selectTab} />
+        {!hideNavigation && <BottomNav label={name} tabs={tabs} current={appView.view} onSelect={selectTab} />}
       </div>
     </AppViewContext>
   );

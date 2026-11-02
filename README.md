@@ -33,6 +33,12 @@ Before your first e2e run, install the test browser with `npx playwright install
 
 Add a new file `db/migrations/NNN_name.sql`, and never edit one that has already been applied. Each file runs in its own transaction, and applied files are recorded in `schema_migrations`.
 
+## Shared spaces
+
+`/shared` offers creation or joining until the user has a space, then opens Calendar. Settings manages the name, members, invitations and leaving. Each space supports up to 10 members, with distinct named colors; ownership passes by join time. The last member leaving deletes the space and its data. Outstanding invites expire when ownership changes.
+
+The authenticated JSON API uses `/api/shared/spaces`: `GET` reads your space, `POST {name}` creates one, and `POST /join {code}` joins. `GET /:id` reads a space, `PATCH /:id {name}` renames it, `POST /:id/invites {}` generates a single-use 24-hour code, and `POST /:id/leave {}` leaves. Responses contain `data` or an `error` message. Reads and mutations check current database membership; renaming and inviting require ownership. Join attempts are limited to 20 per 15 minutes per user. Migration `004_space_membership.sql` records join times and enforces unique member colors within a space.
+
 ## Docker image
 
 From the repo root:
@@ -61,7 +67,7 @@ The workflow needs these repository secrets (Settings → Secrets and variables 
 
 ### Versions
 
-Every deploy gets the next patch version, `vX.Y.Z`. `app/package.json` holds `X.Y.0`, and the image job sets the patch to one more than the newest `vX.Y.*` git tag (`0` if there is none yet). To move to a new minor (or major), e.g. when a roadmap goal starts, run `npm version 0.7.0 --no-git-tag-version` in `app/` and commit: the next deploy is `v0.7.0`, then `v0.7.1`, and so on. A version other than `X.Y.0` in `package.json` fails the image job.
+Every deploy gets the next patch version, `vX.Y.Z`. `app/package.json` holds `X.Y.0`, and the image job sets the patch to one more than the newest `vX.Y.*` git tag (`0` if there is none yet). To move to a new minor (or major), e.g. when a roadmap goal starts, run `npm version 0.8.0 --no-git-tag-version` in `app/` and commit: the next deploy is `v0.8.0`, then `v0.8.1`, and so on. A version other than `X.Y.0` in `package.json` fails the image job.
 
 A failed build doesn't use up a number, because the git tag is only added once the image is on Docker Hub. Run `git fetch --tags` to get the tags locally.
 

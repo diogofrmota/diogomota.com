@@ -17,6 +17,11 @@ async function openApp(page: Page, path: string) {
   const user = newUser();
   await signUp(page, user, `/signup?${new URLSearchParams({ next: path })}`);
   await expect(page).toHaveURL(path);
+  if (path === "/shared") {
+    await page.getByLabel("Space name").fill("Shell test space");
+    await page.getByRole("button", { name: "Create a Space" }).click();
+    await expect(viewHeading(page)).toHaveText("Calendar");
+  }
   return user;
 }
 
@@ -71,6 +76,7 @@ test("back and forward move between views, and out of the app to /apps", async (
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
+  expect((await page.request.post("/api/shared/spaces", { data: { name: "History space" } })).ok()).toBe(true);
   await page.getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
   await expect(viewHeading(page)).toHaveText("Calendar");
