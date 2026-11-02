@@ -1,0 +1,61 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.25rem;
+  border: 1px solid #333;
+  transition: border-color 0.15s;
+}
+
+@media (hover: hover) {
+  .card:hover {
+    border-color: #fff;
+  }
+}
+
+/* The link covers the whole card, so the focus ring goes around the card. */
+.card:has(.link:focus-visible) {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.link:focus-visible {
+  outline: none;
+}
+
+.link {
+  text-decoration: none;
+}
+
+.link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.logo {
+  flex: none;
+}
+
+.name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.description {
+  margin: 0.25rem 0 0;
+  color: #a3a3a3;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}

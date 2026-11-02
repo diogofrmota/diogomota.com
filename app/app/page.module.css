@@ -1,23 +1,17 @@
-.main {
-  display: grid;
-  place-content: center;
-  gap: 0.5rem;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: 1rem;
-  background: #000;
-  color: #fff;
-  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  text-align: center;
+.main p {
+  margin: 0;
 }
 
-.title {
-  margin: 0;
-  font-size: 1.25rem;
+.name {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.5rem, 6vw, 2rem);
   font-weight: 400;
 }
 
-.main p {
-  margin: 0;
-  color: #aaa;
+.employer {
+  color: #fff;
+}
+
+.main .action {
+  margin-top: 2rem;
 }

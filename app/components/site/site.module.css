@@ -1,0 +1,64 @@
+/* Public pages (/, /apps, their placeholders, 404): black, IBM Plex Mono. */
+
+/* Black behind the page too, so overscroll on mobile doesn't flash white. */
+:global(html):has(.page) {
+  background: #000;
+}
+
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #000;
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+/* Element defaults. :where() keeps them at zero specificity, so any class wins. */
+:where(.page) button {
+  font: inherit;
+  color: inherit;
+}
+
+:where(.page) a {
+  color: inherit;
+  text-underline-offset: 0.2em;
+}
+
+:where(.page) :focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.centered {
+  display: grid;
+  place-content: center;
+  padding: 2rem 1.25rem;
+  text-align: center;
+}
+
+/* Secondary text: #a3a3a3 on black is 8.6:1. */
+.muted {
+  color: #a3a3a3;
+}
+
+/* "[Label]" links and buttons. At least 44px tall for touch. */
+.bracket {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.375rem;
+  border: 0;
+  background: none;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .bracket:hover {
+    background: #fff;
+    color: #000;
+  }
+}
