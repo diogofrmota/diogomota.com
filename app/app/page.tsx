@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Brackets, SitePage } from "@/components/site/SitePage";
+import { SitePage } from "@/components/site/SitePage";
+import site from "@/components/site/site.module.css";
 import { baseOpenGraph, siteDescription, siteName, siteViewport } from "@/lib/site";
 import styles from "./page.module.css";
 
@@ -29,9 +30,9 @@ export default function Home() {
           </a>
         </p>
         <p>currently based in Lisbon, PT</p>
-        <p>
-          <Link href="/apps" className={styles.checkApps}>
-            <Brackets>Check Apps</Brackets>
+        <p className={styles.checkApps}>
+          <Link href="/apps" className={site.button}>
+            Check Apps
           </Link>
         </p>
       </main>

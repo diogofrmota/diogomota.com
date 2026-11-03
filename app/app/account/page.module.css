@@ -47,11 +47,7 @@
   font-weight: 400;
 }
 
-.logout {
-  margin-left: -0.375rem;
-}
-
-/* A "[Link]" under a section's text, its "[" lined up with the text. */
+/* A button under a section's text. */
 .section .action {
-  margin: 0.75rem 0 0 -0.375rem;
+  margin: 0.75rem 0 0;
 }

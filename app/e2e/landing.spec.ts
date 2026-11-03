@@ -6,7 +6,7 @@ test("landing shows the intro and no navbar or footer", async ({ page }) => {
   await expect(main.getByRole("heading", { level: 1, name: "diogo mota" })).toBeVisible();
   await expect(main).toContainText("devops engineer @ Richemont");
   await expect(main).toContainText("currently based in Lisbon, PT");
-  await expect(main.getByRole("link", { name: "Check Apps" })).toHaveText("[Check Apps]");
+  await expect(main.getByRole("link", { name: "Check Apps" })).toHaveText("Check Apps");
 
   await expect(page.getByRole("banner")).toHaveCount(0);
   await expect(page.getByRole("navigation")).toHaveCount(0);
@@ -22,12 +22,24 @@ test("landing lines are one size and white, left-aligned in a centered block", a
   const lines = await main.locator("h1, p, a").evaluateAll((elements) =>
     elements.map((element) => {
       const style = getComputedStyle(element);
-      return { fontSize: style.fontSize, color: style.color, textAlign: style.textAlign };
+      return {
+        isButton: element.getAttribute("href") === "/apps",
+        fontSize: style.fontSize,
+        color: style.color,
+        background: style.backgroundColor,
+        textAlign: style.textAlign,
+      };
     }),
   );
   expect(lines).toHaveLength(6); // 4 lines, 2 links
-  for (const line of lines) {
-    expect(line).toEqual({ fontSize: "16px", color: "rgb(255, 255, 255)", textAlign: "left" });
+  for (const { isButton, ...line } of lines) {
+    // White text on the page's black, except Check Apps: a white button with black text.
+    expect(line).toEqual({
+      fontSize: "16px",
+      color: isButton ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)",
+      background: isButton ? "rgb(255, 255, 255)" : "rgba(0, 0, 0, 0)",
+      textAlign: "left",
+    });
   }
 
   // The block is as wide as its longest line and sits in the middle of the screen.

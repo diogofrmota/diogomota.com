@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
 import type { AppInfo } from "@/lib/apps";
 import { authHref } from "@/lib/next-path";
-import { Brackets } from "./SitePage";
 import site from "./site.module.css";
 import styles from "./LoginPrompt.module.css";
 
@@ -46,11 +45,11 @@ export function LoginPrompt({
             You need an account to use {app.name}. Log in, or sign up if you are new.
           </p>
           <div className={styles.actions}>
-            <Link href={authHref("/login", app.href)} className={site.bracket}>
-              <Brackets>Login</Brackets>
+            <Link href={authHref("/login", app.href)} className={site.button}>
+              Login
             </Link>
-            <Link href={authHref("/signup", app.href)} className={site.bracket}>
-              <Brackets>Sign Up</Brackets>
+            <Link href={authHref("/signup", app.href)} className={site.button}>
+              Sign Up
             </Link>
           </div>
           <button

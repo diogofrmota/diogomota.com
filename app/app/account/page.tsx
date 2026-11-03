@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/auth";
 import { PasswordForm, ThemeForm, UsernameForm } from "@/components/account/AccountSettings";
-import { Brackets, SitePage } from "@/components/site/SitePage";
+import { SitePage } from "@/components/site/SitePage";
 import site from "@/components/site/site.module.css";
 import { TopBar } from "@/components/site/TopBar";
 import { siteViewport } from "@/lib/site";
@@ -55,8 +55,8 @@ export default async function AccountPage() {
             Don&apos;t know your current password? Reset it with a link sent to {user.email}.
           </p>
           <p className={styles.action}>
-            <Link href="/forgot-password" className={site.bracket}>
-              <Brackets>Reset by email</Brackets>
+            <Link href="/forgot-password" className={site.button}>
+              Reset by email
             </Link>
           </p>
         </section>
@@ -73,8 +73,8 @@ export default async function AccountPage() {
             Log out
           </h2>
           <form action={logOut}>
-            <button type="submit" className={`${site.bracket} ${styles.logout}`}>
-              <Brackets>Logout</Brackets>
+            <button type="submit" className={site.button}>
+              Logout
             </button>
           </form>
         </section>

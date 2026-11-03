@@ -43,22 +43,24 @@
   color: #a3a3a3;
 }
 
-/* "[Label]" links and buttons. At least 44px tall for touch. */
-.bracket {
+/* Buttons, and links that act as one: white with black text. At least 44px tall for touch. */
+.button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 2.75rem;
-  padding: 0 0.375rem;
+  padding: 0 1rem;
   border: 0;
-  background: none;
-  color: #fff;
+  background: #fff;
+  color: #000;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color 150ms ease;
 }
 
 @media (hover: hover) {
-  .bracket:hover {
-    background: #fff;
-    color: #000;
+  .button:hover {
+    background: #d4d4d4;
   }
 }

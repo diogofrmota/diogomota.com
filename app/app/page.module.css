@@ -15,23 +15,20 @@
   font-weight: 400;
 }
 
-.main a {
+/* The text links; Check Apps is a button with its own hover. */
+.main p:not(.checkApps) a {
   transition: opacity 150ms ease;
 }
 
 @media (hover: hover) {
-  .main a:hover {
+  .main p:not(.checkApps) a:hover {
     opacity: 0.7;
   }
 }
 
-/* 44px tall for touch; the negative margins keep its line as tall as the others. */
-.checkApps {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
-  margin-block: calc((1.625em - 2.75rem) / 2);
-  text-decoration: none;
+/* A little more room above the button than between the lines of text. */
+.main .checkApps {
+  margin-top: 0.5rem;
 }
 
 @media (min-width: 48rem) {

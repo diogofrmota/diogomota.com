@@ -1,7 +1,6 @@
 "use client";
 
 import { useId } from "react";
-import { Brackets } from "./SitePage";
 import site from "./site.module.css";
 import styles from "./Form.module.css";
 
@@ -64,8 +63,8 @@ export function FormMessage({ error, success }: { error?: string; success?: stri
 
 export function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
   return (
-    <button type="submit" className={`${site.bracket} ${styles.submit}`} disabled={pending}>
-      <Brackets>{pending ? `${label}…` : label}</Brackets>
+    <button type="submit" className={`${site.button} ${styles.submit}`} disabled={pending}>
+      {pending ? `${label}…` : label}
     </button>
   );
 }

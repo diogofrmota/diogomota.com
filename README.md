@@ -1,6 +1,6 @@
 # diogomota.com
 
-Personal site plus two small apps for friends (Shared, Shows), built with Next.js and PostgreSQL. The spec is in [plan.md](plan.md) and the build order is in [roadmap.md](roadmap.md).
+Personal site plus two small apps for friends (Shared, Shows), built with Next.js and PostgreSQL. The spec, the decisions and the full build log are in [plan.md](plan.md); running the server is in [docs/operations.md](docs/operations.md).
 
 ## Prerequisites
 
@@ -127,7 +127,7 @@ The workflow needs these repository secrets (Settings → Secrets and variables 
 
 ### Versions
 
-Every deploy gets the next patch version, `vX.Y.Z`. `app/package.json` holds `X.Y.0`, and the image job sets the patch to one more than the newest `vX.Y.*` git tag (`0` if there is none yet). To move to a new minor (or major), e.g. when a roadmap goal starts, run `npm version 0.9.0 --no-git-tag-version` in `app/` and commit: the next deploy is `v0.9.0`, then `v0.9.1`, and so on. A version other than `X.Y.0` in `package.json` fails the image job.
+Every deploy gets the next patch version, `vX.Y.Z`. `app/package.json` holds `X.Y.0`, and the image job sets the patch to one more than the newest `vX.Y.*` git tag (`0` if there is none yet). To move to a new minor (or major), e.g. when a new piece of work starts (see plan.md, Build log), run `npm version 1.1.0 --no-git-tag-version` in `app/` and commit: the next deploy is `v1.1.0`, then `v1.1.1`, and so on. A version other than `X.Y.0` in `package.json` fails the image job.
 
 A failed build doesn't use up a number, because the git tag is only added once the image is on Docker Hub. Run `git fetch --tags` to get the tags locally.
 

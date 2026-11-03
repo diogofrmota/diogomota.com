@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Brackets, SitePage } from "@/components/site/SitePage";
+import { SitePage } from "@/components/site/SitePage";
 import site from "@/components/site/site.module.css";
 import styles from "./AuthPage.module.css";
 
@@ -26,8 +26,8 @@ export function AuthPage({
         {form}
         <div className={`${site.muted} ${styles.links}`}>{children}</div>
         <p className={styles.back}>
-          <Link href="/apps" className={site.bracket}>
-            <Brackets>Back to Apps</Brackets>
+          <Link href="/apps" className={site.button}>
+            Back to Apps
           </Link>
         </p>
       </main>

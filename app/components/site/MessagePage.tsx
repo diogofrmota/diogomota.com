@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Brackets, SitePage } from "./SitePage";
+import { SitePage } from "./SitePage";
 import site from "./site.module.css";
 import styles from "./MessagePage.module.css";
 
@@ -23,12 +23,12 @@ export function MessagePage({
         <p className={site.muted}>{message}</p>
         <p className={styles.action}>
           {onRetry && (
-            <button type="button" className={site.bracket} onClick={onRetry}>
-              <Brackets>Retry</Brackets>
+            <button type="button" className={site.button} onClick={onRetry}>
+              Retry
             </button>
           )}
-          <Link href={link.href} className={site.bracket}>
-            <Brackets>{link.label}</Brackets>
+          <Link href={link.href} className={site.button}>
+            {link.label}
           </Link>
         </p>
       </main>

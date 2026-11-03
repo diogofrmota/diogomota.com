@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AccountMenu } from "@/components/account/AccountMenu";
 import { authHref } from "@/lib/next-path";
 import { siteName } from "@/lib/site";
+import site from "./site.module.css";
 import styles from "./TopBar.module.css";
 
 // Top bar of /apps and /account. Logged out: Login | Sign Up, which send the
@@ -17,11 +18,12 @@ export function TopBar({ username, next }: { username: string | null; next?: str
           <AccountMenu username={username} />
         ) : (
           <>
-            <Link href={authHref("/login", next)}>Login</Link>
-            <span aria-hidden="true" className={styles.separator}>
-              |
-            </span>
-            <Link href={authHref("/signup", next)}>Sign Up</Link>
+            <Link href={authHref("/login", next)} className={site.button}>
+              Login
+            </Link>
+            <Link href={authHref("/signup", next)} className={site.button}>
+              Sign Up
+            </Link>
           </>
         )}
       </nav>

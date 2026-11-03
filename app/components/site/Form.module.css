@@ -67,8 +67,6 @@
 
 .submit {
   justify-self: start;
-  /* Line the "[" up with the inputs' left edge. */
-  margin-left: -0.375rem;
 }
 
 .submit:disabled {
