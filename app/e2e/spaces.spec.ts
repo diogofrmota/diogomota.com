@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { randomBytes } from "node:crypto";
-import { expect, newUser, signUp, test } from "./fixtures";
+import { expect, newUser, openGlobalSettings, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
 import type { Space } from "../lib/space-types";
 
@@ -18,9 +18,10 @@ async function create(page: Page, name = "Our home") {
   await expect(page.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
   return (await (await page.request.get(base)).json()).data as Space;
 }
+/** Global Settings, on Shared's settings: the space's. */
 async function settings(page: Page) {
-  await page.getByRole("navigation", { name: "Shared", exact: true }).getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+  await openGlobalSettings(page, "Shared");
+  await expect(page.getByRole("region", { name: "Members" })).toBeVisible();
 }
 async function generate(page: Page, id: string) {
   const response = await page.request.post(`${base}/${id}/invites`, { data: {} });
@@ -31,9 +32,12 @@ async function join(page: Page, code: string) {
   await page.getByLabel("Invite code").fill(code);
   await page.getByRole("button", { name: "Join with Code" }).click();
 }
+/** Leaves the space from its settings, then goes to Shared, which offers to create or join one. */
 async function leave(page: Page) {
   await page.getByRole("button", { name: "Leave space", exact: true }).click();
   await page.getByRole("button", { name: "Confirm leave" }).click();
+  await expect(page.getByRole("heading", { name: "No space yet" })).toBeVisible();
+  await page.getByRole("link", { name: "Open Shared" }).click();
   await expect(page.getByRole("heading", { name: "Your shared space" })).toBeVisible();
 }
 
@@ -73,9 +77,9 @@ test("two users create, copy invite, join, rename, transfer ownership and delete
     await page.getByLabel("Space name").fill("Lisbon home");
     await page.getByRole("button", { name: "Save name" }).click();
     await expect(page.getByRole("status")).toHaveText("Space name saved.");
+    // The other member's settings show the new name once loaded again.
     await other.reload();
-    await expect(other.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
-    await expect(other.getByText("Lisbon home", { exact: true })).toBeVisible();
+    await expect(other.getByLabel("Space name")).toHaveValue("Lisbon home");
     await leave(page);
     expect((await page.request.get(`${base}/${space.id}`)).status()).toBe(404);
     await settings(other);
@@ -104,6 +108,7 @@ test("invalid, expired and used invite codes show clear errors; a member can lea
     await expect(other.getByRole("main").getByRole("alert")).toContainText("has expired");
     const code = await generate(page, space.id);
     await join(other, code);
+    await expect(other.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
     await settings(other);
     await leave(other);
     await join(other, code);
@@ -159,7 +164,8 @@ test("on mobile the welcome and Settings fit both themes", async ({ page }) => {
   await page.getByRole("button", { name: "Generate invite" }).click();
   await expect(page.getByLabel("Invite code")).toHaveValue(/.{8}/);
   for (const theme of ["dark", "light"]) {
-    if (theme === "light") await page.getByRole("button", { name: "Dark theme" }).click();
+    // Shown without saving it (the theme is chosen in Account settings): every color comes from data-theme.
+    if (theme === "light") await page.locator("[data-theme]").evaluate((shell) => shell.setAttribute("data-theme", "light"));
     await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", theme);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await expect(page.getByRole("button", { name: "Save name" })).toBeVisible();

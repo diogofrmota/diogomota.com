@@ -1,0 +1,230 @@
+/* The apps' common parts: a view's heading, cards, fields, buttons and
+   messages, in the one look both apps share. The colors come from the shell's
+   theme (AppShell.module.css). Shows, Tasks and Calendar keep their own copies
+   of some of these in their modules, with the same values: change both together.
+
+   Only class selectors, so the parts combine (`${ui.button} ${ui.primary}`)
+   and a later rule here wins over an earlier one. */
+
+/* A view's column. */
+.view {
+  max-width: 44rem;
+  margin-inline: auto;
+}
+
+/* What the view belongs to, such as the space's name, over its heading. */
+.eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.heading {
+  margin: 0 0 1rem;
+  font-size: 1.75rem;
+  letter-spacing: -0.04em;
+}
+
+.muted {
+  margin: 0;
+  color: var(--muted);
+}
+
+.note {
+  margin: 1.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* Cards one under the other. */
+.stack {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.card {
+  display: grid;
+  gap: 0.875rem;
+  min-width: 0;
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.cardHeading {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* A label over its input or select. */
+.field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  font-size: 0.875rem;
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem; /* 16px, so iOS doesn't zoom in on it */
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+/* Radio buttons, each a whole row to tap. */
+.choices {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.choice input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* Buttons, and links that look like one. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-height: 44px;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* The main action of a card or dialog. */
+.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 650;
+}
+
+/* Confirms something that can't be undone. */
+.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--bg);
+  font-weight: 650;
+}
+
+/* Starts something destructive, which a .danger button then confirms. */
+.remove {
+  padding-inline: 0;
+  border-color: transparent;
+  background: none;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@media (hover: hover) {
+  .button:hover {
+    background: var(--hover);
+  }
+
+  .primary:hover {
+    background: var(--accent);
+    filter: brightness(0.93);
+  }
+
+  .danger:hover {
+    background: var(--danger);
+    filter: brightness(0.93);
+  }
+
+  .remove:hover {
+    background: none;
+    text-decoration: underline;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* An error, with Retry or similar after it. */
+.alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+  border-left: 3px solid var(--danger);
+  border-radius: 0.4rem;
+  background: var(--hover);
+  color: var(--text);
+}
+
+.alertText {
+  margin: 0;
+}
+
+/* What an action did. */
+.success {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.5rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* "Are you sure?", with a .danger button and Cancel. */
+.confirm {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--danger);
+  border-radius: 0.4rem;
+  background: var(--hover);
+}
+
+.confirm p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

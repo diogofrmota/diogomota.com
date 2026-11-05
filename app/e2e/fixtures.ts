@@ -52,6 +52,23 @@ export async function logIn(page: Page, login: string, password: string, path = 
   await page.getByRole("button", { name: "Log in" }).click();
 }
 
+/** Global Settings' dropdown, which picks the app whose settings show. */
+export function settingsPicker(page: Page) {
+  return page.getByRole("combobox", { name: "App", exact: true });
+}
+
+/**
+ * Opens Global Settings (/settings) from the account menu, the way in to every
+ * app's settings, and picks `app` in its dropdown if given (it opens on the app
+ * the menu was in).
+ */
+export async function openGlobalSettings(page: Page, app?: "Shared" | "Shows") {
+  await page.getByRole("navigation", { name: "Account" }).locator("button[aria-expanded]").click();
+  await page.getByRole("link", { name: "Global Settings", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Global Settings");
+  if (app) await settingsPicker(page).selectOption({ label: app });
+}
+
 /** The account menu button in the top bar, labelled with the username. */
 export function accountButton(page: Page, username: string) {
   return page.getByRole("navigation", { name: "Account" }).getByRole("button", { name: username, exact: true });

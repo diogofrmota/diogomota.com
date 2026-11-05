@@ -67,7 +67,7 @@ for (const app of apps) {
 
 test("the login prompt closes with Escape, its close button or the backdrop", async ({ page }) => {
   await page.goto("/apps");
-  const link = page.getByRole("link", { name: "Shared", exact: true });
+  const link = page.getByRole("main").getByRole("link", { name: "Shared", exact: true });
   const prompt = page.getByRole("dialog");
 
   await link.click();

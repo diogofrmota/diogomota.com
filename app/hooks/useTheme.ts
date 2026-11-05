@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import { setThemePreference } from "@/app/account/actions";
 import type { Theme } from "@/lib/users";
 
-// The theme inside the apps. It starts as the user's saved preference, which the
+// The theme of Global Settings (/settings), where it is chosen for the apps
+// (components/shows/ShowsSettings). It starts as the user's saved preference, which the
 // server renders into the page, so the first paint is already in the right theme
 // (nothing to correct after load). Each change is saved to the account; if that
 // fails, the theme switches back.

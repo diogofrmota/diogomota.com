@@ -90,14 +90,15 @@ export function EventDialog({ event, date, space, userId, onClose, onSaved, onDe
       </fieldset>
     </form> : event && <div className={styles.details}>
       <p className={styles.badge}>{assignee}</p>
-      <p><time dateTime={event.startsAt}>{start.date} · {start.time}</time> – <time dateTime={event.endsAt}>{end.date !== start.date && `${end.date} · `}{end.time}</time><br /><span className={styles.muted}>{calendarZone}</span></p>
+      <p><time dateTime={event.startsAt}>{start.date} · {start.time}</time> – <time dateTime={event.endsAt}>{end.date !== start.date && `${end.date} · `}{end.time}</time></p>
       {event.notes && <p className={styles.notes}>{event.notes}</p>}
+      {/* This event only: to Google Calendar, or as a file for any other calendar. */}
+      <div className={styles.actions}><a href={googleCalendarLink(event)} target="_blank" rel="noopener noreferrer">Export to Google Calendar ↗</a>
+        <a href={`/api/shared/events/${event.id}/export`} download>Download event .ics</a></div>
       <div className={styles.actions}><button className={styles.primary} onClick={() => { setError(""); setEditing(true); setDeleting(false); }}>Edit event</button>
-        <button onClick={() => setDeleting(true)}>Delete event</button></div>
+        <button className={styles.remove} onClick={() => setDeleting(true)}>Delete event</button></div>
       {deleting && <div className={styles.confirm}><p>Delete this event for everyone in your space?</p>
-        <div className={styles.actions}><button disabled={pending} onClick={remove}>{pending ? "Deleting…" : "Confirm delete"}</button><button disabled={pending} onClick={() => setDeleting(false)}>Keep event</button></div></div>}
-      <div className={styles.actions}><a href={`/api/shared/events/${event.id}/export`} download>Download event .ics</a>
-        <a href={googleCalendarLink(event)} target="_blank" rel="noopener noreferrer">Add to Google Calendar ↗</a></div>
+        <div className={styles.actions}><button className={styles.danger} disabled={pending} onClick={remove}>{pending ? "Deleting…" : "Confirm delete"}</button><button disabled={pending} onClick={() => setDeleting(false)}>Keep event</button></div></div>}
     </div>}
   </div></Dialog>;
 }

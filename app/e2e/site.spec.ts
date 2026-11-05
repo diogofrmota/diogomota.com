@@ -26,7 +26,7 @@ for (const width of [320, 375]) {
 
     test("/apps with the login prompt open has no horizontal scroll", async ({ page }) => {
       await page.goto("/apps");
-      await page.getByRole("link", { name: "Shows", exact: true }).click();
+      await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await expectNoHorizontalScroll(page);
     });
@@ -104,12 +104,12 @@ test("keyboard focus is visible", async ({ page }) => {
   await expect(richemont).toHaveCSS("outline-color", "rgb(255, 255, 255)");
 
   await page.goto("/apps");
-  // diogo mota, Login, Sign Up, then the first card.
-  for (let i = 0; i < 4; i++) await page.keyboard.press("Tab");
-  const shared = page.getByRole("link", { name: "Shared", exact: true });
-  await expect(shared).toBeFocused();
+  // diogomota.com, Shared, Shows, Login, Sign Up, then the first card.
+  for (let i = 0; i < 6; i++) await page.keyboard.press("Tab");
+  const card = page.getByRole("main").getByRole("listitem").filter({ has: page.getByRole("link", { name: "Shared", exact: true }) });
+  await expect(card.getByRole("link")).toBeFocused();
   // The link covers its card, so the ring is drawn around the card.
-  await expect(page.getByRole("listitem").filter({ has: shared })).toHaveCSS("outline-style", "solid");
+  await expect(card).toHaveCSS("outline-style", "solid");
 
   await page.keyboard.press("Enter");
   const login = page.getByRole("dialog").getByRole("link", { name: "Login" });

@@ -10,6 +10,7 @@
   --border: #2e2e2e;
   --accent: #60a5fa; /* 7.8:1 on --bg */
   --accent-soft: #16243a; /* --accent on it: 6.1:1 */
+  --danger: #f87171; /* 6.3:1 on --surface */
 
   --top-bar-height: 3.5rem;
   --bottom-nav-height: 4rem;
@@ -36,6 +37,7 @@
   --border: #e5e5e5;
   --accent: #2563eb; /* 5.2:1 on --bg */
   --accent-soft: #eff6ff; /* --accent on it: 4.8:1 */
+  --danger: #b91c1c; /* 6.5:1 on --surface */
   color-scheme: light;
 }
 
@@ -68,24 +70,12 @@
   outline-offset: 2px;
 }
 
-/* Mobile: top bar, then the view; BottomNav is fixed to the bottom.
-   Desktop: the top bar across, then Sidebar beside the view. */
-@media (min-width: 48rem) {
-  .shell {
-    display: grid;
-    grid-template-columns: 14rem minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "top top"
-      "side main";
-  }
-}
-
+/* The top bar (with the tabs in it on desktop), then the view across the whole
+   width; on mobile, BottomNav is fixed to the bottom. */
 .main {
   --main-padding-top: 1.5rem;
   --main-padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 1.5rem);
   --app-view-height: calc(100dvh - var(--top-bar-height) - var(--main-padding-top) - var(--main-padding-bottom));
-  grid-area: main;
   min-width: 0;
   padding: var(--main-padding-top) max(1.25rem, env(safe-area-inset-right))
     var(--main-padding-bottom)
@@ -93,10 +83,16 @@
 }
 
 .withoutNav .main {
-  grid-column: 1 / -1;
   width: 100%;
   max-width: 64rem;
   margin-inline: auto;
+}
+
+/* No bottom bar to keep clear of on a phone. */
+@media (max-width: 47.99rem) {
+  .withoutNav .main {
+    --main-padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem);
+  }
 }
 
 @media (min-width: 48rem) {

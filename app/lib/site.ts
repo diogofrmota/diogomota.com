@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 
 export const siteUrl = new URL("https://diogomota.com");
 export const siteName = "diogo mota";
+/** "diogomota.com": the name on the left of every top bar. */
+export const siteDomain = siteUrl.hostname;
 export const siteDescription =
   "diogo mota, devops engineer @ Richemont, currently based in Lisbon, PT.";
 

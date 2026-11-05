@@ -61,7 +61,7 @@ for (const mobile of [false, true]) {
     const ics = await download(page, "Download event .ics");
     expect(ics).toContain("SUMMARY:Morning walk\r\n");
     expect(ics).toContain("DESCRIPTION:Bring coffee\\, tea\\; and a notebook.\\nSee you there!");
-    const link = new URL((await page.getByRole("link", { name: "Add to Google Calendar" }).getAttribute("href"))!);
+    const link = new URL((await page.getByRole("link", { name: "Export to Google Calendar" }).getAttribute("href"))!);
     expect(link.searchParams.get("ctz")).toBe("Europe/Lisbon");
     expect(link.searchParams.get("dates")).toMatch(/^\d{8}T\d{6}Z\/\d{8}T\d{6}Z$/);
     await page.goBack(); await expect(page.getByRole("dialog")).toHaveCount(0); await expect(page).toHaveURL("/shared");
@@ -73,8 +73,13 @@ for (const mobile of [false, true]) {
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await page.reload();
     await expect(page.getByRole("button", { name: /^Evening walk, 18:00/ })).toBeVisible();
-    const all = await download(page, "Export calendar .ics");
-    expect(all).toContain("SUMMARY:Evening walk"); expect(all).toContain("SUMMARY:Dinner together");
+    // Exports are per event, from its dialog: none for the whole calendar, and no time zone line.
+    await expect(page.getByRole("link", { name: /Export calendar/ })).toHaveCount(0);
+    await expect(page.getByText("Europe/Lisbon")).toHaveCount(0);
+    await page.getByRole("button", { name: /^Evening walk,/ }).click();
+    const edited = await download(page, "Download event .ics");
+    expect(edited).toContain("SUMMARY:Evening walk"); expect(edited).not.toContain("SUMMARY:Dinner together");
+    await page.goBack(); await expect(page.getByRole("dialog")).toHaveCount(0);
     for (const title of ["Evening walk", "Dinner together"]) {
       await page.getByRole("button", { name: new RegExp(`^${title},`) }).click();
       await page.getByRole("button", { name: "Delete event", exact: true }).click();
@@ -83,8 +88,6 @@ for (const mobile of [false, true]) {
     }
     await expect(page.getByText("Nothing planned yet — add your first event!")).toBeVisible();
     await withDatabase(async (db) => expect((await db.query("SELECT id FROM events WHERE space_id=$1", [space.id])).rowCount).toBe(0));
-    await page.getByRole("button", { name: "Dark theme" }).click();
-    await expect(page.locator('[data-theme="light"]')).toBeVisible();
     await page.getByRole("button", { name: "+ Add event" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape"); await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -102,7 +105,8 @@ test("events and exports are isolated by current space; same-space members can c
     const other = await context.newPage(); const otherSpace = (await setup(other)).space;
     expect((await (await other.request.get(base)).json()).data).toEqual([]);
     for (const url of [`${base}/${event.id}`, `${base}/${event.id}/export`]) expect((await other.request.get(url)).status()).toBe(404);
-    expect(await (await other.request.get(`${base}/export`)).text()).not.toContain("Private appointment");
+    // There is no whole-calendar export, for anyone.
+    for (const p of [page, other]) expect((await p.request.get(`${base}/export`)).status()).toBe(404);
     expect((await other.request.patch(`${base}/${event.id}`, { data: payload })).status()).toBe(404);
     expect((await other.request.delete(`${base}/${event.id}`)).status()).toBe(404);
     expect((await other.request.post(base, { data: payload })).status()).toBe(400);

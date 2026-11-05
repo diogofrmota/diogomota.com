@@ -27,6 +27,21 @@ export const apps: readonly AppInfo[] = [
   },
 ];
 
+/** An app's id in URLs, such as /settings?app=shows: its path without the slash. */
+export function appId(app: AppInfo): string {
+  return app.href.slice(1);
+}
+
+/** The app with this id, or none. */
+export function findApp(id: unknown): AppInfo | undefined {
+  return apps.find((app) => appId(app) === id);
+}
+
+/** Global Settings, open on this app's settings (the first app's without one). */
+export function settingsHref(app?: AppInfo): string {
+  return app ? `/settings?${new URLSearchParams({ app: appId(app) })}` : "/settings";
+}
+
 const names = new Intl.ListFormat("en", { type: "conjunction" }).format(apps.map((app) => app.name));
 /** What /apps is, for its description and the web app manifest. */
 export const appsDescription = `Small apps for friends: ${names}.`;

@@ -15,7 +15,7 @@ test("sign up logs the new user in, and the cards go straight into the apps", as
   await expect(accountButton(page, user.username)).toBeVisible();
   await expect(account.getByRole("link")).toHaveCount(0);
 
-  await page.getByRole("link", { name: "Shared", exact: true }).click();
+  await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
   await expect(accountButton(page, user.username)).toBeVisible();
 });

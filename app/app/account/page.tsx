@@ -43,7 +43,7 @@ export default async function AccountPage() {
 
   return (
     <SitePage>
-      <TopBar name="Account" username={user.username} />
+      <TopBar username={user.username} />
       <main className={styles.main}>
         <p className={styles.back}>
           <Link href="/apps">

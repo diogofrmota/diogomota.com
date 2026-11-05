@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import { checkView, emulateHomeIndicator } from "./checks";
-import { accountButton, expect, newUser, signUp, test } from "./fixtures";
+import { accountButton, expect, newUser, openGlobalSettings, settingsPicker, signUp, test } from "./fixtures";
 import { card, grid, mockBase, openShows, otherPerson, section, tab, userId, viewHeading } from "./shows";
 
 // Every view of the site and of both apps, with their dialogs open and in their
@@ -35,7 +35,7 @@ test("the site's pages", async ({ page }) => {
   await checkView(page, "error page");
 
   await page.goto("/apps");
-  await page.getByRole("link", { name: "Shows", exact: true }).click();
+  await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Log in to open Shows" })).toBeVisible();
   await checkView(page, "login prompt");
 
@@ -122,10 +122,16 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await expect(page.getByRole("status").filter({ hasText: "Deleted “Bread”" })).toBeVisible();
   await checkView(page, "undo delete");
 
-  await sharedTab(page, "Settings").click();
+  await openGlobalSettings(page);
   await page.getByRole("button", { name: "Generate invite" }).click();
   await expect(page.getByLabel("Invite code")).toHaveValue(/.{8}/);
-  await checkView(page, "Settings");
+  await checkView(page, "Global Settings, Shared");
+  await page.getByRole("button", { name: "Leave space", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Confirm leave" })).toBeVisible();
+  await checkView(page, "Global Settings, Shared, confirm leave");
+  await settingsPicker(page).selectOption({ label: "Shows" });
+  await expect(page.getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
+  await checkView(page, "Global Settings, Shows");
 
   await goBackTo(page, "Tasks");
   await goBackTo(page, "Calendar");
@@ -217,7 +223,7 @@ test("a load that fails says so, and Retry loads it again", async ({ page }) => 
   await expect(page.getByText("Nothing planned yet — add your first event!")).toBeVisible();
   await failing("**/api/shared/tasks", () => sharedTab(page, "Tasks").click(), "Tasks");
   await expect(page.getByRole("heading", { name: "No lists yet — start your first one!" })).toBeVisible();
-  await failing("**/api/shared/spaces", () => sharedTab(page, "Settings").click(), "Settings");
+  await failing("**/api/shared/spaces", () => openGlobalSettings(page, "Shared"), "Global Settings");
   await expect(page.getByRole("listitem").filter({ hasText: "(you)" })).toBeVisible();
 
   await failing("**/api/shows/library", async () => { await page.goto("/shows"); }, "Shows Home");

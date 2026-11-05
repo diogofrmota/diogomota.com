@@ -2,7 +2,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { Spinner } from "@/components/common/Spinner";
 import { useAppView } from "@/hooks/useAppView";
-import { calendarZone, dateLabel, datePlus, localParts, type CalendarEvent } from "@/lib/calendar";
+import { dateLabel, datePlus, localParts, type CalendarEvent } from "@/lib/calendar";
 import type { Space } from "@/lib/space-types";
 import { EventDialog, eventRequest } from "./EventDialog";
 import styles from "./Calendar.module.css";
@@ -71,16 +71,20 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
       <span className={styles.eventTitle}>{event.title}</span>{" "}<span className={styles.eventMeta}>{localParts(event.startsAt).time} · {event.isGroup ? <span className={styles.groupBadge}>Group</span> : who}</span>
     </button>;
   }
+  // One toolbar over the grid, so the grid gets the rest of the screen. The
+  // top bar's Calendar tab names the view; the h1 is for screen readers.
   return <section className={styles.calendar} aria-label="Shared calendar">
-    <div className={styles.heading}><div><p className={styles.muted}>{space.name}</p><h1>Calendar</h1></div>
-      <button className={styles.primary} onClick={() => openPanel(`new-event:${date}`)}>+ Add event</button></div>
-    <div className={styles.toolbar}><div className={styles.actions}>
-      <button aria-label="Previous period" onClick={() => navigate(-1)}>‹</button><button onClick={() => setDate(today)}>Today</button><button aria-label="Next period" onClick={() => navigate(1)}>›</button>
-    </div><h2 aria-live="polite">{view === "day" ? dateLabel(date, { day: "numeric", month: "long", year: "numeric" }) : view === "week" ? `${dateLabel(first, { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short", year: "numeric" })}` : dateLabel(date, { month: "long", year: "numeric" })}</h2>
+    <h1 className={styles.srOnly}>Calendar</h1>
+    <div className={styles.toolbar}>
+      <div className={styles.actions}>
+        <button className={styles.prev} aria-label="Previous period" onClick={() => navigate(-1)}>‹</button><button className={styles.goToday} onClick={() => setDate(today)}>Today</button><button className={styles.next} aria-label="Next period" onClick={() => navigate(1)}>›</button>
+      </div>
+      <h2 aria-live="polite">{view === "day" ? dateLabel(date, { day: "numeric", month: "long", year: "numeric" }) : view === "week" ? `${dateLabel(first, { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short", year: "numeric" })}` : dateLabel(date, { month: "long", year: "numeric" })}</h2>
+      <ul className={styles.legend} aria-label="Event colors">{space.members.map((m) => <li key={m.id}><i style={{ background: m.color }} />{m.username}</li>)}<li><i className={styles.groupDot} />Group</li></ul>
       <div className={styles.switcher} role="group" aria-label="Calendar view">{(["month", "week", "day"] as const).map((item) => <button key={item} aria-pressed={view === item} onClick={() => setView(item)}>{item[0].toUpperCase() + item.slice(1)}</button>)}</div>
+      {/* Just "+" on phones up to 400px wide; the name stays "+ Add event". */}
+      <button className={`${styles.primary} ${styles.add}`} onClick={() => openPanel(`new-event:${date}`)}>+<span className={styles.addLabel}> Add event</span></button>
     </div>
-    <div className={styles.subbar}><span>{calendarZone}</span><a href="/api/shared/events/export" download>Export calendar .ics</a></div>
-    <ul className={styles.legend} aria-label="Event colors">{space.members.map((m) => <li key={m.id}><i style={{ background: m.color }} />{m.username}</li>)}<li><i className={styles.groupDot} />Group</li></ul>
     {loading && <Spinner label="Loading calendar…" />}
     {error && <div role="alert" className={styles.alert}><p>{error}</p><button onClick={() => { setError(""); setLoading(true); setRevision((r) => r + 1); }}>Retry</button></div>}
     {!loading && !error && events.length === 0 && <p className={styles.empty}>Nothing planned yet — add your first event!</p>}

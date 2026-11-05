@@ -65,6 +65,7 @@ Single shared account across all apps. Auth lives at the `/apps` level.
 
 - **Logged out:** `/apps` shows the app cards with their descriptions, and Login and Sign Up buttons in the top bar. A card opens a login prompt (`components/site/LoginPrompt.tsx`) whose links carry `?next=/shared` or `?next=/shows`, so logging in lands in that app.
 - **Logged in:** the top bar shows the username and the account menu (Account settings, Logout); the cards open the apps.
+- **Top bar** (`components/common/AppHeader`, the same on `/apps`, `/account` and in the apps): `diogomota.com` (→ `/`) and the apps, Shared and Shows, on the left (the open app in bold and underlined, neither on `/apps`); the open app's tabs in the middle on desktop; Login and Sign Up or the account menu on the right.
 - **Session:** an Auth.js JWT cookie, encrypted with `AUTH_SECRET`, holding the user id, the username and the `password_changed_at` it logged in under. Shared by every app.
 - **Sign-up:** open to anyone, no sign-up code (decided). Username 3–20 characters of `[a-z0-9_]`, saved lowercase (the database enforces it too); email; password of at least 10 characters and at most 72 bytes. Signing up logs straight in.
 - **Login:** by username or email, in any case. One message for a wrong password or an unknown account, and one for a taken username or email (sign-up can't hide which one exists without email verification).
@@ -120,17 +121,17 @@ From the account menu on `/apps` and in both apps' top bars:
 - **Protected** — redirect to `/apps?next=...` when logged out
 - Each app is a **SPA** — the URL stays at `/shared` or `/shows` at all times
 - Views and panels are React state (`hooks/useAppView.ts`); each change is a `history.pushState` entry and `popstate` restores it, so Back closes the open panel, then goes back through the views and finally out to `/apps`; a reload starts on the default view
-- One shell, `components/common/AppShell`: a sticky top bar (`‹ Apps` back to `/apps`, the app's name, actions such as Shows' search, `ThemeToggle`, the account menu), the tabs as `Sidebar` (768 px and wider, sticky on the left) or `BottomNav` (narrower, fixed to the bottom, clear of the home indicator), and the current view. Views switched away from stay mounted but hidden (React `<Activity>`)
+- One shell, `components/common/AppShell`: the sticky top bar (`diogomota.com` and the apps on the left, the app's tabs centered in it as `HeaderTabs` at 768 px and wider, actions such as Shows' search and the account menu on the right), the tabs as `BottomNav` on narrower screens (fixed to the bottom, clear of the home indicator), and the current view across the whole width. The app's settings are a view opened from the account menu (`<App> Settings`), not a tab. Views switched away from stay mounted but hidden (React `<Activity>`)
 
 ---
 
 ## General UI/UX Rules (All Apps)
 - **Design:** Minimalistic, modern, clean
 - **Typography:** the system font stack inside apps. IBM Plex Mono is **only** for `/` and `/apps`
-- **Theme:** Light mode + Dark mode, saved per user (`users.theme_preference`) and rendered by the server, so there is no flash on load; the toggle in the apps' top bar and Account settings; `<meta name="theme-color">` follows it; a failed save switches back
+- **Theme:** Light mode + Dark mode, saved per user (`users.theme_preference`) and rendered by the server, so there is no flash on load; chosen in Account settings (and in an app's settings where it has no settings of its own, i.e. Shows); no toggle in the top bar; `<meta name="theme-color">` follows it; a failed save switches back
 - **Responsive:** Mobile-first — primarily used on mobile, must work well on desktop too. Nothing scrolls sideways at 1280×800, 390×844 or 375×812; on a phone, controls are at least 44×44 px, text fields have 16 px text (so iOS doesn't zoom), and the bottom bar, sheets and the undo message stay clear of the home indicator
-- **Navigation:** Bottom tab bar (mobile) / sidebar (desktop) within each app
-- **Back to hub:** `‹ Apps` in every app's top bar (the only way back when opened from the home screen)
+- **Navigation:** Bottom tab bar (mobile) / tabs in the middle of the top bar (desktop) within each app
+- **Between apps:** Shared and Shows in every top bar, and `diogomota.com` back to `/` (the only way out when opened from the home screen)
 - **Account access:** the same account menu in the apps' top bar as on `/apps`
 - **Dialogs:** one `components/common/Dialog`: modal on desktop, a sheet from the bottom or the whole screen on a phone; closed by Escape, Back, a tap outside or its × button, which hands focus back to what opened it; the page behind doesn't scroll
 - **Loading and errors:** grey skeletons in Shows, a spinner in Shared; a load that fails says why ("Could not reach the server. Check your connection." when offline) with Retry. Every browser API call goes through `lib/api-request.ts`
@@ -158,7 +159,7 @@ A private space for a small group (e.g. couple, roommates) to share a calendar a
 - A member who leaves loses their task assignments; their events stay, labeled Former member, until reassigned; they can't open the space any more
 - Every API call checks current membership in the database, inside the same transaction as the read or write; another space's data answers 404
 
-#### SPA Views (bottom tab bar on mobile / sidebar on desktop)
+#### SPA Views (bottom tab bar on mobile / top bar tabs on desktop)
 
 **1. Calendar**
 - Custom month, week and day views (no FullCalendar), in the app's light and dark themes; week view scrolls sideways on narrow screens; click a date to open its day
@@ -168,7 +169,8 @@ A private space for a small group (e.g. couple, roommates) to share a calendar a
   - Member-colored events; group events neutral, with a **Group** badge; a color legend
 - Click an event to view, edit or delete it (a modal on desktop, a bottom sheet on a phone); every member can manage every event
 - Times are entered and shown in `Europe/Lisbon` whatever the device's zone, stored as UTC `timestamptz`; nonexistent spring-forward times are rejected, and repeated autumn times offer the first or second occurrence
-- **Export:** Export calendar (every event in the space, as `.ics`), a `.ics` per event and an Add to Google Calendar link per event; UTC timestamps, escaped text, CRLF and UTF-8 line folding per RFC 5545
+- One toolbar over the grid (‹ Today ›, the period, the color legend, Month | Week | Day, Add event), so the grid gets the rest of the screen; no time zone line
+- **Export:** per event, from its dialog: Export to Google Calendar and a `.ics` download; no whole-calendar export. UTC timestamps, escaped text, CRLF and UTF-8 line folding per RFC 5545
 
 **2. Tasks**
 - Any number of lists per space, as chips above the open list; the last list opened is remembered on the device
@@ -192,7 +194,7 @@ A private space for a small group (e.g. couple, roommates) to share a calendar a
 #### UI/UX Details
 - **First-time flow:** Click Shared → "Create a Space" or "Join with Code" screen
 - **Returning user:** Click Shared → auto-loads their space's Calendar (default view)
-- **Navigation:** Calendar | Tasks | Settings (bottom tab bar mobile, sidebar desktop)
+- **Navigation:** Calendar | Tasks (bottom tab bar mobile, top bar desktop); Shared Settings from the account menu
 - **Color palette:** each member's color marks their events and tasks
 - **Empty states:** friendly messages when there are no events or tasks yet
 
@@ -210,7 +212,7 @@ Minimalistic personal tracker for TV shows and movies.
 - TMDB's terms: their logo and notice at the bottom of Discover and of the search panel, and caching for at most 6 months (met by the refresh)
 - The `/api/shows` API allows 120 requests a minute per user
 
-#### SPA Views (bottom tab bar on mobile / sidebar on desktop)
+#### SPA Views (bottom tab bar on mobile / top bar tabs on desktop)
 
 **1. Home**
 - **Toggle at top:** TV Shows | Movies (filters all sections below; the same switch as Discover's)
@@ -417,7 +419,7 @@ diogomota.com/                            # repo root (this folder)
     │   ├── site/                         # SitePage, TopBar, AppList, LoginPrompt, Form, MessagePage
     │   ├── auth/                         # AuthPage, LoginForm, SignUpForm, ForgotPasswordForm, ResetPasswordForm
     │   ├── account/                      # AccountMenu, AccountSettings
-    │   ├── common/                       # AppShell, Sidebar, BottomNav, Dialog, ThemeToggle, Spinner, icons
+    │   ├── common/                       # AppShell, AppHeader, HeaderTabs, BottomNav, Dialog, Spinner, icons
     │   ├── shared/                       # SharedApp, SpaceWelcome, SpaceSettings, Calendar, EventDialog,
     │   │                                 # Tasks, TaskItem, TaskDialogs, Sortable, useTasks
     │   └── shows/                        # ShowsApp, Home, Discover, Profile, Stats, TitleGrid, LibraryGrid,
@@ -551,6 +553,8 @@ Everything done, in the order it happened (moved here from the former `roadmap.m
 
 - Launch (2026-11-02): pushed `3150734`; deployed as `v1.0.0` (no migration), the Deploy run green. On https://diogomota.com: `/api/health` ok, `/apps` shows `v1.0.0`. On the VPS: a real backup, then the restore dry run from `docs/operations.md`. A full pass on the phone: a second account signed up, Shared with two people, Shows with a friend. A calendar reminder set for the monthly check in `docs/operations.md`. Friends sent the link. `roadmap.md` merged into this file and deleted
 - White buttons (2026-11-03): every button on the site's own pages is now a white box with black text (`.button` in `components/site/site.module.css`, a light grey on hover) instead of a `[Label]` link; the `Brackets` component is gone. That is Check Apps on `/`, Login and Sign Up in the `/apps` top bar (no more `|` between them) and in its login prompt, Log in / Sign up and the other form buttons, Back to Apps, Retry, and Reset by email and Logout on `/account`. The negative margins that lined the `[` up with the text are gone. Checked locally: screenshots of `/`, `/apps`, the login prompt and `/login` on desktop and phone; typecheck and lint clean; `landing`, `apps` and `site` e2e specs pass (the landing style test now expects Check Apps black on white). Not checked: the database-backed specs and `/account`, Docker wasn't running (not committed)
+
+- Header and calendar (2026-11-05): one top bar everywhere (`components/common/AppHeader`): `diogomota.com` on the left (→ `/`, replacing `‹ diogo mota` / `‹ Apps` and the page name), then Shared and Shows, the open app in bold and underlined (neither on `/apps` or `/account`); a hidden bold copy of each label keeps its width, so the bar doesn't move between pages. The sidebar is gone: on desktop the app's tabs are in the middle of the top bar (`HeaderTabs`), on phones still the bottom bar, and the views have the whole width. Shared's Settings tab is gone: Shared Settings opens from the username's menu, like Shows Settings (`AppShell`'s `settings` prop), and the Settings page is a centered column. The theme toggle is gone from the top bar (`ThemeToggle` and the sun and moon icons deleted); the theme is chosen in Account settings, or Shows Settings. On narrow phones the bar's text is 15 px (14 px under 360 px) and the username is cut off before anything overlaps. Calendar: one toolbar row on desktop (‹ Today ›, the period, the legend, Month | Week | Day, + Add event; on phones ‹ period › over Today, the switcher and +), no space name or visible title (the tab names it; the h1 is for screen readers), no `Europe/Lisbon` line and no Export calendar: export is per event, Export to Google Calendar and Download event .ics, moved above Edit and Delete in the event's dialog; `GET /api/shared/events/export` now answers 404. Checked locally: screenshots at 1280, 768, 600, 390, 375 and 320 px wide, logged in and out (nothing overlaps, no sideways scroll); e2e tests updated for the new header and settings flow (theme now picked in Shows Settings), with new tests for the top bar (bold and underline on the open app, same widths on every page, no theme button) and tabs centered in it
 
 ## To-do
 

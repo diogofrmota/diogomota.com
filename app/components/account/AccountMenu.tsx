@@ -5,12 +5,15 @@ import { useEffect, useId, useRef, useState } from "react";
 import { logOut } from "@/app/account/actions";
 import styles from "./AccountMenu.module.css";
 
-export type AppSettingsAction = { label: string; onSelect: () => void };
-
-// The username in the top bar, opening account and app settings. A disclosure
-// (a button that shows a list) rather than an ARIA menu, so Tab moves through it
-// like any links. Escape, a click outside or tabbing away closes it.
-export function AccountMenu({ username, settings }: { username: string; settings?: AppSettingsAction }) {
+// The username in the top bar, opening Account (/account), Global Settings
+// (/settings, every app's settings) and Logout. A disclosure (a button that
+// shows a list) rather than an ARIA menu, so Tab moves through it like any
+// links. Escape, a click outside or tabbing away closes it.
+export function AccountMenu({ username, settingsHref }: {
+  username: string;
+  /** Global Settings, open on the app the menu is in (lib/apps.ts, settingsHref). */
+  settingsHref: string;
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -61,15 +64,11 @@ export function AccountMenu({ username, settings }: { username: string; settings
             Account
           </Link>
         </li>
-        {settings && <li>
-          <button type="button" className={styles.item} onClick={() => {
-            setOpen(false);
-            buttonRef.current?.focus();
-            settings.onSelect();
-          }}>
-            {settings.label}
-          </button>
-        </li>}
+        <li>
+          <Link href={settingsHref} className={styles.item} onClick={() => setOpen(false)}>
+            Global Settings
+          </Link>
+        </li>
         <li>
           <form action={logOut}>
             <button type="submit" className={styles.item}>

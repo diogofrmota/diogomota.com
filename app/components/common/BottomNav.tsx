@@ -2,7 +2,8 @@ import type { TabNavProps } from "./AppShell";
 import styles from "./BottomNav.module.css";
 
 // The app's tabs in a bar along the bottom, on mobile (hidden on wide screens,
-// where Sidebar takes over). Buttons rather than links: the URL never changes.
+// where the top bar's HeaderTabs take over). Buttons rather than links: the URL
+// never changes.
 export function BottomNav({ label, tabs, current, onSelect }: TabNavProps) {
   return (
     <nav aria-label={label} className={styles.bottomNav}>

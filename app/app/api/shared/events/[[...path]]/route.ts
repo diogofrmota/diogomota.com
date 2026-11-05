@@ -11,7 +11,8 @@ async function handle(request: Request, context: { params: Promise<{ path?: stri
     const method = request.method;
     const exporting = path.at(-1) === "export";
     const ids = exporting ? path.slice(0, -1) : path;
-    if (ids.length > 1 || (exporting && method !== "GET") ||
+    // Only single events export (/:id/export); there is no whole-calendar file.
+    if (ids.length > 1 || (exporting && (method !== "GET" || !ids.length)) ||
       (method === "POST" && ids.length) || (["PATCH", "DELETE"].includes(method) && !ids.length))
       throw new SpaceError("Endpoint not found.", 404);
     if (method !== "GET") {
@@ -28,7 +29,7 @@ async function handle(request: Request, context: { params: Promise<{ path?: stri
     const events = await spaceTransaction((db) => eventOperation(db, session.user.id, method, ids[0], body));
     const headers = { "Cache-Control": "no-store" };
     if (exporting) return new Response(calendarIcs(events), { headers: { ...headers,
-      "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": `attachment; filename="${ids.length ? "event" : "shared-calendar"}.ics"`,
+      "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": 'attachment; filename="event.ics"',
     } });
     return Response.json({ data: method === "DELETE" ? null : ids.length || method === "POST" ? events[0] : events }, { status: method === "POST" ? 201 : 200, headers });
   } catch (error) {

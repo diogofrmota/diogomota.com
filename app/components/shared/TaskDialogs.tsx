@@ -55,7 +55,7 @@ export function TaskDialog({ task, list, space, onClose, onSave, onDelete }: {
       <div className={styles.actions}>
         <button className={styles.primary} type="submit">Save task</button>
         <button type="button" onClick={onClose}>Cancel</button>
-        <button type="button" className={styles.danger} onClick={onDelete}>Delete task</button>
+        <button type="button" className={styles.remove} onClick={onDelete}>Delete task</button>
       </div>
     </form>
   </Sheet>;
