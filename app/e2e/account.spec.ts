@@ -26,7 +26,7 @@ test("the account menu opens settings, and closes with Escape or a click outside
   await expect(page).toHaveURL("/apps");
 
   const button = accountButton(page, user.username);
-  const settings = page.getByRole("link", { name: "Account settings" });
+  const settings = page.getByRole("link", { name: "Account", exact: true });
   await expect(button).toHaveAttribute("aria-expanded", "false");
   await expect(settings).toBeHidden();
 
@@ -191,7 +191,7 @@ test.describe("at 320px wide", () => {
     await expectNoHorizontalScroll(page);
 
     await accountButton(page, user.username).click();
-    await expect(page.getByRole("link", { name: "Account settings" })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("link", { name: "Account", exact: true })).toBeInViewport({ ratio: 1 });
     await expectNoHorizontalScroll(page);
 
     await page.goto("/account");

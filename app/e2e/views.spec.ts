@@ -50,7 +50,7 @@ test("the site's pages", async ({ page }) => {
   await checkView(page, "apps, logged in");
   await accountButton(page, user.username).click();
   await checkView(page, "account menu");
-  await page.getByRole("link", { name: "Account settings" }).click();
+  await page.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await checkView(page, "account");
 });

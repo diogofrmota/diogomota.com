@@ -1,0 +1,8 @@
+.settings { max-width: 44rem; margin-inline: auto; }
+.settings h1 { margin: 0.5rem 0 1.5rem; font-size: 1.6rem; }
+.back { min-height: 2.75rem; padding: 0 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--surface); cursor: pointer; }
+.appearance { margin: 0; padding: 1rem; border: 1px solid var(--border); border-radius: 0.75rem; }
+.appearance legend { padding-inline: 0.5rem; font-weight: 600; }
+.appearance p { margin-top: 0; color: var(--muted); }
+.appearance label { display: flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; cursor: pointer; }
+.appearance input { accent-color: var(--accent); }

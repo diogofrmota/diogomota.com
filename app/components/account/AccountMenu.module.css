@@ -1,5 +1,4 @@
-/* Colors default to the site's (black); the apps set the --menu-* variables
-   from their theme (components/common/AppShell.module.css). */
+/* AppHeader supplies the menu colors from the current page's theme. */
 
 .root {
   position: relative;

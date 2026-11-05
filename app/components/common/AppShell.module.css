@@ -11,13 +11,6 @@
   --accent: #60a5fa; /* 7.8:1 on --bg */
   --accent-soft: #16243a; /* --accent on it: 6.1:1 */
 
-  /* components/account/AccountMenu */
-  --menu-bg: var(--surface);
-  --menu-border: var(--border);
-  --menu-hover-bg: var(--hover);
-  --menu-hover-text: var(--text);
-  --menu-muted: var(--muted);
-
   --top-bar-height: 3.5rem;
   --bottom-nav-height: 4rem;
 
@@ -88,64 +81,14 @@
   }
 }
 
-.topBar {
-  grid-area: top;
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  height: var(--top-bar-height);
-  padding: 0 max(0.5rem, env(safe-area-inset-right)) 0 max(0.5rem, env(safe-area-inset-left));
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
-}
-
-.back {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  min-height: 2.75rem;
-  padding: 0 0.625rem 0 0.25rem;
-  border-radius: 0.5rem;
-  color: var(--muted);
-  text-decoration: none;
-}
-
-@media (hover: hover) {
-  .back:hover {
-    background: var(--hover);
-    color: var(--text);
-  }
-}
-
-.appName {
-  flex-shrink: 0;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  min-width: 0;
-  margin-left: auto;
-}
-
-/* Lets a long username shrink (AccountMenu cuts it off with an ellipsis). */
-.account {
-  display: flex;
-  min-width: 0;
-  padding-right: 0.5rem;
-}
-
 .main {
+  --main-padding-top: 1.5rem;
+  --main-padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 1.5rem);
+  --app-view-height: calc(100dvh - var(--top-bar-height) - var(--main-padding-top) - var(--main-padding-bottom));
   grid-area: main;
   min-width: 0;
-  padding: 1.5rem max(1.25rem, env(safe-area-inset-right))
-    calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 1.5rem)
+  padding: var(--main-padding-top) max(1.25rem, env(safe-area-inset-right))
+    var(--main-padding-bottom)
     max(1.25rem, env(safe-area-inset-left));
 }
 
@@ -158,6 +101,8 @@
 
 @media (min-width: 48rem) {
   .main {
-    padding: 2rem 2.5rem 3rem;
+    --main-padding-top: 2rem;
+    --main-padding-bottom: 3rem;
+    padding: var(--main-padding-top) 2.5rem var(--main-padding-bottom);
   }
 }

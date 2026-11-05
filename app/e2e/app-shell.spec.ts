@@ -158,13 +158,77 @@ test("back pressed while the page is still loading still goes to the previous vi
 test("the top bar links back to /apps and has the account menu", async ({ page }) => {
   const user = await openApp(page, "/shared");
   await accountButton(page, user.username).click();
-  await expect(page.getByRole("link", { name: "Account settings" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Account", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("link", { name: "Account settings" })).toBeHidden();
+  await expect(page.getByRole("link", { name: "Account", exact: true })).toBeHidden();
 
   await page.getByRole("link", { name: "Back to Apps" }).click();
   await expect(page).toHaveURL("/apps");
   await expect(accountButton(page, user.username)).toBeVisible();
+});
+
+for (const app of appViews) {
+  test(`${app.name}: the account menu opens app settings with working history`, async ({ page }) => {
+    const user = await openApp(page, app.path);
+    await accountButton(page, user.username).click();
+    const menu = page.getByRole("navigation", { name: "Account" }).getByRole("list");
+    await expect(menu.getByRole("listitem")).toHaveText(["Account", `${app.name} Settings`, "Logout"]);
+    await menu.getByRole("button", { name: `${app.name} Settings` }).click();
+    await expect(menu).toBeHidden();
+    await expect(accountButton(page, user.username)).toBeFocused();
+    await expect(viewHeading(page)).toHaveText(app.name === "Shared" ? "Settings" : "Shows Settings");
+    await expect(page).toHaveURL(app.path);
+    if (app.name === "Shared") {
+      await expect(page.getByLabel("Space name")).toHaveValue("Shell test space");
+    } else {
+      const saved = page.waitForResponse(response => response.request().method() === "POST" && "next-action" in response.request().headers());
+      await page.getByRole("radio", { name: "Light", exact: true }).check();
+      expect((await saved).headers()["x-action-revalidated"]).toBeTruthy();
+      await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "light");
+    }
+    await page.goBack();
+    await expect(viewHeading(page)).toHaveText(app.views[0]);
+    await page.goForward();
+    await expect(viewHeading(page)).toHaveText(app.name === "Shared" ? "Settings" : "Shows Settings");
+  });
+}
+
+test("Shared settings are available before creating a space", async ({ page }) => {
+  const user = newUser();
+  await signUp(page, user, "/signup?next=%2Fshared");
+  await expect(viewHeading(page)).toHaveText("Your shared space");
+  await accountButton(page, user.username).click();
+  await page.getByRole("button", { name: "Shared Settings" }).click();
+  await expect(viewHeading(page)).toHaveText("Shared Settings");
+  await page.getByRole("button", { name: "Back to Shared" }).click();
+  await expect(viewHeading(page)).toHaveText("Your shared space");
+});
+
+test("Apps, Shared and Shows share header sizing and fit a narrow screen", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/apps");
+  await expectNoHorizontalScroll(page);
+  const user = { ...newUser(), username: `e2e_${Date.now()}abc` };
+  await signUp(page, user);
+  await expect(page).toHaveURL("/apps");
+  let reference: unknown;
+  for (const path of ["/apps", "/shared", "/shows"]) {
+    await page.goto(path);
+    const header = page.getByRole("banner");
+    await expect(header).toBeVisible();
+    const format = await header.evaluate(element => {
+      const style = getComputedStyle(element);
+      return { height: element.getBoundingClientRect().height, width: element.getBoundingClientRect().width,
+        font: style.fontFamily, padding: style.padding, position: style.position };
+    });
+    if (reference) expect(format).toEqual(reference);
+    else reference = format;
+    await accountButton(page, user.username).click();
+    await expect(header.getByRole("link", { name: "Account", exact: true })).toBeInViewport({ ratio: 1 });
+    if (path === "/apps") await expect(header.getByRole("listitem")).toHaveText(["Account", "Logout"]);
+    else await expect(header.getByRole("button", { name: `${path === "/shared" ? "Shared" : "Shows"} Settings` })).toBeInViewport({ ratio: 1 });
+    await expectNoHorizontalScroll(page);
+  }
 });
 
 test("the theme toggle saves to the account, and the saved theme is in the page as served", async ({
@@ -232,7 +296,7 @@ test("theme changes show on pages reached with the back button, and keep the vie
 
   // The same for a change in account settings.
   await accountButton(page, user.username).click();
-  await page.getByRole("link", { name: "Account settings" }).click();
+  await page.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await page.getByRole("heading", { name: "Theme", exact: true }).click();
   await page.getByRole("radio", { name: "Dark" }).check();
@@ -268,7 +332,7 @@ test.describe("at 375px wide", () => {
 
     await expectNoHorizontalScroll(page);
     await accountButton(page, user.username).click();
-    await expect(page.getByRole("link", { name: "Account settings" })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("link", { name: "Account", exact: true })).toBeInViewport({ ratio: 1 });
     await expectNoHorizontalScroll(page);
   });
 

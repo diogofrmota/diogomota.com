@@ -5,10 +5,12 @@ import { useEffect, useId, useRef, useState } from "react";
 import { logOut } from "@/app/account/actions";
 import styles from "./AccountMenu.module.css";
 
-// The username in the top bar, opening Account settings and Logout. A disclosure
+export type AppSettingsAction = { label: string; onSelect: () => void };
+
+// The username in the top bar, opening account and app settings. A disclosure
 // (a button that shows a list) rather than an ARIA menu, so Tab moves through it
 // like any links. Escape, a click outside or tabbing away closes it.
-export function AccountMenu({ username }: { username: string }) {
+export function AccountMenu({ username, settings }: { username: string; settings?: AppSettingsAction }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -56,9 +58,18 @@ export function AccountMenu({ username }: { username: string }) {
       <ul id={listId} className={styles.list} hidden={!open}>
         <li>
           <Link href="/account" className={styles.item} onClick={() => setOpen(false)}>
-            Account settings
+            Account
           </Link>
         </li>
+        {settings && <li>
+          <button type="button" className={styles.item} onClick={() => {
+            setOpen(false);
+            buttonRef.current?.focus();
+            settings.onSelect();
+          }}>
+            {settings.label}
+          </button>
+        </li>}
         <li>
           <form action={logOut}>
             <button type="submit" className={styles.item}>

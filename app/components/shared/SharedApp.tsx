@@ -12,6 +12,7 @@ import { Tasks } from "./Tasks";
 export function SharedApp({ user, initialSpace }: { user: User; initialSpace: Space | null }) {
   const [space, setSpace] = useState(initialSpace);
   return <AppShell key={space?.id ?? "welcome"} name="Shared" username={user.username} theme={user.themePreference}
+    settingsTab={space ? "settings" : undefined}
     hideNavigation={!space} tabs={space ? [
       { id: "calendar", label: "Calendar", icon: <CalendarIcon />, view: <Calendar space={space} userId={user.id} /> },
       { id: "tasks", label: "Tasks", icon: <TasksIcon />, view: <Tasks space={space} /> },

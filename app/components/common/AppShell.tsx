@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { Activity, useMemo } from "react";
-import { AccountMenu } from "@/components/account/AccountMenu";
 import { AppViewContext, useAppViewHistory } from "@/hooks/useAppView";
 import { useTheme } from "@/hooks/useTheme";
 import type { Theme } from "@/lib/users";
 import { BottomNav } from "./BottomNav";
-import { BackIcon } from "./icons";
+import { AppHeader } from "./AppHeader";
+import { AppSettings } from "./AppSettings";
 import { Sidebar } from "./Sidebar";
 import { ThemeToggle } from "./ThemeToggle";
 import styles from "./AppShell.module.css";
@@ -43,6 +42,7 @@ export function AppShell({
   theme: savedTheme,
   hideNavigation = false,
   actions,
+  settingsTab,
   children,
 }: {
   name: string;
@@ -53,10 +53,13 @@ export function AppShell({
   hideNavigation?: boolean;
   /** The app's own buttons in the top bar, before the theme toggle. */
   actions?: React.ReactNode;
+  /** An existing settings tab; otherwise the shell provides appearance settings. */
+  settingsTab?: string;
   /** Shown over every view, such as the app's dialogs; can use useAppView(). */
   children?: React.ReactNode;
 }) {
-  const ids = useMemo(() => tabs.map((tab) => tab.id), [tabs]);
+  const settingsId = settingsTab ?? "app-settings";
+  const ids = useMemo(() => [...tabs.map((tab) => tab.id), ...(!settingsTab ? [settingsId] : [])], [tabs, settingsId, settingsTab]);
   const appView = useAppViewHistory(ids);
   const [theme, setTheme] = useTheme(savedTheme);
 
@@ -70,20 +73,9 @@ export function AppShell({
       <div className={`${styles.shell} ${hideNavigation ? styles.withoutNav : ""}`} data-theme={theme}>
         {/* Browser UI color on mobile. React moves it into <head>. */}
         <meta name="theme-color" content={theme === "light" ? "#ffffff" : "#0a0a0a"} />
-        <header className={styles.topBar}>
-          <Link href="/apps" className={styles.back} aria-label="Back to Apps">
-            <BackIcon />
-            Apps
-          </Link>
-          <span className={styles.appName}>{name}</span>
-          <div className={styles.actions}>
-            {actions}
-            <ThemeToggle theme={theme} onChange={setTheme} />
-            <nav aria-label="Account" className={styles.account}>
-              <AccountMenu username={username} />
-            </nav>
-          </div>
-        </header>
+        <AppHeader name={name} back={{ href: "/apps", label: "Apps", ariaLabel: "Back to Apps" }}
+          username={username} actions={<>{actions}<ThemeToggle theme={theme} onChange={setTheme} /></>}
+          settings={{ label: `${name} Settings`, onSelect: () => selectTab(settingsId) }} />
         {!hideNavigation && <Sidebar label={name} tabs={tabs} current={appView.view} onSelect={selectTab} />}
         <main className={styles.main}>
           {tabs.map((tab) => (
@@ -91,6 +83,9 @@ export function AppShell({
               {tab.view}
             </Activity>
           ))}
+          {!settingsTab && <Activity mode={appView.view === settingsId ? "visible" : "hidden"}>
+            <AppSettings name={name} theme={theme} onThemeChange={setTheme} onBack={() => selectTab(tabs[0].id)} />
+          </Activity>}
         </main>
         {!hideNavigation && <BottomNav label={name} tabs={tabs} current={appView.view} onSelect={selectTab} />}
         {children}
