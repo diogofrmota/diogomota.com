@@ -15,6 +15,25 @@ export const metadata: Metadata = { title: "account", robots: { index: false } }
 
 export const viewport = siteViewport;
 
+// One setting per dropdown, closed until opened. A native <details>, so it opens
+// with a click, Enter or Space and needs no script. The open state is the
+// browser's, so it stays open while a form inside it saves and the page re-renders.
+function Dropdown({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  const headingId = `${id}-heading`;
+  return (
+    <section aria-labelledby={headingId} className={styles.item}>
+      <details className={styles.details}>
+        <summary className={styles.summary}>
+          <h2 id={headingId} className={styles.heading}>
+            {title}
+          </h2>
+        </summary>
+        <div className={styles.body}>{children}</div>
+      </details>
+    </section>
+  );
+}
+
 // Account settings, opened from the account menu. Like /apps, it is in the site
 // style (black, IBM Plex Mono); the theme set here applies inside the apps.
 export default async function AccountPage() {
@@ -33,51 +52,36 @@ export default async function AccountPage() {
         </p>
         <h1 className={styles.title}>account</h1>
 
-        <section aria-labelledby="username-heading" className={styles.section}>
-          <h2 id="username-heading" className={styles.heading}>
-            Change username
-          </h2>
-          <UsernameForm username={user.username} />
-        </section>
+        <div className={styles.list}>
+          <Dropdown id="username" title="Change username">
+            <UsernameForm username={user.username} />
+          </Dropdown>
 
-        <section aria-labelledby="password-heading" className={styles.section}>
-          <h2 id="password-heading" className={styles.heading}>
-            Change password
-          </h2>
-          <PasswordForm />
-        </section>
+          <Dropdown id="password" title="Change password">
+            <PasswordForm />
+          </Dropdown>
 
-        <section aria-labelledby="forgot-heading" className={styles.section}>
-          <h2 id="forgot-heading" className={styles.heading}>
-            Forgot password
-          </h2>
-          <p className={site.muted}>
-            Don&apos;t know your current password? Reset it with a link sent to {user.email}.
-          </p>
-          <p className={styles.action}>
-            <Link href="/forgot-password" className={site.button}>
-              Reset by email
-            </Link>
-          </p>
-        </section>
+          <Dropdown id="forgot" title="Forgot password">
+            <p className={site.muted}>
+              Don&apos;t know your current password? Reset it with a link sent to {user.email}.
+            </p>
+            <p className={styles.action}>
+              <Link href="/forgot-password" className={site.button}>
+                Reset by email
+              </Link>
+            </p>
+          </Dropdown>
 
-        <section aria-labelledby="theme-heading" className={styles.section}>
-          <h2 id="theme-heading" className={styles.heading}>
-            Theme
-          </h2>
-          <ThemeForm theme={user.themePreference} labelledBy="theme-heading" />
-        </section>
+          <Dropdown id="theme" title="Theme">
+            <ThemeForm theme={user.themePreference} labelledBy="theme-heading" />
+          </Dropdown>
+        </div>
 
-        <section aria-labelledby="logout-heading" className={styles.section}>
-          <h2 id="logout-heading" className={styles.heading}>
-            Log out
-          </h2>
-          <form action={logOut}>
-            <button type="submit" className={site.button}>
-              Logout
-            </button>
-          </form>
-        </section>
+        <form action={logOut} className={styles.logout}>
+          <button type="submit" className={site.button}>
+            Logout
+          </button>
+        </form>
       </main>
     </SitePage>
   );

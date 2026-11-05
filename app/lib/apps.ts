@@ -16,7 +16,7 @@ export const apps: readonly AppInfo[] = [
   {
     name: "Shared",
     href: "/shared",
-    description: "A private space to share a calendar and task lists.",
+    description: "Create a shared calendar and task list with someone else.",
     logo: "/logos/shared.svg",
   },
   {

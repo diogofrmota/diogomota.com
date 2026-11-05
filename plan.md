@@ -104,8 +104,8 @@ From the account menu on `/apps` and in both apps' top bars:
 - **Top bar:**
   - Logged out: Login and Sign Up buttons
   - Logged in: username + account menu (Account settings, Logout); long usernames are cut off with an ellipsis
-- A responsive grid of app cards (one column on a phone), from the typed list in `app/lib/apps.ts`:
-  - **Shared**: "A private space to share a calendar and task lists."
+- A vertical list of app cards, one per row, from the typed list in `app/lib/apps.ts`:
+  - **Shared**: "Create a shared calendar and task list with someone else."
   - **Shows**: "Track the TV shows and movies you watch."
   - Each with its logo (`public/logos/`, 48×48), name and description
   - Logged out: a card opens the login prompt

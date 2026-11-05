@@ -3,6 +3,15 @@ import { accountButton, expect, formAlert, logIn, logOut, newUser, signUp, test 
 
 const section = (page: Page, name: string) => page.getByRole("region", { name, exact: true });
 
+/** The settings are dropdowns, closed on load: opens one and returns it. */
+async function openSection(page: Page, name: string) {
+  const region = section(page, name);
+  const heading = region.getByRole("heading", { name, exact: true });
+  await heading.click();
+  await expect(region.locator("details")).toHaveAttribute("open", "");
+  return region;
+}
+
 async function expectNoHorizontalScroll(page: Page) {
   const { scrollWidth, clientWidth } = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
@@ -51,7 +60,7 @@ test("change username", async ({ page }) => {
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
 
-  const form = section(page, "Change username");
+  const form = await openSection(page, "Change username");
   const field = form.getByLabel("Username");
   const save = form.getByRole("button", { name: "Save username" });
   await expect(field).toHaveValue(user.username);
@@ -91,7 +100,7 @@ test("change password, which logs out every device", async ({ page, browser }) =
   await expect(other).toHaveURL("/apps");
   await page.goto("/account");
 
-  const form = section(page, "Change password");
+  const form = await openSection(page, "Change password");
   const newPassword = "a whole new password";
   async function submit(current: string, password: string, confirm: string) {
     await form.getByLabel("Current password").fill(current);
@@ -133,7 +142,7 @@ test("theme preference persists after logging in again", async ({ page }) => {
   await expect(app).toHaveAttribute("data-theme", "dark");
 
   await page.goto("/account");
-  const form = section(page, "Theme");
+  const form = await openSection(page, "Theme");
   await expect(form.getByRole("radio", { name: "Dark" })).toBeChecked();
   await form.getByRole("radio", { name: "Light" }).check();
   await form.getByRole("button", { name: "Save theme" }).click();
@@ -144,6 +153,7 @@ test("theme preference persists after logging in again", async ({ page }) => {
   await expect(page).toHaveURL("/apps");
 
   await page.goto("/account");
+  await openSection(page, "Theme");
   await expect(form.getByRole("radio", { name: "Light" })).toBeChecked();
   await page.goto("/shared");
   await expect(app).toHaveAttribute("data-theme", "light");
@@ -156,7 +166,7 @@ test("forgot password in account settings opens the reset by email", async ({ pa
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
 
-  const forgot = section(page, "Forgot password");
+  const forgot = await openSection(page, "Forgot password");
   await expect(forgot).toContainText(`Reset it with a link sent to ${user.email}.`);
   await forgot.getByRole("link", { name: "Reset by email" }).click();
   await expect(page).toHaveURL("/forgot-password");

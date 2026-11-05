@@ -1,6 +1,6 @@
+/* One app per row, at every width. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
   gap: 1rem;
   margin: 0;
   padding: 0;

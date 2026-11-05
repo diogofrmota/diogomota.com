@@ -1,5 +1,6 @@
+/* One centered column: the back link, the title, the dropdowns and Logout. */
 .main {
-  max-width: 56rem;
+  max-width: 42rem;
   margin: 0 auto;
   padding: 0.5rem 1.25rem 3rem;
 }
@@ -31,23 +32,99 @@
   font-weight: 400;
 }
 
-.section {
-  max-width: 26rem;
-  padding: 1.5rem 0;
+/* The dropdowns: one box, a line between each. */
+.list {
+  border: 1px solid #333;
+}
+
+.item + .item {
   border-top: 1px solid #333;
 }
 
-.section p {
+.details {
   margin: 0;
 }
 
+/* The whole row opens it. No browser triangle: the chevron is drawn below. */
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.5rem;
+  padding: 0 1.25rem;
+  list-style: none;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A chevron that points down when closed and up when open. */
+.summary::after {
+  content: "";
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-top: -0.25rem;
+  border-right: 1.5px solid #a3a3a3;
+  border-bottom: 1.5px solid #a3a3a3;
+  transform: rotate(45deg);
+  transition: transform 150ms ease;
+}
+
+.details[open] > .summary::after {
+  margin-top: 0.25rem;
+  transform: rotate(-135deg);
+}
+
+/* Inside the box, so the ring isn't clipped by or drawn over the next row. */
+.summary:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (hover: hover) {
+  .summary:hover {
+    background: #111;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .summary,
+  .summary::after {
+    transition: none;
+  }
+}
+
 .heading {
-  margin: 0 0 1rem;
+  margin: 0;
   font-size: 1rem;
   font-weight: 400;
 }
 
+.body {
+  padding: 0.25rem 1.25rem 1.5rem;
+}
+
+.body p {
+  margin: 0;
+}
+
 /* A button under a section's text. */
-.section .action {
+.body .action {
   margin: 0.75rem 0 0;
+}
+
+.logout {
+  margin-top: 1.5rem;
+}
+
+/* Narrow phones: a little less padding, so the fields keep their width. */
+@media (max-width: 24rem) {
+  .summary,
+  .body {
+    padding-inline: 1rem;
+  }
 }

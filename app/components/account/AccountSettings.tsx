@@ -70,7 +70,7 @@ export function PasswordForm() {
         autoComplete="new-password"
         required
       />
-      <p className={formStyles.hint}>Changing it logs you out on every device, this one too.</p>
+      <p className={formStyles.hint}>Changing password logs you out on every device.</p>
       <FormMessage error={state.error} success={state.success} />
       <SubmitButton label="Change password" pending={pending} />
     </form>
