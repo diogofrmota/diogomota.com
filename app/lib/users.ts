@@ -75,6 +75,14 @@ export async function createUser(
   return rows[0] ?? null;
 }
 
+export async function usernameAvailable(id: string, username: string): Promise<boolean> {
+  const { rows } = await query<{ available: boolean }>(
+    `SELECT NOT EXISTS (SELECT 1 FROM users WHERE username = $1 AND id <> $2) AS available`,
+    [username, id],
+  );
+  return rows[0].available;
+}
+
 // Returns false when another account has that username.
 export async function updateUsername(id: string, username: string): Promise<boolean> {
   try {

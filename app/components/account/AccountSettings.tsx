@@ -1,38 +1,86 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { changePassword, changeUsername, saveTheme } from "@/app/account/actions";
 import { Field, FormMessage, SubmitButton } from "@/components/site/Form";
 import formStyles from "@/components/site/Form.module.css";
 import {
   PASSWORD_MIN,
+  normalizeUsername,
   passwordHint,
   USERNAME_MAX,
   USERNAME_MIN,
   usernameHint,
+  usernameError,
 } from "@/lib/account-rules";
+import { ApiError, apiRequest } from "@/lib/api-request";
+import type { FormState } from "@/lib/form-state";
 import type { Theme } from "@/lib/users";
 import styles from "./AccountSettings.module.css";
 
 export function UsernameForm({ username }: { username: string }) {
   const [state, action, pending] = useActionState(changeUsername, {});
+  const [draft, setDraft] = useState<{ value: string; previous: FormState } | null>(null);
+  const [check, setCheck] = useState<{ username: string; available?: boolean; error?: string } | null>(null);
+  const statusId = useId();
+  const value = draft?.value ?? username;
+  const normalized = normalizeUsername(value);
+  const validation = draft ? usernameError(normalized) : null;
+  const changed = normalized !== username;
+  const showSavedResult = !draft || draft.previous !== state;
+  const savedError = showSavedResult && state.values?.username === normalized ? state.fieldErrors?.username : undefined;
+  const result = check?.username === normalized ? check : null;
+  const error = validation || savedError || (changed && result?.available === false ? "That username is taken." : undefined);
+  const message = error || (showSavedResult && state.error)
+    || (showSavedResult && !changed && state.success)
+    || (changed ? result?.error || (result?.available ? "That username is available." : "Checking availability…") : usernameHint);
+
+  useEffect(() => {
+    if (!changed || usernameError(normalized)) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const data = await apiRequest<{ available: boolean }>(
+          `/api/account/username?${new URLSearchParams({ username: normalized })}`,
+          { signal: controller.signal, fallback: "Couldn't check availability. Try again or save to check." },
+        );
+        if (!controller.signal.aborted) setCheck({ username: normalized, available: data.available });
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setCheck({ username: normalized, error: error instanceof ApiError ? error.message : "Couldn't check availability. Try again or save to check." });
+        }
+      }
+    }, 350);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [changed, normalized, value]);
 
   return (
     <form action={action} noValidate className={formStyles.form}>
-      <Field
-        label="Username"
-        name="username"
-        hint={usernameHint}
-        error={state.fieldErrors?.username}
-        autoComplete="username"
-        autoCapitalize="none"
-        spellCheck={false}
-        required
-        minLength={USERNAME_MIN}
-        maxLength={USERNAME_MAX}
-        defaultValue={state.values?.username ?? username}
-      />
-      <FormMessage error={state.error} success={state.success} />
+      <div className={formStyles.field}>
+        <Field
+          label="Username"
+          name="username"
+          aria-describedby={statusId}
+          aria-invalid={error ? true : undefined}
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          required
+          minLength={USERNAME_MIN}
+          maxLength={USERNAME_MAX}
+          value={value}
+          onChange={(event) => {
+            setDraft({ value: event.target.value, previous: state });
+            setCheck(null);
+          }}
+        />
+        <p id={statusId} role="status" className={error || (changed && result?.error) ? formStyles.error : formStyles.hint}>
+          {message}
+        </p>
+      </div>
       <SubmitButton label="Save username" pending={pending} />
     </form>
   );

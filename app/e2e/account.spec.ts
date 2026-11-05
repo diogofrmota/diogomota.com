@@ -66,15 +66,23 @@ test("change username", async ({ page }) => {
   await expect(field).toHaveValue(user.username);
 
   await field.fill("not valid!");
-  await save.click();
   await expect(form.getByText("Use 3-20 characters: a-z, 0-9 and _.")).toBeVisible();
 
   await field.fill(taken.username.toUpperCase());
-  await save.click();
   await expect(form.getByText("That username is taken.")).toBeVisible();
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  await save.click();
+  await expect(save).toBeEnabled();
+  await expect(form.getByText("That username is taken.")).toBeVisible();
+
+  await field.fill(user.username.toUpperCase());
+  await expect(form.getByRole("status")).toHaveText("3-20 characters: a-z, 0-9 and _.");
+  await expect(field).not.toHaveAttribute("aria-invalid", "true");
 
   const renamed = newUser().username;
   await field.fill(renamed);
+  await expect(form.getByRole("status")).toHaveText("That username is available.");
+  await expect(accountButton(page, user.username)).toBeVisible();
   await save.click();
   await expect(form.getByRole("status")).toHaveText("Username changed.");
   // The session has the new name too.
@@ -88,6 +96,67 @@ test("change username", async ({ page }) => {
   await logIn(page, renamed, user.password);
   await expect(page).toHaveURL("/apps");
   await expect(accountButton(page, renamed)).toBeVisible();
+});
+
+test("username checks ignore old responses and recover after a network failure", async ({ page }) => {
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/apps");
+  await page.goto("/account");
+  const form = await openSection(page, "Change username");
+  const field = form.getByLabel("Username");
+  const status = form.getByRole("status");
+  const endpoint = "**/api/account/username?*";
+  let releaseOld!: () => void;
+  const oldResponse = new Promise<void>((resolve) => { releaseOld = resolve; });
+  let oldStarted!: () => void;
+  const started = new Promise<void>((resolve) => { oldStarted = resolve; });
+  let oldFinished!: () => void;
+  const finished = new Promise<void>((resolve) => { oldFinished = resolve; });
+  await page.route(endpoint, async (route) => {
+    if (new URL(route.request().url()).searchParams.get("username") === "e2e_slow") {
+      oldStarted();
+      await oldResponse;
+      await route.fulfill({ json: { data: { available: false } } });
+      oldFinished();
+    } else {
+      await route.fulfill({ json: { data: { available: true } } });
+    }
+  });
+  await field.fill("e2e_slow");
+  await started;
+  await expect(status).toHaveText("Checking availability…");
+  await field.fill("e2e_fast");
+  await expect(status).toHaveText("That username is available.");
+  releaseOld();
+  await finished;
+  await expect(status).toHaveText("That username is available.");
+
+  await page.unroute(endpoint);
+  await page.route(endpoint, (route) => route.abort());
+  await field.fill(newUser().username);
+  await expect(status).toHaveText("Could not reach the server. Check your connection.");
+  await page.unroute(endpoint);
+  await field.fill(newUser().username);
+  await expect(status).toHaveText("That username is available.");
+});
+
+test("username availability requires login, validates input and limits checks", async ({ page, playwright }) => {
+  const endpoint = "/api/account/username";
+  const anonymous = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  expect((await anonymous.get(`${endpoint}?username=someone`)).status()).toBe(401);
+  await anonymous.dispose();
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/apps");
+  expect((await page.request.get(`${endpoint}?username=ab`)).status()).toBe(400);
+  const own = await page.request.get(`${endpoint}?username=${user.username.toUpperCase()}`);
+  expect(await own.json()).toEqual({ data: { available: true } });
+  expect(own.headers()["cache-control"]).toContain("no-store");
+  for (let i = 1; i < 60; i++) {
+    expect((await page.request.get(`${endpoint}?username=${user.username}`)).status()).toBe(200);
+  }
+  expect((await page.request.get(`${endpoint}?username=${user.username}`)).status()).toBe(429);
 });
 
 test("change password, which logs out every device", async ({ page, browser }) => {
