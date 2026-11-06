@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/common/AppShell";
 import { appViewport } from "@/lib/apps";
 import { testHooksEnabled } from "@/lib/test-hooks";
+import { defaultTheme } from "@/lib/themes";
 import { PanelsView } from "./PanelsView";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export default function AppShellTestPage() {
     <AppShell
       name="Test"
       username="tester"
-      theme="dark"
+      theme={defaultTheme}
       tabs={[
         { id: "one", label: "One", view: <PanelsView title="One" /> },
         { id: "two", label: "Two", view: <PanelsView title="Two" /> },

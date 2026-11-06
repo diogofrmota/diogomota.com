@@ -409,7 +409,7 @@ diogomota.com/                            # repo root (this folder)
     ├── proxy.ts                          # route guard (Next 16's middleware)
     ├── playwright.config.ts
     ├── scripts/migrate.mjs               # applies db/migrations
-    ├── scripts/stop-e2e-server.mjs       # stops an e2e dev server left by a run that didn't finish
+    ├── scripts/run-e2e.mjs               # npm run test:e2e: stops what earlier runs left, runs Playwright, cleans up after it
     ├── app/
     │   ├── page.tsx                      # landing (/), with opengraph-image.tsx
     │   ├── apps/                         # app hub (/apps)

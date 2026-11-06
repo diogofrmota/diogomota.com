@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // The tests' own dev server, on a port of its own (not 3000, where `npm run dev`
-// runs). scripts/stop-e2e-server.mjs knows it by this port.
+// runs). scripts/run-e2e.mjs knows it by this port.
 const port = 3100;
 const baseURL = `http://localhost:${port}`;
 
@@ -21,6 +21,8 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 15_000 },
   // A run that hangs (a server that stops answering) ends rather than going on forever.
+  // (A whole run takes about 20 minutes. scripts/run-e2e.mjs stops Playwright if
+  // it's still going a few minutes past this: change both together.)
   globalTimeout: 30 * 60_000,
   use: {
     baseURL,
@@ -40,8 +42,9 @@ export default defineConfig({
   // memory, the fake TMDB: lib/test-hooks.ts) and stops it when the run ends.
   // None is ever reused, so no run gets a server left over from another, or one
   // without the hooks. Next runs one dev server per folder: stop your own
-  // `npm run dev` before running the tests. `npm run test:e2e` first stops a
-  // server left by a run that didn't finish (scripts/stop-e2e-server.mjs).
+  // `npm run dev` before running the tests. Run them with `npm run test:e2e`
+  // (scripts/run-e2e.mjs), which stops whatever an earlier run left running
+  // before it starts, and whatever this one leaves when it ends.
   webServer: {
     command: `npm run dev -- --port ${port}`,
     url: baseURL,

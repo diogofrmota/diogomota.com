@@ -1,21 +1,21 @@
 import Link from "next/link";
 import { AppFrame } from "@/components/common/AppShell";
 import ui from "@/components/common/ui.module.css";
-import type { Theme } from "@/lib/themes";
+import { defaultTheme, type Theme } from "@/lib/themes";
 import styles from "./AuthPage.module.css";
 
 // Frame for /login, /signup and the password reset pages, in the apps' frame
 // and look: the top bar with only diogomota.com (these pages are the way to log
 // in), then a centered column with the form in a card, a few lines of links
-// under it, and a way back to /apps. Dark, unless the user is logged in (the
-// reset pages are open then too) and chose light.
+// under it, and a way back to /apps. In the default theme, unless the user is
+// logged in (the reset pages are open then too): then in theirs.
 export function AuthPage({
   title,
   intro,
   form,
   children,
   action,
-  theme = "dark",
+  theme = defaultTheme,
 }: {
   title: string;
   /** A line between the title and the form. */

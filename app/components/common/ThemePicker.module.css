@@ -1,22 +1,10 @@
 /* The theme picker (Account and Settings), in the page's theme. Each card's
    sample is in its own theme instead (themes.module.css, data-theme-preview). */
 
-.groups {
-  display: grid;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.groupHeading {
-  margin: 0 0 0.5rem;
-  color: var(--muted);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
 /* As many columns as fit: two on the narrowest phones. */
 .grid {
   display: grid;
+  min-width: 0;
   grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
   gap: 0.5rem;
 }

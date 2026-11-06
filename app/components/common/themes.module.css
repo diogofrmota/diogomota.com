@@ -18,42 +18,6 @@
    compiled into one :is(), as specific as html:has(...), which would win over
    every theme's rule. */
 
-/* Light. */
-.theme[data-theme="light"],
-.theme[data-theme-preview="light"],
-:global(html):has(.theme[data-theme="light"]) {
-  --bg: #ffffff;
-  --surface: #ffffff;
-  --hover: #f0f0f0;
-  --text: #171717;
-  --muted: #525252;
-  --border: #e5e5e5;
-  --accent: #2563eb;
-  --accent-soft: #eff6ff;
-  --danger: #b91c1c;
-  --star: #d97706;
-  --star-off: #8a8a8a;
-  color-scheme: light;
-}
-
-/* Light 1: warm paper, with teal. */
-.theme[data-theme="light-1"],
-.theme[data-theme-preview="light-1"],
-:global(html):has(.theme[data-theme="light-1"]) {
-  --bg: #faf8f5;
-  --surface: #ffffff;
-  --hover: #f1ede7;
-  --text: #1f1b16;
-  --muted: #5c554c;
-  --border: #e6e0d7;
-  --accent: #0f766e;
-  --accent-soft: #e3f3f1;
-  --danger: #b42318;
-  --star: #b45309;
-  --star-off: #8f877c;
-  color-scheme: light;
-}
-
 /* Light 2: cool slate, with indigo. */
 .theme[data-theme="light-2"],
 .theme[data-theme-preview="light-2"],
@@ -90,24 +54,6 @@
   color-scheme: light;
 }
 
-/* Dark: new accounts' theme, and the one logged out. */
-.theme[data-theme="dark"],
-.theme[data-theme-preview="dark"],
-:global(html):has(.theme[data-theme="dark"]) {
-  --bg: #0a0a0a;
-  --surface: #171717;
-  --hover: #262626;
-  --text: #f5f5f5;
-  --muted: #a3a3a3;
-  --border: #2e2e2e;
-  --accent: #60a5fa;
-  --accent-soft: #16243a;
-  --danger: #f87171;
-  --star: #fbbf24;
-  --star-off: #737373;
-  color-scheme: dark;
-}
-
 /* Dark 1: midnight navy, with sky blue. */
 .theme[data-theme="dark-1"],
 .theme[data-theme-preview="dark-1"],
@@ -126,7 +72,8 @@
   color-scheme: dark;
 }
 
-/* Dark 2: true black (off pixels on OLED screens), with violet. */
+/* Dark 2: true black (off pixels on OLED screens), with violet. New accounts'
+   theme, and the one logged out (lib/themes.ts, defaultTheme). */
 .theme[data-theme="dark-2"],
 .theme[data-theme-preview="dark-2"],
 :global(html):has(.theme[data-theme="dark-2"]) {
@@ -141,24 +88,6 @@
   --danger: #ff6b6b;
   --star: #ffd43b;
   --star-off: #6b6b6b;
-  color-scheme: dark;
-}
-
-/* Dark 3: warm and dim, with amber. */
-.theme[data-theme="dark-3"],
-.theme[data-theme-preview="dark-3"],
-:global(html):has(.theme[data-theme="dark-3"]) {
-  --bg: #1f1d1b;
-  --surface: #292624;
-  --hover: #35312e;
-  --text: #ece6df;
-  --muted: #aaa197;
-  --border: #3e3934;
-  --accent: #e5a65b;
-  --accent-soft: #3b2e1e;
-  --danger: #f28b82;
-  --star: #f5c451;
-  --star-off: #7d756d;
   color-scheme: dark;
 }
 
@@ -180,24 +109,6 @@
   color-scheme: light;
 }
 
-/* Vibrant greens: lime on deep teal and the deepest navy, with fog. */
-.theme[data-theme="vibrant-greens"],
-.theme[data-theme-preview="vibrant-greens"],
-:global(html):has(.theme[data-theme="vibrant-greens"]) {
-  --bg: #1e1e1f;
-  --surface: #122023;
-  --hover: #1c3034;
-  --text: #e9e9e9;
-  --muted: #a5b4b6;
-  --border: #2a3d41;
-  --accent: #e1fcad;
-  --accent-soft: #2a3a20;
-  --danger: #ff9090;
-  --star: #f5d36b;
-  --star-off: #61757a;
-  color-scheme: dark;
-}
-
 /* Warm neutrals: leather, auburn and cappuccino on cream. */
 .theme[data-theme="warm-neutrals"],
 .theme[data-theme-preview="warm-neutrals"],
@@ -214,42 +125,6 @@
   --star: #a8641b;
   --star-off: #98826a;
   color-scheme: light;
-}
-
-/* Maroon mood: soft black, sophisticated gray and maroon on pale rose. */
-.theme[data-theme="maroon-mood"],
-.theme[data-theme-preview="maroon-mood"],
-:global(html):has(.theme[data-theme="maroon-mood"]) {
-  --bg: #f8f5f5;
-  --surface: #ffffff;
-  --hover: #efe7e7;
-  --text: #262626;
-  --muted: #575757;
-  --border: #e6dcdc;
-  --accent: #7a3b3b;
-  --accent-soft: #f4e6e6;
-  --danger: #c0262d;
-  --star: #b7791f;
-  --star-off: #928686;
-  color-scheme: light;
-}
-
-/* Bold orange: vivid orange on french roast, with soft brown and orangey greige. */
-.theme[data-theme="bold-orange"],
-.theme[data-theme-preview="bold-orange"],
-:global(html):has(.theme[data-theme="bold-orange"]) {
-  --bg: #211302;
-  --surface: #3a2207;
-  --hover: #462a0b;
-  --text: #f7f0e8;
-  --muted: #cdbcac;
-  --border: #5a4029;
-  --accent: #ff5c00;
-  --accent-soft: #2a1404;
-  --danger: #ff8fab;
-  --star: #ffc233;
-  --star-off: #8d7764;
-  color-scheme: dark;
 }
 
 /* Cool blues: deep cyan, soft teal, cool gray and pale blue. */
@@ -304,42 +179,6 @@
   --star: #b0753a;
   --star-off: #708a9c;
   color-scheme: light;
-}
-
-/* Vibrant blues: sky blue on navy, with storm and pale blue. */
-.theme[data-theme="vibrant-blues"],
-.theme[data-theme-preview="vibrant-blues"],
-:global(html):has(.theme[data-theme="vibrant-blues"]) {
-  --bg: #002846;
-  --surface: #073457;
-  --hover: #0f4069;
-  --text: #eef7fc;
-  --muted: #a9cbe0;
-  --border: #1f4f74;
-  --accent: #5eb2f2;
-  --accent-soft: #012035;
-  --danger: #ff9b9b;
-  --star: #ffd166;
-  --star-off: #6f90aa;
-  color-scheme: dark;
-}
-
-/* Power purple: rose on aubergine and royal purple, with off-white. */
-.theme[data-theme="power-purple"],
-.theme[data-theme-preview="power-purple"],
-:global(html):has(.theme[data-theme="power-purple"]) {
-  --bg: #312335;
-  --surface: #3b2b40;
-  --hover: #47354d;
-  --text: #ebe7e0;
-  --muted: #c5b8c6;
-  --border: #5b2655;
-  --accent: #f2b9aa;
-  --accent-soft: #5b2655;
-  --danger: #ff8fa0;
-  --star: #f6c768;
-  --star-off: #8a768f;
-  color-scheme: dark;
 }
 
 /* Vivid nightfall: dark amethyst through indigo and royal violet to mauve. */

@@ -58,10 +58,13 @@ test("Account settings save any theme, and the apps open in it", async ({ page }
   const shell = page.locator("[data-theme]");
   const form = page.getByRole("region", { name: "Theme", exact: true });
   await form.getByRole("heading", { name: "Theme", exact: true }).click();
-  await expect(form.getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
-  // Grouped under headings, with every theme in one of them.
-  await expect(form.getByRole("group", { name: "Palettes" }).getByRole("radio")).toHaveCount(11);
-  await expect(form.getByRole("radio")).toHaveCount(themes.length);
+  // New accounts start in the default theme.
+  await expect(form.getByRole("radio", { name: "Dark 2", exact: true })).toBeChecked();
+  // All in one list, in lib/themes.ts's order, with no headings between them.
+  const radios = form.getByRole("radio");
+  await expect(radios).toHaveCount(themes.length);
+  for (const [index, { name }] of themes.entries()) await expect(radios.nth(index)).toHaveAccessibleName(name);
+  await expect(form.getByRole("heading")).toHaveText(["Theme"]);
 
   for (const { id, name, background } of [theme("earth-tones"), theme("vivid-nightfall")]) {
     await form.getByRole("radio", { name, exact: true }).check();
@@ -96,7 +99,7 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await checkThemes(page, "Account, the theme picker");
 
     await openSettings(page, "Shows");
-    await expect(page.getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
+    await expect(page.getByRole("radio", { name: "Dark 2", exact: true })).toBeChecked();
     await checkThemes(page, "Settings, Shows");
   });
 

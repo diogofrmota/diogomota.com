@@ -6,7 +6,13 @@ import pg from "pg";
 export async function withDatabase<T>(fn: (client: pg.Client) => Promise<T>): Promise<T> {
   if (!process.env.DATABASE_URL && existsSync(".env.local")) process.loadEnvFile(".env.local");
 
-  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  // Bounded, so a database that doesn't answer fails the test (or the teardown)
+  // instead of holding up the run.
+  const client = new pg.Client({
+    connectionString: process.env.DATABASE_URL,
+    connectionTimeoutMillis: 10_000,
+    query_timeout: 60_000,
+  });
   await client.connect();
   try {
     return await fn(client);

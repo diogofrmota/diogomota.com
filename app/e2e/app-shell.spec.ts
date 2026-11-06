@@ -32,7 +32,7 @@ async function openApp(page: Page, path: string) {
  * starts once the action has run (its headers say whether it revalidated). The
  * body streams on with the re-rendered page.
  */
-async function chooseTheme(page: Page, theme: "Light" | "Dark") {
+async function chooseTheme(page: Page, theme: "Light 2" | "Dark 2") {
   await openSettings(page, "Shows");
   const saved = page.waitForResponse(
     (response) => response.request().method() === "POST" && "next-action" in response.request().headers(),
@@ -267,7 +267,7 @@ for (const app of appViews) {
       // openApp made a space for Shared's test, not for Shows'.
       if (name === "Shared" && app.name === "Shared") await expect(settingsSection(page, name).getByLabel("Space name")).toHaveValue("Shell test space");
       else if (name === "Shared") await expect(settingsSection(page, name).getByRole("heading", { name: "No space yet" })).toBeVisible();
-      else await expect(settingsSection(page, name).getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
+      else await expect(settingsSection(page, name).getByRole("radio", { name: "Dark 2", exact: true })).toBeChecked();
     };
     await check(app.name);
     await settingsPicker(page).selectOption({ label: other.name });
@@ -376,42 +376,42 @@ test("the theme in Settings saves to the account, and the saved theme is in the 
   await openApp(page, "/shows");
   const shell = page.locator("[data-theme]");
   const themeColor = page.locator('meta[name="theme-color"]');
-  await expect(shell).toHaveAttribute("data-theme", "dark");
-  await expect(shell).toHaveCSS("background-color", "rgb(10, 10, 10)");
+  await expect(shell).toHaveAttribute("data-theme", "dark-2");
+  await expect(shell).toHaveCSS("background-color", "rgb(0, 0, 0)");
 
-  await chooseTheme(page, "Light");
-  await expect(shell).toHaveAttribute("data-theme", "light");
-  await expect(shell).toHaveCSS("background-color", "rgb(255, 255, 255)");
-  await expect(themeColor).toHaveAttribute("content", "#ffffff");
+  await chooseTheme(page, "Light 2");
+  await expect(shell).toHaveAttribute("data-theme", "light-2");
+  await expect(shell).toHaveCSS("background-color", "rgb(241, 245, 249)");
+  await expect(themeColor).toHaveAttribute("content", "#f1f5f9");
 
   // The server renders the saved theme into the HTML, so it applies before any
   // script runs (no flash of the other theme on load): Settings, and the apps.
-  expect(await reloadHtml(page)).toContain('data-theme="light"');
-  await expect(page.getByRole("radio", { name: "Light", exact: true })).toBeChecked();
+  expect(await reloadHtml(page)).toContain('data-theme="light-2"');
+  await expect(page.getByRole("radio", { name: "Light 2", exact: true })).toBeChecked();
   await page.goto("/shows");
-  expect(await reloadHtml(page)).toContain('data-theme="light"');
-  await expect(shell).toHaveAttribute("data-theme", "light");
-  await expect(page.locator("html")).toHaveCSS("background-color", "rgb(255, 255, 255)");
-  await expect(themeColor).toHaveAttribute("content", "#ffffff");
+  expect(await reloadHtml(page)).toContain('data-theme="light-2"');
+  await expect(shell).toHaveAttribute("data-theme", "light-2");
+  await expect(page.locator("html")).toHaveCSS("background-color", "rgb(241, 245, 249)");
+  await expect(themeColor).toHaveAttribute("content", "#f1f5f9");
 
   // The same preference everywhere: the other app, /apps and account settings.
   await page.goto("/shared");
-  await expect(shell).toHaveAttribute("data-theme", "light");
+  await expect(shell).toHaveAttribute("data-theme", "light-2");
   await page.goto("/apps");
-  expect(await reloadHtml(page)).toContain('data-theme="light"');
-  await expect(shell).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  expect(await reloadHtml(page)).toContain('data-theme="light-2"');
+  await expect(shell).toHaveCSS("background-color", "rgb(241, 245, 249)");
   await page.goto("/account");
-  await expect(shell).toHaveAttribute("data-theme", "light");
+  await expect(shell).toHaveAttribute("data-theme", "light-2");
   await page.getByRole("heading", { name: "Theme", exact: true }).click();
-  await expect(page.getByRole("radio", { name: "Light", exact: true })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Light 2", exact: true })).toBeChecked();
 
   await page.goto("/shows");
-  await chooseTheme(page, "Dark");
-  await expect(shell).toHaveAttribute("data-theme", "dark");
-  expect(await reloadHtml(page)).toContain('data-theme="dark"');
-  await expect(shell).toHaveAttribute("data-theme", "dark");
-  await expect(shell).toHaveCSS("background-color", "rgb(10, 10, 10)");
-  await expect(themeColor).toHaveAttribute("content", "#0a0a0a");
+  await chooseTheme(page, "Dark 2");
+  await expect(shell).toHaveAttribute("data-theme", "dark-2");
+  expect(await reloadHtml(page)).toContain('data-theme="dark-2"');
+  await expect(shell).toHaveAttribute("data-theme", "dark-2");
+  await expect(shell).toHaveCSS("background-color", "rgb(0, 0, 0)");
+  await expect(themeColor).toHaveAttribute("content", "#000000");
 });
 
 test("theme changes show on pages reached with the back button, and keep the view history", async ({
@@ -420,14 +420,14 @@ test("theme changes show on pages reached with the back button, and keep the vie
   const user = await openApp(page, "/shows");
   const shell = page.locator("[data-theme]");
   await tab(page, "Shows", "Discover").click();
-  await chooseTheme(page, "Light");
-  await expect(shell).toHaveAttribute("data-theme", "light");
+  await chooseTheme(page, "Light 2");
+  await expect(shell).toHaveAttribute("data-theme", "light-2");
 
   // Back in the app: in the new theme, on the view Settings was opened from.
   await page.goBack();
   await expect(page).toHaveURL("/shows");
   await expect(viewHeading(page)).toHaveText("Discover");
-  await expect(shell).toHaveAttribute("data-theme", "light");
+  await expect(shell).toHaveAttribute("data-theme", "light-2");
   await page.goForward();
   await expect(viewHeading(page)).toHaveText("Settings");
   await expect(settingsPicker(page)).toHaveValue("shows");
@@ -437,17 +437,17 @@ test("theme changes show on pages reached with the back button, and keep the vie
   await page.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await page.getByRole("heading", { name: "Theme", exact: true }).click();
-  await page.getByRole("radio", { name: "Dark", exact: true }).check();
+  await page.getByRole("radio", { name: "Dark 2", exact: true }).check();
   await page.getByRole("button", { name: "Save theme" }).click();
   await expect(page.getByRole("region", { name: "Theme" }).getByRole("status")).toHaveText("Theme saved.");
   await page.goBack();
   await expect(page).toHaveURL("/settings?app=shows");
-  await expect(shell).toHaveAttribute("data-theme", "dark");
-  await expect(page.getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
+  await expect(shell).toHaveAttribute("data-theme", "dark-2");
+  await expect(page.getByRole("radio", { name: "Dark 2", exact: true })).toBeChecked();
   await page.goBack();
   await expect(page).toHaveURL("/shows");
   await expect(viewHeading(page)).toHaveText("Discover");
-  await expect(shell).toHaveAttribute("data-theme", "dark");
+  await expect(shell).toHaveAttribute("data-theme", "dark-2");
 });
 
 test.describe("at 375px wide", () => {

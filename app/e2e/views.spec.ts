@@ -130,7 +130,7 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Confirm leave" })).toBeVisible();
   await checkView(page, "Settings, Shared, confirm leave");
   await settingsPicker(page).selectOption({ label: "Shows" });
-  await expect(page.getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Dark 2", exact: true })).toBeChecked();
   await checkView(page, "Settings, Shows");
 
   await goBackTo(page, "Tasks");
