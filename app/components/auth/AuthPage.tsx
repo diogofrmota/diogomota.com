@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AppFrame } from "@/components/common/AppShell";
 import ui from "@/components/common/ui.module.css";
-import type { Theme } from "@/lib/users";
+import type { Theme } from "@/lib/themes";
 import styles from "./AuthPage.module.css";
 
 // Frame for /login, /signup and the password reset pages, in the apps' frame

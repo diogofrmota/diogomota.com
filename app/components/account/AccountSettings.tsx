@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useState } from "react";
 import { changePassword, changeUsername, saveTheme } from "@/app/account/actions";
+import { ThemeOptions } from "@/components/common/ThemePicker";
 import { Field, FormMessage, SubmitButton } from "@/components/site/Form";
 import formStyles from "@/components/site/Form.module.css";
 import {
@@ -15,7 +16,7 @@ import {
 } from "@/lib/account-rules";
 import { ApiError, apiRequest } from "@/lib/api-request";
 import type { FormState } from "@/lib/form-state";
-import type { Theme } from "@/lib/users";
+import { isTheme, type Theme } from "@/lib/themes";
 import styles from "./AccountSettings.module.css";
 
 export function UsernameForm({ username }: { username: string }) {
@@ -129,7 +130,8 @@ export function PasswordForm() {
 export function ThemeForm({ theme, labelledBy }: { theme: Theme; labelledBy: string }) {
   const [state, action, pending] = useActionState(saveTheme, {});
   const hintId = useId();
-  const selected = state.values?.theme ?? theme;
+  const saved = state.values?.theme;
+  const selected = isTheme(saved) ? saved : theme;
 
   return (
     <form action={action} className={formStyles.form}>
@@ -137,12 +139,7 @@ export function ThemeForm({ theme, labelledBy }: { theme: Theme; labelledBy: str
         <p id={hintId} className={formStyles.hint}>
           Your theme preference applies across your apps, and on this page.
         </p>
-        {(["light", "dark"] as const).map((value) => (
-          <label key={value} className={styles.radio}>
-            <input type="radio" name="theme" value={value} defaultChecked={selected === value} />
-            {value === "light" ? "Light" : "Dark"}
-          </label>
-        ))}
+        <ThemeOptions defaultValue={selected} />
       </fieldset>
       <FormMessage error={state.error} success={state.success} />
       <SubmitButton label="Save theme" pending={pending} />

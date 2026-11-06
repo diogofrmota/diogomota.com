@@ -1,11 +1,9 @@
 /* The Shows app. The dialogs are rendered inside the AppShell, so its theme
    variables reach them too. */
 /* The buttons, cards and messages have the apps' common look
-   (components/common/ui.module.css); --danger is the shell's.
-   --star-off: 3.9:1 on --surface (light: 3.5:1). */
-.view, .dialog { --star: #fbbf24; --star-off: #737373; }
+   (components/common/ui.module.css); --danger, --star and --star-off are the
+   theme's (components/common/themes.module.css). */
 .view { max-width: 72rem; margin: auto; }
-:global([data-theme="light"]) .view, :global([data-theme="light"]) .dialog { --star: #d97706; --star-off: #8a8a8a; }
 .heading { font-size: 1.75rem; margin: 0 0 1rem; letter-spacing: -.04em; }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 

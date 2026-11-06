@@ -3,10 +3,11 @@
 import { usePathname } from "next/navigation";
 import { Activity, useMemo } from "react";
 import { AppViewContext, useAppViewHistory } from "@/hooks/useAppView";
-import type { Theme } from "@/lib/users";
+import { themeBackground, type Theme } from "@/lib/themes";
 import { AppHeader } from "./AppHeader";
 import { HeaderTabs } from "./HeaderTabs";
 import styles from "./AppShell.module.css";
+import themeStyles from "./themes.module.css";
 
 export type AppTab = {
   /** Unique within the app; saved in history entries (useAppView). */
@@ -48,9 +49,9 @@ export function AppFrame({ theme, username, next, brand, account, nav, children,
 }) {
   const pathname = usePathname();
   return (
-    <div className={`${styles.shell} ${nav ? "" : styles.withoutNav}`} data-theme={theme}>
+    <div className={`${themeStyles.theme} ${styles.shell} ${nav ? "" : styles.withoutNav}`} data-theme={theme}>
       {/* Browser UI color on mobile. React moves it into <head>. */}
-      <meta name="theme-color" content={theme === "light" ? "#ffffff" : "#0a0a0a"} />
+      <meta name="theme-color" content={themeBackground(theme)} />
       <AppHeader pathname={pathname} username={username} next={next} brand={brand} account={account}
         tabs={nav && <HeaderTabs {...nav} />} />
       <main className={styles.main}>{children}</main>

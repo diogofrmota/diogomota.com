@@ -1,0 +1,113 @@
+/* The theme picker (Account and Settings), in the page's theme. Each card's
+   sample is in its own theme instead (themes.module.css, data-theme-preview). */
+
+.groups {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.groupHeading {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* As many columns as fit: two on the narrowest phones. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: 0.5rem;
+}
+
+/* The whole card is the tap target. The picked one is outlined in the accent.
+   No transition on the background: it changes with the theme, and would fade
+   between them. */
+.option {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  cursor: pointer;
+}
+
+.option:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+@media (hover: hover) {
+  .option:hover {
+    background: var(--hover);
+  }
+}
+
+/* The theme's page, with a card (text and secondary text) and an accent dot.
+   background-color, not background: Blueprint adds its grid as an image. */
+.sample {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 3.25rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: var(--bg);
+}
+
+.sampleCard {
+  display: grid;
+  flex: 1;
+  align-content: center;
+  gap: 0.3rem;
+  min-width: 0;
+  height: 100%;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background-color: var(--surface);
+}
+
+.sampleText,
+.sampleMuted {
+  height: 0.3125rem;
+  border-radius: 1rem;
+}
+
+.sampleText {
+  width: 85%;
+  background: var(--text);
+}
+
+.sampleMuted {
+  width: 55%;
+  background: var(--muted);
+}
+
+.sampleAccent {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25;
+}
+
+.name input {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  accent-color: var(--accent);
+}

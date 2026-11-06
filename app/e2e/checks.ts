@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, type Page } from "@playwright/test";
+import { themes } from "../lib/themes";
 import { expect } from "./fixtures";
 
 // The checks views.spec.ts runs on every view of the site and the apps, at the
@@ -99,8 +100,33 @@ async function seriousAxeViolations(page: Page): Promise<string[]> {
 }
 
 /** Shows an app in a theme without saving it: every color comes from the shell's data-theme. */
-async function showTheme(page: Page, theme: string) {
+export async function showTheme(page: Page, theme: string) {
   await page.locator("[data-theme]").evaluate((shell, value) => shell.setAttribute("data-theme", value), theme);
+}
+
+/**
+ * axe on what is showing now, in every theme (lib/themes.ts). checkView runs it
+ * in light and dark on every view; themes.spec.ts in all of them on the views
+ * that between them have every pair of the themes' colors.
+ */
+export async function checkThemes(page: Page, view: string) {
+  await test.step(`check ${view} in every theme`, async () => {
+    const shell = page.locator("[data-theme]");
+    const saved = (await shell.getAttribute("data-theme"))!;
+    for (const { id, background } of themes) {
+      await showTheme(page, id);
+      // In the theme's colors, and not some other's, before axe looks.
+      await expect(shell).toHaveCSS("background-color", rgb(background));
+      expect(await seriousAxeViolations(page), `${view}, ${id} theme`).toEqual([]);
+    }
+    await showTheme(page, saved);
+  });
+}
+
+/** "#faf8f5" as getComputedStyle has it: "rgb(250, 248, 245)". */
+export function rgb(hex: string) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 /**

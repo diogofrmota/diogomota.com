@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { setThemePreference } from "@/app/account/actions";
-import type { Theme } from "@/lib/users";
+import type { Theme } from "@/lib/themes";
 
 // The theme of Settings (/settings), where it is chosen for the apps
 // (components/shows/ShowsSettings). It starts as the user's saved preference, which the

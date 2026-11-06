@@ -212,8 +212,8 @@ test("theme preference persists after logging in again", async ({ page }) => {
 
   await page.goto("/account");
   const form = await openSection(page, "Theme");
-  await expect(form.getByRole("radio", { name: "Dark" })).toBeChecked();
-  await form.getByRole("radio", { name: "Light" }).check();
+  await expect(form.getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
+  await form.getByRole("radio", { name: "Light", exact: true }).check();
   await form.getByRole("button", { name: "Save theme" }).click();
   await expect(form.getByRole("status")).toHaveText("Theme saved.");
 
@@ -223,7 +223,7 @@ test("theme preference persists after logging in again", async ({ page }) => {
 
   await page.goto("/account");
   await openSection(page, "Theme");
-  await expect(form.getByRole("radio", { name: "Light" })).toBeChecked();
+  await expect(form.getByRole("radio", { name: "Light", exact: true })).toBeChecked();
   await page.goto("/shared");
   await expect(app).toHaveAttribute("data-theme", "light");
   await expect(app).toHaveCSS("background-color", "rgb(255, 255, 255)");

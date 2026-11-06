@@ -2,7 +2,7 @@
 import { AppShell } from "@/components/common/AppShell";
 import { useAppView } from "@/hooks/useAppView";
 import { parseTitleKey } from "@/lib/show-types";
-import type { Theme } from "@/lib/users";
+import type { Theme } from "@/lib/themes";
 import { Discover } from "./Discover";
 import { FriendDialog } from "./FriendDialog";
 import { Home } from "./Home";

@@ -1,6 +1,7 @@
 "use client";
+import { ThemeOptions } from "@/components/common/ThemePicker";
 import ui from "@/components/common/ui.module.css";
-import type { Theme } from "@/lib/users";
+import type { Theme } from "@/lib/themes";
 
 /**
  * Shows' settings, in Settings (/settings): the theme, which applies in both apps.
@@ -12,10 +13,7 @@ export function ShowsSettings({ theme, onThemeChange }: { theme: Theme; onThemeC
       <h2 id="theme-heading" className={ui.cardHeading}>Theme</h2>
       <fieldset className={ui.choices} aria-labelledby="theme-heading" aria-describedby="theme-hint">
         <p id="theme-hint" className={ui.muted}>Your theme preference applies across your apps.</p>
-        {(["light", "dark"] as const).map((value) => <label key={value} className={ui.choice}>
-          <input type="radio" name="theme" value={value} checked={theme === value} onChange={() => onThemeChange(value)} />
-          {value === "light" ? "Light" : "Dark"}
-        </label>)}
+        <ThemeOptions value={theme} onChange={onThemeChange} />
       </fieldset>
     </section>
   </div>;

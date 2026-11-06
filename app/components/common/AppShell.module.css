@@ -1,53 +1,21 @@
 /* The frame of the apps and the pages around them (/apps, /settings, /account,
    the login pages). The theme is a set of variables on .shell, switched by its
-   data-theme attribute; everything inside takes its colors from them. */
+   data-theme attribute (themes.module.css); everything inside takes its colors
+   from them. */
 
 .shell {
-  --bg: #0a0a0a;
-  --surface: #171717;
-  --hover: #262626;
-  --text: #f5f5f5;
-  --muted: #a3a3a3; /* 7.8:1 on --bg */
-  --border: #2e2e2e;
-  --accent: #60a5fa; /* 7.8:1 on --bg */
-  --accent-soft: #16243a; /* --accent on it: 6.1:1 */
-  --danger: #f87171; /* 6.3:1 on --surface */
-
   --top-bar-height: 3.5rem;
 
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
-  color-scheme: dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 1rem;
   line-height: 1.5;
   overflow-wrap: break-word;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-}
-
-.shell[data-theme="light"] {
-  --bg: #fff;
-  --surface: #fff;
-  --hover: #f0f0f0;
-  --text: #171717;
-  --muted: #525252; /* 7.8:1 on --bg */
-  --border: #e5e5e5;
-  --accent: #2563eb; /* 5.2:1 on --bg */
-  --accent-soft: #eff6ff; /* --accent on it: 4.8:1 */
-  --danger: #b91c1c; /* 6.5:1 on --surface */
-  color-scheme: light;
-}
-
-/* The same color behind the page, so overscroll doesn't show another one. */
-:global(html):has(.shell[data-theme="dark"]) {
-  background: #0a0a0a;
-}
-
-:global(html):has(.shell[data-theme="light"]) {
-  background: #fff;
 }
 
 /* No scrolling the page behind an open dialog (components/common/Dialog). */

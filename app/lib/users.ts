@@ -1,7 +1,6 @@
 import { DatabaseError } from "pg";
 import { query } from "./db";
-
-export type Theme = "light" | "dark";
+import { defaultTheme, type Theme } from "./themes";
 
 export type User = {
   id: string;
@@ -37,10 +36,10 @@ export async function findUserById(id: string): Promise<User | null> {
 
 /**
  * The theme of a page that is open logged out too (/apps, the password reset
- * pages): the user's saved one, or dark without a user.
+ * pages): the user's saved one, or the default (dark) without a user.
  */
 export async function themeOf(userId: string | undefined): Promise<Theme> {
-  return (userId && (await findUserById(userId))?.themePreference) || "dark";
+  return (userId && (await findUserById(userId))?.themePreference) || defaultTheme;
 }
 
 export async function findUserByEmail(email: string): Promise<User | null> {

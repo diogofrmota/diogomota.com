@@ -403,7 +403,7 @@ test("the theme in Settings saves to the account, and the saved theme is in the 
   await page.goto("/account");
   await expect(shell).toHaveAttribute("data-theme", "light");
   await page.getByRole("heading", { name: "Theme", exact: true }).click();
-  await expect(page.getByRole("radio", { name: "Light" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Light", exact: true })).toBeChecked();
 
   await page.goto("/shows");
   await chooseTheme(page, "Dark");
@@ -437,7 +437,7 @@ test("theme changes show on pages reached with the back button, and keep the vie
   await page.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await page.getByRole("heading", { name: "Theme", exact: true }).click();
-  await page.getByRole("radio", { name: "Dark" }).check();
+  await page.getByRole("radio", { name: "Dark", exact: true }).check();
   await page.getByRole("button", { name: "Save theme" }).click();
   await expect(page.getByRole("region", { name: "Theme" }).getByRole("status")).toHaveText("Theme saved.");
   await page.goBack();
