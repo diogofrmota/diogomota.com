@@ -41,7 +41,7 @@ Given the small user base (~10 users, max 2 concurrent), minimum specs are more 
 | **DB Client** | pg (node-postgres) — raw, parameterised SQL; a pool of 5 |
 | **Auth** | Auth.js (`next-auth@5.0.0-beta.32`), credentials provider, encrypted JWT session cookie; bcryptjs (cost 12) |
 | **Email** | Resend (`resend` package) |
-| **Styling** | CSS Modules, CSS variables for the light and dark themes; IBM Plex Mono (self-hosted) on `/` and `/apps`, the system font stack in the apps |
+| **Styling** | CSS Modules, CSS variables for the light and dark themes; IBM Plex Mono (self-hosted) on `/` and the 404 and error pages, the system font stack in the apps and the pages around them (`/apps`, login, settings) |
 | **Drag & drop** | dnd-kit (`@dnd-kit/core` 6.3.1, `@dnd-kit/sortable` 10) |
 | **Schema** | SQL migrations (`db/migrations/NNN_name.sql`), applied in order on every deploy by `app/scripts/migrate.mjs` |
 | **Tests** | Playwright on a desktop and a mobile project, `@axe-core/playwright`; ESLint and `tsc` |
@@ -64,8 +64,8 @@ Single shared account across all apps. Auth lives at the `/apps` level.
 ```
 
 - **Logged out:** `/apps` shows the app cards with their descriptions, and Login and Sign Up buttons in the top bar. A card opens a login prompt (`components/site/LoginPrompt.tsx`) whose links carry `?next=/shared` or `?next=/shows`, so logging in lands in that app.
-- **Logged in:** the top bar shows the username and the account menu (Account settings, Logout); the cards open the apps.
-- **Top bar** (`components/common/AppHeader`, the same on `/apps`, `/account` and in the apps): `diogomota.com` (→ `/`) and the apps, Shared and Shows, on the left (the open app in bold and underlined, neither on `/apps`); the open app's tabs in the middle on desktop; Login and Sign Up or the account menu on the right.
+- **Logged in:** the top bar shows the username and the account menu (Account, Settings, Switch apps, Logout); the cards open the apps.
+- **Top bar** (`components/common/AppHeader`, at every width): on `/apps`, `/settings`, `/account` and the login pages, `diogomota.com` (→ `/`) on the left; in an app, its tabs there instead (Calendar | Tasks, Home | Discover | Profile; the open one in bold and underlined), and nothing else: no `diogomota.com`, no app links, no search. On the right, Login and Sign Up or the account menu (none on the login pages). **Switch apps** in the account menu goes to `/apps`, the way from one app to the other.
 - **Session:** an Auth.js JWT cookie, encrypted with `AUTH_SECRET`, holding the user id, the username and the `password_changed_at` it logged in under. Shared by every app.
 - **Sign-up:** open to anyone, no sign-up code (decided). Username 3–20 characters of `[a-z0-9_]`, saved lowercase (the database enforces it too); email; password of at least 10 characters and at most 72 bytes. Signing up logs straight in.
 - **Login:** by username or email, in any case. One message for a wrong password or an unknown account, and one for a taken username or email (sign-up can't hide which one exists without email verification).
@@ -75,14 +75,14 @@ Single shared account across all apps. Auth lives at the `/apps` level.
 - **Password changes end sessions:** a reset or a change sets `users.password_changed_at`, and `auth.ts` checks it on every session read, so every device is logged out, this one included, and sent to `/login?password=changed` (a change in Account settings returns to `/account` after logging in). Decided: a change in Account settings keeps logging out the current device too.
 
 ### Account Settings (`/account`)
-From the account menu on `/apps` and in both apps' top bars:
+From the account menu on `/apps` and in both apps' top bars. In the apps' frame and the user's theme, like `/apps` and `/settings`:
 - Change username (unique)
 - Change password (current + new + confirm)
 - Reset by email (→ `/forgot-password`)
 - Theme preference (light/dark), saved in `users.theme_preference`
 - Logout
 
-> App settings only contain **app-specific** settings (the space, friends). No account-level settings inside apps.
+> The apps' settings are all on one page, **Settings** (`/settings`), not inside the apps: the space for Shared, the theme for Shows (its only setting, also here in Account settings). No other account-level settings there.
 
 ---
 
@@ -95,44 +95,53 @@ From the account menu on `/apps` and in both apps' top bars:
   - diogo mota
   - devops engineer @ Richemont (link to https://www.richemont.com/, opens in a new tab)
   - currently based in Lisbon, PT
-  - A Check Apps button (white, black text, like every button on these pages) → links to `/apps`
+  - A Check Apps button (white, black text) → links to `/apps`
 - No navbar, no footer — minimal
 - Title, description, Open Graph tags and a generated preview image (`app/opengraph-image.tsx`) in the same layout
 
 ### `/apps` — App Hub
-- IBM Plex Mono and black background, consistent with the landing
-- Title `apps (v1.0.0)`: the deployed version, small and grey (`apps (dev)` locally)
-- **Top bar:**
-  - Logged out: Login and Sign Up buttons
-  - Logged in: username + account menu (Account settings, Logout); long usernames are cut off with an ellipsis
+- In the apps' frame and look (`AppFrame` in `components/common/AppShell`, `components/common/ui.module.css`): the system font, the user's theme (dark when logged out), a centered column; the way between the apps (Switch apps in the account menu)
+- Title `Apps (v1.0.0)`: the deployed version, small and grey (`Apps (dev)` locally)
+- **Top bar:** `diogomota.com` on the left, and on the right:
+  - Logged out: Login and Sign Up
+  - Logged in: username + account menu (Account, Settings, Switch apps, Logout); long usernames are cut off with an ellipsis
 - A vertical list of app cards, one per row, from the typed list in `app/lib/apps.ts`:
   - **Shared**: "Create a shared calendar and task list with someone else."
   - **Shows**: "Track the TV shows and movies you watch."
-  - Each with its logo (`public/logos/`, 48×48), name and description
+  - A card in the apps' look, each with its logo (`public/logos/`, 48×48, on a black tile), name and description
   - Logged out: a card opens the login prompt
   - Logged in: a card goes straight into the app, with a small ring turning beside its name until the app has loaded
 
 ### Other pages
-- `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/account` (see [Authentication Flow](#authentication-flow))
-- A styled 404 (`app/not-found.tsx`), and `app/error.tsx` (Retry, Back to Apps) for pages that fail on the server
+- `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/account` (see [Authentication Flow](#authentication-flow)), in the apps' frame and look: the login pages (`components/auth/AuthPage`) have the top bar with only `diogomota.com`, then a centered column with the form in a card and Back to Apps; dark, except the reset pages opened logged in, in the user's theme
+- A styled 404 (`app/not-found.tsx`), and `app/error.tsx` (Retry, Back to Apps) for pages that fail on the server, in the site style (black, IBM Plex Mono) like `/`
 - Favicon, touch icon, and a web app manifest (`/manifest.webmanifest`, from `app/manifest.ts`): added to a phone's home screen, the site opens on `/apps` without the browser's bars, with the `>_` icon (192 and 512 px, and a maskable 512 px one, in `public/icons/`)
+
+### `/settings` — Settings
+- Every app's settings on one page, from **Settings** in the account menu (on `/apps`, `/account`, both apps and here); **protected** like the apps
+- In the apps' frame and theme (`AppFrame` in `components/common/AppShell`): the top bar of `/apps` (`diogomota.com` and the account menu), no tabs; a centered column
+- A dropdown, **App**, picks **Shared** or **Shows**; only that app's settings show under it. The account menu opens the page on the app it was opened in (`/settings?app=shared` or `?app=shows`; `/settings` alone is Shared). Picking another app replaces the URL's `?app=` (no new history entry), so a reload or Back keeps it; both apps' settings stay mounted, so switching keeps what's in them
+- **Shared:** the space's cards (name, members, invite, leave; see Shared, Settings), or without a space, "No space yet" and Open Shared
+- **Shows:** Theme (Light / Dark), saved to the account straight away and applied to both apps
+- After a change to the space, a server action (`app/shared/actions.ts`) makes the pages the browser kept for Back render again, so Back to `/shared` shows the space as it is now; `/shared` also checks its space once shown
 
 ### `/(app_name)` — Individual App Pages
 - **Protected** — redirect to `/apps?next=...` when logged out
 - Each app is a **SPA** — the URL stays at `/shared` or `/shows` at all times
 - Views and panels are React state (`hooks/useAppView.ts`); each change is a `history.pushState` entry and `popstate` restores it, so Back closes the open panel, then goes back through the views and finally out to `/apps`; a reload starts on the default view
-- One shell, `components/common/AppShell`: the sticky top bar (`diogomota.com` and the apps on the left, the app's tabs centered in it as `HeaderTabs` at 768 px and wider, actions such as Shows' search and the account menu on the right), the tabs as `BottomNav` on narrower screens (fixed to the bottom, clear of the home indicator), and the current view across the whole width. The app's settings are a view opened from the account menu (`<App> Settings`), not a tab. Views switched away from stay mounted but hidden (React `<Activity>`)
+- One shell, `components/common/AppShell`: the sticky top bar (the app's tabs on the left as `HeaderTabs`, at every width, and the account menu on the right; nothing along the bottom of the screen), and the current view across the whole width. The apps' settings are a page of their own, Settings (`/settings`), opened from the account menu, and Switch apps there goes to `/apps`. Views switched away from stay mounted but hidden (React `<Activity>`)
 
 ---
 
 ## General UI/UX Rules (All Apps)
 - **Design:** Minimalistic, modern, clean
-- **Typography:** the system font stack inside apps. IBM Plex Mono is **only** for `/` and `/apps`
-- **Theme:** Light mode + Dark mode, saved per user (`users.theme_preference`) and rendered by the server, so there is no flash on load; chosen in Account settings (and in an app's settings where it has no settings of its own, i.e. Shows); no toggle in the top bar; `<meta name="theme-color">` follows it; a failed save switches back
-- **Responsive:** Mobile-first — primarily used on mobile, must work well on desktop too. Nothing scrolls sideways at 1280×800, 390×844 or 375×812; on a phone, controls are at least 44×44 px, text fields have 16 px text (so iOS doesn't zoom), and the bottom bar, sheets and the undo message stay clear of the home indicator
-- **Navigation:** Bottom tab bar (mobile) / tabs in the middle of the top bar (desktop) within each app
-- **Between apps:** Shared and Shows in every top bar, and `diogomota.com` back to `/` (the only way out when opened from the home screen)
-- **Account access:** the same account menu in the apps' top bar as on `/apps`
+- **Typography:** the system font stack inside the apps and the pages around them (`/apps`, login, settings). IBM Plex Mono is **only** for `/` (and the 404 and error pages)
+- **Theme:** Light mode + Dark mode, saved per user (`users.theme_preference`) and rendered by the server, so there is no flash on load; chosen in Account settings and in Settings (under Shows); applies in the apps, on `/apps`, `/settings` and `/account`; no toggle in the top bar; `<meta name="theme-color">` follows it; a failed save switches back
+- **One look in both apps** (and on `/apps`, `/settings`, `/account` and the login pages): every view is built from the same parts, `components/common/ui.module.css` (Shows, Tasks and Calendar keep copies with the same values in their own modules): a 1.75 rem heading (with the space's name over it where there is one), cards (1 px border, 1 rem corners, the surface color), labels over 44 px fields, buttons (plain, `primary` in the accent color for a card's main action, `remove` in red text to start something destructive and a filled red `danger` to confirm it, in a `confirm` box with a red bar), alerts with a red bar and Retry, and what an action did in the accent's soft color, in the card it was done in. The red, `--danger`, is the shell's theme variable, like the other colors
+- **Responsive:** Mobile-first — primarily used on mobile, must work well on desktop too. Nothing scrolls sideways at 1280×800, 390×844 or 375×812; on a phone, controls are at least 44×44 px, text fields have 16 px text (so iOS doesn't zoom), and sheets and the undo message stay clear of the home indicator
+- **Navigation:** the app's tabs on the left of the top bar, on a phone and on desktop alike; no bottom tab bar
+- **Between apps:** Switch apps in the account menu, to `/apps`; `diogomota.com` there goes back to `/` (the way out when opened from the home screen)
+- **Account access:** the same account menu (Account, Settings, Switch apps, Logout) in the apps' top bar as on `/apps`
 - **Dialogs:** one `components/common/Dialog`: modal on desktop, a sheet from the bottom or the whole screen on a phone; closed by Escape, Back, a tap outside or its × button, which hands focus back to what opened it; the page behind doesn't scroll
 - **Loading and errors:** grey skeletons in Shows, a spinner in Shared; a load that fails says why ("Could not reach the server. Check your connection." when offline) with Retry. Every browser API call goes through `lib/api-request.ts`
 - **Changes:** shown at once (optimistic), sent one at a time in the order they were made, and undone with a message if the server refuses one
@@ -159,7 +168,7 @@ A private space for a small group (e.g. couple, roommates) to share a calendar a
 - A member who leaves loses their task assignments; their events stay, labeled Former member, until reassigned; they can't open the space any more
 - Every API call checks current membership in the database, inside the same transaction as the read or write; another space's data answers 404
 
-#### SPA Views (bottom tab bar on mobile / top bar tabs on desktop)
+#### SPA Views (tabs on the left of the top bar)
 
 **1. Calendar**
 - Custom month, week and day views (no FullCalendar), in the app's light and dark themes; week view scrolls sideways on narrow screens; click a date to open its day
@@ -185,7 +194,7 @@ A private space for a small group (e.g. couple, roommates) to share a calendar a
 - Clients choose the UUIDs of what they create; when someone else changed the list meanwhile (404 or 409), Tasks reloads. It also reloads when opened and when the tab becomes visible, to show other members' changes
 - Empty states for no lists, an empty list and a list with everything done
 
-**3. Settings**
+**3. Settings** (in Settings, `/settings`, with Shared picked)
 - Space name (the owner can rename it)
 - Members list, with role (owner / member) and color
 - **Invite people** — a single-use code (24 h expiry), with copy
@@ -194,7 +203,7 @@ A private space for a small group (e.g. couple, roommates) to share a calendar a
 #### UI/UX Details
 - **First-time flow:** Click Shared → "Create a Space" or "Join with Code" screen
 - **Returning user:** Click Shared → auto-loads their space's Calendar (default view)
-- **Navigation:** Calendar | Tasks (bottom tab bar mobile, top bar desktop); Shared Settings from the account menu
+- **Navigation:** Calendar | Tasks on the left of the top bar (no tabs before there is a space); the space's settings in Settings, from the account menu
 - **Color palette:** each member's color marks their events and tasks
 - **Empty states:** friendly messages when there are no events or tasks yet
 
@@ -212,7 +221,7 @@ Minimalistic personal tracker for TV shows and movies.
 - TMDB's terms: their logo and notice at the bottom of Discover and of the search panel, and caching for at most 6 months (met by the refresh)
 - The `/api/shows` API allows 120 requests a minute per user
 
-#### SPA Views (bottom tab bar on mobile / top bar tabs on desktop)
+#### SPA Views (tabs on the left of the top bar)
 
 **1. Home**
 - **Toggle at top:** TV Shows | Movies (filters all sections below; the same switch as Discover's)
@@ -258,7 +267,7 @@ Minimalistic personal tracker for TV shows and movies.
 - **First-time flow:** Click Shows → Home (empty state: "Start by discovering shows!", with Go to Discover and Search)
 - **Poster-heavy design** — visual grid of posters, Netflix/Letterboxd-inspired
 - **Quick actions:** ⋯ button, right click or long press on a card to change status or rate
-- **Search:** a search button in the top bar of every Shows view opens the search panel (the whole screen on a phone): TV shows and movies together, 300 ms after typing stops
+- **Search:** the search field at the top of Discover (and Search in an empty Home) opens the search panel (the whole screen on a phone): TV shows and movies together, 300 ms after typing stops. No search button in the top bar
 - **Loading states:** Skeleton loaders for TMDB API calls
 - **Empty states:** friendly messages per section, with a link to Discover
 
@@ -400,11 +409,13 @@ diogomota.com/                            # repo root (this folder)
     ├── proxy.ts                          # route guard (Next 16's middleware)
     ├── playwright.config.ts
     ├── scripts/migrate.mjs               # applies db/migrations
+    ├── scripts/stop-e2e-server.mjs       # stops an e2e dev server left by a run that didn't finish
     ├── app/
     │   ├── page.tsx                      # landing (/), with opengraph-image.tsx
     │   ├── apps/                         # app hub (/apps)
     │   ├── login/ signup/ forgot-password/ reset-password/ account/
-    │   ├── shared/page.tsx               # Shared SPA (protected)
+    │   ├── settings/page.tsx             # Global Settings (protected)
+    │   ├── shared/page.tsx               # Shared SPA (protected), actions.ts (spaceChanged)
     │   ├── shows/page.tsx                # Shows Tracker SPA (protected)
     │   ├── manifest.ts icon.svg apple-icon.png favicon.ico error.tsx not-found.tsx
     │   ├── fonts/                        # IBM Plex Mono
@@ -419,11 +430,14 @@ diogomota.com/                            # repo root (this folder)
     │   ├── site/                         # SitePage, TopBar, AppList, LoginPrompt, Form, MessagePage
     │   ├── auth/                         # AuthPage, LoginForm, SignUpForm, ForgotPasswordForm, ResetPasswordForm
     │   ├── account/                      # AccountMenu, AccountSettings
-    │   ├── common/                       # AppShell, AppHeader, HeaderTabs, BottomNav, Dialog, Spinner, icons
+    │   ├── common/                       # AppShell (and AppFrame), AppHeader, HeaderTabs, BottomNav, Dialog,
+    │   │                                 # Spinner, icons, ui.module.css (the apps' common parts)
+    │   ├── settings/                     # GlobalSettings
     │   ├── shared/                       # SharedApp, SpaceWelcome, SpaceSettings, Calendar, EventDialog,
     │   │                                 # Tasks, TaskItem, TaskDialogs, Sortable, useTasks
     │   └── shows/                        # ShowsApp, Home, Discover, Profile, Stats, TitleGrid, LibraryGrid,
-    │                                     # TitleDialog, SearchDialog, QuickActions, FriendDialog, library
+    │                                     # TitleDialog, SearchDialog, QuickActions, FriendDialog, library,
+    │                                     # ShowsSettings
     ├── lib/                              # db, tmdb (and tmdb-mock), email, password, password-reset,
     │                                     # rate-limit, users, spaces, events, calendar, tasks, shows,
     │                                     # friends, show-types, api-request, apps, test-hooks, ...
@@ -555,6 +569,7 @@ Everything done, in the order it happened (moved here from the former `roadmap.m
 - White buttons (2026-11-03): every button on the site's own pages is now a white box with black text (`.button` in `components/site/site.module.css`, a light grey on hover) instead of a `[Label]` link; the `Brackets` component is gone. That is Check Apps on `/`, Login and Sign Up in the `/apps` top bar (no more `|` between them) and in its login prompt, Log in / Sign up and the other form buttons, Back to Apps, Retry, and Reset by email and Logout on `/account`. The negative margins that lined the `[` up with the text are gone. Checked locally: screenshots of `/`, `/apps`, the login prompt and `/login` on desktop and phone; typecheck and lint clean; `landing`, `apps` and `site` e2e specs pass (the landing style test now expects Check Apps black on white). Not checked: the database-backed specs and `/account`, Docker wasn't running (not committed)
 
 - Header and calendar (2026-11-05): one top bar everywhere (`components/common/AppHeader`): `diogomota.com` on the left (→ `/`, replacing `‹ diogo mota` / `‹ Apps` and the page name), then Shared and Shows, the open app in bold and underlined (neither on `/apps` or `/account`); a hidden bold copy of each label keeps its width, so the bar doesn't move between pages. The sidebar is gone: on desktop the app's tabs are in the middle of the top bar (`HeaderTabs`), on phones still the bottom bar, and the views have the whole width. Shared's Settings tab is gone: Shared Settings opens from the username's menu, like Shows Settings (`AppShell`'s `settings` prop), and the Settings page is a centered column. The theme toggle is gone from the top bar (`ThemeToggle` and the sun and moon icons deleted); the theme is chosen in Account settings, or Shows Settings. On narrow phones the bar's text is 15 px (14 px under 360 px) and the username is cut off before anything overlaps. Calendar: one toolbar row on desktop (‹ Today ›, the period, the legend, Month | Week | Day, + Add event; on phones ‹ period › over Today, the switcher and +), no space name or visible title (the tab names it; the h1 is for screen readers), no `Europe/Lisbon` line and no Export calendar: export is per event, Export to Google Calendar and Download event .ics, moved above Edit and Delete in the event's dialog; `GET /api/shared/events/export` now answers 404. Checked locally: screenshots at 1280, 768, 600, 390, 375 and 320 px wide, logged in and out (nothing overlaps, no sideways scroll); e2e tests updated for the new header and settings flow (theme now picked in Shows Settings), with new tests for the top bar (bold and underline on the open app, same widths on every page, no theme button) and tabs centered in it
+- Global Settings and one look (2026-11-05): "Shared Settings" and "Shows Settings" are now one page, **Global Settings** (`/settings`, `app/settings/page.tsx`, `components/settings/GlobalSettings`), the account menu's middle item everywhere (on `/apps` and `/account` too), opening on the app it was opened in (`?app=shared` / `?app=shows`, the first app without one). A dropdown, App, picks Shared or Shows: Shared has the space's cards (`SpaceSettings`: name, members, invite, leave, or "No space yet" with Open Shared), Shows the theme (`ShowsSettings`, saved straight away, both apps). The choice replaces `?app=` in the URL, so reload and Back keep it; both apps' settings stay mounted (`<Activity>`). It's in the apps' frame: `AppShell` is split, and `AppFrame` (top bar, theme, page) is what `/settings` uses without tabs; `AppShell` no longer has a settings view, a `settings` prop or `useTheme` (the theme is changed only on `/settings` and `/account`). `AppSettings` (Back to Shows + theme radios, the odd one out) is deleted. `proxy.ts` guards `/settings`. The apps' look made one: `components/common/ui.module.css` holds the common parts (heading, eyebrow, cards, fields, buttons with `primary`, `danger` and `remove`, alerts, `success`, `confirm`), used by Global Settings and Shared's welcome; Shared's welcome and settings had their own (a bigger heading, buttons in the accent's soft color, alerts with an accent bar) and now match Shows, Tasks and Calendar, whose modules were aligned to the same values: `--danger` moved from Shows and Tasks into the shell's theme (Calendar had its own `#ee6677`), 44 px fields with `.6rem .75rem` padding and `.5rem` corners everywhere, section headings 600, one backdrop, and destructive actions one way in both apps: a red text button starts it (Delete task, Delete event, Leave space, like Shows' Remove), a filled red one in a red-barred box confirms it (Delete list, Confirm delete, Confirm leave). Messages in the space's settings show in the card they belong to. Bugs found on the way: Back from Global Settings showed `/shared` as the browser had kept it (the welcome screen after creating a space there, or a space that was just left); a server action, `spaceChanged` (`app/shared/actions.ts`, `revalidatePath`), now runs after every change to the space, and `SharedApp` checks its space once shown. The menu's link from `/settings` itself didn't refresh the space; the page now follows a new server render. e2e runs: each one now starts its own dev server on port 3100 (not reusing whatever answers on 3000, which had been a 10-hour-old leftover server) and stops it at the end; `npm run test:e2e` first stops a test server left by a run that didn't finish (`scripts/stop-e2e-server.mjs`, which only touches the one on port 3100); a run ends after 30 min at most; 2 workers instead of 4 (as fast here, without the time-outs); the test server's database pool is 20 (`DATABASE_POOL_MAX`; 5 in production), since every Shared request queues on one lock holding its connection, which had left the session check without one ("Unauthorized"). The long tasks test is `test.slow()`. Checked locally: screenshots of Global Settings (both apps, both themes, desktop and phone), Shared's welcome and Tasks, and Shows' Profile; lint and typecheck clean; every e2e spec passes, run in batches (not committed, no version yet)
 
 ## To-do
 

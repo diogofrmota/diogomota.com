@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
+import ui from "@/components/common/ui.module.css";
 import type { AppInfo } from "@/lib/apps";
 import { authHref } from "@/lib/next-path";
-import site from "./site.module.css";
 import styles from "./LoginPrompt.module.css";
 
-// Shown instead of an app while logged out. A native modal <dialog>: it keeps
-// focus inside, closes on Escape and hands focus back to the card on close.
+// Shown instead of an app while logged out, in the apps' dialog look. A native
+// modal <dialog>: it keeps focus inside, closes on Escape and hands focus back
+// to the card on close.
 export function LoginPrompt({
   app,
   onClose,
@@ -38,17 +39,17 @@ export function LoginPrompt({
     >
       {app && (
         <div className={styles.content}>
-          <h2 id={titleId} className={styles.title}>
+          <h2 id={titleId} className={`${ui.cardHeading} ${styles.title}`}>
             Log in to open {app.name}
           </h2>
-          <p className={`${site.muted} ${styles.text}`}>
+          <p className={`${ui.muted} ${styles.text}`}>
             You need an account to use {app.name}. Log in, or sign up if you are new.
           </p>
-          <div className={styles.actions}>
-            <Link href={authHref("/login", app.href)} className={site.button}>
+          <div className={ui.actions}>
+            <Link href={authHref("/login", app.href)} className={`${ui.button} ${ui.primary}`}>
               Login
             </Link>
-            <Link href={authHref("/signup", app.href)} className={site.button}>
+            <Link href={authHref("/signup", app.href)} className={ui.button}>
               Sign Up
             </Link>
           </div>

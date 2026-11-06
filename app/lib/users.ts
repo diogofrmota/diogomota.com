@@ -35,6 +35,14 @@ export async function findUserById(id: string): Promise<User | null> {
   return rows[0] ?? null;
 }
 
+/**
+ * The theme of a page that is open logged out too (/apps, the password reset
+ * pages): the user's saved one, or dark without a user.
+ */
+export async function themeOf(userId: string | undefined): Promise<Theme> {
+  return (userId && (await findUserById(userId))?.themePreference) || "dark";
+}
+
 export async function findUserByEmail(email: string): Promise<User | null> {
   const { rows } = await query<User>(`SELECT ${userColumns} FROM users WHERE email = $1`, [email]);
   return rows[0] ?? null;

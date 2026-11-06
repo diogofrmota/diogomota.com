@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
+import { spaceChanged } from "@/app/shared/actions";
 import { Spinner } from "@/components/common/Spinner";
 import ui from "@/components/common/ui.module.css";
 import { memberColors, type Invite, type Space } from "@/lib/space-types";
@@ -37,7 +38,11 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
   function rename(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = new FormData(event.currentTarget).get("name");
-    void run("name", async () => { onChange(await spaceRequest<Space>(`/${space.id}`, "PATCH", { name })); return "Space name saved."; });
+    void run("name", async () => {
+      onChange(await spaceRequest<Space>(`/${space.id}`, "PATCH", { name }));
+      void spaceChanged();
+      return "Space name saved.";
+    });
   }
   const status = (card: Card) => <>
     {pending === card && <Spinner label="Saving…" />}
@@ -86,7 +91,11 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
       {confirmLeave ? <div className={ui.confirm}><p>Leave {space.name}?</p>
         <div className={ui.actions}>
           <button className={`${ui.button} ${ui.danger}`} disabled={busy}
-            onClick={() => run("leave", async () => { await spaceRequest(`/${space.id}/leave`, "POST"); onChange(null); })}>Confirm leave</button>
+            onClick={() => run("leave", async () => {
+              await spaceRequest(`/${space.id}/leave`, "POST");
+              onChange(null);
+              void spaceChanged();
+            })}>Confirm leave</button>
           <button className={ui.button} disabled={busy} onClick={() => setConfirmLeave(false)}>Cancel</button>
         </div>
       </div> : <button className={`${ui.button} ${ui.remove}`} disabled={busy} onClick={() => setConfirmLeave(true)}>Leave space</button>}
@@ -96,7 +105,7 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
 }
 
 /**
- * Shared's settings, in Global Settings: the user's space (its name, members,
+ * Shared's settings, in Settings (/settings): the user's space (its name, members,
  * invites, leaving), or a way to Shared to create or join one.
  */
 export function SpaceSettings({ initialSpace, userId }: { initialSpace: Space | null; userId: string }) {

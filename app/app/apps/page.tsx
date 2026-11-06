@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { auth } from "@/auth";
+import { AppFrame } from "@/components/common/AppShell";
+import ui from "@/components/common/ui.module.css";
 import { AppList } from "@/components/site/AppList";
-import { SitePage } from "@/components/site/SitePage";
-import { TopBar } from "@/components/site/TopBar";
-import { apps, appsDescription as description } from "@/lib/apps";
+import { appViewport, apps, appsDescription as description } from "@/lib/apps";
 import { safeNextPath } from "@/lib/next-path";
-import { baseOpenGraph, siteName, siteViewport } from "@/lib/site";
+import { baseOpenGraph, siteName } from "@/lib/site";
+import { themeOf } from "@/lib/users";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -15,8 +16,12 @@ export const metadata: Metadata = {
   openGraph: { ...baseOpenGraph, title: `apps · ${siteName}`, description, url: "/apps" },
 };
 
-export const viewport = siteViewport;
+export const viewport = appViewport;
 
+// The way into the apps, and between them (Switch apps in the account menu).
+// In the apps' frame and the user's theme (dark when logged out); the top bar
+// has diogomota.com and the account menu, or Login and Sign Up.
+//
 // `next` is set when a logged-out user was sent here from a protected page
 // (proxy.ts): Login and Sign Up return there, and for an app its login prompt opens.
 export default async function AppsPage({ searchParams }: PageProps<"/apps">) {
@@ -28,14 +33,13 @@ export default async function AppsPage({ searchParams }: PageProps<"/apps">) {
   const version = process.env.APP_VERSION ?? "dev";
 
   return (
-    <SitePage>
-      <TopBar username={username} next={next} />
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          apps <span className={styles.version}>({version})</span>
+    <AppFrame theme={await themeOf(session?.user.id)} username={username} next={next}>
+      <div className={ui.view}>
+        <h1 className={ui.heading}>
+          Apps <span className={styles.version}>({version})</span>
         </h1>
         <AppList apps={apps} loggedIn={username !== null} prompted={prompted?.href} />
-      </main>
-    </SitePage>
+      </div>
+    </AppFrame>
   );
 }

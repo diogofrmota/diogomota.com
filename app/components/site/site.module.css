@@ -1,4 +1,6 @@
-/* The site's own pages (/, /apps, account, login and the like, 404): black, IBM Plex Mono. */
+/* The site's own pages (/, the 404 and error pages): black, IBM Plex Mono. The
+   apps and the pages around them (/apps, login, settings) are in the apps' frame
+   (components/common/AppShell). */
 
 /* Black behind the page too, so overscroll on mobile doesn't flash white. */
 :global(html):has(.page) {

@@ -1,23 +1,24 @@
-/* SitePage centers this column; its text stays left-aligned. */
-.main {
-  width: min(22rem, 100vw - 2.5rem);
-  text-align: left;
+/* One narrow column in the middle of the page; the form is in a card. */
+.column {
+  width: min(24rem, 100%);
+  margin: 0 auto;
 }
 
-.title {
-  margin: 0 0 1.5rem;
-  font-size: 1.5rem;
-  font-weight: 400;
+@media (min-width: 48rem) {
+  .column {
+    padding-top: 2rem;
+  }
 }
 
-.intro {
-  margin: -0.75rem 0 1.5rem;
+/* Two classes, to win over ui.module.css's margins whatever the order. */
+.column .intro {
+  margin: -0.25rem 0 1.25rem;
   font-size: 0.875rem;
 }
 
-.links {
+.column .links {
   display: grid;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
   font-size: 0.875rem;
 }
 
@@ -30,9 +31,10 @@
   display: inline-flex;
   align-items: center;
   min-height: 2.75rem;
-  color: #fff;
+  color: var(--accent);
+  text-underline-offset: 0.2em;
 }
 
-.back {
-  margin: 1.5rem 0 0;
+.column .back {
+  margin: 1.25rem 0 0;
 }

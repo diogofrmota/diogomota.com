@@ -4,12 +4,12 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AuthPage } from "@/components/auth/AuthPage";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { appViewport } from "@/lib/apps";
 import { authHref, safeNextPath } from "@/lib/next-path";
-import { siteViewport } from "@/lib/site";
 
 export const metadata: Metadata = { title: "login", robots: { index: false } };
 
-export const viewport = siteViewport;
+export const viewport = appViewport;
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;
@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <AuthPage
-      title="login"
+      title="Login"
       // Where a password reset or change sends the user, logged out everywhere.
       intro={params.password === "changed" ? "Your password was changed. Log in with the new one." : undefined}
       form={<LoginForm next={next} />}

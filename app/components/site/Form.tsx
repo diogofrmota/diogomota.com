@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import site from "./site.module.css";
+import ui from "@/components/common/ui.module.css";
 import styles from "./Form.module.css";
 
 type FieldProps = Omit<React.ComponentProps<"input">, "id" | "className"> & {
@@ -63,7 +63,7 @@ export function FormMessage({ error, success }: { error?: string; success?: stri
 
 export function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
   return (
-    <button type="submit" className={`${site.button} ${styles.submit}`} disabled={pending}>
+    <button type="submit" className={`${ui.button} ${ui.primary} ${styles.submit}`} disabled={pending}>
       {pending ? `${label}…` : label}
     </button>
   );

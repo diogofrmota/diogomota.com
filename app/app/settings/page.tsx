@@ -6,11 +6,11 @@ import { appViewport } from "@/lib/apps";
 import { readSpace, spaceTransaction } from "@/lib/spaces";
 import { findUserById } from "@/lib/users";
 
-export const metadata: Metadata = { title: "Global Settings", robots: { index: false } };
+export const metadata: Metadata = { title: "Settings", robots: { index: false } };
 
 export const viewport = appViewport;
 
-// Global Settings: every app's settings on one page, one app at a time
+// Settings: every app's settings on one page, one app at a time
 // (?app=shared or ?app=shows, read by GlobalSettings; the first app without
 // one). The account menu opens it on the app it's in. proxy.ts keeps
 // logged-out users out.

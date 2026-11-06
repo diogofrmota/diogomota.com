@@ -1,12 +1,6 @@
-/* One centered column: the back link, the title, the dropdowns and Logout. */
-.main {
-  max-width: 42rem;
-  margin: 0 auto;
-  padding: 0.5rem 1.25rem 3rem;
-}
-
+/* One column (ui.view): the back link, the title, the dropdowns and Logout. */
 .back {
-  margin: 0;
+  margin: -0.75rem 0 0;
   font-size: 0.875rem;
 }
 
@@ -15,30 +9,32 @@
   align-items: center;
   gap: 0.5ch;
   min-height: 2.75rem;
-  color: #a3a3a3;
+  color: var(--muted);
   text-decoration: none;
 }
 
 @media (hover: hover) {
   .back a:hover {
-    color: #fff;
+    color: var(--text);
     text-decoration: underline;
   }
 }
 
-.title {
-  margin: 0.5rem 0 1.5rem;
-  font-size: 1.5rem;
-  font-weight: 400;
+/* Two classes, to win over ui.module.css's margin whatever the order. */
+.title.title {
+  margin: 0.25rem 0 1.25rem;
 }
 
-/* The dropdowns: one box, a line between each. */
+/* The dropdowns: one card, a line between each. */
 .list {
-  border: 1px solid #333;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
 }
 
 .item + .item {
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border);
 }
 
 .details {
@@ -69,8 +65,8 @@
   width: 0.5rem;
   height: 0.5rem;
   margin-top: -0.25rem;
-  border-right: 1.5px solid #a3a3a3;
-  border-bottom: 1.5px solid #a3a3a3;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
   transform: rotate(45deg);
   transition: transform 150ms ease;
 }
@@ -87,7 +83,7 @@
 
 @media (hover: hover) {
   .summary:hover {
-    background: #111;
+    background: var(--hover);
   }
 }
 
@@ -101,7 +97,7 @@
 .heading {
   margin: 0;
   font-size: 1rem;
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .body {

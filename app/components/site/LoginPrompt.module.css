@@ -1,14 +1,17 @@
+/* The apps' dialog look (as in Shared and Shows), in the page's theme. */
 .prompt {
   width: min(100% - 2.5rem, 26rem);
   max-width: none;
   padding: 0;
-  border: 1px solid #444;
-  background: #0a0a0a;
-  color: #fff;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 24px 90px #0006;
 }
 
 .prompt::backdrop {
-  background: rgb(0 0 0 / 0.8);
+  background: #0008;
 }
 
 /* No page scrolling behind the open prompt. */
@@ -18,42 +21,37 @@
 
 .content {
   position: relative;
-  padding: 1.5rem 1.5rem 1rem;
+  padding: 1.5rem;
 }
 
-.title {
+/* Two classes, to win over ui.module.css's margins whatever the order. */
+.content .title {
   /* Clear of the close button. */
   margin: 0 2.5rem 0.5rem 0;
-  font-size: 1rem;
-  font-weight: 400;
 }
 
-.text {
-  margin: 0 0 1rem;
+.content .text {
+  margin: 0 0 1.25rem;
   font-size: 0.875rem;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
 }
 
 .close {
   position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
+  top: 0.5rem;
+  right: 0.5rem;
   width: 2.75rem;
   height: 2.75rem;
   border: 0;
+  border-radius: 0.5rem;
   background: none;
-  color: #a3a3a3;
+  color: var(--muted);
   font-size: 1.25rem;
   cursor: pointer;
 }
 
 @media (hover: hover) {
   .close:hover {
-    color: #fff;
+    background: var(--hover);
+    color: var(--text);
   }
 }

@@ -32,7 +32,7 @@
 }
 
 .caret {
-  color: var(--menu-muted, #a3a3a3);
+  color: var(--menu-muted);
   font-size: 0.75em;
 }
 
@@ -42,10 +42,12 @@
   right: 0;
   z-index: 10;
   min-width: 13rem;
-  margin: 0;
-  padding: 0.25rem 0;
-  border: 1px solid var(--menu-border, #444);
-  background: var(--menu-bg, #0a0a0a);
+  margin: 0.25rem 0 0;
+  padding: 0.25rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 0.75rem;
+  background: var(--menu-bg);
+  box-shadow: 0 12px 40px #0004;
   list-style: none;
 }
 
@@ -58,8 +60,9 @@
   align-items: center;
   width: 100%;
   min-height: 2.75rem;
-  padding: 0 1rem;
+  padding: 0 0.75rem;
   border: 0;
+  border-radius: 0.5rem;
   background: none;
   text-align: left;
   text-decoration: none;
@@ -74,7 +77,7 @@
 
 @media (hover: hover) {
   .item:hover {
-    background: var(--menu-hover-bg, #fff);
-    color: var(--menu-hover-text, #000);
+    background: var(--menu-hover-bg);
+    color: var(--menu-hover-text);
   }
 }

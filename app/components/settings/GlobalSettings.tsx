@@ -31,6 +31,9 @@ export function GlobalSettings({ user, initialSpace }: { user: User; initialSpac
   }
 
   function select(id: string) {
+    // Not for the app already showing: replacing the URL then would cut short a
+    // navigation to this page under way (the account menu's link).
+    if (id === app) return;
     setApp(id);
     window.history.replaceState(null, "", `?${new URLSearchParams({ app: id })}`);
   }
@@ -41,7 +44,7 @@ export function GlobalSettings({ user, initialSpace }: { user: User; initialSpac
   };
   return <AppFrame theme={theme} username={user.username}>
     <div className={ui.view}>
-      <h1 className={ui.heading}>Global Settings</h1>
+      <h1 className={ui.heading}>Settings</h1>
       <div className={`${ui.field} ${styles.picker}`}>
         <label htmlFor="settings-app">App</label>
         <select id="settings-app" className={ui.input} value={app} onChange={(event) => select(event.target.value)}>

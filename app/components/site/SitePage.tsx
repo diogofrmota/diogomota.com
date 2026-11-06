@@ -1,8 +1,9 @@
 import { plexMono } from "@/app/fonts/plex-mono";
 import styles from "./site.module.css";
 
-// Frame for the public pages: black background and IBM Plex Mono. The font is
-// applied here rather than in the root layout so the apps never inherit it.
+// Frame for the site's own pages (/, the 404 and error pages): black background
+// and IBM Plex Mono. The font is applied here rather than in the root layout so
+// the apps, and the pages around them, never inherit it.
 export function SitePage({
   children,
   centered = false,

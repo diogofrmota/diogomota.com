@@ -1,6 +1,5 @@
 "use client";
 import { AppShell } from "@/components/common/AppShell";
-import { DiscoverIcon, HomeIcon, ProfileIcon, SearchIcon } from "@/components/common/icons";
 import { useAppView } from "@/hooks/useAppView";
 import { parseTitleKey } from "@/lib/show-types";
 import type { Theme } from "@/lib/users";
@@ -12,16 +11,9 @@ import { Profile } from "./Profile";
 import { QuickActions } from "./QuickActions";
 import { SearchDialog } from "./SearchDialog";
 import { TitleDialog } from "./TitleDialog";
-import styles from "./Shows.module.css";
 
-// In the top bar of every view.
-function SearchButton() {
-  const { openPanel } = useAppView();
-  return <button type="button" className={styles.searchButton} aria-label="Search" title="Search TV shows and movies"
-    onClick={() => openPanel("search")}><SearchIcon /></button>;
-}
-
-// The search panel and a friend's profile stay open under a title opened from them.
+// The search panel (opened from Discover's search field and an empty Home) and
+// a friend's profile stay open under a title opened from them.
 function Panels() {
   const { panels, closePanel } = useAppView();
   const top = panels.at(-1);
@@ -38,10 +30,10 @@ function Panels() {
 
 export function ShowsApp({ username, theme }: { username: string; theme: Theme }) {
   return <LibraryProvider>
-    <AppShell name="Shows" username={username} theme={theme} actions={<SearchButton />} tabs={[
-      { id: "home", label: "Home", icon: <HomeIcon />, view: <Home /> },
-      { id: "discover", label: "Discover", icon: <DiscoverIcon />, view: <Discover /> },
-      { id: "profile", label: "Profile", icon: <ProfileIcon />, view: <Profile username={username} /> },
+    <AppShell name="Shows" username={username} theme={theme} tabs={[
+      { id: "home", label: "Home", view: <Home /> },
+      { id: "discover", label: "Discover", view: <Discover /> },
+      { id: "profile", label: "Profile", view: <Profile username={username} /> },
     ]}>
       <Panels />
     </AppShell>

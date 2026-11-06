@@ -141,9 +141,9 @@ test("username checks ignore old responses and recover after a network failure",
   await expect(status).toHaveText("That username is available.");
 });
 
-test("username availability requires login, validates input and limits checks", async ({ page, playwright }) => {
+test("username availability requires login, validates input and limits checks", async ({ page, playwright, baseURL }) => {
   const endpoint = "/api/account/username";
-  const anonymous = await playwright.request.newContext({ baseURL: "http://localhost:3000" });
+  const anonymous = await playwright.request.newContext({ baseURL });
   expect((await anonymous.get(`${endpoint}?username=someone`)).status()).toBe(401);
   await anonymous.dispose();
   const user = newUser();

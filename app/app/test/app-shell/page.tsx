@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/common/AppShell";
-import { CalendarIcon, HomeIcon, SettingsIcon } from "@/components/common/icons";
 import { appViewport } from "@/lib/apps";
 import { testHooksEnabled } from "@/lib/test-hooks";
 import { PanelsView } from "./PanelsView";
@@ -25,9 +24,9 @@ export default function AppShellTestPage() {
       username="tester"
       theme="dark"
       tabs={[
-        { id: "one", label: "One", icon: <HomeIcon />, view: <PanelsView title="One" /> },
-        { id: "two", label: "Two", icon: <CalendarIcon />, view: <PanelsView title="Two" /> },
-        { id: "three", label: "Three", icon: <SettingsIcon />, view: <PanelsView title="Three" /> },
+        { id: "one", label: "One", view: <PanelsView title="One" /> },
+        { id: "two", label: "Two", view: <PanelsView title="Two" /> },
+        { id: "three", label: "Three", view: <PanelsView title="Three" /> },
       ]}
     />
   );

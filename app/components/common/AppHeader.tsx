@@ -17,39 +17,34 @@ export function NavLabel({ children }: { children: string }) {
 }
 
 /**
- * The one top bar of the site's pages and the apps: diogomota.com, the apps
- * (the open one in bold and underlined), the open app's tabs in the middle on
- * wide screens, and the account menu on the right.
+ * The one top bar of the apps and the pages around them, at every width. On
+ * the left, inside an app, the app's tabs (HeaderTabs); on /apps, /settings,
+ * /account and the login pages, diogomota.com. On the right, the account menu
+ * (where Switch apps goes back to /apps), or Login and Sign Up.
  */
-export function AppHeader({ pathname, username, next, tabs, actions }: {
-  /** The page's path, to mark the app it belongs to. */
+export function AppHeader({ pathname, username, next, tabs, brand = true, account = true }: {
+  /** The page's path, to open Settings on the app it belongs to. */
   pathname?: string;
   username: string | null;
   next?: string | null;
-  /** The open app's tabs (HeaderTabs). */
+  /** The open app's tabs (HeaderTabs), on the left. */
   tabs?: React.ReactNode;
-  /** The app's own buttons, before the account menu. */
-  actions?: React.ReactNode;
+  /** diogomota.com on the left. The apps leave it out. */
+  brand?: boolean;
+  /** The account menu, or Login and Sign Up. The login pages leave it out. */
+  account?: boolean;
 }) {
   const open = apps.find((app) => pathname === app.href || pathname?.startsWith(`${app.href}/`));
   return <header className={styles.header}>
     <div className={styles.start}>
-      <Link href="/" className={styles.brand}>{siteDomain}</Link>
-      <nav aria-label="Apps" className={styles.apps}>
-        {apps.map((app) => <Link key={app.href} href={app.href} className={styles.link} aria-current={app === open ? "page" : undefined}>
-          <NavLabel>{app.name}</NavLabel>
-        </Link>)}
-      </nav>
+      {brand && <Link href="/" className={styles.brand}>{siteDomain}</Link>}
+      {tabs}
     </div>
-    {tabs}
-    <div className={styles.end}>
-      {actions}
-      <nav aria-label="Account" className={styles.account}>
-        {username ? <AccountMenu username={username} settingsHref={settingsHref(open)} /> : <>
-          <Link href={authHref("/login", next)} className={styles.authLink}>Login</Link>
-          <Link href={authHref("/signup", next)} className={styles.authLink}>Sign Up</Link>
-        </>}
-      </nav>
-    </div>
+    {account && <nav aria-label="Account" className={styles.account}>
+      {username ? <AccountMenu username={username} settingsHref={settingsHref(open)} /> : <>
+        <Link href={authHref("/login", next)} className={styles.authLink}>Login</Link>
+        <Link href={authHref("/signup", next)} className={styles.authLink}>Sign Up</Link>
+      </>}
+    </nav>}
   </header>;
 }

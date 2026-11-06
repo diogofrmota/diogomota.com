@@ -9,7 +9,7 @@ import { expect } from "./fixtures";
 const phoneSizes = [{ width: 390, height: 844 }, { width: 375, height: 812 }];
 const desktopSize = { width: 1280, height: 800 };
 
-/** The home indicator of an iPhone without a home button: what the bottom bar and sheets stay clear of. */
+/** The home indicator of an iPhone without a home button: what sheets and toasts stay clear of. */
 const homeIndicator = 34;
 
 /** Gives the phone a home indicator (CDP emulates the safe area insets, which env() then reads). */
@@ -22,8 +22,8 @@ export async function emulateHomeIndicator(page: Page) {
  * What is wrong with the layout showing now, as sentences. Everywhere: nothing
  * scrolls sideways, the page or an open dialog. On a phone also: tap targets are
  * at least 44px both ways, text fields have 16px text (smaller makes iOS zoom in
- * on focus), and the bottom bar, sheets and toasts keep clear of the home
- * indicator. Runs in the page, so it can't use anything from outside.
+ * on focus), and sheets and toasts keep clear of the home indicator. Runs in
+ * the page, so it can't use anything from outside.
  */
 function layoutProblems({ phone, bottomInset }: { phone: boolean; bottomInset: number }): string[] {
   const problems: string[] = [];
@@ -70,7 +70,7 @@ function layoutProblems({ phone, bottomInset }: { phone: boolean; bottomInset: n
     if (size < 16 && shown(el)) problems.push(`${name(el)} has ${size}px text, under 16px`);
   }
 
-  // The safe area: whatever is fixed to the bottom (the bottom bar's tabs, a toast)
+  // The safe area: whatever is fixed to the bottom (a toast)
   // and the last control of a sheet or full-screen panel, scrolled to its end.
   const limit = innerHeight - bottomInset;
   const fixed = [...document.querySelectorAll<HTMLElement>("body *")].filter((el) =>

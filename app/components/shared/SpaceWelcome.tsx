@@ -1,5 +1,6 @@
 "use client";
 import { useState, type FormEvent } from "react";
+import { spaceChanged } from "@/app/shared/actions";
 import { Spinner } from "@/components/common/Spinner";
 import ui from "@/components/common/ui.module.css";
 import type { Space } from "@/lib/space-types";
@@ -16,6 +17,7 @@ export function SpaceWelcome({ onJoined }: { onJoined: (space: Space) => void })
     try {
       const space = await spaceRequest<Space>(join ? "/join" : "", "POST", join ? { code: values.get("code") } : { name: values.get("name") });
       onJoined(space);
+      void spaceChanged();
     } catch (error) { setError(error instanceof Error ? error.message : "Could not connect. Try again."); }
     finally { setBusy(false); }
   }

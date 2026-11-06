@@ -1,5 +1,6 @@
-/* The apps' frame. The theme is a set of variables on .shell, switched by its
-   data-theme attribute; everything inside an app takes its colors from them. */
+/* The frame of the apps and the pages around them (/apps, /settings, /account,
+   the login pages). The theme is a set of variables on .shell, switched by its
+   data-theme attribute; everything inside takes its colors from them. */
 
 .shell {
   --bg: #0a0a0a;
@@ -13,7 +14,6 @@
   --danger: #f87171; /* 6.3:1 on --surface */
 
   --top-bar-height: 3.5rem;
-  --bottom-nav-height: 4rem;
 
   min-height: 100vh;
   min-height: 100dvh;
@@ -70,11 +70,11 @@
   outline-offset: 2px;
 }
 
-/* The top bar (with the tabs in it on desktop), then the view across the whole
-   width; on mobile, BottomNav is fixed to the bottom. */
+/* The top bar (with the app's tabs in it), then the view across the whole
+   width. Nothing is fixed to the bottom: only the home indicator to keep clear of. */
 .main {
   --main-padding-top: 1.5rem;
-  --main-padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 1.5rem);
+  --main-padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem);
   --app-view-height: calc(100dvh - var(--top-bar-height) - var(--main-padding-top) - var(--main-padding-bottom));
   min-width: 0;
   padding: var(--main-padding-top) max(1.25rem, env(safe-area-inset-right))
@@ -86,13 +86,6 @@
   width: 100%;
   max-width: 64rem;
   margin-inline: auto;
-}
-
-/* No bottom bar to keep clear of on a phone. */
-@media (max-width: 47.99rem) {
-  .withoutNav .main {
-    --main-padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem);
-  }
 }
 
 @media (min-width: 48rem) {

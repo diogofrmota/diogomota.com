@@ -84,7 +84,7 @@ test("Discover shows Top Rated, Popular and Added by Friends, the same for TV sh
   expect([...browserHosts].filter((host) => /themoviedb|tmdb/.test(host))).toEqual(["image.tmdb.org"]);
 });
 
-test("search is in the top bar of every view, waits for typing to pause, and finds TV shows and movies", async ({ page }) => {
+test("search opens from Discover and an empty Home (not the top bar), waits for typing to pause, and finds TV shows and movies", async ({ page }) => {
   await openShows(page);
   const searches: string[] = [];
   page.on("request", (request) => {
@@ -93,11 +93,18 @@ test("search is in the top bar of every view, waits for typing to pause, and fin
   });
   const dialog = page.getByRole("dialog", { name: "Search" });
   const input = dialog.getByRole("searchbox", { name: "Search TV shows and movies" });
+  // The top bar has the tabs and the account menu, no search.
+  await expect(page.getByRole("banner").getByRole("button", { name: /search/i })).toHaveCount(0);
 
-  for (const view of ["Home", "Discover", "Profile"]) {
+  // Discover's search field at the top, and the Search button of an empty library.
+  const launchers = {
+    Home: page.getByRole("main").getByRole("button", { name: "Search", exact: true }),
+    Discover: page.getByRole("main").getByRole("button", { name: "Search TV shows and movies" }),
+  };
+  for (const [view, launcher] of Object.entries(launchers)) {
     await tab(page, view).click();
     await expect(viewHeading(page)).toHaveText(view);
-    await page.getByRole("banner").getByRole("button", { name: "Search", exact: true }).click();
+    await launcher.click();
     await expect(dialog).toBeVisible();
     await expect(input).toBeFocused();
     await expect(dialog).toContainText("Find any TV show or movie by its title.");
@@ -106,10 +113,7 @@ test("search is in the top bar of every view, waits for typing to pause, and fin
     await expect(dialog).toBeHidden();
     await expect(viewHeading(page)).toHaveText(view);
   }
-
-  // Discover has a search field at the top as well.
-  await tab(page, "Discover").click();
-  await page.getByRole("main").getByRole("button", { name: "Search TV shows and movies" }).click();
+  await launchers.Discover.click();
   await expect(input).toBeFocused();
 
   // Typing at a normal pace sends one search, once typing stops.
@@ -147,7 +151,7 @@ test("search is in the top bar of every view, waits for typing to pause, and fin
   await expect(dialog).toBeHidden();
   await expect(viewHeading(page)).toHaveText("Discover");
   // Reopened, it still has the last search.
-  await page.getByRole("banner").getByRole("button", { name: "Search", exact: true }).click();
+  await launchers.Discover.click();
   await expect(input).toHaveValue("tmdb-down");
   // Escape closes it (in a filled search field, browsers may clear it first).
   await input.fill("");
@@ -219,7 +223,8 @@ test.describe("on a phone", () => {
 
   test("the search panel fills the screen", async ({ page }) => {
     await openShows(page);
-    await page.getByRole("banner").getByRole("button", { name: "Search", exact: true }).tap();
+    await tab(page, "Discover").tap();
+    await page.getByRole("main").getByRole("button", { name: "Search TV shows and movies" }).tap();
     const dialog = page.getByRole("dialog", { name: "Search" });
     // Popular Series 2 to 20 (the first popular TV show is Harbor Lights).
     await dialog.getByRole("searchbox").fill("Popular Series");

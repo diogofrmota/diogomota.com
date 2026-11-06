@@ -5,13 +5,14 @@ import { useEffect, useId, useRef, useState } from "react";
 import { logOut } from "@/app/account/actions";
 import styles from "./AccountMenu.module.css";
 
-// The username in the top bar, opening Account (/account), Global Settings
-// (/settings, every app's settings) and Logout. A disclosure (a button that
-// shows a list) rather than an ARIA menu, so Tab moves through it like any
-// links. Escape, a click outside or tabbing away closes it.
+// The username in the top bar, opening Account (/account), Settings
+// (/settings, every app's settings), Switch apps (/apps, the way from one app
+// to another) and Logout. A disclosure (a button that shows a list) rather than
+// an ARIA menu, so Tab moves through it like any links. Escape, a click outside
+// or tabbing away closes it.
 export function AccountMenu({ username, settingsHref }: {
   username: string;
-  /** Global Settings, open on the app the menu is in (lib/apps.ts, settingsHref). */
+  /** Settings, open on the app the menu is in (lib/apps.ts, settingsHref). */
   settingsHref: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -66,7 +67,12 @@ export function AccountMenu({ username, settingsHref }: {
         </li>
         <li>
           <Link href={settingsHref} className={styles.item} onClick={() => setOpen(false)}>
-            Global Settings
+            Settings
+          </Link>
+        </li>
+        <li>
+          <Link href="/apps" className={styles.item} onClick={() => setOpen(false)}>
+            Switch apps
           </Link>
         </li>
         <li>

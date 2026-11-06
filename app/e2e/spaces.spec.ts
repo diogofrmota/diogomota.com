@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { randomBytes } from "node:crypto";
-import { expect, newUser, openGlobalSettings, signUp, test } from "./fixtures";
+import { expect, newUser, openSettings, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
 import type { Space } from "../lib/space-types";
 
@@ -18,9 +18,9 @@ async function create(page: Page, name = "Our home") {
   await expect(page.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
   return (await (await page.request.get(base)).json()).data as Space;
 }
-/** Global Settings, on Shared's settings: the space's. */
+/** Settings, on Shared's settings: the space's. */
 async function settings(page: Page) {
-  await openGlobalSettings(page, "Shared");
+  await openSettings(page, "Shared");
   await expect(page.getByRole("region", { name: "Members" })).toBeVisible();
 }
 async function generate(page: Page, id: string) {

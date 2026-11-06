@@ -3,7 +3,7 @@ import ui from "@/components/common/ui.module.css";
 import type { Theme } from "@/lib/users";
 
 /**
- * Shows' settings, in Global Settings: the theme, which applies in both apps.
+ * Shows' settings, in Settings (/settings): the theme, which applies in both apps.
  * Each change is saved to the account straight away (hooks/useTheme.ts).
  */
 export function ShowsSettings({ theme, onThemeChange }: { theme: Theme; onThemeChange: (theme: Theme) => void }) {

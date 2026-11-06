@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import { checkView, emulateHomeIndicator } from "./checks";
-import { accountButton, expect, newUser, openGlobalSettings, settingsPicker, signUp, test } from "./fixtures";
+import { accountButton, expect, newUser, openSettings, settingsPicker, signUp, test } from "./fixtures";
 import { card, grid, mockBase, openShows, otherPerson, section, tab, userId, viewHeading } from "./shows";
 
 // Every view of the site and of both apps, with their dialogs open and in their
@@ -122,16 +122,16 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await expect(page.getByRole("status").filter({ hasText: "Deleted “Bread”" })).toBeVisible();
   await checkView(page, "undo delete");
 
-  await openGlobalSettings(page);
+  await openSettings(page);
   await page.getByRole("button", { name: "Generate invite" }).click();
   await expect(page.getByLabel("Invite code")).toHaveValue(/.{8}/);
-  await checkView(page, "Global Settings, Shared");
+  await checkView(page, "Settings, Shared");
   await page.getByRole("button", { name: "Leave space", exact: true }).click();
   await expect(page.getByRole("button", { name: "Confirm leave" })).toBeVisible();
-  await checkView(page, "Global Settings, Shared, confirm leave");
+  await checkView(page, "Settings, Shared, confirm leave");
   await settingsPicker(page).selectOption({ label: "Shows" });
   await expect(page.getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
-  await checkView(page, "Global Settings, Shows");
+  await checkView(page, "Settings, Shows");
 
   await goBackTo(page, "Tasks");
   await goBackTo(page, "Calendar");
@@ -147,7 +147,7 @@ test("Shows: every view and dialog, each closed with Back", async ({ page, brows
   await expect(page.getByTestId("skeleton")).toHaveCount(0);
   await checkView(page, "Discover");
 
-  await page.getByRole("banner").getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByRole("main").getByRole("button", { name: "Search TV shows and movies" }).click();
   const search = page.getByRole("dialog", { name: "Search" });
   await search.getByRole("searchbox").fill("harbor");
   await expect(card(grid(search, "Search results"), "Harbor Lights")).toBeVisible();
@@ -223,7 +223,7 @@ test("a load that fails says so, and Retry loads it again", async ({ page }) => 
   await expect(page.getByText("Nothing planned yet — add your first event!")).toBeVisible();
   await failing("**/api/shared/tasks", () => sharedTab(page, "Tasks").click(), "Tasks");
   await expect(page.getByRole("heading", { name: "No lists yet — start your first one!" })).toBeVisible();
-  await failing("**/api/shared/spaces", () => openGlobalSettings(page, "Shared"), "Global Settings");
+  await failing("**/api/shared/spaces", () => openSettings(page, "Shared"), "Settings");
   await expect(page.getByRole("listitem").filter({ hasText: "(you)" })).toBeVisible();
 
   await failing("**/api/shows/library", async () => { await page.goto("/shows"); }, "Shows Home");

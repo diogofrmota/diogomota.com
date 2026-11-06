@@ -77,7 +77,7 @@ export async function saveTheme(_previous: FormState, formData: FormData): Promi
   return { success: "Theme saved.", values: { theme } };
 }
 
-// The theme picked in Global Settings (hooks/useTheme.ts). Returns whether it
+// The theme picked in Settings (hooks/useTheme.ts). Returns whether it
 // was saved; without a session it isn't, and the theme switches back.
 export async function setThemePreference(theme: Theme): Promise<boolean> {
   const session = await auth();

@@ -135,7 +135,7 @@ export function ThemeForm({ theme, labelledBy }: { theme: Theme; labelledBy: str
     <form action={action} className={formStyles.form}>
       <fieldset className={styles.fieldset} aria-labelledby={labelledBy} aria-describedby={hintId}>
         <p id={hintId} className={formStyles.hint}>
-          Used inside the apps. This page and /apps stay black.
+          Your theme preference applies across your apps, and on this page.
         </p>
         {(["light", "dark"] as const).map((value) => (
           <label key={value} className={styles.radio}>

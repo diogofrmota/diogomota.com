@@ -96,7 +96,7 @@ test("reset the password with the emailed link, then log in with the new one", a
   await requestReset(page, user.email);
   await page.goto(await resetLink(request, user.email));
 
-  await expect(heading(page)).toHaveText("reset password");
+  await expect(heading(page)).toHaveText("Reset password");
   await expect(page.getByRole("main")).toContainText(`Choose a new password for ${user.username}.`);
 
   // The sign-up rules.
@@ -135,11 +135,11 @@ test("a used link doesn't work again, not even from a page opened before", async
   await expect(page).toHaveURL("/login?password=changed");
 
   await setNewPassword(otherTab, "the second new password");
-  await expect(heading(otherTab)).toHaveText("link expired");
+  await expect(heading(otherTab)).toHaveText("Link expired");
   await expect(otherTab.getByRole("main")).toContainText(linkExpired);
 
   await page.goto(link);
-  await expect(heading(page)).toHaveText("link expired");
+  await expect(heading(page)).toHaveText("Link expired");
   await page.getByRole("link", { name: "Get a new link" }).click();
   await expect(page).toHaveURL("/forgot-password");
 
@@ -154,7 +154,7 @@ test("an expired link is rejected and the password stays the same", async ({ pag
   await requestReset(page, user.email);
   const link = await resetLink(request, user.email);
   await page.goto(link);
-  await expect(heading(page)).toHaveText("reset password");
+  await expect(heading(page)).toHaveText("Reset password");
 
   // The hour passes while the page is open.
   const token = new URL(link, "http://n.invalid").searchParams.get("token")!;
@@ -166,7 +166,7 @@ test("an expired link is rejected and the password stays the same", async ({ pag
   expect(rowCount).toBe(1);
 
   await setNewPassword(page, "a brand new password");
-  await expect(heading(page)).toHaveText("link expired");
+  await expect(heading(page)).toHaveText("Link expired");
   await page.goto(link);
   await expect(page.getByRole("main")).toContainText(linkExpired);
 
@@ -183,7 +183,7 @@ test("a new request replaces the earlier link", async ({ page, request }) => {
   expect(second).not.toBe(first);
 
   await page.goto(first);
-  await expect(heading(page)).toHaveText("link expired");
+  await expect(heading(page)).toHaveText("Link expired");
   await page.goto(second);
   await setNewPassword(page, "a brand new password");
   await expect(page).toHaveURL("/login?password=changed");

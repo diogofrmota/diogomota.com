@@ -11,7 +11,11 @@ function createPool(): Pool {
 
   const pool = new Pool({
     connectionString,
-    max: 5,
+    // 5 is plenty for this site's few users. The e2e tests' server, with several
+    // test workers at once, sets more (playwright.config.ts): every Shared
+    // request waits for one lock (lib/spaces.ts) holding its connection, and
+    // the rest, such as the session check, must still get one.
+    max: Number(process.env.DATABASE_POOL_MAX) || 5,
     connectionTimeoutMillis: 5_000,
     idleTimeoutMillis: 30_000,
   });

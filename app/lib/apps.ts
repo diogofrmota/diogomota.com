@@ -37,7 +37,7 @@ export function findApp(id: unknown): AppInfo | undefined {
   return apps.find((app) => appId(app) === id);
 }
 
-/** Global Settings, open on this app's settings (the first app's without one). */
+/** Settings (/settings), open on this app's settings (the first app's without one). */
 export function settingsHref(app?: AppInfo): string {
   return app ? `/settings?${new URLSearchParams({ app: appId(app) })}` : "/settings";
 }

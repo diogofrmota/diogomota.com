@@ -52,20 +52,33 @@ export async function logIn(page: Page, login: string, password: string, path = 
   await page.getByRole("button", { name: "Log in" }).click();
 }
 
-/** Global Settings' dropdown, which picks the app whose settings show. */
+/** Settings' dropdown, which picks the app whose settings show. */
 export function settingsPicker(page: Page) {
   return page.getByRole("combobox", { name: "App", exact: true });
 }
 
-/**
- * Opens Global Settings (/settings) from the account menu, the way in to every
- * app's settings, and picks `app` in its dropdown if given (it opens on the app
- * the menu was in).
- */
-export async function openGlobalSettings(page: Page, app?: "Shared" | "Shows") {
+/** The account menu's items, top to bottom. */
+export const accountMenuItems = ["Account", "Settings", "Switch apps", "Logout"];
+
+/** Opens the account menu in the top bar (the username) and follows its link named `name`. */
+export async function followAccountMenu(page: Page, name: string) {
   await page.getByRole("navigation", { name: "Account" }).locator("button[aria-expanded]").click();
-  await page.getByRole("link", { name: "Global Settings", exact: true }).click();
-  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Global Settings");
+  await page.getByRole("navigation", { name: "Account" }).getByRole("link", { name, exact: true }).click();
+}
+
+/**
+ * Opens Settings (/settings) from the account menu, the way in to every app's
+ * settings, and picks `app` in its dropdown if given (it opens on the app the
+ * menu was in).
+ */
+export async function openSettings(page: Page, app?: "Shared" | "Shows") {
+  await page.getByRole("navigation", { name: "Account" }).locator("button[aria-expanded]").click();
+  const link = page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Settings", exact: true });
+  const href = await link.getAttribute("href");
+  await link.click();
+  // There, also when opened from Settings itself (where the heading already is).
+  await expect(page).toHaveURL(href!);
+  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Settings");
   if (app) await settingsPicker(page).selectOption({ label: app });
 }
 

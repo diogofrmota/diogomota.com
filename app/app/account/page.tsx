@@ -3,17 +3,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/auth";
 import { PasswordForm, ThemeForm, UsernameForm } from "@/components/account/AccountSettings";
-import { SitePage } from "@/components/site/SitePage";
-import site from "@/components/site/site.module.css";
-import { TopBar } from "@/components/site/TopBar";
-import { siteViewport } from "@/lib/site";
+import { AppFrame } from "@/components/common/AppShell";
+import ui from "@/components/common/ui.module.css";
+import { appViewport } from "@/lib/apps";
 import { findUserById } from "@/lib/users";
 import { logOut } from "./actions";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = { title: "account", robots: { index: false } };
 
-export const viewport = siteViewport;
+export const viewport = appViewport;
 
 // One setting per dropdown, closed until opened. A native <details>, so it opens
 // with a click, Enter or Space and needs no script. The open state is the
@@ -34,23 +33,22 @@ function Dropdown({ id, title, children }: { id: string; title: string; children
   );
 }
 
-// Account settings, opened from the account menu. Like /apps, it is in the site
-// style (black, IBM Plex Mono); the theme set here applies inside the apps.
+// Account settings, opened from the account menu. Like /apps and /settings, in
+// the apps' frame and the user's theme, which is also set here.
 export default async function AccountPage() {
   const { id } = await requireUser("/account");
   const user = await findUserById(id);
   if (!user) notFound();
 
   return (
-    <SitePage>
-      <TopBar username={user.username} />
-      <main className={styles.main}>
+    <AppFrame theme={user.themePreference} username={user.username}>
+      <div className={ui.view}>
         <p className={styles.back}>
           <Link href="/apps">
             <span aria-hidden="true">←</span>Back to Apps
           </Link>
         </p>
-        <h1 className={styles.title}>account</h1>
+        <h1 className={`${ui.heading} ${styles.title}`}>Account</h1>
 
         <div className={styles.list}>
           <Dropdown id="username" title="Change username">
@@ -62,11 +60,11 @@ export default async function AccountPage() {
           </Dropdown>
 
           <Dropdown id="forgot" title="Forgot password">
-            <p className={site.muted}>
+            <p className={ui.muted}>
               Don&apos;t know your current password? Reset it with a link sent to {user.email}.
             </p>
             <p className={styles.action}>
-              <Link href="/forgot-password" className={site.button}>
+              <Link href="/forgot-password" className={ui.button}>
                 Reset by email
               </Link>
             </p>
@@ -78,11 +76,11 @@ export default async function AccountPage() {
         </div>
 
         <form action={logOut} className={styles.logout}>
-          <button type="submit" className={site.button}>
+          <button type="submit" className={ui.button}>
             Logout
           </button>
         </form>
-      </main>
-    </SitePage>
+      </div>
+    </AppFrame>
   );
 }

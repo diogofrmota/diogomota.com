@@ -149,6 +149,9 @@ test("lists: empty state, create, rename, reorder with the keyboard and delete, 
 });
 
 test("tasks: add, reorder with mouse and keyboard (persists after reload), complete, assign and delete with undo", async ({ page, browser, isMobile }) => {
+  // Two sign-ups, two reloads and the 5 s undo window, twice: ~45 s on its own,
+  // over the 60 s limit when the other workers keep the dev server busy.
+  test.slow();
   const space = await setup(page);
   const friend = newUser();
   const context = await browser.newContext(contextOptions());
@@ -298,9 +301,9 @@ test.describe("on a phone", () => {
     await touchDrag(page, { x: 320, y }, { x: 60, y });
     await expect.poll(() => todoTitles(page)).toEqual(["Coffee", "Apples"]);
     const toast = page.getByRole("status").filter({ hasText: "Deleted “Bread”" });
+    // Above the bottom of the screen (the tabs are in the top bar, nothing is along the bottom).
     const box = (await toast.boundingBox())!;
-    const nav = (await page.getByRole("navigation", { name: "Shared", exact: true }).boundingBox())!;
-    expect(box.y + box.height).toBeLessThanOrEqual(nav.y);
+    expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height - 8);
     await toast.getByRole("button", { name: "Undo" }).tap();
     await expect.poll(() => todoTitles(page)).toEqual(["Coffee", "Apples", "Bread"]);
     const gone = saved(page, /\/tasks\/[^/]+$/, "DELETE");

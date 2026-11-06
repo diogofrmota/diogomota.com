@@ -1,4 +1,5 @@
-/* One app per row, at every width. */
+/* The app cards on /apps, in the apps' card look (components/common/ui.module.css).
+   One app per row, at every width. */
 .grid {
   display: grid;
   gap: 1rem;
@@ -11,22 +12,25 @@
   position: relative;
   display: flex;
   gap: 1rem;
-  align-items: flex-start;
+  align-items: center;
   padding: 1.25rem;
-  border: 1px solid #333;
-  transition: border-color 0.15s;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  transition: border-color 0.15s, background-color 0.15s;
 }
 
 @media (hover: hover) {
   .card:hover {
-    border-color: #fff;
+    border-color: var(--muted);
+    background: var(--hover);
   }
 }
 
 /* The link covers the whole card, so the focus ring goes around the card. */
 .card:has(.link:focus-visible) {
-  outline: 2px solid #fff;
-  outline-offset: 3px;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .link:focus-visible {
@@ -41,21 +45,26 @@
   content: "";
   position: absolute;
   inset: 0;
+  border-radius: inherit;
 }
 
+/* The logos are white line drawings: on a black tile, like an app icon, in
+   either theme. */
 .logo {
   flex: none;
+  border-radius: 0.75rem;
+  background: #000;
 }
 
 .name {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 400;
+  font-size: 1.2rem;
+  font-weight: 600;
 }
 
 .description {
   margin: 0.25rem 0 0;
-  color: #a3a3a3;
+  color: var(--muted);
   font-size: 0.875rem;
   line-height: 1.5;
 }
@@ -66,8 +75,8 @@
   width: 0.875rem;
   height: 0.875rem;
   margin-left: 0.625rem;
-  border: 2px solid #444;
-  border-top-color: #fff;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
   border-radius: 50%;
   vertical-align: -0.125rem;
   opacity: 0;
