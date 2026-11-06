@@ -1,57 +1,15 @@
-import { type Page } from "@playwright/test";
 import { themes } from "../lib/themes";
 import { checkThemes, rgb } from "./checks";
-import { expect, newUser, openSettings, signUp, test } from "./fixtures";
+import { expect, newUser, saveTheme, signUp, test } from "./fixtures";
 import { card, grid, openShows, section, tab, viewHeading } from "./shows";
 
 // The themes (lib/themes.ts, with their colors in components/common/themes.module.css):
-// each one is picked and saved in Settings or Account, colors the page, and
+// each one is picked and saved in Account, colors the page, and
 // passes axe wherever the apps put its colors together.
 
-const theme = (id: string) => themes.find((info) => info.id === id)!;
-
-/**
- * The response of the server action that saves the theme picked in Settings,
- * which starts once the action has run: its headers say whether it revalidated,
- * which it only does once the theme is saved (see app-shell.spec.ts).
- */
-async function pickInSettings(page: Page, name: string) {
-  const saved = page.waitForResponse(
-    (response) => response.request().method() === "POST" && "next-action" in response.request().headers(),
-  );
-  await page.getByRole("radio", { name, exact: true }).check();
-  expect((await saved).headers()["x-action-revalidated"]).toBeTruthy();
-}
-
-test("every theme saves from Settings, and colors the page, the page behind it and the browser's UI", async ({ page }) => {
-  // Two dozen saves.
+test("every theme saves from Account, and colors the page, the page behind it and the browser's UI", async ({ page }) => {
+  // A dozen saves or more.
   test.slow();
-  await openShows(page);
-  await openSettings(page, "Shows");
-  const shell = page.locator("[data-theme]");
-
-  for (const { id, name, background } of themes) {
-    await pickInSettings(page, name);
-    await expect(shell).toHaveAttribute("data-theme", id);
-    await expect(page.getByRole("radio", { name, exact: true })).toBeChecked();
-    // Its own colors, not the default's: themes.module.css has the theme, with
-    // the background lib/themes.ts gives the browser.
-    await expect(shell).toHaveCSS("background-color", rgb(background));
-    await expect(page.locator("html")).toHaveCSS("background-color", rgb(background));
-    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", background);
-  }
-
-  // The last one is the account's: in the page as served, and in the apps.
-  const last = themes.at(-1)!;
-  const response = await page.reload();
-  expect(await response!.text()).toContain(`data-theme="${last.id}"`);
-  await expect(page.getByRole("radio", { name: last.name, exact: true })).toBeChecked();
-  await page.goto("/shows");
-  await expect(shell).toHaveAttribute("data-theme", last.id);
-  await expect(shell).toHaveCSS("background-color", rgb(last.background));
-});
-
-test("Account settings save any theme, and the apps open in it", async ({ page }) => {
   await signUp(page, newUser());
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
@@ -66,18 +24,28 @@ test("Account settings save any theme, and the apps open in it", async ({ page }
   for (const [index, { name }] of themes.entries()) await expect(radios.nth(index)).toHaveAccessibleName(name);
   await expect(form.getByRole("heading")).toHaveText(["Theme"]);
 
-  for (const { id, name, background } of [theme("earth-tones"), theme("vivid-nightfall")]) {
-    await form.getByRole("radio", { name, exact: true }).check();
-    await form.getByRole("button", { name: "Save theme" }).click();
+  // Each one differs from the one before, so the page changes with every save.
+  for (const { id, name, background } of themes) {
+    await saveTheme(page, name);
     await expect(shell).toHaveAttribute("data-theme", id);
     await expect(form.getByRole("status")).toHaveText("Theme saved.");
-    await expect(shell).toHaveCSS("background-color", rgb(background));
     await expect(form.getByRole("radio", { name, exact: true })).toBeChecked();
+    // Its own colors, not the default's: themes.module.css has the theme, with
+    // the background lib/themes.ts gives the browser.
+    await expect(shell).toHaveCSS("background-color", rgb(background));
+    await expect(page.locator("html")).toHaveCSS("background-color", rgb(background));
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", background);
   }
 
-  await page.goto("/shows");
-  await expect(shell).toHaveAttribute("data-theme", "vivid-nightfall");
-  await expect(shell).toHaveCSS("background-color", rgb(theme("vivid-nightfall").background));
+  // The last one is the account's: in the page as served, and in the apps.
+  const last = themes.at(-1)!;
+  const response = await page.reload();
+  expect(await response!.text()).toContain(`data-theme="${last.id}"`);
+  for (const app of ["/shows", "/shared"]) {
+    await page.goto(app);
+    await expect(shell).toHaveAttribute("data-theme", last.id);
+    await expect(shell).toHaveCSS("background-color", rgb(last.background));
+  }
 });
 
 // axe in all the themes, on the views that between them have every pair of
@@ -88,7 +56,7 @@ test.describe("in every theme, axe finds nothing serious", () => {
   test.skip(({ isMobile }) => isMobile, "colors don't change with the screen size");
   test.beforeEach(() => test.slow());
 
-  test("the theme pickers, in Account and Settings", async ({ page }) => {
+  test("the theme picker, in Account", async ({ page }) => {
     await signUp(page, newUser());
     await expect(page).toHaveURL("/apps");
     await page.goto("/account");
@@ -97,10 +65,6 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await form.locator("summary").press("Enter");
     await expect(form.locator("details")).toHaveAttribute("open", "");
     await checkThemes(page, "Account, the theme picker");
-
-    await openSettings(page, "Shows");
-    await expect(page.getByRole("radio", { name: "Dark 2", exact: true })).toBeChecked();
-    await checkThemes(page, "Settings, Shows");
   });
 
   test("Shared: Calendar and Tasks, with an event and a task open", async ({ page }) => {

@@ -72,16 +72,6 @@ export async function saveTheme(_previous: FormState, formData: FormData): Promi
   return { success: "Theme saved.", values: { theme } };
 }
 
-// The theme picked in Settings (hooks/useTheme.ts). Returns whether it
-// was saved; without a session it isn't, and the theme switches back.
-export async function setThemePreference(theme: Theme): Promise<boolean> {
-  const session = await auth();
-  if (!session || !isTheme(theme)) return false;
-
-  await saveThemePreference(session.user.id, theme);
-  return true;
-}
-
 async function saveThemePreference(userId: string, theme: Theme): Promise<void> {
   await updateThemePreference(userId, theme);
   // The browser keeps the pages it has shown for back and forward, each still in

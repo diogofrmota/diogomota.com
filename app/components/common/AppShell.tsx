@@ -26,7 +26,7 @@ export type TabNavProps = {
 };
 
 /**
- * The frame of the apps and the pages around them (/apps, /settings, /account,
+ * The frame of the apps and the pages around them (/apps, /account,
  * the login pages), in the user's theme: the top bar, then the page. With tabs,
  * the page has the whole width; without (/apps and the rest, Shared before
  * there is a space) it is a centered column.
@@ -61,8 +61,8 @@ export function AppFrame({ theme, username, next, brand, account, nav, children,
 }
 
 // An app in the frame: the top bar (the app's tabs in the middle, the account
-// menu, with Settings and Switch app, on the right) and the current view. The apps' settings are a page
-// of their own, /settings, opened from the account menu. The URL stays the
+// menu, with Switch app, on the right) and the current view. An app with
+// settings has them as one of its tabs (Shared's Settings). The URL stays the
 // same; useAppView keeps the view in history entries for the back button.
 //
 // Views that are switched away from stay mounted but hidden (<Activity>), so
@@ -79,7 +79,7 @@ export function AppShell({
   /** The first tab is the default view. */
   tabs: readonly AppTab[];
   username: string;
-  /** The user's saved theme, rendered by the server. It is changed in /settings or /account. */
+  /** The user's saved theme, rendered by the server. It is changed in /account. */
   theme: Theme;
   hideNavigation?: boolean;
   /** Shown over every view, such as the app's dialogs; can use useAppView(). */

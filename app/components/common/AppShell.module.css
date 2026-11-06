@@ -1,4 +1,4 @@
-/* The frame of the apps and the pages around them (/apps, /settings, /account,
+/* The frame of the apps and the pages around them (/apps, /account,
    the login pages). The theme is a set of variables on .shell, switched by its
    data-theme attribute (themes.module.css); everything inside takes its colors
    from them. */

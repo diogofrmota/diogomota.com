@@ -43,3 +43,39 @@ export function TrashIcon() {
     </Icon>
   );
 }
+
+export function UserIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.5 20.5c.9-3.8 3.9-6 7.5-6s6.6 2.2 7.5 6" />
+    </Icon>
+  );
+}
+
+export function AppsIcon() {
+  return (
+    <Icon>
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1.5" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" />
+    </Icon>
+  );
+}
+
+export function LogoutIcon() {
+  return (
+    <Icon>
+      <path d="M14 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H14M10 12h10M16.5 8l4 4-4 4" />
+    </Icon>
+  );
+}
+
+export function ChevronDownIcon() {
+  return (
+    <Icon>
+      <path d="m6 9 6 6 6-6" />
+    </Icon>
+  );
+}

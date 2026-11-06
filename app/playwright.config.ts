@@ -21,20 +21,27 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 15_000 },
   // A run that hangs (a server that stops answering) ends rather than going on forever.
-  // (A whole run takes about 20 minutes. scripts/run-e2e.mjs stops Playwright if
+  // (A whole run takes about 10 minutes. scripts/run-e2e.mjs stops Playwright if
   // it's still going a few minutes past this: change both together.)
   globalTimeout: 30 * 60_000,
   use: {
     baseURL,
     trace: "on-first-retry",
   },
-  // Every test runs on both. Tests that set their own viewport run the same way on
-  // each; the few that need a mouse, or a touch screen, skip the other project.
-  // The phone is an iPhone 13 (its whole 390x844 screen, touch input), in
-  // Chromium, the browser the tests install.
+  // Every test runs on the desktop. The phone runs only views.spec.ts, the walk
+  // through every view and dialog at a phone's size (tap targets, the home
+  // indicator): most tests are about what the app does, which doesn't change
+  // with the screen, and the ones about phones (touch, bottom sheets, narrow
+  // screens) set a phone's screen and touch themselves. The phone is an iPhone
+  // 13 (its whole 390x844 screen, touch input), in Chromium, the browser the
+  // tests install.
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } } },
-    { name: "mobile", use: { ...devices["iPhone 13"], browserName: "chromium", viewport: { width: 390, height: 844 } } },
+    {
+      name: "mobile",
+      testMatch: "views.spec.ts",
+      use: { ...devices["iPhone 13"], browserName: "chromium", viewport: { width: 390, height: 844 } },
+    },
   ],
   globalTeardown: "./e2e/global-teardown.ts",
   // Needs the docker compose database running and DATABASE_URL in .env.local.

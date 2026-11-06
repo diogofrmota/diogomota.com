@@ -5,6 +5,8 @@
   --menu-hover-bg: var(--hover);
   --menu-hover-text: var(--text);
   --menu-muted: var(--muted);
+  --menu-accent: var(--accent);
+  --menu-accent-soft: var(--accent-soft);
 
   position: sticky;
   top: 0;
@@ -39,10 +41,12 @@
 }
 
 /* As wide as its column (no auto margin, which would size it to the whole
-   username), the menu at its right end. */
+   username), the menu at its right end. A container, so the menu can leave out
+   the username's initial when the column is narrow (AccountMenu.module.css). */
 .withTabs .account {
   justify-content: flex-end;
   margin-left: 0;
+  container-type: inline-size;
 }
 
 /* diogomota.com. Never narrower than its content: the account menu gives way

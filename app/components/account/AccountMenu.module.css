@@ -5,10 +5,10 @@
   min-width: 0;
 }
 
+/* A 44px tap target; what shows is the pill inside it. */
 .button {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
   max-width: 100%;
   min-width: 2.75rem;
   min-height: 2.75rem;
@@ -18,22 +18,105 @@
   cursor: pointer;
 }
 
+/* Bordered and filled like a button, so it reads as one: the username's
+   initial, the username and a chevron. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.25rem;
+  padding: 0.1875rem 0.5rem 0.1875rem 0.1875rem;
+  border: 1px solid var(--menu-border);
+  border-radius: 999px;
+  background: var(--menu-bg);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+/* The ring around the pill rather than the whole tap target. */
+.button:focus-visible {
+  outline: none;
+}
+
+.button:focus-visible .pill {
+  outline: 2px solid var(--menu-accent);
+  outline-offset: 2px;
+}
+
+.button[aria-expanded="true"] .pill {
+  border-color: var(--menu-accent);
+  background: var(--menu-hover-bg);
+}
+
 @media (hover: hover) {
-  .button:hover {
-    text-decoration: underline;
+  .button:hover .pill {
+    background: var(--menu-hover-bg);
   }
+}
+
+.avatar {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--menu-accent-soft);
+  color: var(--menu-accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
 }
 
 /* Cut off with an ellipsis when the top bar is too narrow for it. */
 .name {
   overflow: hidden;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.caret {
+/* Turns over while the menu is open. */
+.chevron {
+  display: inline-flex;
+  flex-shrink: 0;
   color: var(--menu-muted);
-  font-size: 0.75em;
+  transition: transform 150ms ease;
+}
+
+.chevron svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.button[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill,
+  .chevron {
+    transition: none;
+  }
+}
+
+/* In an app on a phone (AppHeader makes the menu's column a container): the
+   tabs leave little room, so the initial goes and the username keeps it. */
+@container (max-width: 10rem) {
+  .avatar {
+    display: none;
+  }
+
+  .pill {
+    gap: 0.25rem;
+    padding-inline: 0.5rem 0.375rem;
+  }
+
+  .chevron svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
 }
 
 .list {
@@ -55,9 +138,17 @@
   display: none;
 }
 
+/* Logout, set apart from the links. */
+.separated {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--menu-border);
+}
+
 .item {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
   width: 100%;
   min-height: 2.75rem;
   padding: 0 0.75rem;
@@ -70,6 +161,13 @@
   cursor: pointer;
 }
 
+.item svg {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--menu-muted);
+}
+
 /* Inside the box, so the ring isn't drawn over the menu's border. */
 .item:focus-visible {
   outline-offset: -2px;
@@ -79,5 +177,9 @@
   .item:hover {
     background: var(--menu-hover-bg);
     color: var(--menu-hover-text);
+  }
+
+  .item:hover svg {
+    color: inherit;
   }
 }

@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { spaceChanged } from "@/app/shared/actions";
 import { Spinner } from "@/components/common/Spinner";
@@ -105,37 +104,34 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
 }
 
 /**
- * Shared's settings, in Settings (/settings): the user's space (its name, members,
- * invites, leaving), or a way to Shared to create or join one.
+ * Shared's Settings tab: the space's name, members, invites and leaving. The
+ * space is SharedApp's, and every change goes back to it (onChange): a new
+ * name shows in the other tabs, and leaving takes Shared back to creating or
+ * joining a space.
  */
-export function SpaceSettings({ initialSpace, userId }: { initialSpace: Space | null; userId: string }) {
-  const [space, setSpace] = useState(initialSpace);
-  // A new one each time the server renders the page again (the account menu's
-  // link from this page, a saved theme), and as new as any loaded here.
-  const [rendered, setRendered] = useState(initialSpace);
-  if (initialSpace !== rendered) {
-    setRendered(initialSpace);
-    setSpace(initialSpace);
-  }
+export function SpaceSettings({ space, userId, onChange }: {
+  space: Space;
+  userId: string;
+  onChange: (space: Space | null) => void;
+}) {
   const [loadError, setLoadError] = useState("");
   const [attempt, setAttempt] = useState(0);
-  // Loaded again whenever Shared is picked (Activity resumes this effect), so
+  // Loaded again each time the tab is shown (Activity resumes this effect), so
   // what other members changed meanwhile shows.
   useEffect(() => {
     let active = true;
-    spaceRequest<Space | null>().then((current) => { if (active) { setLoadError(""); setSpace(current); } })
+    spaceRequest<Space | null>().then((current) => { if (active) { setLoadError(""); onChange(current); } })
       .catch((err) => { if (active) setLoadError((err as Error).message); });
     return () => { active = false; };
-  }, [attempt]);
+  }, [attempt, onChange]);
 
-  return <div className={ui.stack}>
-    {loadError && <div role="alert" className={ui.alert}><p className={ui.alertText}>{loadError}</p>
-      <button className={ui.button} onClick={() => { setLoadError(""); setAttempt((n) => n + 1); }}>Retry</button></div>}
-    {space ? <SpaceCards space={space} userId={userId} onChange={setSpace} />
-      : <section className={ui.card} aria-labelledby="no-space-heading">
-        <h2 id="no-space-heading" className={ui.cardHeading}>No space yet</h2>
-        <p className={ui.muted}>Create a space, or join one with an invite code, in Shared. Its settings are here once you have one.</p>
-        <Link href="/shared" className={`${ui.button} ${ui.primary}`}>Open Shared</Link>
-      </section>}
+  return <div className={ui.view}>
+    <p className={ui.eyebrow}>{space.name}</p>
+    <h1 className={ui.heading}>Settings</h1>
+    <div className={ui.stack}>
+      {loadError && <div role="alert" className={ui.alert}><p className={ui.alertText}>{loadError}</p>
+        <button className={ui.button} onClick={() => { setLoadError(""); setAttempt((n) => n + 1); }}>Retry</button></div>}
+      <SpaceCards space={space} userId={userId} onChange={onChange} />
+    </div>
   </div>;
 }

@@ -52,13 +52,8 @@ export async function logIn(page: Page, login: string, password: string, path = 
   await page.getByRole("button", { name: "Log in" }).click();
 }
 
-/** Settings' dropdown, which picks the app whose settings show. */
-export function settingsPicker(page: Page) {
-  return page.getByRole("combobox", { name: "App", exact: true });
-}
-
 /** The account menu's items, top to bottom; on /apps, without Switch app. */
-export const accountMenuItems = ["Account", "Settings", "Switch app", "Logout"];
+export const accountMenuItems = ["Account", "Switch app", "Logout"];
 export const appsMenuItems = accountMenuItems.filter((item) => item !== "Switch app");
 
 /** Opens the account menu in the top bar (the username) and follows its link named `name`. */
@@ -67,20 +62,36 @@ export async function followAccountMenu(page: Page, name: string) {
   await page.getByRole("navigation", { name: "Account" }).getByRole("link", { name, exact: true }).click();
 }
 
+/** A tab of Shared's, in the middle of the top bar. */
+export function sharedTab(page: Page, view: "Calendar" | "Tasks" | "Settings") {
+  return page.getByRole("navigation", { name: "Shared", exact: true }).getByRole("button", { name: view, exact: true });
+}
+
 /**
- * Opens Settings (/settings) from the account menu, the way in to every app's
- * settings, and picks `app` in its dropdown if given (it opens on the app the
- * menu was in).
+ * Opens Shared's Settings tab: the space's name, members, invites and leaving.
+ * The space loads again each time the tab is shown.
  */
-export async function openSettings(page: Page, app?: "Shared" | "Shows") {
-  await page.getByRole("navigation", { name: "Account" }).locator("button[aria-expanded]").click();
-  const link = page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Settings", exact: true });
-  const href = await link.getAttribute("href");
-  await link.click();
-  // There, also when opened from Settings itself (where the heading already is).
-  await expect(page).toHaveURL(href!);
+export async function openSpaceSettings(page: Page) {
+  await sharedTab(page, "Settings").click();
   await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Settings");
-  if (app) await settingsPicker(page).selectOption({ label: app });
+}
+
+/**
+ * On /account: picks a theme in its Theme dropdown (opened if it isn't) and
+ * saves it, waiting for the response of the server action that does, which
+ * starts once the action has run (its headers say whether it revalidated).
+ */
+export async function saveTheme(page: Page, name: string) {
+  const form = page.getByRole("region", { name: "Theme", exact: true });
+  const details = form.locator("details");
+  if ((await details.getAttribute("open")) === null) await form.getByRole("heading", { name: "Theme", exact: true }).click();
+  await expect(details).toHaveAttribute("open", "");
+  await form.getByRole("radio", { name, exact: true }).check();
+  const saved = page.waitForResponse(
+    (response) => response.request().method() === "POST" && "next-action" in response.request().headers(),
+  );
+  await form.getByRole("button", { name: "Save theme" }).click();
+  expect((await saved).headers()["x-action-revalidated"]).toBeTruthy();
 }
 
 /** The account menu button in the top bar, labelled with the username. */

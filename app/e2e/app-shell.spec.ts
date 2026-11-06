@@ -1,9 +1,9 @@
 import { type Page } from "@playwright/test";
-import { accountButton, accountMenuItems, appsMenuItems, expect, followAccountMenu, newUser, openSettings, settingsPicker, signUp, test } from "./fixtures";
+import { accountButton, accountMenuItems, appsMenuItems, expect, followAccountMenu, newUser, saveTheme, signUp, test } from "./fixtures";
 
-// The tabs. Settings aren't one: Settings (/settings) opens from the account menu.
+// The tabs. Shared's settings are one of them; Shows has none.
 const appViews = [
-  { path: "/shared", name: "Shared", views: ["Calendar", "Tasks"] },
+  { path: "/shared", name: "Shared", views: ["Calendar", "Tasks", "Settings"] },
   { path: "/shows", name: "Shows", views: ["Home", "Discover", "Profile"] },
 ] as const;
 
@@ -26,19 +26,11 @@ async function openApp(page: Page, path: string) {
   return user;
 }
 
-/**
- * Picks a theme in Settings' Shows settings (opened from the account
- * menu) and waits for the response of the server action that saves it, which
- * starts once the action has run (its headers say whether it revalidated). The
- * body streams on with the re-rendered page.
- */
+/** Saves a theme in Account (/account), opened from the account menu. */
 async function chooseTheme(page: Page, theme: "Light 2" | "Dark 2") {
-  await openSettings(page, "Shows");
-  const saved = page.waitForResponse(
-    (response) => response.request().method() === "POST" && "next-action" in response.request().headers(),
-  );
-  await page.getByRole("radio", { name: theme, exact: true }).check();
-  expect((await saved).headers()["x-action-revalidated"]).toBeTruthy();
+  await followAccountMenu(page, "Account");
+  await expect(page).toHaveURL("/account");
+  await saveTheme(page, theme);
 }
 
 /** Reloads, and returns the page's HTML as the server sent it, before any script ran. */
@@ -87,10 +79,10 @@ test("back and forward move between views, and out of the app to /apps", async (
 
   await tab(page, "Shared", "Tasks").click();
   await expect(viewHeading(page)).toHaveText("Tasks");
-  await openSettings(page);
-  await expect(page).toHaveURL("/settings?app=shared");
+  await followAccountMenu(page, "Account");
+  await expect(page).toHaveURL("/account");
 
-  // Back from Settings, a page of its own, to the view it was opened on.
+  // Back from Account, a page of its own, to the view it was opened on.
   await page.goBack();
   await expect(viewHeading(page)).toHaveText("Tasks");
   await expect(tab(page, "Shared", "Tasks")).toHaveAttribute("aria-current", "page");
@@ -209,6 +201,10 @@ test("the top bar: in an app, its tabs in the middle and the account menu; elsew
     expect(Math.abs(tabs.x + tabs.width / 2 - (bar.x + bar.width / 2))).toBeLessThanOrEqual(1);
     expect(tabs.x + tabs.width).toBeLessThanOrEqual(menu.x);
     expect(menu.x + menu.width).toBeGreaterThan(bar.x + bar.width - 32);
+    // The view has the whole width.
+    const main = (await page.getByRole("main").boundingBox())!;
+    expect(main.x).toBe(0);
+    expect(main.width).toBe(bar.width);
 
     // NavLabel's visible text (its first span; the second is the hidden bold copy).
     const text = (view: string) => tab(page, app.name, view).locator("span > span").first();
@@ -225,88 +221,41 @@ test("the top bar: in an app, its tabs in the middle and the account menu; elsew
     }
   }
 
-  for (const path of ["/apps", "/account", "/settings"]) {
+  for (const path of ["/apps", "/account"]) {
     await page.goto(path);
     await expect(header.getByRole("link")).toHaveCount(1);
     await expect(header.getByRole("link", { name: "diogomota.com", exact: true })).toHaveAttribute("href", "/");
     await expect(header.getByRole("navigation")).toHaveCount(1);
     await expect(account).toBeVisible();
-    // The theme is chosen in Settings or Account, not in the top bar.
+    // The theme is chosen in Account, not in the top bar.
     await expect(header.getByRole("button", { name: /theme/i })).toHaveCount(0);
   }
 });
 
-/** Settings' section for an app, shown when the dropdown picks it. */
-const settingsSection = (page: Page, app: string) =>
-  page.getByRole("main").getByRole("region", { name: `${app} settings`, exact: true });
+test("the account menu: a button that shows it opens, with Account, Switch app and Logout, each with an icon; no Settings", async ({ page }) => {
+  const user = await openApp(page, "/shows");
+  const button = accountButton(page, user.username);
+  // The username's initial and a chevron, both hidden: the button is named by the username alone.
+  await expect(button).toContainText(user.username);
+  await expect(button.locator('[aria-hidden="true"]')).toHaveCount(2);
+  // Looks like a button: bordered all round.
+  await expect(button.locator("span").first()).toHaveCSS("border-top-style", "solid");
+  await expect(button).toHaveAttribute("aria-expanded", "false");
 
-for (const app of appViews) {
-  const id = app.path.slice(1);
-  const other = appViews.find((each) => each !== app)!;
-  const otherId = other.path.slice(1);
-  test(`${app.name}: the account menu opens Settings on ${app.name}, and its dropdown switches app`, async ({ page }) => {
-    const user = await openApp(page, app.path);
-    await accountButton(page, user.username).click();
-    const menu = page.getByRole("navigation", { name: "Account" }).getByRole("list");
-    await expect(menu.getByRole("listitem")).toHaveText(accountMenuItems);
-    await expect(menu.getByRole("link", { name: "Switch app" })).toHaveAttribute("href", "/apps");
-    await menu.getByRole("link", { name: "Settings", exact: true }).click();
-    await expect(page).toHaveURL(`/settings?app=${id}`);
-    await expect(page).toHaveTitle("Settings · diogo mota");
-    await expect(viewHeading(page)).toHaveText("Settings");
-    // In the apps' frame: the top bar of /apps, diogomota.com and no tabs.
-    await expect(page.getByRole("banner").getByRole("link", { name: "diogomota.com", exact: true })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: app.name, exact: true })).toHaveCount(0);
+  await button.click();
+  await expect(button).toHaveAttribute("aria-expanded", "true");
+  const menu = page.getByRole("navigation", { name: "Account" }).getByRole("list");
+  await expect(menu.getByRole("listitem")).toHaveText(accountMenuItems);
+  for (const item of await menu.getByRole("listitem").all()) await expect(item.locator("svg")).toHaveCount(1);
+  await expect(menu.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
+  await expect(menu.getByRole("link", { name: "Switch app" })).toHaveAttribute("href", "/apps");
+  await expect(menu.getByRole("link", { name: "Settings" })).toHaveCount(0);
 
-    // One app's settings at a time, picked in the dropdown; the URL follows it.
-    await expect(settingsPicker(page)).toHaveValue(id);
-    await expect(settingsPicker(page).getByRole("option")).toHaveText(["Shared", "Shows"]);
-    const check = async (name: string) => {
-      await expect(settingsSection(page, name)).toBeVisible();
-      await expect(settingsSection(page, name === "Shared" ? "Shows" : "Shared")).toBeHidden();
-      // openApp made a space for Shared's test, not for Shows'.
-      if (name === "Shared" && app.name === "Shared") await expect(settingsSection(page, name).getByLabel("Space name")).toHaveValue("Shell test space");
-      else if (name === "Shared") await expect(settingsSection(page, name).getByRole("heading", { name: "No space yet" })).toBeVisible();
-      else await expect(settingsSection(page, name).getByRole("radio", { name: "Dark 2", exact: true })).toBeChecked();
-    };
-    await check(app.name);
-    await settingsPicker(page).selectOption({ label: other.name });
-    await expect(page).toHaveURL(`/settings?app=${otherId}`);
-    await check(other.name);
-    await page.reload();
-    await expect(settingsPicker(page)).toHaveValue(otherId);
-    await check(other.name);
-    // The menu's link from Settings itself opens it on the first app.
-    await openSettings(page);
-    await expect(page).toHaveURL("/settings");
-    await expect(settingsPicker(page)).toHaveValue("shared");
-    await check("Shared");
-
-    // Back goes through the pages, not the dropdown's choices, to the view it was opened on.
-    await page.goBack();
-    await expect(page).toHaveURL(`/settings?app=${otherId}`);
-    await page.goBack();
-    await expect(page).toHaveURL(app.path);
-    await expect(viewHeading(page)).toHaveText(app.views[0]);
-  });
-}
-
-test("Settings for Shared, before there is a space, sends the user to Shared", async ({ page }) => {
-  const user = newUser();
-  await signUp(page, user, "/signup?next=%2Fshared");
-  await expect(viewHeading(page)).toHaveText("Your shared space");
-  // No tabs yet: the top bar has only the account menu.
-  await expect(page.getByRole("banner").getByRole("button")).toHaveCount(1);
-  await expect(page.getByRole("banner").getByRole("link")).toHaveCount(0);
-  await openSettings(page);
-  await expect(page).toHaveURL("/settings?app=shared");
-  await expect(settingsSection(page, "Shared").getByRole("heading", { name: "No space yet" })).toBeVisible();
-  await settingsSection(page, "Shared").getByRole("link", { name: "Open Shared" }).click();
-  await expect(page).toHaveURL("/shared");
-  await expect(viewHeading(page)).toHaveText("Your shared space");
+  // There is no Settings page: Shared's settings are its Settings tab, and the theme is in Account.
+  expect((await page.goto("/settings"))!.status()).toBe(404);
 });
 
-test("Back from Settings shows Shared as it is now, after creating or leaving the space", async ({ page }) => {
+test("Shared's Settings tab: only once there is a space, and leaving there goes back to creating or joining one", async ({ page }) => {
   // The space's changes are API calls; a server action then makes the pages the
   // browser kept for Back render again (app/shared/actions.ts). Its response
   // comes once that's done.
@@ -314,65 +263,44 @@ test("Back from Settings shows Shared as it is now, after creating or leaving th
     response.request().method() === "POST" && "next-action" in response.request().headers());
   await signUp(page, newUser(), "/signup?next=%2Fshared");
   await expect(viewHeading(page)).toHaveText("Your shared space");
+  // No tabs yet: the top bar has only the account menu.
+  await expect(page.getByRole("banner").getByRole("button")).toHaveCount(1);
+  await expect(page.getByRole("banner").getByRole("link")).toHaveCount(0);
   await page.getByLabel("Space name").fill("Back test space");
   let done = refreshed();
   await page.getByRole("button", { name: "Create a Space" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
   await done;
 
-  await openSettings(page);
-  await page.goBack();
-  await expect(page).toHaveURL("/shared");
-  await expect(viewHeading(page)).toHaveText("Calendar");
-
-  await page.goForward();
+  await tab(page, "Shared", "Settings").click();
+  await expect(viewHeading(page)).toHaveText("Settings");
   await expect(page.getByLabel("Space name")).toHaveValue("Back test space");
+  // A new name shows in the other tabs straight away.
+  await page.getByLabel("Space name").fill("Renamed space");
+  done = refreshed();
+  await page.getByRole("button", { name: "Save name" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toHaveText("Space name saved.");
+  await done;
+  await tab(page, "Shared", "Tasks").click();
+  await expect(page.getByRole("region", { name: "Shared tasks" }).getByText("Renamed space", { exact: true })).toBeVisible();
+
+  await tab(page, "Shared", "Settings").click();
   await page.getByRole("button", { name: "Leave space", exact: true }).click();
   done = refreshed();
   await page.getByRole("button", { name: "Confirm leave" }).click();
-  await expect(page.getByRole("heading", { name: "No space yet" })).toBeVisible();
+  await expect(viewHeading(page)).toHaveText("Your shared space");
+  await expect(tabBar(page, "Shared")).toHaveCount(0);
   await done;
+
+  // Back to /shared from another page shows it as it is now: no space.
+  await followAccountMenu(page, "Switch app");
+  await expect(page).toHaveURL("/apps");
   await page.goBack();
   await expect(page).toHaveURL("/shared");
   await expect(viewHeading(page)).toHaveText("Your shared space");
 });
 
-test("Settings is only for logged-in users", async ({ page }) => {
-  await page.goto("/settings?app=shows");
-  await expect(page).toHaveURL(`/apps?${new URLSearchParams({ next: "/settings?app=shows" })}`);
-});
-
-test("Apps, Shared and Shows share header sizing and fit a narrow screen", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 740 });
-  await page.goto("/apps");
-  await expectNoHorizontalScroll(page);
-  const user = { ...newUser(), username: `e2e_${Date.now()}abc` };
-  await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
-  let reference: unknown;
-  for (const path of ["/apps", "/shared", "/shows", "/settings"]) {
-    await page.goto(path);
-    const header = page.getByRole("banner");
-    await expect(header).toBeVisible();
-    const format = await header.evaluate(element => {
-      const style = getComputedStyle(element);
-      return { height: element.getBoundingClientRect().height, width: element.getBoundingClientRect().width,
-        font: style.fontFamily, padding: style.padding, position: style.position };
-    });
-    if (reference) expect(format).toEqual(reference);
-    else reference = format;
-    await accountButton(page, user.username).click();
-    await expect(header.getByRole("link", { name: "Account", exact: true })).toBeInViewport({ ratio: 1 });
-    const items = path === "/apps" ? appsMenuItems : accountMenuItems;
-    await expect(header.getByRole("navigation", { name: "Account" }).getByRole("listitem")).toHaveText(items);
-    for (const name of items.slice(0, -1)) await expect(header.getByRole("link", { name, exact: true })).toBeInViewport({ ratio: 1 });
-    await expectNoHorizontalScroll(page);
-  }
-});
-
-test("the theme in Settings saves to the account, and the saved theme is in the page as served", async ({
-  page,
-}) => {
+test("the theme saved in Account is in the page as served, in the apps and the pages around them", async ({ page }) => {
   await openApp(page, "/shows");
   const shell = page.locator("[data-theme]");
   const themeColor = page.locator('meta[name="theme-color"]');
@@ -385,29 +313,20 @@ test("the theme in Settings saves to the account, and the saved theme is in the 
   await expect(themeColor).toHaveAttribute("content", "#f1f5f9");
 
   // The server renders the saved theme into the HTML, so it applies before any
-  // script runs (no flash of the other theme on load): Settings, and the apps.
-  expect(await reloadHtml(page)).toContain('data-theme="light-2"');
-  await expect(page.getByRole("radio", { name: "Light 2", exact: true })).toBeChecked();
-  await page.goto("/shows");
-  expect(await reloadHtml(page)).toContain('data-theme="light-2"');
-  await expect(shell).toHaveAttribute("data-theme", "light-2");
-  await expect(page.locator("html")).toHaveCSS("background-color", "rgb(241, 245, 249)");
-  await expect(themeColor).toHaveAttribute("content", "#f1f5f9");
-
-  // The same preference everywhere: the other app, /apps and account settings.
-  await page.goto("/shared");
-  await expect(shell).toHaveAttribute("data-theme", "light-2");
-  await page.goto("/apps");
-  expect(await reloadHtml(page)).toContain('data-theme="light-2"');
-  await expect(shell).toHaveCSS("background-color", "rgb(241, 245, 249)");
-  await page.goto("/account");
-  await expect(shell).toHaveAttribute("data-theme", "light-2");
-  await page.getByRole("heading", { name: "Theme", exact: true }).click();
-  await expect(page.getByRole("radio", { name: "Light 2", exact: true })).toBeChecked();
+  // script runs (no flash of the other theme on load). The same preference
+  // everywhere: both apps, /apps and Account.
+  for (const path of ["/shows", "/shared", "/apps", "/account"]) {
+    await page.goto(path);
+    expect(await reloadHtml(page)).toContain('data-theme="light-2"');
+    await expect(shell).toHaveAttribute("data-theme", "light-2");
+    await expect(page.locator("html")).toHaveCSS("background-color", "rgb(241, 245, 249)");
+    await expect(themeColor).toHaveAttribute("content", "#f1f5f9");
+  }
 
   await page.goto("/shows");
   await chooseTheme(page, "Dark 2");
   await expect(shell).toHaveAttribute("data-theme", "dark-2");
+  await page.goto("/shows");
   expect(await reloadHtml(page)).toContain('data-theme="dark-2"');
   await expect(shell).toHaveAttribute("data-theme", "dark-2");
   await expect(shell).toHaveCSS("background-color", "rgb(0, 0, 0)");
@@ -417,68 +336,31 @@ test("the theme in Settings saves to the account, and the saved theme is in the 
 test("theme changes show on pages reached with the back button, and keep the view history", async ({
   page,
 }) => {
-  const user = await openApp(page, "/shows");
+  await openApp(page, "/shows");
   const shell = page.locator("[data-theme]");
   await tab(page, "Shows", "Discover").click();
   await chooseTheme(page, "Light 2");
   await expect(shell).toHaveAttribute("data-theme", "light-2");
 
-  // Back in the app: in the new theme, on the view Settings was opened from.
+  // Back in the app: in the new theme, on the view Account was opened from.
   await page.goBack();
   await expect(page).toHaveURL("/shows");
   await expect(viewHeading(page)).toHaveText("Discover");
   await expect(shell).toHaveAttribute("data-theme", "light-2");
-  await page.goForward();
-  await expect(viewHeading(page)).toHaveText("Settings");
-  await expect(settingsPicker(page)).toHaveValue("shows");
 
-  // The same for a change in account settings.
-  await accountButton(page, user.username).click();
-  await page.getByRole("link", { name: "Account", exact: true }).click();
+  // The same for a change in Account reached with forward.
+  await page.goForward();
   await expect(page).toHaveURL("/account");
-  await page.getByRole("heading", { name: "Theme", exact: true }).click();
-  await page.getByRole("radio", { name: "Dark 2", exact: true }).check();
-  await page.getByRole("button", { name: "Save theme" }).click();
-  await expect(page.getByRole("region", { name: "Theme" }).getByRole("status")).toHaveText("Theme saved.");
-  await page.goBack();
-  await expect(page).toHaveURL("/settings?app=shows");
+  await saveTheme(page, "Dark 2");
   await expect(shell).toHaveAttribute("data-theme", "dark-2");
-  await expect(page.getByRole("radio", { name: "Dark 2", exact: true })).toBeChecked();
   await page.goBack();
   await expect(page).toHaveURL("/shows");
   await expect(viewHeading(page)).toHaveText("Discover");
   await expect(shell).toHaveAttribute("data-theme", "dark-2");
 });
 
-test.describe("at 375px wide", () => {
+test.describe("on a phone", () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
-
-  test("the tabs are in the middle of the top bar, the account menu on the right, and nothing is along the bottom", async ({ page }) => {
-    const user = await openApp(page, "/shared");
-    const nav = tabBar(page, "Shared");
-    await expect(nav).toBeVisible();
-    // Once, in the top bar; the shell has no other navigation than the account menu.
-    await expect(page.locator('nav[aria-label="Shared"]')).toHaveCount(1);
-    await expect(page.locator("[data-theme] nav")).toHaveCount(2);
-
-    const box = (await nav.boundingBox())!;
-    const topBar = (await page.getByRole("banner").boundingBox())!;
-    expect(Math.abs(box.x + box.width / 2 - 375 / 2)).toBeLessThanOrEqual(1);
-    expect(box.y).toBeGreaterThanOrEqual(topBar.y);
-    expect(box.y + box.height).toBeLessThanOrEqual(topBar.y + topBar.height);
-    expect(box.x + box.width).toBeLessThanOrEqual((await accountButton(page, user.username).boundingBox())!.x);
-
-    await tab(page, "Shared", "Tasks").tap();
-    await expect(viewHeading(page)).toHaveText("Tasks");
-    await expect(page).toHaveURL("/shared");
-    await page.goBack();
-    await expect(viewHeading(page)).toHaveText("Calendar");
-
-    await expectNoHorizontalScroll(page);
-    await accountButton(page, user.username).click();
-    await expect(page.getByRole("link", { name: "Account", exact: true })).toBeInViewport({ ratio: 1 });
-    await expectNoHorizontalScroll(page);
-  });
 
   test("at 320px, the top bar still fits, the tabs whole and the username cut off if need be", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 740 });
@@ -500,34 +382,11 @@ test.describe("at 375px wide", () => {
       for (const view of app.views) expect((await tab(page, app.name, view).boundingBox())!.width).toBeGreaterThanOrEqual(44);
       expect((await account.boundingBox())!.width).toBeGreaterThanOrEqual(44);
       await expectNoHorizontalScroll(page);
+      await account.click();
+      for (const name of ["Account", "Switch app"]) await expect(page.getByRole("link", { name, exact: true })).toBeInViewport({ ratio: 1 });
+      await expectNoHorizontalScroll(page);
+      await page.keyboard.press("Escape");
     }
-  });
-});
-
-test.describe("at 1280px wide", () => {
-  test.use({ viewport: { width: 1280, height: 800 } });
-
-  test("the tabs are in the middle of the top bar, and the view has the whole width", async ({ page }) => {
-    await openApp(page, "/shows");
-    const header = page.getByRole("banner");
-    const nav = header.getByRole("navigation", { name: "Shows", exact: true });
-    await expect(nav).toBeVisible();
-    await expect(page.locator('nav[aria-label="Shows"]:visible')).toHaveCount(1);
-    await expect(nav.getByRole("button")).toHaveCount(3);
-
-    const box = (await nav.boundingBox())!;
-    const topBar = (await header.boundingBox())!;
-    expect(box.y).toBeGreaterThanOrEqual(topBar.y);
-    expect(box.y + box.height).toBeLessThanOrEqual(topBar.y + topBar.height);
-    expect(Math.abs(box.x + box.width / 2 - 640)).toBeLessThanOrEqual(1);
-
-    const main = (await page.getByRole("main").boundingBox())!;
-    expect(main.x).toBe(0);
-    expect(main.width).toBe(1280);
-
-    await tab(page, "Shows", "Profile").click();
-    await expect(viewHeading(page)).toHaveText("Profile");
-    await expectNoHorizontalScroll(page);
   });
 });
 

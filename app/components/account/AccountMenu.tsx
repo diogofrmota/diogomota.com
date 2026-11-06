@@ -3,17 +3,17 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { logOut } from "@/app/account/actions";
+import { AppsIcon, ChevronDownIcon, LogoutIcon, UserIcon } from "@/components/common/icons";
 import styles from "./AccountMenu.module.css";
 
-// The username in the top bar, opening Account (/account), Settings
-// (/settings, every app's settings), Switch app (/apps, the way from one app
-// to another; not on /apps itself) and Logout. A disclosure (a button that
+// The username in the top bar, drawn as a button (a pill with the username's
+// initial, the username and a chevron that turns over when open), opening
+// Account (/account), Switch app (/apps, the way from one app to another; not
+// on /apps itself) and Logout, each with its icon. A disclosure (a button that
 // shows a list) rather than an ARIA menu, so Tab moves through it like any
 // links. Escape, a click outside or tabbing away closes it.
-export function AccountMenu({ username, settingsHref, switchApp }: {
+export function AccountMenu({ username, switchApp }: {
   username: string;
-  /** Settings, open on the app the menu is in (lib/apps.ts, settingsHref). */
-  settingsHref: string;
   /** Whether to offer Switch app: everywhere but /apps, where the apps already are. */
   switchApp: boolean;
 }) {
@@ -48,6 +48,7 @@ export function AccountMenu({ username, settingsHref, switchApp }: {
         if (!rootRef.current?.contains(event.relatedTarget)) setOpen(false);
       }}
     >
+      {/* Named by the username alone: the initial and the chevron are hidden. */}
       <button
         ref={buttonRef}
         type="button"
@@ -56,32 +57,35 @@ export function AccountMenu({ username, settingsHref, switchApp }: {
         aria-controls={listId}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className={styles.name}>{username}</span>
-        <span aria-hidden="true" className={styles.caret}>
-          ▾
+        <span className={styles.pill}>
+          <span aria-hidden="true" className={styles.avatar}>
+            {username.charAt(0).toUpperCase()}
+          </span>
+          <span className={styles.name}>{username}</span>
+          <span className={styles.chevron}>
+            <ChevronDownIcon />
+          </span>
         </span>
       </button>
       <ul id={listId} className={styles.list} hidden={!open}>
         <li>
           <Link href="/account" className={styles.item} onClick={() => setOpen(false)}>
+            <UserIcon />
             Account
-          </Link>
-        </li>
-        <li>
-          <Link href={settingsHref} className={styles.item} onClick={() => setOpen(false)}>
-            Settings
           </Link>
         </li>
         {switchApp && (
           <li>
             <Link href="/apps" className={styles.item} onClick={() => setOpen(false)}>
+              <AppsIcon />
               Switch app
             </Link>
           </li>
         )}
-        <li>
+        <li className={styles.separated}>
           <form action={logOut}>
             <button type="submit" className={styles.item}>
+              <LogoutIcon />
               Logout
             </button>
           </form>

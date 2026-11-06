@@ -1,5 +1,5 @@
-/* Every theme's colors, as variables: the user picks one in /account or
-   /settings (components/common/ThemePicker). Each theme's id and name are in
+/* Every theme's colors, as variables: the user picks one in /account
+   (components/common/ThemePicker). Each theme's id and name are in
    lib/themes.ts, and the database accepts only those ids (db/migrations): a new
    theme goes in all three.
 

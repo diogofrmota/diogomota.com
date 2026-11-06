@@ -13,25 +13,27 @@ async function expectNoHorizontalScroll(page: Page) {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
-for (const width of [320, 375]) {
-  test.describe(`at ${width}px wide`, () => {
-    test.use({ viewport: { width, height: 740 }, isMobile: true, hasTouch: true });
+// The narrowest phones: views.spec.ts checks these pages at 390 and 375 px.
+test.describe("at 320px wide", () => {
+  test.use({ viewport: { width: 320, height: 740 }, isMobile: true, hasTouch: true });
 
+  test("no page scrolls sideways, nor /apps with the login prompt open", async ({ page }) => {
     for (const path of pages) {
-      test(`${path} has no horizontal scroll`, async ({ page }) => {
-        await page.goto(path);
-        await expectNoHorizontalScroll(page);
-      });
-    }
-
-    test("/apps with the login prompt open has no horizontal scroll", async ({ page }) => {
-      await page.goto("/apps");
-      await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
-      await expect(page.getByRole("dialog")).toBeVisible();
+      await page.goto(path);
       await expectNoHorizontalScroll(page);
-    });
+    }
+    await page.goto("/apps");
+    await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expectNoHorizontalScroll(page);
   });
-}
+});
+
+test("health check reports ok", async ({ request }) => {
+  const response = await request.get("/api/health");
+  expect(response.status()).toBe(200);
+  expect(await response.json()).toEqual({ status: "ok" });
+});
 
 test("unknown URLs get a 404 page in the site style", async ({ page }) => {
   const response = await page.goto("/no-such-page");

@@ -33,8 +33,8 @@ function Dropdown({ id, title, children }: { id: string; title: string; children
   );
 }
 
-// Account settings, opened from the account menu. Like /apps and /settings, in
-// the apps' frame and the user's theme, which is also set here.
+// Account settings, opened from the account menu. Like /apps, in the apps'
+// frame and the user's theme, which is set here (and only here).
 export default async function AccountPage() {
   const { id } = await requireUser("/account");
   const user = await findUserById(id);

@@ -1,5 +1,5 @@
 /**
- * The themes a user can pick, in /account and /settings, in the order they are
+ * The themes a user can pick, in /account, in the order they are
  * listed there. Each one's colors are in components/common/themes.module.css,
  * under its id, and the database accepts only these ids (db/migrations): a new
  * theme goes in all three. `background` is the theme's --bg, for the browser's

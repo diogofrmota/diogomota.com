@@ -12,7 +12,9 @@
 //   is going in this folder.
 // - During: Playwright ends a run after its globalTimeout; if it's still
 //   running a few minutes after that, it is stopped.
-// - After: the same as before, for anything Playwright didn't stop itself.
+// - After: stops what this run's Playwright started and didn't stop itself (its
+//   workers and browsers, its test server), and nothing else: another run
+//   starting meanwhile is left alone.
 //
 // The processes are found by their command lines, which name this folder:
 // on Windows the owner of a port can't be read reliably (netstat's output is
@@ -132,11 +134,36 @@ function stopTree(pid, list) {
   }
 }
 
+/** Waits until these processes are gone (and the test server's port with them), for up to 10 s. */
+async function gone(stopped) {
+  for (let i = 0; i < 100 && stopped.some((p) => alive(p.pid)); i++) await new Promise((resolve) => setTimeout(resolve, 100));
+}
+
 /**
- * Stops what was left running in this folder (see the top), saying so after
- * `heading`. Returns why the tests can't run now, or null.
+ * After the run: stops what its Playwright (`pid`, which has exited) started and
+ * left running. Those are the processes whose parent it was: its workers, and
+ * the shell its test server runs in, each with what they started in turn.
  */
-async function stopLeftovers(heading) {
+async function stopWhatPlaywrightLeft(pid) {
+  let list;
+  try {
+    list = processes();
+  } catch {
+    return;
+  }
+  const left = list.filter((p) => p.ppid === pid);
+  if (!left.length) return;
+  for (const p of left) stopTree(p.pid, list);
+  const name = (p) => kind(p.command) === "worker" ? "a test worker and its browser" : /\sdev\b/.test(p.command) ? "the test server" : "a process";
+  console.log(`Stopped what the test run left running: ${left.map((p) => `${name(p)} (pid ${p.pid})`).join(", ")}.`);
+  await gone(left);
+}
+
+/**
+ * Before the run: stops what was left running in this folder (see the top).
+ * Returns why the tests can't run now, or null.
+ */
+async function stopLeftovers() {
   let list;
   try {
     list = processes();
@@ -166,9 +193,8 @@ async function stopLeftovers(heading) {
   };
   if (leftovers.length) {
     for (const p of leftovers) stopTree(p.pid, list);
-    console.log(`${heading}: ${leftovers.map((p) => `${names[p.kind]} (pid ${p.pid})`).join(", ")}.`);
-    // Until they are gone, and the test server's port with them.
-    for (let i = 0; i < 100 && leftovers.some((p) => alive(p.pid)); i++) await new Promise((resolve) => setTimeout(resolve, 100));
+    console.log(`Stopped what was left running in this folder: ${leftovers.map((p) => `${names[p.kind]} (pid ${p.pid})`).join(", ")}.`);
+    await gone(leftovers);
   }
 
   // A dev server of this folder that's still running, now, is someone's own.
@@ -181,7 +207,7 @@ async function stopLeftovers(heading) {
   return null;
 }
 
-const blocked = await stopLeftovers("Stopped what was left running in this folder");
+const blocked = await stopLeftovers();
 if (blocked) {
   console.error(blocked);
   process.exit(1);
@@ -206,6 +232,6 @@ const deadline = setTimeout(() => {
 
 playwright.on("exit", async (code) => {
   clearTimeout(deadline);
-  await stopLeftovers("Stopped what the test run left running");
+  await stopWhatPlaywrightLeft(playwright.pid);
   process.exit(code ?? 1);
 });

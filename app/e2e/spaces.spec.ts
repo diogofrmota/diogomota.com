@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { randomBytes } from "node:crypto";
-import { expect, newUser, openSettings, signUp, test } from "./fixtures";
+import { expect, newUser, openSpaceSettings, sharedTab, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
 import type { Space } from "../lib/space-types";
 
@@ -18,9 +18,9 @@ async function create(page: Page, name = "Our home") {
   await expect(page.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
   return (await (await page.request.get(base)).json()).data as Space;
 }
-/** Settings, on Shared's settings: the space's. */
+/** Shared's Settings tab: the space's settings. */
 async function settings(page: Page) {
-  await openSettings(page, "Shared");
+  await openSpaceSettings(page);
   await expect(page.getByRole("region", { name: "Members" })).toBeVisible();
 }
 async function generate(page: Page, id: string) {
@@ -32,12 +32,10 @@ async function join(page: Page, code: string) {
   await page.getByLabel("Invite code").fill(code);
   await page.getByRole("button", { name: "Join with Code" }).click();
 }
-/** Leaves the space from its settings, then goes to Shared, which offers to create or join one. */
+/** Leaves the space from its settings; Shared then offers to create or join one. */
 async function leave(page: Page) {
   await page.getByRole("button", { name: "Leave space", exact: true }).click();
   await page.getByRole("button", { name: "Confirm leave" }).click();
-  await expect(page.getByRole("heading", { name: "No space yet" })).toBeVisible();
-  await page.getByRole("link", { name: "Open Shared" }).click();
   await expect(page.getByRole("heading", { name: "Your shared space" })).toBeVisible();
 }
 
@@ -77,11 +75,14 @@ test("two users create, copy invite, join, rename, transfer ownership and delete
     await page.getByLabel("Space name").fill("Lisbon home");
     await page.getByRole("button", { name: "Save name" }).click();
     await expect(page.getByRole("status")).toHaveText("Space name saved.");
-    // The other member's settings show the new name once loaded again.
-    await other.reload();
+    // The other member's settings show the new name once shown again: the tab loads the space each time.
+    await sharedTab(other, "Calendar").click();
+    await settings(other);
     await expect(other.getByLabel("Space name")).toHaveValue("Lisbon home");
     await leave(page);
     expect((await page.request.get(`${base}/${space.id}`)).status()).toBe(404);
+    // Now the owner, once the tab loads the space again.
+    await sharedTab(other, "Calendar").click();
     await settings(other);
     await expect(other.getByRole("button", { name: "Save name" })).toBeVisible();
     await expect(other.getByRole("region", { name: "Members" })).toContainText("owner");
