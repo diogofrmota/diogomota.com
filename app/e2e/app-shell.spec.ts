@@ -1,5 +1,5 @@
 import { type Page } from "@playwright/test";
-import { accountButton, accountMenuItems, expect, followAccountMenu, newUser, openSettings, settingsPicker, signUp, test } from "./fixtures";
+import { accountButton, accountMenuItems, appsMenuItems, expect, followAccountMenu, newUser, openSettings, settingsPicker, signUp, test } from "./fixtures";
 
 // The tabs. Settings aren't one: Settings (/settings) opens from the account menu.
 const appViews = [
@@ -7,7 +7,7 @@ const appViews = [
   { path: "/shows", name: "Shows", views: ["Home", "Discover", "Profile"] },
 ] as const;
 
-/** The app's tabs, on the left of the top bar at every width. */
+/** The app's tabs, in the middle of the top bar at every width. */
 const tabBar = (page: Page, app: string) => page.getByRole("navigation", { name: app, exact: true });
 const tab = (page: Page, app: string, view: string) =>
   tabBar(page, app).getByRole("button", { name: view, exact: true });
@@ -105,15 +105,15 @@ test("back and forward move between views, and out of the app to /apps", async (
   await expect(viewHeading(page)).toHaveText("Calendar");
   await page.goBack();
   await expect(page).toHaveURL("/apps");
-  await expect(page.getByRole("heading", { level: 1, name: /^apps/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /^Apps/ })).toBeVisible();
   await page.goForward();
   await expect(page).toHaveURL("/shared");
   await expect(viewHeading(page)).toHaveText("Calendar");
   await page.goForward();
   await expect(viewHeading(page)).toHaveText("Tasks");
 
-  // Same after leaving with Switch apps, in the account menu.
-  await followAccountMenu(page, "Switch apps");
+  // Same after leaving with Switch app, in the account menu.
+  await followAccountMenu(page, "Switch app");
   await expect(page).toHaveURL("/apps");
   await page.goBack();
   await expect(page).toHaveURL("/shared");
@@ -160,31 +160,37 @@ test("back pressed while the page is still loading still goes to the previous vi
   await expect(viewHeading(page)).toHaveText("Home");
 });
 
-test("Switch apps, in the account menu, goes to /apps, the way to the other app and to the site", async ({ page }) => {
+test("Switch app, in the account menu, goes to /apps, the way to the other app and to the site; /apps itself has no Switch app", async ({ page }) => {
   const user = await openApp(page, "/shared");
   await accountButton(page, user.username).click();
   await expect(page.getByRole("link", { name: "Account", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("link", { name: "Account", exact: true })).toBeHidden();
 
-  await followAccountMenu(page, "Switch apps");
+  await followAccountMenu(page, "Switch app");
   await expect(page).toHaveURL("/apps");
+  // Not on /apps itself, where the apps already are.
+  await accountButton(page, user.username).click();
+  const menu = page.getByRole("navigation", { name: "Account" }).getByRole("list");
+  await expect(menu.getByRole("listitem")).toHaveText(appsMenuItems);
+  await expect(menu.getByRole("link", { name: "Switch app" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
   await expect(page).toHaveURL("/shows");
   await expect(viewHeading(page)).toHaveText("Home");
-  await followAccountMenu(page, "Switch apps");
+  await followAccountMenu(page, "Switch app");
   await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
   await expect(viewHeading(page)).toHaveText("Calendar");
 
   // diogomota.com is on /apps, not in the apps.
   await expect(page.getByRole("banner").getByRole("link", { name: "diogomota.com" })).toHaveCount(0);
-  await followAccountMenu(page, "Switch apps");
+  await followAccountMenu(page, "Switch app");
   await page.getByRole("banner").getByRole("link", { name: "diogomota.com", exact: true }).click();
   await expect(page).toHaveURL("/");
 });
 
-test("the top bar: in an app, its tabs and the account menu; elsewhere, diogomota.com and the account menu", async ({ page }) => {
+test("the top bar: in an app, its tabs in the middle and the account menu; elsewhere, diogomota.com and the account menu", async ({ page }) => {
   const user = await openApp(page, "/shared");
   const header = page.getByRole("banner");
   const account = accountButton(page, user.username);
@@ -194,11 +200,15 @@ test("the top bar: in an app, its tabs and the account menu; elsewhere, diogomot
     await expect(header.getByRole("link")).toHaveCount(0);
     await expect(header.getByRole("navigation")).toHaveCount(2);
     await expect(header.getByRole("button")).toHaveCount(app.views.length + 1);
-    await expect(tabBar(page, app.name).getByRole("button")).toHaveText([...app.views]);
-    // The tabs on the left, the account menu on the right.
+    // By name: each label's text is there twice (NavLabel's hidden bold copy).
+    for (const [i, view] of app.views.entries()) await expect(tabBar(page, app.name).getByRole("button").nth(i)).toHaveAccessibleName(view);
+    // The tabs in the middle of the bar, the account menu on the right.
     const tabs = (await tabBar(page, app.name).boundingBox())!;
+    const bar = (await header.boundingBox())!;
     const menu = (await account.boundingBox())!;
+    expect(Math.abs(tabs.x + tabs.width / 2 - (bar.x + bar.width / 2))).toBeLessThanOrEqual(1);
     expect(tabs.x + tabs.width).toBeLessThanOrEqual(menu.x);
+    expect(menu.x + menu.width).toBeGreaterThan(bar.x + bar.width - 32);
 
     // NavLabel's visible text (its first span; the second is the hidden bold copy).
     const text = (view: string) => tab(page, app.name, view).locator("span > span").first();
@@ -239,7 +249,7 @@ for (const app of appViews) {
     await accountButton(page, user.username).click();
     const menu = page.getByRole("navigation", { name: "Account" }).getByRole("list");
     await expect(menu.getByRole("listitem")).toHaveText(accountMenuItems);
-    await expect(menu.getByRole("link", { name: "Switch apps" })).toHaveAttribute("href", "/apps");
+    await expect(menu.getByRole("link", { name: "Switch app" })).toHaveAttribute("href", "/apps");
     await menu.getByRole("link", { name: "Settings", exact: true }).click();
     await expect(page).toHaveURL(`/settings?app=${id}`);
     await expect(page).toHaveTitle("Settings · diogo mota");
@@ -353,8 +363,9 @@ test("Apps, Shared and Shows share header sizing and fit a narrow screen", async
     else reference = format;
     await accountButton(page, user.username).click();
     await expect(header.getByRole("link", { name: "Account", exact: true })).toBeInViewport({ ratio: 1 });
-    await expect(header.getByRole("navigation", { name: "Account" }).getByRole("listitem")).toHaveText(accountMenuItems);
-    for (const name of accountMenuItems.slice(0, 3)) await expect(header.getByRole("link", { name, exact: true })).toBeInViewport({ ratio: 1 });
+    const items = path === "/apps" ? appsMenuItems : accountMenuItems;
+    await expect(header.getByRole("navigation", { name: "Account" }).getByRole("listitem")).toHaveText(items);
+    for (const name of items.slice(0, -1)) await expect(header.getByRole("link", { name, exact: true })).toBeInViewport({ ratio: 1 });
     await expectNoHorizontalScroll(page);
   }
 });
@@ -442,7 +453,7 @@ test("theme changes show on pages reached with the back button, and keep the vie
 test.describe("at 375px wide", () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
-  test("the tabs are in the top bar, on the left of the account menu, and nothing is along the bottom", async ({ page }) => {
+  test("the tabs are in the middle of the top bar, the account menu on the right, and nothing is along the bottom", async ({ page }) => {
     const user = await openApp(page, "/shared");
     const nav = tabBar(page, "Shared");
     await expect(nav).toBeVisible();
@@ -452,7 +463,7 @@ test.describe("at 375px wide", () => {
 
     const box = (await nav.boundingBox())!;
     const topBar = (await page.getByRole("banner").boundingBox())!;
-    expect(box.x).toBeLessThan(16);
+    expect(Math.abs(box.x + box.width / 2 - 375 / 2)).toBeLessThanOrEqual(1);
     expect(box.y).toBeGreaterThanOrEqual(topBar.y);
     expect(box.y + box.height).toBeLessThanOrEqual(topBar.y + topBar.height);
     expect(box.x + box.width).toBeLessThanOrEqual((await accountButton(page, user.username).boundingBox())!.x);
@@ -481,6 +492,8 @@ test.describe("at 375px wide", () => {
       await expect(viewHeading(page)).toHaveText(app.views[0]);
       await expect(account).toBeInViewport({ ratio: 1 });
       for (const view of app.views) await expect(tab(page, app.name, view)).toBeInViewport({ ratio: 1 });
+      const tabs = (await tabBar(page, app.name).boundingBox())!;
+      expect(Math.abs(tabs.x + tabs.width / 2 - 160)).toBeLessThanOrEqual(1);
       // Side by side, not over one another, and each at least 44px wide to tap.
       const last = (await tab(page, app.name, app.views.at(-1)!).boundingBox())!;
       expect(last.x + last.width).toBeLessThanOrEqual((await account.boundingBox())!.x);
@@ -494,7 +507,7 @@ test.describe("at 375px wide", () => {
 test.describe("at 1280px wide", () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
-  test("the tabs are on the left of the top bar, and the view has the whole width", async ({ page }) => {
+  test("the tabs are in the middle of the top bar, and the view has the whole width", async ({ page }) => {
     await openApp(page, "/shows");
     const header = page.getByRole("banner");
     const nav = header.getByRole("navigation", { name: "Shows", exact: true });
@@ -506,7 +519,7 @@ test.describe("at 1280px wide", () => {
     const topBar = (await header.boundingBox())!;
     expect(box.y).toBeGreaterThanOrEqual(topBar.y);
     expect(box.y + box.height).toBeLessThanOrEqual(topBar.y + topBar.height);
-    expect(box.x).toBeLessThan(24);
+    expect(Math.abs(box.x + box.width / 2 - 640)).toBeLessThanOrEqual(1);
 
     const main = (await page.getByRole("main").boundingBox())!;
     expect(main.x).toBe(0);

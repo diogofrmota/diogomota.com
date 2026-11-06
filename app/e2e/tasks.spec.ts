@@ -243,6 +243,10 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
     if (!isMobile) return row(page, title).getByRole("button", { name: `Delete ${title}` }).click();
     await row(page, title).getByRole("button", { name: new RegExp(`^${title}`) }).click();
     await dialog.getByRole("button", { name: "Delete task" }).click();
+    // A finger lifts after the tap; the emulated mouse stays where it clicked, at
+    // the foot of the sheet, where the undo message then shows (and pauses while
+    // a pointer is on it).
+    await page.mouse.move(0, 0);
   };
   const deletes: string[] = [];
   page.on("request", (r) => { if (r.method() === "DELETE") deletes.push(r.url()); });

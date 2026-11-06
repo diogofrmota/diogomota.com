@@ -59,8 +59,8 @@ export function AppFrame({ theme, username, next, brand, account, nav, children,
   );
 }
 
-// An app in the frame: the top bar (the app's tabs, then the account menu, with
-// Settings and Switch apps) and the current view. The apps' settings are a page
+// An app in the frame: the top bar (the app's tabs in the middle, the account
+// menu, with Settings and Switch app, on the right) and the current view. The apps' settings are a page
 // of their own, /settings, opened from the account menu. The URL stays the
 // same; useAppView keeps the view in history entries for the back button.
 //

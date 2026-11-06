@@ -30,8 +30,23 @@
   }
 }
 
-/* diogomota.com or the app's tabs. Never narrower than its content: the
-   account menu gives way instead (the username is cut off). */
+/* In an app: the tabs in the middle of the bar, between two columns of the
+   same width, the account menu in the right one (cut off with an ellipsis if
+   the username doesn't fit). The left one is empty. */
+.withTabs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+/* As wide as its column (no auto margin, which would size it to the whole
+   username), the menu at its right end. */
+.withTabs .account {
+  justify-content: flex-end;
+  margin-left: 0;
+}
+
+/* diogomota.com. Never narrower than its content: the account menu gives way
+   instead (the username is cut off). */
 .start {
   display: flex;
   flex-shrink: 0;

@@ -8,7 +8,7 @@ import { SpaceWelcome } from "./SpaceWelcome";
 import { Calendar } from "./Calendar";
 import { Tasks } from "./Tasks";
 
-// Calendar and Tasks for the user's space, tabs on the left of the top bar, or
+// Calendar and Tasks for the user's space, tabs in the middle of the top bar, or
 // before there is one, creating or joining one (and no tabs). The space's
 // settings (its name, members, invites, leaving) are in Settings (/settings),
 // from the account menu.

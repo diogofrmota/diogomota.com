@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export const viewport = appViewport;
 
-// The way into the apps, and between them (Switch apps in the account menu).
+// The way into the apps, and between them (Switch app in the apps' account menu).
 // In the apps' frame and the user's theme (dark when logged out); the top bar
 // has diogomota.com and the account menu, or Login and Sign Up.
 //

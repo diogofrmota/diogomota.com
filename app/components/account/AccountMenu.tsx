@@ -6,14 +6,16 @@ import { logOut } from "@/app/account/actions";
 import styles from "./AccountMenu.module.css";
 
 // The username in the top bar, opening Account (/account), Settings
-// (/settings, every app's settings), Switch apps (/apps, the way from one app
-// to another) and Logout. A disclosure (a button that shows a list) rather than
-// an ARIA menu, so Tab moves through it like any links. Escape, a click outside
-// or tabbing away closes it.
-export function AccountMenu({ username, settingsHref }: {
+// (/settings, every app's settings), Switch app (/apps, the way from one app
+// to another; not on /apps itself) and Logout. A disclosure (a button that
+// shows a list) rather than an ARIA menu, so Tab moves through it like any
+// links. Escape, a click outside or tabbing away closes it.
+export function AccountMenu({ username, settingsHref, switchApp }: {
   username: string;
   /** Settings, open on the app the menu is in (lib/apps.ts, settingsHref). */
   settingsHref: string;
+  /** Whether to offer Switch app: everywhere but /apps, where the apps already are. */
+  switchApp: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -70,11 +72,13 @@ export function AccountMenu({ username, settingsHref }: {
             Settings
           </Link>
         </li>
-        <li>
-          <Link href="/apps" className={styles.item} onClick={() => setOpen(false)}>
-            Switch apps
-          </Link>
-        </li>
+        {switchApp && (
+          <li>
+            <Link href="/apps" className={styles.item} onClick={() => setOpen(false)}>
+              Switch app
+            </Link>
+          </li>
+        )}
         <li>
           <form action={logOut}>
             <button type="submit" className={styles.item}>

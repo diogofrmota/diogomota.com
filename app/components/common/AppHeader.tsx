@@ -17,17 +17,18 @@ export function NavLabel({ children }: { children: string }) {
 }
 
 /**
- * The one top bar of the apps and the pages around them, at every width. On
- * the left, inside an app, the app's tabs (HeaderTabs); on /apps, /settings,
- * /account and the login pages, diogomota.com. On the right, the account menu
- * (where Switch apps goes back to /apps), or Login and Sign Up.
+ * The one top bar of the apps and the pages around them, at every width.
+ * Inside an app, the app's tabs (HeaderTabs) in the middle; on /apps,
+ * /settings, /account and the login pages, diogomota.com on the left. On the
+ * right, the account menu (where Switch app goes to /apps, except on /apps
+ * itself), or Login and Sign Up.
  */
 export function AppHeader({ pathname, username, next, tabs, brand = true, account = true }: {
   /** The page's path, to open Settings on the app it belongs to. */
   pathname?: string;
   username: string | null;
   next?: string | null;
-  /** The open app's tabs (HeaderTabs), on the left. */
+  /** The open app's tabs (HeaderTabs), in the middle. */
   tabs?: React.ReactNode;
   /** diogomota.com on the left. The apps leave it out. */
   brand?: boolean;
@@ -35,13 +36,13 @@ export function AppHeader({ pathname, username, next, tabs, brand = true, accoun
   account?: boolean;
 }) {
   const open = apps.find((app) => pathname === app.href || pathname?.startsWith(`${app.href}/`));
-  return <header className={styles.header}>
+  return <header className={`${styles.header} ${tabs ? styles.withTabs : ""}`}>
     <div className={styles.start}>
       {brand && <Link href="/" className={styles.brand}>{siteDomain}</Link>}
-      {tabs}
     </div>
+    {tabs}
     {account && <nav aria-label="Account" className={styles.account}>
-      {username ? <AccountMenu username={username} settingsHref={settingsHref(open)} /> : <>
+      {username ? <AccountMenu username={username} settingsHref={settingsHref(open)} switchApp={pathname !== "/apps"} /> : <>
         <Link href={authHref("/login", next)} className={styles.authLink}>Login</Link>
         <Link href={authHref("/signup", next)} className={styles.authLink}>Sign Up</Link>
       </>}

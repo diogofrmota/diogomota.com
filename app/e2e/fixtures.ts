@@ -57,8 +57,9 @@ export function settingsPicker(page: Page) {
   return page.getByRole("combobox", { name: "App", exact: true });
 }
 
-/** The account menu's items, top to bottom. */
-export const accountMenuItems = ["Account", "Settings", "Switch apps", "Logout"];
+/** The account menu's items, top to bottom; on /apps, without Switch app. */
+export const accountMenuItems = ["Account", "Settings", "Switch app", "Logout"];
+export const appsMenuItems = accountMenuItems.filter((item) => item !== "Switch app");
 
 /** Opens the account menu in the top bar (the username) and follows its link named `name`. */
 export async function followAccountMenu(page: Page, name: string) {

@@ -17,7 +17,8 @@
   border: 1px solid var(--border);
   border-radius: 1rem;
   background: var(--surface);
-  transition: border-color 0.15s, background-color 0.15s;
+  /* Not the background: it changes with the theme, and would fade between them. */
+  transition: border-color 0.15s;
 }
 
 @media (hover: hover) {

@@ -2,7 +2,7 @@ import type { TabNavProps } from "./AppShell";
 import { NavLabel } from "./AppHeader";
 import styles from "./AppHeader.module.css";
 
-// The app's tabs, on the left of the top bar at every width. Buttons rather
+// The app's tabs, in the middle of the top bar at every width. Buttons rather
 // than links: the URL never changes.
 export function HeaderTabs({ label, tabs, current, onSelect }: TabNavProps) {
   return (
