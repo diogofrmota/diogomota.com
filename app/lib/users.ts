@@ -68,16 +68,18 @@ export async function getPasswordHash(id: string): Promise<string | null> {
 }
 
 // Returns null when the username or the email is already taken, without saying which.
+// New accounts start in the default theme (lib/themes.ts), set here rather than
+// left to the column's default, so the code says which one it is.
 export async function createUser(
   username: string,
   email: string,
   passwordHash: string,
 ): Promise<User | null> {
   const { rows } = await query<User>(
-    `INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3)
+    `INSERT INTO users (username, email, password_hash, theme_preference) VALUES ($1, $2, $3, $4)
      ON CONFLICT DO NOTHING
      RETURNING ${userColumns}`,
-    [username, email, passwordHash],
+    [username, email, passwordHash, defaultTheme],
   );
   return rows[0] ?? null;
 }

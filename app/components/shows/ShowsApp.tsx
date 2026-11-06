@@ -31,7 +31,7 @@ function Panels() {
 export function ShowsApp({ username, theme }: { username: string; theme: Theme }) {
   return <LibraryProvider>
     <AppShell name="Shows" username={username} theme={theme} tabs={[
-      { id: "home", label: "Home", view: <Home /> },
+      { id: "home", label: "Home", view: <Home username={username} /> },
       { id: "discover", label: "Discover", view: <Discover /> },
       { id: "profile", label: "Profile", view: <Profile username={username} /> },
     ]}>

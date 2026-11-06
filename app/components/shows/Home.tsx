@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAppView } from "@/hooks/useAppView";
 import { libraryStatuses, statusNames, type LibraryItem, type LibraryStatus, type MediaType } from "@/lib/show-types";
 import { TypeSwitch } from "./Discover";
 import { ChangeError, useLibrary } from "./library";
 import { LibrarySection } from "./LibraryGrid";
+import { Onboarding } from "./Onboarding";
 import { LoadError } from "./TitleGrid";
 import { TmdbAttribution } from "./TmdbAttribution";
 import styles from "./Shows.module.css";
@@ -28,8 +29,8 @@ function Section({ status, type, items }: { status: LibraryStatus; type: MediaTy
     items={items} empty={<Empty status={status} type={type} />} />;
 }
 
-// The first visit, and a library emptied again.
-function Welcome() {
+// An empty library once the guide is skipped or done, or emptied again.
+function Welcome({ onSetUp }: { onSetUp: () => void }) {
   const { setView, openPanel } = useAppView();
   return <div className={styles.welcome}>
     <h2>Start by discovering shows!</h2>
@@ -37,20 +38,39 @@ function Welcome() {
     <div className={styles.offerButtons}>
       <button type="button" className={styles.primary} onClick={() => setView("discover")}>Go to Discover</button>
       <button type="button" onClick={() => openPanel("search")}>Search</button>
+      <button type="button" onClick={onSetUp}>Set up step by step</button>
     </div>
   </div>;
 }
 
-/** The user's library: Watching, Planned and Completed, for TV shows or movies. */
-export function Home() {
+/**
+ * The user's library: Watching, Planned and Completed, for TV shows or movies.
+ * A library that is empty when the app opens gets the guide (Onboarding) instead.
+ */
+export function Home({ username }: { username: string }) {
   const { items, loadError, reload } = useLibrary();
   const [type, setType] = useState<MediaType>("tv");
+  // Whether the guide shows: decided once the library first loads, then until
+  // it is skipped or done, however many titles it adds; or until the user comes
+  // back to Home from another view with titles in the library (added in the
+  // guide or there), which then shows them. Home's effects end while another
+  // view is shown, and start again when it's back, in this order.
+  const [guide, setGuide] = useState<boolean | null>(null);
+  if (guide === null && items) setGuide(items.length === 0);
+  const hasTitles = useRef(false);
+  const left = useRef(false);
+  useEffect(() => { hasTitles.current = !!items?.length; }, [items]);
+  useEffect(() => {
+    if (left.current && hasTitles.current) setGuide((shown) => shown && false);
+    return () => { left.current = true; };
+  }, []);
   const ofType = items?.filter((item) => item.type === type) ?? null;
   return <div className={styles.view}>
     <h1 className={styles.heading}>Home</h1>
     <ChangeError className={`${styles.error} ${styles.viewError}`} />
     {!items && loadError ? <LoadError message={loadError} onRetry={reload} />
-      : items?.length === 0 ? <Welcome />
+      : items && guide ? <Onboarding username={username} onDone={() => setGuide(false)} />
+      : items?.length === 0 ? <Welcome onSetUp={() => setGuide(true)} />
       : <>
         <TypeSwitch type={type} onChange={setType} />
         {/* Keyed by type, so each section starts collapsed. */}

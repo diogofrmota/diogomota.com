@@ -18,13 +18,19 @@ export const themes = [
   { id: "dark-2", name: "Dark mode", background: "#000000", recommended: false },
   { id: "graphite", name: "Graphite", background: "#1f2023", recommended: true },
   { id: "dark-1", name: "Ocean", background: "#0b1120", recommended: false },
+  { id: "space", name: "Space", background: "#070818", recommended: false },
   { id: "blueprint", name: "Blueprint", background: "#123a6b", recommended: false },
+  { id: "retro", name: "Retro", background: "#0a0f0b", recommended: false },
 ] as const;
 
 export type Theme = (typeof themes)[number]["id"];
 
-/** Logged out, and new accounts' (the database's default): black, like the site's own pages. */
-export const defaultTheme: Theme = "dark-2";
+/**
+ * Out of the box: logged out (/apps, the login pages), and a new account's
+ * until they pick another in Account (lib/users.ts sets it at sign-up; it is
+ * the database's default too).
+ */
+export const defaultTheme: Theme = "minimal-neutrals";
 
 const ids: ReadonlySet<string> = new Set(themes.map((theme) => theme.id));
 

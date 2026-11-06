@@ -389,6 +389,69 @@ test("only accepted friends can read a library through the API, and every friend
   await stranger.context.close();
 });
 
+test("Add a friend suggests usernames while typing, and says whether an account has the one typed", async ({ page, browser }) => {
+  const me = await openShows(page);
+  const bob = await otherPerson(browser);
+  const ann = await otherPerson(browser);
+  // Ann already asked me.
+  expect((await ann.page.request.post("/api/shows/friends", { data: { username: me.username } })).status()).toBe(201);
+  await tab(page, "Profile").click();
+  const friends = section(page, "Friends");
+  const field = friends.getByRole("combobox", { name: "Add a friend" });
+  const list = friends.getByRole("listbox", { name: "Usernames" });
+
+  // The start of Bob's username (in any case, with an @): Bob, and nobody else's says "No account".
+  await field.fill(`@${bob.user.username.slice(0, 10).toUpperCase()}`);
+  await expect(field).toHaveAttribute("aria-expanded", "true");
+  await expect(list.getByRole("option")).toHaveCount(1);
+  await expect(list.getByRole("option")).toHaveAccessibleName(bob.user.username);
+  await expect(friends).not.toContainText("No account");
+  // Picked with the keyboard: the field has it, and says the account is there.
+  await field.press("ArrowDown");
+  await expect(list.getByRole("option", { name: bob.user.username })).toHaveAttribute("aria-selected", "true");
+  await expect(field).toHaveAttribute("aria-activedescendant", (await list.getByRole("option").first().getAttribute("id"))!);
+  await field.press("Enter");
+  await expect(field).toHaveValue(bob.user.username);
+  await expect(list).toBeHidden();
+  await expect(friends.getByText(`✓ ${bob.user.username} has an account`)).toBeVisible();
+  await friends.getByRole("button", { name: "Send request" }).click();
+  await expect(friends.getByRole("status")).toHaveText(`Friend request sent to ${bob.user.username}.`);
+
+  // How each is connected, picked with a tap; Escape closes the list.
+  await field.fill(ann.user.username.slice(0, 12));
+  await expect(list.getByRole("option")).toHaveCount(1);
+  await expect(list.getByRole("option")).toHaveAccessibleName(new RegExp(`^${ann.user.username}\\s*Sent you a request$`));
+  await field.press("Escape");
+  await expect(list).toBeHidden();
+  await field.fill(bob.user.username);
+  await expect(friends.getByText(`✓ ${bob.user.username} has an account · Request sent`)).toBeVisible();
+  await field.fill(bob.user.username.slice(0, 12));
+  await list.getByRole("option", { name: new RegExp(`^${bob.user.username}`) }).click();
+  await expect(field).toHaveValue(bob.user.username);
+
+  // Nobody's, their own, and what no username could be.
+  const nobody = newUser().username;
+  await field.fill(nobody);
+  await expect(friends.getByText(`No account has the username ${nobody}.`)).toBeVisible();
+  await expect(field).toHaveAttribute("aria-expanded", "false");
+  await field.fill(me.username);
+  await expect(friends.getByText("That's your own username.")).toBeVisible();
+  await field.fill("no spaces");
+  await expect(friends.getByText("Usernames have 3-20 characters: a-z, 0-9 and _.")).toBeVisible();
+
+  // The API: from 2 characters, the exact match first, never the user themselves.
+  const search = async (q: string) => (await (await page.request.get(`/api/shows/friends/search?${new URLSearchParams({ q })}`)).json()).data;
+  expect(await search("e")).toEqual({ matches: [], exact: false, self: false });
+  expect(await search(`@${bob.user.username.toUpperCase()}`)).toEqual({
+    matches: [{ id: bob.id, username: bob.user.username, relation: "outgoing" }], exact: true, self: false,
+  });
+  expect(await search(me.username)).toEqual({ matches: [], exact: false, self: true });
+  expect((await search("e2e_")).matches.length).toBeLessThanOrEqual(6);
+  expect((await search("e2e_")).matches.map((match: { id: string }) => match.id)).not.toContain(await userId(me.username));
+  await bob.context.close();
+  await ann.context.close();
+});
+
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 

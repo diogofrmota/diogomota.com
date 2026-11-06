@@ -137,12 +137,24 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
 
 test("Shows: every view and dialog, each closed with Back", async ({ page, browser }) => {
   const me = await openShows(page);
-  await expect(page.getByRole("heading", { name: "Start by discovering shows!" })).toBeVisible();
-  await checkView(page, "Home, empty library");
+  // A new account's guide: picking titles, then adding friends.
+  const guide = page.getByRole("main").getByRole("region", { name: "What are you watching right now?" });
+  await expect(card(grid(guide, "Trending this week: TV shows"), "Glass Meridian")).toBeVisible();
+  await expect(guide.getByTestId("skeleton")).toHaveCount(0);
+  await card(grid(guide, "Trending this week: TV shows"), "Glass Meridian").click();
+  await expect(card(grid(guide, "Trending this week: TV shows"), "Glass Meridian")).toHaveAttribute("aria-pressed", "true");
+  await checkView(page, "Home, the guide");
+  await page.getByRole("main").getByRole("button", { name: "Next" }).click();
+  await page.getByRole("main").getByRole("button", { name: "Next" }).click();
+  await expect(page.getByRole("main").getByRole("region", { name: "Watch together" })).toBeVisible();
+  await checkView(page, "Home, the guide's friends step");
+  await page.getByRole("main").getByRole("button", { name: "Back" }).click();
+  await page.getByRole("main").getByRole("button", { name: "Back" }).click();
+  await expect(guide).toBeVisible();
 
   await tab(page, "Discover").click();
   await expect(card(grid(page, "Popular TV shows"), "Harbor Lights")).toBeVisible();
-  await expect(page.getByTestId("skeleton")).toHaveCount(0);
+  await expect(page.getByTestId("skeleton").filter({ visible: true })).toHaveCount(0);
   await checkView(page, "Discover");
 
   await page.getByRole("main").getByRole("button", { name: "Search TV shows and movies" }).click();
@@ -187,6 +199,11 @@ test("Shows: every view and dialog, each closed with Back", async ({ page, brows
   const friendLink = page.getByRole("list", { name: "Your friends" }).getByRole("button", { name: friend.user.username, exact: true });
   await expect(friendLink).toBeVisible();
   await checkView(page, "Profile");
+  // Add a friend's suggestions, open under the field.
+  await page.getByLabel("Add a friend").fill(asker.user.username.slice(0, 10));
+  await expect(page.getByRole("listbox", { name: "Usernames" }).getByRole("option", { name: new RegExp(asker.user.username) })).toBeVisible();
+  await checkView(page, "Profile, Add a friend's suggestions");
+  await page.getByLabel("Add a friend").fill("");
   await friendLink.click();
   const profile = page.getByRole("dialog", { name: friend.user.username });
   await expect(card(profile, "Harbor Lights")).toBeVisible();
@@ -225,7 +242,7 @@ test("a load that fails says so, and Retry loads it again", async ({ page }) => 
   await expect(page.getByRole("listitem").filter({ hasText: "(you)" })).toBeVisible();
 
   await failing("**/api/shows/library", async () => { await page.goto("/shows"); }, "Shows Home");
-  await expect(page.getByRole("heading", { name: "Start by discovering shows!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What are you watching right now?" })).toBeVisible();
   await failing("**/api/shows/discover/tv/popular", () => tab(page, "Discover").click(), "Discover");
   await expect(card(grid(page, "Popular TV shows"), "Harbor Lights")).toBeVisible();
   await failing("**/api/shows/friends", () => tab(page, "Profile").click(), "Profile");

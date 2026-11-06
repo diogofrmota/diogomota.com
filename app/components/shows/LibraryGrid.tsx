@@ -3,12 +3,13 @@ import { useEffect, useId, useRef, useState, type MouseEvent, type PointerEvent 
 import { formatEpisode, progressOf, statusNames, titleKey, type SharedEntry, type TitleSummary } from "@/lib/show-types";
 import { useOpenActions } from "./QuickActions";
 import { useOpenTitle } from "./shows-data";
-import { Poster, SkeletonGrid } from "./TitleGrid";
+import { Poster, SkeletonGrid, useGridColumns } from "./TitleGrid";
 import styles from "./Shows.module.css";
 
 const longPressMs = 500;
-// A section shows this many titles until "Show all", like Discover.
-const collapsedCount = 12;
+// A section shows whole rows of titles until "Show all": 3 rows when the grid
+// has 4 columns or fewer (a phone), 2 when it's wider; 12 until it's measured.
+const collapsedCount = (columns: number) => !columns ? 12 : columns * (columns <= 4 ? 3 : 2);
 
 // Holding a finger (or pen) still on a card for half a second, or a right click,
 // calls onLongPress instead of the browser's own menu; the click that may follow
@@ -100,13 +101,15 @@ function LibraryCard({ item, readOnly }: { item: CardItem; readOnly: boolean }) 
   </div>;
 }
 
-export function LibraryGrid({ items, label, readOnly = false }: { items: readonly CardItem[]; label: string; readOnly?: boolean }) {
-  return <ul className={styles.grid} aria-label={label}>
+export function LibraryGrid({ items, label, readOnly = false, gridRef }: {
+  items: readonly CardItem[]; label: string; readOnly?: boolean; gridRef?: (grid: HTMLElement | null) => void;
+}) {
+  return <ul ref={gridRef} className={styles.grid} aria-label={label}>
     {items.map((item) => <li key={titleKey(item)}><LibraryCard item={item} readOnly={readOnly} /></li>)}
   </ul>;
 }
 
-/** A section of library titles with its heading and count: the first 12 until Show all. */
+/** A section of library titles with its heading and count: whole rows of them until Show all. */
 export function LibrarySection({ heading, label, loadingLabel, items, empty, readOnly }: {
   heading: string;
   /** Names the grid, e.g. "Watching TV shows". */
@@ -119,6 +122,8 @@ export function LibrarySection({ heading, label, loadingLabel, items, empty, rea
 }) {
   const id = useId();
   const [expanded, setExpanded] = useState(false);
+  const grid = useGridColumns();
+  const count = collapsedCount(grid.columns);
   return <section className={styles.section} aria-labelledby={id} aria-busy={!items}>
     <div className={styles.sectionHeader}>
       <h2 id={id}>{heading}</h2>
@@ -127,8 +132,8 @@ export function LibrarySection({ heading, label, loadingLabel, items, empty, rea
     {!items ? <SkeletonGrid count={6} label={loadingLabel} />
       : !items.length ? <p className={styles.empty}>{empty}</p>
       : <>
-        <LibraryGrid items={expanded ? items : items.slice(0, collapsedCount)} label={label} readOnly={readOnly} />
-        {items.length > collapsedCount && <button type="button" className={styles.more} aria-expanded={expanded}
+        <LibraryGrid items={expanded ? items : items.slice(0, count)} label={label} readOnly={readOnly} gridRef={grid.ref} />
+        {items.length > count && <button type="button" className={styles.more} aria-expanded={expanded}
           onClick={() => setExpanded(!expanded)}>{expanded ? "Show fewer" : `Show all ${items.length}`}</button>}
       </>}
   </section>;

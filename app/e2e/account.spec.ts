@@ -211,11 +211,11 @@ test("theme preference persists after logging in again", async ({ page }) => {
 
   const app = page.locator("[data-theme]");
   await page.goto("/shared");
-  await expect(app).toHaveAttribute("data-theme", "dark-2");
+  await expect(app).toHaveAttribute("data-theme", "minimal-neutrals");
 
   await page.goto("/account");
   const form = await openSection(page, "Theme");
-  await expect(form.getByRole("radio", { name: "Dark mode", exact: true })).toBeChecked();
+  await expect(form.getByRole("radio", { name: "Neutral", exact: true })).toBeChecked();
   await form.getByRole("radio", { name: "Light mode", exact: true }).check();
   await form.getByRole("button", { name: "Save theme" }).click();
   await expect(form.getByRole("status")).toHaveText("Theme saved.");

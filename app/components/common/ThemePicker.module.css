@@ -34,7 +34,8 @@
 }
 
 /* The theme's page, with a card (text and secondary text) and an accent dot.
-   background-color, not background: Blueprint adds its grid as an image. */
+   background-color, not background: Blueprint, Space and Retro add their
+   grid, stars and scanlines as images. */
 .sample {
   display: flex;
   align-items: center;

@@ -22,7 +22,10 @@ import {
   type TitleDetail,
   type TitleSummary,
 } from "./show-types";
-import { fetchTitle, listTitles, searchTitles, TmdbError, type TmdbTitle } from "./tmdb";
+import {
+  collectTitles, fetchTitle, listTtlMs, minVotes, recommendedFor, remember, searchTitles, TmdbError, topRatedVotes,
+  type TmdbSource, type TmdbTitle,
+} from "./tmdb";
 
 export class ShowsError extends Error {
   constructor(message: string, public status = 400) {
@@ -41,6 +44,9 @@ const showColumns = `id, type, tmdb_id AS "tmdbId", title, year, poster_url AS "
   last_updated < now() - interval '${refreshAfter}' AS stale`;
 const entryColumns = `id, status, rating, current_season AS "currentSeason",
   current_episode AS "currentEpisode", is_favourite AS "isFavourite"`;
+// The same, of user_shows as "us", in a statement that has shows too.
+const usEntryColumns = `us.id, us.status, us.rating, us.current_season AS "currentSeason",
+  us.current_episode AS "currentEpisode", us.is_favourite AS "isFavourite"`;
 
 type ShowRow = TmdbTitle & { id: string; stale: boolean };
 
@@ -77,8 +83,11 @@ async function saveTitle(title: TmdbTitle): Promise<ShowRow> {
 // better than none.
 async function cachedTitle(type: MediaType, id: number): Promise<ShowRow> {
   const { rows } = await query<ShowRow>(`SELECT ${showColumns} FROM shows WHERE type = $1 AND tmdb_id = $2`, [type, id]);
-  const cached = rows[0];
-  if (cached && !cached.stale) return cached;
+  return rows[0] && !rows[0].stale ? rows[0] : refreshedTitle(type, id, rows[0]);
+}
+
+// `cached` (missing or stale) fetched from TMDB again and saved.
+async function refreshedTitle(type: MediaType, id: number, cached: ShowRow | undefined): Promise<ShowRow> {
   try {
     return await saveTitle(await fetchTitle(type, id));
   } catch (error) {
@@ -96,9 +105,19 @@ function detail(show: ShowRow, library: LibraryEntry | null): TitleDetail {
   };
 }
 
-/** A title's details (from the cache) with the user's library entry for it. */
+/**
+ * A title's details (from the cache) with the user's library entry for it: one
+ * query when the cached copy is fresh, which it mostly is.
+ */
 export async function readTitle(userId: string, type: MediaType, id: number): Promise<TitleDetail> {
-  const show = await cachedTitle(type, id);
+  const { rows: [cached] } = await query<ShowRow & { library: LibraryEntry | null }>(
+    `SELECT ${showColumns}, (SELECT row_to_json(entry) FROM (SELECT ${usEntryColumns} FROM user_shows us
+       WHERE us.user_id = $3 AND us.show_id = shows.id) entry) AS library
+     FROM shows WHERE type = $1 AND tmdb_id = $2`,
+    [type, id, userId],
+  );
+  if (cached && !cached.stale) return detail(cached, cached.library);
+  const show = await refreshedTitle(type, id, cached);
   const { rows } = await query<LibraryEntry>(`SELECT ${entryColumns} FROM user_shows WHERE user_id = $1 AND show_id = $2`,
     [userId, show.id]);
   return detail(show, rows[0] ?? null);
@@ -211,11 +230,11 @@ async function libraryRow(userId: string, type: MediaType, id: number) {
 /**
  * Changes the user's entry for a title: any of status, rating (1-5 or null),
  * isFavourite, and the progress of a TV show (currentSeason and currentEpisode
- * together: an episode it has, or both null).
+ * together: an episode it has, or both null). One statement, except for a
+ * change of progress, which is checked against the show's episodes first.
  */
 export async function updateLibraryEntry(userId: string, type: MediaType, id: number, body: Record<string, unknown>): Promise<LibraryEntry> {
-  const entry = await libraryRow(userId, type, id);
-  const values: unknown[] = [entry.id];
+  const values: unknown[] = [userId, type, id];
   const columns: string[] = [];
   const set = (column: string, value: unknown) => {
     values.push(value);
@@ -241,7 +260,7 @@ export async function updateLibraryEntry(userId: string, type: MediaType, id: nu
     const { currentSeason: season, currentEpisode: episode } = body;
     if (type === "movie") throw new ShowsError("Movies have no episodes.");
     if ((season !== null || episode !== null) &&
-      !hasEpisode(entry.episodesPerSeason ?? [], { season: season as number, episode: episode as number })) {
+      !hasEpisode((await libraryRow(userId, type, id)).episodesPerSeason ?? [], { season: season as number, episode: episode as number })) {
       throw new ShowsError("This show has no such episode.");
     }
     set("current_season", season);
@@ -250,10 +269,12 @@ export async function updateLibraryEntry(userId: string, type: MediaType, id: nu
   if (!columns.length) throw new ShowsError("Nothing to change.");
 
   const { rows } = await query<LibraryEntry>(
-    `UPDATE user_shows SET ${columns.join(", ")}, updated_at = now() WHERE id = $1 RETURNING ${entryColumns}`,
+    `UPDATE user_shows us SET ${columns.join(", ")}, updated_at = now() FROM shows s
+     WHERE s.id = us.show_id AND us.user_id = $1 AND s.type = $2 AND s.tmdb_id = $3
+     RETURNING ${usEntryColumns}`,
     values,
   );
-  // Removed meanwhile.
+  // Not in the library, or removed meanwhile.
   if (!rows[0]) throw new ShowsError("This title isn't in your library.", 404);
   return rows[0];
 }
@@ -270,25 +291,124 @@ export async function removeFromLibrary(userId: string, type: MediaType, id: num
 }
 
 // Titles of this type in the libraries of the user's accepted friends, the ones
-// most of them have first.
+// most of them have first. The friends are found from each side of the pair
+// separately, so each half uses its index (friendships_user_id_idx,
+// friendships_friend_id_idx), and their libraries user_shows' (user_id, ...) one.
 async function friendsTitles(userId: string, type: MediaType): Promise<TitleSummary[]> {
   const { rows } = await query<TitleSummary>(
-    `SELECT s.type, s.tmdb_id AS "tmdbId", s.title, s.year, s.poster_url AS "posterPath",
+    `WITH friends AS (
+       SELECT friend_id AS id FROM friendships WHERE user_id = $1 AND status = 'accepted'
+       UNION ALL
+       SELECT user_id FROM friendships WHERE friend_id = $1 AND status = 'accepted'
+     )
+     SELECT s.type, s.tmdb_id AS "tmdbId", s.title, s.year, s.poster_url AS "posterPath",
        s.vote_average::float8 AS rating
-     FROM friendships f
-     JOIN user_shows us ON us.user_id = CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END
-     JOIN shows s ON s.id = us.show_id
-     WHERE f.status = 'accepted' AND $1 IN (f.user_id, f.friend_id) AND s.type = $2
+     FROM friends f JOIN user_shows us ON us.user_id = f.id JOIN shows s ON s.id = us.show_id
+     WHERE s.type = $2
      GROUP BY s.id ORDER BY count(*) DESC, s.title, s.id LIMIT 20`,
     [userId, type],
   );
   return rows;
 }
 
+// Each Discover section from TMDB has this many titles (or fewer, when TMDB runs out).
+const sectionSize = 20;
+
+// Where each section's titles come from (TMDB's genre ids: Comedy 35 and Crime
+// 80 for both, Sci-Fi & Fantasy 10765 for TV, Action 28 and Science Fiction 878
+// for movies).
+const sources: Record<MediaType, Partial<Record<DiscoverSection, TmdbSource>>> = {
+  tv: {
+    trending: { list: "trending" }, popular: { list: "popular" }, "top-rated": { list: "top-rated" },
+    comedy: { list: "genre", genre: 35 }, crime: { list: "genre", genre: 80 }, "sci-fi": { list: "genre", genre: 10765 },
+  },
+  movie: {
+    trending: { list: "trending" }, popular: { list: "popular" }, upcoming: { list: "upcoming" }, "top-rated": { list: "top-rated" },
+    action: { list: "genre", genre: 28 }, comedy: { list: "genre", genre: 35 }, "sci-fi": { list: "genre", genre: 878 },
+  },
+};
+
+// The sections that don't repeat each other, in this order: a title is only in
+// the first it would be in, and the next pages fill the gaps. Top Rated is left
+// out, and repeats what it likes: the best rated are the best rated.
+const distinctSections: Record<MediaType, readonly DiscoverSection[]> = {
+  tv: ["trending", "popular", "comedy", "crime", "sci-fi"],
+  movie: ["trending", "popular", "upcoming", "action", "comedy", "sci-fi"],
+};
+
+// Coming Soon's titles aren't out yet, so they can't have votes.
+const sectionVotes = (type: MediaType, section: DiscoverSection) =>
+  section === "upcoming" ? 0 : section === "top-rated" ? topRatedVotes[type] : minVotes[type];
+
+/**
+ * A section made from TMDB's lists, the same for everyone: up to 20 titles
+ * with enough votes, none of them in an earlier distinct section (a failed one
+ * leaves nothing out). Kept for as long as TMDB's lists.
+ */
+function tmdbSection(type: MediaType, section: DiscoverSection): Promise<TitleSummary[]> {
+  return remember(`${type}/section/${section}`, listTtlMs, async () => {
+    const order = distinctSections[type];
+    const earlier = order.includes(section) ? order.slice(0, order.indexOf(section)) : [];
+    const shown = await Promise.all(earlier.map((other) => tmdbSection(type, other).catch(() => [])));
+    return collectTitles(type, sources[type][section]!, {
+      count: sectionSize, votes: sectionVotes(type, section), exclude: new Set(shown.flat().map((title) => title.tmdbId)),
+    });
+  });
+}
+
+// For You is made from at most this many of the user's titles.
+const forYouSeeds = 5;
+
+/**
+ * For You: TMDB's recommendations for the titles of this type the user likes
+ * best (favourites, then the best rated, then completed and watching ones, the
+ * latest first), merged: a title recommended for several of them, or near the
+ * top of a list, comes first. Left out: titles already in the library, with
+ * too few votes, or in Trending and Popular, which are just under it.
+ * Nothing without titles of this type in the library.
+ */
+async function forYou(userId: string, type: MediaType): Promise<TitleSummary[]> {
+  const { rows } = await query<{ tmdbId: number; seed: boolean }>(
+    `SELECT s.tmdb_id AS "tmdbId", row_number() OVER (
+         ORDER BY us.is_favourite DESC, us.rating DESC NULLS LAST,
+           CASE us.status WHEN 'completed' THEN 0 WHEN 'watching' THEN 1 ELSE 2 END, us.updated_at DESC, us.id
+       ) <= ${forYouSeeds} AS seed
+     FROM user_shows us JOIN shows s ON s.id = us.show_id
+     WHERE us.user_id = $1 AND s.type = $2`,
+    [userId, type],
+  );
+  const seeds = rows.filter((row) => row.seed);
+  if (!seeds.length) return [];
+  const [lists, ...shown] = await Promise.all([
+    Promise.allSettled(seeds.map((seed) => recommendedFor(type, seed.tmdbId))),
+    ...(["trending", "popular"] as const).map((section) => tmdbSection(type, section).catch(() => [])),
+  ]);
+  // Every list failed: say so. Some did: the others are enough.
+  const failed = lists.find((list) => list.status === "rejected");
+  if (failed && lists.every((list) => list.status === "rejected")) throw failed.reason;
+
+  const leftOut = new Set([...rows.map((row) => row.tmdbId), ...shown.flat().map((title) => title.tmdbId)]);
+  const scores = new Map<number, { title: TitleSummary; score: number }>();
+  for (const list of lists) {
+    if (list.status === "rejected") continue;
+    list.value.forEach(({ title, votes }, rank) => {
+      if (leftOut.has(title.tmdbId) || votes < minVotes[type]) return;
+      const entry = scores.get(title.tmdbId) ?? { title, score: 0 };
+      entry.score += 1 - rank / (list.value.length + 1);
+      scores.set(title.tmdbId, entry);
+    });
+  }
+  return [...scores.values()]
+    .sort((a, b) => b.score - a.score || (b.title.rating ?? 0) - (a.title.rating ?? 0) || a.title.tmdbId - b.title.tmdbId)
+    .slice(0, sectionSize).map(({ title }) => title);
+}
+
+/** A Discover section of TV shows or movies (lib/show-types.ts, discoverSections). */
 export function discoverSection(userId: string, type: MediaType, section: string): Promise<TitleSummary[]> {
-  if (!discoverSections.includes(section as DiscoverSection)) throw new ShowsError("Section not found.", 404);
+  if (!discoverSections[type].some((known) => known.id === section)) throw new ShowsError("Section not found.", 404);
   if (section === "friends") return friendsTitles(userId, type);
-  return listTitles(type, section === "top-rated" ? "top_rated" : "popular");
+  if (section === "for-you") return forYou(userId, type);
+  return tmdbSection(type, section as DiscoverSection);
 }
 
 export async function search(value: unknown): Promise<TitleSummary[]> {

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ApiError } from "@/lib/api-request";
 import { libraryStats, type FriendsState, type Person } from "@/lib/show-types";
+import { AddFriend, requestSentText } from "./AddFriend";
 import { useOpenFriend } from "./FriendDialog";
 import { ChangeError, useLibrary } from "./library";
 import { LibrarySection } from "./LibraryGrid";
@@ -71,24 +72,6 @@ function NoticeLine({ notice }: { notice: Notice }) {
     className={notice.error ? `${styles.error} ${styles.notice}` : `${styles.notice} ${styles.success}`}>{notice.text}</p>;
 }
 
-function AddFriend({ username, busy, onAdd }: { username: string; busy: boolean; onAdd: (username: string) => Promise<boolean> }) {
-  const inputId = useId();
-  const hintId = useId();
-  const [value, setValue] = useState("");
-  return <form className={styles.addFriend} onSubmit={async (e) => {
-    e.preventDefault();
-    if (await onAdd(value)) setValue("");
-  }}>
-    <label htmlFor={inputId} className={styles.label}>Add a friend</label>
-    <div className={styles.addFriendRow}>
-      <input id={inputId} value={value} onChange={(e) => setValue(e.target.value)} placeholder="Their username" maxLength={21}
-        autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="send" aria-describedby={hintId} />
-      <button type="submit" className={styles.primary} disabled={busy}>Send request</button>
-    </div>
-    <p id={hintId} className={styles.hint}>Friends add you by your username, <strong>{username}</strong>.</p>
-  </form>;
-}
-
 function FriendRow({ person, busy, onRemove }: { person: Person; busy: boolean; onRemove: () => void }) {
   const openFriend = useOpenFriend();
   const confirmId = useId();
@@ -140,11 +123,7 @@ export function Profile({ username }: { username: string }) {
   const act = (where: Notice["where"], path: string, method: "POST" | "DELETE", done: string) =>
     run(where, true, async () => { await send(path, method, method === "POST" ? {} : undefined); return done; });
   const addFriend = (value: string) => run("friends", false, async () => {
-    const next = await send("/friends", "POST", { username: value });
-    const name = value.trim().replace(/^@/, "").toLowerCase();
-    // They had already sent the user a request: now accepted.
-    return next.friends.some((friend) => friend.username === name)
-      ? `${name} had already sent you a request: you're now friends.` : `Friend request sent to ${name}.`;
+    return requestSentText(await send("/friends", "POST", { username: value }), value);
   });
 
   const incoming = state?.incoming ?? [];

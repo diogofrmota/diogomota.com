@@ -1,9 +1,9 @@
 import "server-only";
 import { DatabaseError } from "pg";
-import { usernameError, usernameHint } from "./account-rules";
+import { USERNAME_MAX, usernameError, usernameHint } from "./account-rules";
 import { query } from "./db";
-import { friendRequestLimit } from "./rate-limit";
-import type { FriendProfile, FriendsState, Person } from "./show-types";
+import { friendRequestLimit, userSearchLimit } from "./rate-limit";
+import type { FriendProfile, FriendsState, PeopleSearch, Person, PersonMatch } from "./show-types";
 import { sharedLibrary, ShowsError } from "./shows";
 
 // Friendships of the Shows app: one row per pair of users (001_initial.sql),
@@ -75,6 +75,45 @@ export async function sendFriendRequest(userId: string, body: Record<string, unk
     throw error;
   }
   return readFriends(userId);
+}
+
+// Suggestions start at this many characters: enough to narrow them down, so
+// listing every account takes many searches (and userSearchLimit caps those).
+const searchMin = 2;
+const suggestionCount = 6;
+
+/**
+ * Usernames that start with `value` (typed in Add a friend; "@" and case don't
+ * matter), the exact match first, then the shortest, each with how they and the
+ * user are connected; whether one is exactly it (`exact`), or it's the user's
+ * own (`self`, left out of the suggestions). Nothing under 2 characters, or for
+ * what no username could start with.
+ */
+export async function searchPeople(userId: string, value: unknown): Promise<PeopleSearch> {
+  const text = typeof value === "string" ? value.trim().replace(/^@/, "").toLowerCase() : "";
+  const none: PeopleSearch = { matches: [], exact: false, self: false };
+  if (text.length < searchMin || text.length > USERNAME_MAX || !/^[a-z0-9_]+$/.test(text)) return none;
+  if (!userSearchLimit(userId)) throw new ShowsError("Too many searches. Wait a minute and try again.", 429);
+
+  // Usernames are stored in lowercase: a plain prefix LIKE, which
+  // users_username_prefix_idx serves. "_" matches any character in LIKE.
+  const { rows } = await query<PersonMatch>(
+    `SELECT u.id, u.username::text AS username,
+       CASE WHEN f.status = 'accepted' THEN 'friend' WHEN f.user_id = $1 THEN 'outgoing'
+         WHEN f.friend_id = $1 THEN 'incoming' ELSE 'none' END AS relation
+     FROM users u
+     LEFT JOIN friendships f ON (f.user_id = $1 AND f.friend_id = u.id) OR (f.user_id = u.id AND f.friend_id = $1)
+     WHERE u.username::text LIKE $2
+     ORDER BY u.username::text = $3 DESC, length(u.username::text), u.username::text
+     LIMIT ${suggestionCount + 1}`,
+    [userId, `${text.replace(/_/g, "\\_")}%`, text],
+  );
+  const others = rows.filter((row) => row.id !== userId);
+  return {
+    matches: others.slice(0, suggestionCount),
+    exact: others.some((row) => row.username === text),
+    self: rows.some((row) => row.id === userId && row.username === text),
+  };
 }
 
 const requestGone = "This friend request isn't there anymore.";

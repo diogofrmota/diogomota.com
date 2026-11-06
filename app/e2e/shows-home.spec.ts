@@ -2,7 +2,7 @@ import { randomBytes, randomInt } from "node:crypto";
 import type { Locator, Page } from "@playwright/test";
 import { expect, newUser, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
-import { card, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, row, section, tab, tmdbRequests, typeSwitch, viewHeading, wholeCard } from "./shows";
+import { card, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, otherPerson, row, section, tab, tmdbRequests, typeSwitch, viewHeading, wholeCard } from "./shows";
 
 // Titles of the fake TMDB (lib/tmdb-mock.ts). Its TV shows all have two seasons,
 // of 10 and 8 episodes.
@@ -30,10 +30,104 @@ async function longPress(page: Page, locator: Locator) {
   await cdp.detach();
 }
 
+test("a new account's Home is a guide: what they're watching, what they want to watch, then their friends", async ({ page, browser }) => {
+  const user = await openShows(page);
+  const friend = await otherPerson(browser);
+  const main = page.getByRole("main");
+  await expect(viewHeading(page)).toHaveText("Home");
+  const watching = main.getByRole("region", { name: "What are you watching right now?" });
+  await expect(watching).toContainText("Set up your library · Step 1 of 3");
+  await pressed(typeSwitch(page, "TV Shows"));
+
+  // This week's trending titles: a tap adds one as Watching, another takes it out again.
+  const glass = card(grid(watching, "Trending this week: TV shows"), "Glass Meridian");
+  await expect(glass).toHaveAttribute("aria-pressed", "false");
+  await glass.click();
+  await pressed(glass);
+  await expect(glass).toHaveAccessibleName("Glass Meridian, 2026, rated 8.2 out of 10, in your library as Watching");
+  await expect(wholeCard(glass)).toContainText("✓ Watching");
+  await expect(main.getByText("1 title in your library")).toBeVisible();
+  await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401)]);
+  await glass.click();
+  await expect(glass).toHaveAttribute("aria-pressed", "false");
+  await expect.poll(() => libraryRows(user.username)).toEqual([]);
+  await glass.click();
+  await pressed(glass);
+
+  // Or any title, TV show or movie, found by a search.
+  await watching.getByRole("searchbox", { name: "Search for a TV show or movie" }).fill("Paper Moons");
+  const moons = card(grid(watching, "Results for “Paper Moons”"), "Paper Moons");
+  await expect(moons).toHaveAccessibleName("Paper Moons, Movie, 1994, rated 8.9 out of 10");
+  await moons.click();
+  await pressed(moons);
+
+  // What they want to watch: the most popular, added as Planned. Focus moves to the step.
+  await main.getByRole("button", { name: "Next" }).click();
+  const planned = main.getByRole("region", { name: "What do you want to watch next?" });
+  await expect(planned.getByRole("heading", { level: 2 })).toBeFocused();
+  await expect(planned).toContainText("Step 2 of 3");
+  await typeSwitch(page, "Movies").click();
+  const northern = card(grid(planned, "Popular right now: movies"), "Northern Line");
+  await northern.click();
+  await expect(northern).toHaveAccessibleName("Northern Line, 2025, rated 7.2 out of 10, in your library as Planned");
+  await expect(main.getByText("3 titles in your library")).toBeVisible();
+  expect(await libraryRows(user.username)).toEqual([
+    row("tv", mockBase + 401), row("movie", paperMoons.tmdbId), row("movie", mockBase + 301, { status: "planned" }),
+  ]);
+
+  // Their friends, by username: the field says the account is there before sending.
+  await main.getByRole("button", { name: "Next" }).click();
+  const friends = main.getByRole("region", { name: "Watch together" });
+  await expect(friends.getByRole("heading", { level: 2 })).toBeFocused();
+  await friends.getByLabel("Add a friend").fill(friend.user.username);
+  await expect(friends.getByText(`✓ ${friend.user.username} has an account`)).toBeVisible();
+  await friends.getByRole("button", { name: "Send request" }).click();
+  await expect(friends.getByRole("status")).toHaveText(`Friend request sent to ${friend.user.username}.`);
+  await expect(friends.getByLabel("Add a friend")).toHaveValue("");
+
+  // Back keeps what was picked.
+  await main.getByRole("button", { name: "Back" }).click();
+  await expect(planned.getByRole("heading", { level: 2 })).toBeFocused();
+  await typeSwitch(page, "Movies").click();
+  await pressed(card(grid(planned, "Popular right now: movies"), "Northern Line"));
+  await main.getByRole("button", { name: "Next" }).click();
+
+  // Done: Home is the library, and the request is in Profile.
+  await main.getByRole("button", { name: "Done" }).click();
+  await expect(card(grid(section(page, "Watching"), "Watching TV shows"), "Glass Meridian")).toBeVisible();
+  await tab(page, "Profile").click();
+  await expect(page.getByRole("list", { name: "Sent requests" })).toContainText(friend.user.username);
+  await friend.context.close();
+});
+
+test("the guide gives way to the library when Home is shown again with titles in it, and comes back from an empty Home", async ({ page }) => {
+  await openShows(page);
+  const main = page.getByRole("main");
+  const guide = main.getByRole("region", { name: "What are you watching right now?" });
+  // Away and back with nothing added: still the guide.
+  await expect(guide).toBeVisible();
+  await tab(page, "Discover").click();
+  await tab(page, "Home").click();
+  await expect(guide).toBeVisible();
+
+  await card(grid(guide, "Trending this week: TV shows"), "Glass Meridian").click();
+  await expect(main.getByText("1 title in your library")).toBeVisible();
+  await tab(page, "Discover").click();
+  await tab(page, "Home").click();
+  await expect(guide).toHaveCount(0);
+  await expect(card(grid(section(page, "Watching"), "Watching TV shows"), "Glass Meridian")).toBeVisible();
+});
+
 test("Home starts with a welcome, fills up from Discover, and the TV Shows | Movies switch filters every section", async ({ page }) => {
   const user = await openShows(page);
   const main = page.getByRole("main");
   await expect(viewHeading(page)).toHaveText("Home");
+  // Without the guide: the welcome, which can start the guide again.
+  await main.getByRole("button", { name: "Skip" }).click();
+  await expect(main.getByRole("heading", { name: "Start by discovering shows!" })).toBeVisible();
+  await main.getByRole("button", { name: "Set up step by step" }).click();
+  await expect(main.getByRole("region", { name: "What are you watching right now?" })).toBeVisible();
+  await main.getByRole("button", { name: "Skip" }).click();
   await expect(main.getByRole("heading", { name: "Start by discovering shows!" })).toBeVisible();
   await expect(typeSwitch(page, "TV Shows")).toHaveCount(0);
   await main.getByRole("button", { name: "Go to Discover" }).click();

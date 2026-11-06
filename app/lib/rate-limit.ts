@@ -45,8 +45,14 @@ export const resetEmailLimit = rateLimit("reset-email", 3, 60 * MINUTE);
 export const spaceJoinLimit = rateLimit("space-join", 20, 15 * MINUTE);
 /** Friend requests (that pass validation), per authenticated user: each one says whether a username exists. */
 export const friendRequestLimit = rateLimit("friend-request", 20, 15 * MINUTE);
-/** Shows API requests (each may call TMDB with the site's token), per authenticated user. */
-export const showsRequestLimit = rateLimit("shows", 120, MINUTE);
+/** Username suggestions in Shows' Add a friend (one per pause in typing), per authenticated user. */
+export const userSearchLimit = rateLimit("user-search", 60, MINUTE);
+/**
+ * Shows API requests (each may call TMDB with the site's token), per authenticated
+ * user. Discover alone loads up to seven sections per type; TMDB's lists are
+ * cached (lib/tmdb.ts), so most of these don't reach it.
+ */
+export const showsRequestLimit = rateLimit("shows", 240, MINUTE);
 
 // nginx sets X-Forwarded-For to exactly the client address (nginx/nginx.conf), so
 // in production its first entry can be trusted. In development it is whatever the

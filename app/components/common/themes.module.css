@@ -36,7 +36,8 @@
   color-scheme: light;
 }
 
-/* Neutral: shadow black and slate gray on warm gray and light gray-blue. */
+/* Neutral: shadow black and slate gray on warm gray and light gray-blue. New
+   accounts' theme, and the one logged out (lib/themes.ts, defaultTheme). */
 .theme[data-theme="minimal-neutrals"],
 .theme[data-theme-preview="minimal-neutrals"],
 :global(html):has(.theme[data-theme="minimal-neutrals"]) {
@@ -90,8 +91,7 @@
   color-scheme: light;
 }
 
-/* Dark mode: true black (off pixels on OLED screens), with violet. New accounts'
-   theme, and the one logged out (lib/themes.ts, defaultTheme). */
+/* Dark mode: true black (off pixels on OLED screens), with violet. */
 .theme[data-theme="dark-2"],
 .theme[data-theme-preview="dark-2"],
 :global(html):has(.theme[data-theme="dark-2"]) {
@@ -145,6 +145,24 @@
   color-scheme: dark;
 }
 
+/* Space: starlight on the night sky, with nebula orchid (and stars, below). */
+.theme[data-theme="space"],
+.theme[data-theme-preview="space"],
+:global(html):has(.theme[data-theme="space"]) {
+  --bg: #070818;
+  --surface: #0f1230;
+  --hover: #1a1e45;
+  --text: #eef0ff;
+  --muted: #a9afdd;
+  --border: #2a2f63;
+  --accent: #f2a7ff;
+  --accent-soft: #341a4a;
+  --danger: #ff8f9c;
+  --star: #ffd36b;
+  --star-off: #6b70a8;
+  color-scheme: dark;
+}
+
 /* Blueprint: white lines and cyan on drafting blue (with a grid, below). */
 .theme[data-theme="blueprint"],
 .theme[data-theme-preview="blueprint"],
@@ -160,6 +178,25 @@
   --danger: #ffb3b3;
   --star: #ffd166;
   --star-off: #7f9fc6;
+  color-scheme: dark;
+}
+
+/* Retro: an old computer's green phosphor screen, with amber stars (and
+   scanlines, below). */
+.theme[data-theme="retro"],
+.theme[data-theme-preview="retro"],
+:global(html):has(.theme[data-theme="retro"]) {
+  --bg: #0a0f0b;
+  --surface: #101a12;
+  --hover: #18271b;
+  --text: #c8f7d0;
+  --muted: #86c495;
+  --border: #28452e;
+  --accent: #5df08a;
+  --accent-soft: #123620;
+  --danger: #ff8a70;
+  --star: #ffcc4d;
+  --star-off: #4f7d5a;
   color-scheme: dark;
 }
 
@@ -179,4 +216,28 @@
 
 .theme[data-theme-preview="blueprint"] {
   background-size: 0.5rem 0.5rem;
+}
+
+/* A scattering of stars, some brighter than others, repeating. Like
+   Blueprint's grid, only behind what has no background of its own. */
+.theme[data-theme="space"],
+.theme[data-theme-preview="space"] {
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgb(255 255 255 / 0.75), transparent),
+    radial-gradient(1px 1px at 37% 72%, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 58% 32%, rgb(255 255 255 / 0.7), transparent),
+    radial-gradient(1px 1px at 81% 64%, rgb(255 255 255 / 0.45), transparent),
+    radial-gradient(1px 1px at 91% 12%, rgb(242 167 255 / 0.6), transparent),
+    radial-gradient(1px 1px at 24% 88%, rgb(169 175 221 / 0.6), transparent);
+  background-size: 18rem 14rem;
+}
+
+.theme[data-theme-preview="space"] {
+  background-size: 3rem 2.5rem;
+}
+
+/* A CRT's scanlines, faintly. */
+.theme[data-theme="retro"],
+.theme[data-theme-preview="retro"] {
+  background-image: repeating-linear-gradient(rgb(93 240 138 / 0.04) 0 1px, transparent 1px 3px);
 }

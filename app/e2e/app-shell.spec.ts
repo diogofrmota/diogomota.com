@@ -304,8 +304,9 @@ test("the theme saved in Account is in the page as served, in the apps and the p
   await openApp(page, "/shows");
   const shell = page.locator("[data-theme]");
   const themeColor = page.locator('meta[name="theme-color"]');
-  await expect(shell).toHaveAttribute("data-theme", "dark-2");
-  await expect(shell).toHaveCSS("background-color", "rgb(0, 0, 0)");
+  // New accounts start in Neutral.
+  await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
+  await expect(shell).toHaveCSS("background-color", "rgb(230, 230, 230)");
 
   await chooseTheme(page, "Light mode");
   await expect(shell).toHaveAttribute("data-theme", "light-2");

@@ -29,6 +29,7 @@
 .section { margin-top: 2rem; }
 .section h2 { font-size: 1.2rem; font-weight: 600; margin: 0 0 .85rem; }
 .empty { margin: 0; padding: 1rem; border-radius: .75rem; background: var(--accent-soft); color: var(--accent); }
+.section .sectionNote { margin: -.5rem 0 .85rem; color: var(--muted); font-size: .875rem; }
 .view .more, .dialog .more { margin-top: 1rem; }
 .error { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; padding: .5rem .5rem .5rem .75rem; border-left: 3px solid var(--danger); border-radius: .4rem; background: var(--hover); }
 .error p, p.error { margin: 0; }
@@ -55,11 +56,37 @@
 }
 .poster { display: block; width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover; border-radius: .5rem; background: var(--hover); box-shadow: 0 1px 3px #0003; transition: filter .15s, box-shadow .15s; }
 .noPoster { display: flex; align-items: center; justify-content: center; padding: .5rem; color: var(--muted); font-size: .8rem; font-weight: 600; text-align: center; overflow: hidden; border: 1px solid var(--border); }
+.noPoster::before { content: attr(data-title); }
 /* A card's button covers the facts under it too (TitleGrid.tsx). */
 .cardItem { position: relative; }
 .card::after { content: ""; position: absolute; inset: 0; }
 .cardTitle { margin-top: .35rem; font-size: .875rem; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .cardMeta { display: block; margin-top: .2rem; color: var(--muted); font-size: .75rem; }
+
+/* Discover's rows (TitleGrid.tsx, TitleRow): one line of cards that scrolls
+   sideways, about three and a bit across on a phone (the next one peeking in
+   says there's more), 9.5rem cards on wider screens. No scrollbar: a swipe,
+   a drag or the ‹ › buttons scroll it. Room above and below for the focus ring. */
+.row, .rowList { --card-w: clamp(6.75rem, 29vw, 9.5rem); }
+.row { position: relative; }
+.rowList { display: flex; gap: .75rem; margin: 0 -.25rem; padding: .25rem .25rem .5rem; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: .25rem; scrollbar-width: none; }
+.rowList::-webkit-scrollbar { display: none; }
+.rowList > li { flex: none; width: var(--card-w); min-width: 0; scroll-snap-align: start; }
+@media (min-width: 48rem) { .row, .rowList { --card-w: 9.5rem; } .rowList { gap: 1rem; } }
+.rowList[data-dragging] { scroll-snap-type: none; cursor: grabbing; user-select: none; }
+.rowList[data-dragging] .card { cursor: grabbing; }
+/* The end with more to see fades out. */
+.row[data-end="false"] .rowList { mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
+.row[data-start="false"] .rowList { mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); }
+.row[data-start="false"][data-end="false"] .rowList { mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); }
+/* ‹ › over the middle of the posters, where there's a mouse; only towards more. */
+.view .rowArrow { position: absolute; top: calc(var(--card-w) * .75 + .25rem - 22px); z-index: 2; display: grid; place-items: center; width: 44px; height: 44px; padding: 0 0 .15rem; border-radius: 50%; background: var(--surface); color: var(--text); font-size: 1.75rem; line-height: 1; box-shadow: 0 4px 16px #0005; opacity: 0; transition: opacity .15s; }
+.rowBack { left: .25rem; }
+.rowForward { right: .25rem; }
+.row:hover .rowArrow { opacity: 1; }
+.view .rowArrow:disabled { opacity: 0; pointer-events: none; }
+@media (hover: none), (pointer: coarse) { .view .rowArrow { display: none; } }
+@media (prefers-reduced-motion: reduce) { .view .rowArrow { transition: none; } }
 
 /* A library card: its status on the poster, a heart if it is a favourite, and
    a quick actions button that shows on hover (or focus) where there is a mouse.
@@ -206,8 +233,54 @@ div.people { padding: .25rem 1rem .75rem; }
 .addFriendRow { display: flex; gap: .5rem; }
 .addFriendRow input { flex: 1; min-width: 0; min-height: 44px; padding: .6rem .75rem; font: inherit; font-size: 1rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: .5rem; }
 .addFriend .hint { font-size: .85rem; }
+/* The username field and its suggestions, a list over what is under it. */
+.combo { position: relative; display: flex; flex: 1; min-width: 0; }
+.suggestions { position: absolute; top: calc(100% + .25rem); left: 0; right: 0; z-index: 5; max-height: 18rem; margin: 0; padding: .25rem; overflow-y: auto; list-style: none; border: 1px solid var(--border); border-radius: .6rem; background: var(--surface); box-shadow: 0 12px 32px #0004; }
+.suggestions[hidden] { display: none; }
+.suggestion { display: flex; align-items: center; gap: .65rem; min-height: 44px; padding: .3rem .5rem; border-radius: .45rem; cursor: pointer; }
+.suggestion[aria-selected="true"] { background: var(--hover); }
+@media (hover: hover) { .suggestion:hover { background: var(--hover); } }
+.suggestion .avatar { width: 1.85rem; height: 1.85rem; font-size: .85rem; }
+.relation { flex-shrink: 0; color: var(--muted); font-size: .8rem; }
+/* Whether an account has the username typed. Empty, it takes no room. */
+.check, .checkFound, .checkMissing { margin: 0; font-size: .85rem; }
+.check { color: var(--muted); }
+.checkFound { color: var(--accent); font-weight: 600; }
+.checkMissing { color: var(--danger); }
+.check:empty, .checkFound:empty, .checkMissing:empty { margin-top: -.4rem; }
 .notice { max-width: 36rem; margin: 0 0 1rem; }
 .success { padding: .6rem .85rem; border-radius: .5rem; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+/* The guide on an empty Home (Onboarding.tsx): the step on a tinted card,
+   then what to pick from, and Back | Next stuck to the bottom of the screen. */
+.onboarding { display: grid; gap: 0; }
+.onboardingTop { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.onboardingKicker { margin: 0; color: var(--muted); font-size: .85rem; font-weight: 600; letter-spacing: .01em; }
+.view .textLink { min-height: 44px; padding: 0 .5rem; border: 0; background: none; color: var(--accent); font-weight: 650; }
+@media (hover: hover) { .view .textLink:hover { background: none; text-decoration: underline; } }
+.stepDots { display: flex; gap: .4rem; margin: .25rem 0 1.25rem; padding: 0; list-style: none; }
+.stepDots li { width: 2rem; height: .3rem; border-radius: 1rem; background: var(--border); }
+.stepDots li[data-state="done"] { background: var(--accent); opacity: .55; }
+.stepDots li[data-state="current"] { background: var(--accent); }
+.onboardingHeading { margin: 0 0 .5rem; font-size: 1.45rem; letter-spacing: -.02em; }
+.onboardingHeading:focus { outline: none; }
+.onboardingHeading:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: .25rem; }
+.onboardingLead { max-width: 40rem; margin: 0 0 1.25rem; color: var(--muted); line-height: 1.55; }
+.pickTools { display: flex; align-items: center; gap: .75rem 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.pickSearch { display: flex; flex: 1 1 16rem; align-items: center; gap: .5rem; max-width: 28rem; padding: 0 .85rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+.pickSearch svg { flex-shrink: 0; width: 1.2rem; height: 1.2rem; color: var(--muted); }
+.pickSearch input { flex: 1; min-width: 0; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; font-size: 1rem; color: var(--text); outline: none; }
+.pickSearch:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+/* A card to pick: + on the poster, ✓ and an outline once it's in the library. */
+.pickMark { position: absolute; top: .4rem; right: .4rem; display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; background: #000c; color: #fff; font-size: 1.1rem; font-weight: 700; line-height: 1; box-shadow: 0 1px 3px #0005; pointer-events: none; }
+.pick[aria-pressed="true"] .poster { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pickMark[data-added="true"] { background: var(--accent); color: var(--bg); }
+.pickAdded { display: block; margin-top: .2rem; color: var(--accent); font-size: .75rem; font-weight: 700; }
+.onboardingFriends { max-width: 36rem; }
+.onboardingNav { position: sticky; bottom: 0; z-index: 2; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .75rem; margin-top: 1.5rem; padding: .75rem 0 calc(.75rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--bg); }
+.onboardingNav .primary { min-width: 7rem; }
+.onboardingCount { margin: 0; color: var(--muted); font-size: .85rem; text-align: center; }
+.onboarding .attribution { margin-top: 1.5rem; }
 
 /* A friend's profile: a large modal on desktop, the whole screen on a phone. */
 .friendDialog { width: min(60rem, calc(100% - 2rem)); height: min(52rem, 90dvh); }

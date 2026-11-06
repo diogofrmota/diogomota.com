@@ -62,8 +62,46 @@ export type TitleDetail = TitleSummary & TitleLengths & {
   library: LibraryEntry | null;
 };
 
-export type DiscoverSection = "top-rated" | "popular" | "friends";
-export const discoverSections: readonly DiscoverSection[] = ["top-rated", "popular", "friends"];
+export type DiscoverSection =
+  | "for-you" | "trending" | "popular" | "upcoming" | "top-rated" | "action" | "comedy" | "crime" | "sci-fi" | "friends";
+
+/**
+ * Discover's sections for TV shows and for movies, in their order: the three
+ * after Top Rated are genres. For You is only there with titles of that type in
+ * the library: it is made from them.
+ */
+export const discoverSections: Record<MediaType, readonly { id: DiscoverSection; heading: string }[]> = {
+  tv: [
+    { id: "for-you", heading: "For You" },
+    { id: "trending", heading: "Trending This Week" },
+    { id: "popular", heading: "Popular" },
+    { id: "top-rated", heading: "Top Rated" },
+    { id: "comedy", heading: "Comedy" },
+    { id: "crime", heading: "Crime" },
+    { id: "sci-fi", heading: "Sci-Fi & Fantasy" },
+    { id: "friends", heading: "Added by Friends" },
+  ],
+  movie: [
+    { id: "for-you", heading: "For You" },
+    { id: "trending", heading: "Trending This Week" },
+    { id: "popular", heading: "Popular" },
+    { id: "upcoming", heading: "Coming Soon" },
+    { id: "top-rated", heading: "Top Rated" },
+    { id: "action", heading: "Action" },
+    { id: "comedy", heading: "Comedy" },
+    { id: "sci-fi", heading: "Science Fiction" },
+    { id: "friends", heading: "Added by Friends" },
+  ],
+};
+
+/** A username suggested in Add a friend, and how they and the user are connected. */
+export type PersonMatch = Person & { relation: "none" | "friend" | "incoming" | "outgoing" };
+
+/**
+ * Usernames that start with what was typed (`matches`), whether another account
+ * has exactly it (`exact`), and whether it is the user's own (`self`).
+ */
+export type PeopleSearch = { matches: PersonMatch[]; exact: boolean; self: boolean };
 
 /** Key of a title in panel ids and lists, e.g. "tv:1399". */
 export const titleKey = (title: Pick<TitleSummary, "type" | "tmdbId">) => `${title.type}:${title.tmdbId}`;

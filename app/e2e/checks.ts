@@ -106,7 +106,7 @@ export async function showTheme(page: Page, theme: string) {
 
 /**
  * axe on what is showing now, in every theme (lib/themes.ts). checkView runs it
- * in Light mode and Dark mode on every view; themes.spec.ts in all of them on the views
+ * in Neutral (the default) and Dark mode on every view; themes.spec.ts in all of them on the views
  * that between them have every pair of the themes' colors.
  */
 export async function checkThemes(page: Page, view: string) {
@@ -131,7 +131,7 @@ export function rgb(hex: string) {
 
 /**
  * Checks what is showing now: its layout at each of the project's sizes, then
- * axe, inside the apps in Light mode and Dark mode (the site's pages are always
+ * axe, inside the apps in Neutral and Dark mode (the site's pages are always
  * black; themes.spec.ts checks every theme).
  */
 export async function checkView(page: Page, view: string) {
@@ -151,7 +151,7 @@ export async function checkView(page: Page, view: string) {
       return;
     }
     const saved = (await shell.getAttribute("data-theme"))!;
-    for (const theme of ["light-2", "dark-2"]) {
+    for (const theme of ["minimal-neutrals", "dark-2"]) {
       await showTheme(page, theme);
       expect(await seriousAxeViolations(page), `${view}, ${theme} theme`).toEqual([]);
     }

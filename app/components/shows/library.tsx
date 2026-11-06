@@ -2,7 +2,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/lib/api-request";
 import { type LibraryChange, type LibraryItem, type LibraryStatus, type TitleDetail, type TitleSummary } from "@/lib/show-types";
-import { showsRequest } from "./shows-data";
+import { forgetShowsData, showsRequest } from "./shows-data";
+
+// Discover's For You is made from the library: once it changes, it loads again
+// when next shown.
+const forgetForYou = () => forgetShowsData((path) => path.endsWith("/for-you"));
 
 type TitleRef = Pick<TitleSummary, "type" | "tmdbId">;
 const entryPath = (title: TitleRef) => `/library/${title.type}/${title.tmdbId}`;
@@ -72,6 +76,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       try {
         await next.send();
         setConfirmed((items) => items && next.apply(items));
+        forgetForYou();
       } catch (err) {
         setError(`${(err as Error).message} Your change was undone.`);
         // Changed or removed elsewhere meanwhile (another tab or device): show what is there now.
@@ -106,6 +111,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
         // Not loaded yet (it failed): load it, with the new title.
         if (loaded.current) setConfirmed((current) => current && [item, ...current.filter((i) => !same(i, item))]);
         else reload();
+        forgetForYou();
         setError("");
       } catch (err) {
         // Already there (added in another tab or device): load the library again to show it.

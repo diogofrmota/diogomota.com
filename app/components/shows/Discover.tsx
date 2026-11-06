@@ -2,39 +2,40 @@
 import { useId, useState } from "react";
 import { SearchIcon } from "@/components/common/icons";
 import { useAppView } from "@/hooks/useAppView";
-import type { DiscoverSection, MediaType, TitleSummary } from "@/lib/show-types";
+import { discoverSections, type DiscoverSection, type MediaType, type TitleSummary } from "@/lib/show-types";
+import { useLibrary } from "./library";
 import { useOpenTitle, useShowsData } from "./shows-data";
-import { LoadError, SkeletonGrid, TitleGrid } from "./TitleGrid";
+import { LoadError, SkeletonGrid, TitleRow } from "./TitleGrid";
 import { TmdbAttribution } from "./TmdbAttribution";
 import styles from "./Shows.module.css";
 
-// A grid shows this many titles until "Show all" (TMDB's lists have 20).
-const collapsedCount = 12;
+// A line under the heading, for the sections whose heading doesn't say it all.
+const notes: Partial<Record<DiscoverSection, string>> = {
+  "for-you": "Picked from TMDB's recommendations for the titles in your library.",
+  upcoming: "In cinemas soon.",
+};
 
-const sections: { id: DiscoverSection; heading: string }[] = [
-  { id: "top-rated", heading: "Top Rated" },
-  { id: "popular", heading: "Popular" },
-  { id: "friends", heading: "Added by Friends" },
-];
+function emptyText(section: DiscoverSection, kind: string) {
+  if (section === "friends") return `No ${kind} from friends yet. Once you have friends, the ${kind} in their libraries show up here.`;
+  if (section === "for-you") return `No recommendations for your ${kind} yet. Add a few more, and they'll show up here.`;
+  return `TMDB has no ${kind} here right now.`;
+}
 
+// A section: a row of up to 20 titles (TitleRow), which scrolls sideways.
 function Section({ type, section, heading }: { type: MediaType; section: DiscoverSection; heading: string }) {
   const id = useId();
+  const noteId = useId();
   const openTitle = useOpenTitle();
-  const [expanded, setExpanded] = useState(false);
   const { data, error, loading, retry } = useShowsData<TitleSummary[]>(`/discover/${type}/${section}`);
   const kind = type === "tv" ? "TV shows" : "movies";
-  return <section className={styles.section} aria-labelledby={id} aria-busy={loading}>
+  const note = notes[section];
+  return <section className={styles.section} aria-labelledby={id} aria-describedby={note ? noteId : undefined} aria-busy={loading}>
     <h2 id={id}>{heading}</h2>
-    {loading ? <SkeletonGrid count={collapsedCount} label={`Loading ${heading.toLowerCase()} ${kind}…`} />
+    {note && <p id={noteId} className={styles.sectionNote}>{note}</p>}
+    {loading ? <SkeletonGrid row count={8} label={`Loading ${heading.toLowerCase()} ${kind}…`} />
       : error ? <LoadError message={error} onRetry={retry} />
-      : !data?.length ? <p className={styles.empty}>{section === "friends"
-        ? `No ${kind} from friends yet. Once you have friends, the ${kind} in their libraries show up here.`
-        : `TMDB has no ${kind} here right now.`}</p>
-      : <>
-        <TitleGrid titles={expanded ? data : data.slice(0, collapsedCount)} label={`${heading} ${kind}`} onOpen={openTitle} />
-        {data.length > collapsedCount && <button type="button" className={styles.more} aria-expanded={expanded}
-          onClick={() => setExpanded(!expanded)}>{expanded ? "Show fewer" : `Show all ${data.length}`}</button>}
-      </>}
+      : !data?.length ? <p className={styles.empty}>{emptyText(section, kind)}</p>
+      : <TitleRow titles={data} label={`${heading} ${kind}`} onOpen={openTitle} />}
   </section>;
 }
 
@@ -54,8 +55,13 @@ export function TypeSwitch({ type, onChange }: { type: MediaType; onChange: (typ
   </div>;
 }
 
+/** Discover: the search field, then TMDB's lists, recommendations and friends' titles, for TV shows or movies. */
 export function Discover() {
   const [type, setType] = useState<MediaType>("tv");
+  // For You is made from the library's titles of this type: none, no section.
+  const { items } = useLibrary();
+  const forYou = !!items?.some((item) => item.type === type);
+  const sections = discoverSections[type].filter((section) => section.id !== "for-you" || forYou);
   return <div className={styles.view}>
     <h1 className={styles.heading}>Discover</h1>
     <SearchLauncher />

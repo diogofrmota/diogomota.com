@@ -17,7 +17,7 @@ test("every theme saves from Account, and colors the page, the page behind it an
   const form = page.getByRole("region", { name: "Theme", exact: true });
   await form.getByRole("heading", { name: "Theme", exact: true }).click();
   // New accounts start in the default theme.
-  await expect(form.getByRole("radio", { name: "Dark mode", exact: true })).toBeChecked();
+  await expect(form.getByRole("radio", { name: "Neutral", exact: true })).toBeChecked();
   // All in one list, in lib/themes.ts's order, with no headings between them.
   const radios = form.getByRole("radio");
   await expect(radios).toHaveCount(themes.length);
@@ -117,7 +117,7 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await tab(page, "Discover").click();
     const popular = grid(page, "Popular TV shows");
     await expect(card(popular, "Harbor Lights")).toBeVisible();
-    await expect(page.getByTestId("skeleton")).toHaveCount(0);
+    await expect(page.getByTestId("skeleton").filter({ visible: true })).toHaveCount(0);
     await card(popular, "Harbor Lights").click();
     const title = page.getByRole("dialog", { name: "Harbor Lights" });
     await title.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Watching" }).click();
