@@ -27,7 +27,7 @@ async function openApp(page: Page, path: string) {
 }
 
 /** Saves a theme in Account (/account), opened from the account menu. */
-async function chooseTheme(page: Page, theme: "Light 2" | "Dark 2") {
+async function chooseTheme(page: Page, theme: "Light mode" | "Dark mode") {
   await followAccountMenu(page, "Account");
   await expect(page).toHaveURL("/account");
   await saveTheme(page, theme);
@@ -307,7 +307,7 @@ test("the theme saved in Account is in the page as served, in the apps and the p
   await expect(shell).toHaveAttribute("data-theme", "dark-2");
   await expect(shell).toHaveCSS("background-color", "rgb(0, 0, 0)");
 
-  await chooseTheme(page, "Light 2");
+  await chooseTheme(page, "Light mode");
   await expect(shell).toHaveAttribute("data-theme", "light-2");
   await expect(shell).toHaveCSS("background-color", "rgb(241, 245, 249)");
   await expect(themeColor).toHaveAttribute("content", "#f1f5f9");
@@ -324,7 +324,7 @@ test("the theme saved in Account is in the page as served, in the apps and the p
   }
 
   await page.goto("/shows");
-  await chooseTheme(page, "Dark 2");
+  await chooseTheme(page, "Dark mode");
   await expect(shell).toHaveAttribute("data-theme", "dark-2");
   await page.goto("/shows");
   expect(await reloadHtml(page)).toContain('data-theme="dark-2"');
@@ -339,7 +339,7 @@ test("theme changes show on pages reached with the back button, and keep the vie
   await openApp(page, "/shows");
   const shell = page.locator("[data-theme]");
   await tab(page, "Shows", "Discover").click();
-  await chooseTheme(page, "Light 2");
+  await chooseTheme(page, "Light mode");
   await expect(shell).toHaveAttribute("data-theme", "light-2");
 
   // Back in the app: in the new theme, on the view Account was opened from.
@@ -351,7 +351,7 @@ test("theme changes show on pages reached with the back button, and keep the vie
   // The same for a change in Account reached with forward.
   await page.goForward();
   await expect(page).toHaveURL("/account");
-  await saveTheme(page, "Dark 2");
+  await saveTheme(page, "Dark mode");
   await expect(shell).toHaveAttribute("data-theme", "dark-2");
   await page.goBack();
   await expect(page).toHaveURL("/shows");

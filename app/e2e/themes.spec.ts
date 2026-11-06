@@ -17,12 +17,19 @@ test("every theme saves from Account, and colors the page, the page behind it an
   const form = page.getByRole("region", { name: "Theme", exact: true });
   await form.getByRole("heading", { name: "Theme", exact: true }).click();
   // New accounts start in the default theme.
-  await expect(form.getByRole("radio", { name: "Dark 2", exact: true })).toBeChecked();
+  await expect(form.getByRole("radio", { name: "Dark mode", exact: true })).toBeChecked();
   // All in one list, in lib/themes.ts's order, with no headings between them.
   const radios = form.getByRole("radio");
   await expect(radios).toHaveCount(themes.length);
   for (const [index, { name }] of themes.entries()) await expect(radios.nth(index)).toHaveAccessibleName(name);
   await expect(form.getByRole("heading")).toHaveText(["Theme"]);
+  // The recommended ones have a star, and say so to screen readers.
+  await expect(form.locator("label").filter({ has: page.getByTitle("Recommended") })).toHaveText(
+    themes.filter((theme) => theme.recommended).map((theme) => theme.name),
+  );
+  for (const [index, { recommended }] of themes.entries()) {
+    await expect(radios.nth(index)).toHaveAccessibleDescription(recommended ? "Recommended" : "");
+  }
 
   // Each one differs from the one before, so the page changes with every save.
   for (const { id, name, background } of themes) {

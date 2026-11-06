@@ -1,6 +1,6 @@
 /* Every theme's colors, as variables: the user picks one in /account
    (components/common/ThemePicker). Each theme's id and name are in
-   lib/themes.ts, and the database accepts only those ids (db/migrations): a new
+   lib/themes.ts, in the same order, and the database accepts only those ids (db/migrations): a new
    theme goes in all three.
 
    An element with .theme takes the colors of its data-theme: AppFrame's shell,
@@ -18,7 +18,7 @@
    compiled into one :is(), as specific as html:has(...), which would win over
    every theme's rule. */
 
-/* Light 2: cool slate, with indigo. */
+/* Light mode: cool slate, with indigo. */
 .theme[data-theme="light-2"],
 .theme[data-theme-preview="light-2"],
 :global(html):has(.theme[data-theme="light-2"]) {
@@ -36,59 +36,40 @@
   color-scheme: light;
 }
 
-/* Light 3: high contrast, black on white. */
-.theme[data-theme="light-3"],
-.theme[data-theme-preview="light-3"],
-:global(html):has(.theme[data-theme="light-3"]) {
-  --bg: #ffffff;
-  --surface: #ffffff;
-  --hover: #ebebeb;
-  --text: #000000;
-  --muted: #3b3b3b;
-  --border: #8c8c8c;
-  --accent: #0038b8;
-  --accent-soft: #e6edff;
-  --danger: #a30000;
-  --star: #a34a00;
-  --star-off: #6e6e6e;
+/* Neutral: shadow black and slate gray on warm gray and light gray-blue. */
+.theme[data-theme="minimal-neutrals"],
+.theme[data-theme-preview="minimal-neutrals"],
+:global(html):has(.theme[data-theme="minimal-neutrals"]) {
+  --bg: #e6e6e6;
+  --surface: #f4f4f4;
+  --hover: #dadbe3;
+  --text: #101014;
+  --muted: #4e4e58;
+  --border: #c9cad4;
+  --accent: #3d3d47;
+  --accent-soft: #d0d1db;
+  --danger: #a3262a;
+  --star: #8f6200;
+  --star-off: #7a7a84;
   color-scheme: light;
 }
 
-/* Dark 1: midnight navy, with sky blue. */
-.theme[data-theme="dark-1"],
-.theme[data-theme-preview="dark-1"],
-:global(html):has(.theme[data-theme="dark-1"]) {
-  --bg: #0b1120;
-  --surface: #131c2e;
-  --hover: #1e293b;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --border: #26324a;
-  --accent: #38bdf8;
-  --accent-soft: #0c2a40;
-  --danger: #fb7185;
-  --star: #fbbf24;
-  --star-off: #64748b;
-  color-scheme: dark;
-}
-
-/* Dark 2: true black (off pixels on OLED screens), with violet. New accounts'
-   theme, and the one logged out (lib/themes.ts, defaultTheme). */
-.theme[data-theme="dark-2"],
-.theme[data-theme-preview="dark-2"],
-:global(html):has(.theme[data-theme="dark-2"]) {
-  --bg: #000000;
-  --surface: #0f0f0f;
-  --hover: #1f1f1f;
-  --text: #ffffff;
-  --muted: #b3b3b3;
-  --border: #2b2b2b;
-  --accent: #b69cff;
-  --accent-soft: #221a3d;
-  --danger: #ff6b6b;
-  --star: #ffd43b;
-  --star-off: #6b6b6b;
-  color-scheme: dark;
+/* Warm: leather, auburn and cappuccino on cream. */
+.theme[data-theme="warm-neutrals"],
+.theme[data-theme-preview="warm-neutrals"],
+:global(html):has(.theme[data-theme="warm-neutrals"]) {
+  --bg: #fff3db;
+  --surface: #fffaf0;
+  --hover: #f5e5c6;
+  --text: #51301f;
+  --muted: #76563f;
+  --border: #ead6b2;
+  --accent: #7a3110;
+  --accent-soft: #f5dfcb;
+  --danger: #a3122f;
+  --star: #a8641b;
+  --star-off: #98826a;
+  color-scheme: light;
 }
 
 /* Earth tones: olive, terra cotta, warm beige and acorn brown. */
@@ -109,111 +90,22 @@
   color-scheme: light;
 }
 
-/* Warm neutrals: leather, auburn and cappuccino on cream. */
-.theme[data-theme="warm-neutrals"],
-.theme[data-theme-preview="warm-neutrals"],
-:global(html):has(.theme[data-theme="warm-neutrals"]) {
-  --bg: #fff3db;
-  --surface: #fffaf0;
-  --hover: #f5e5c6;
-  --text: #51301f;
-  --muted: #76563f;
-  --border: #ead6b2;
-  --accent: #7a3110;
-  --accent-soft: #f5dfcb;
-  --danger: #a3122f;
-  --star: #a8641b;
-  --star-off: #98826a;
-  color-scheme: light;
-}
-
-/* Cool blues: deep cyan, soft teal, cool gray and pale blue. */
-.theme[data-theme="cool-blues"],
-.theme[data-theme-preview="cool-blues"],
-:global(html):has(.theme[data-theme="cool-blues"]) {
-  --bg: #0d1e21;
-  --surface: #142a2e;
-  --hover: #1d363b;
-  --text: #d8e6e8;
-  --muted: #94a8ab;
-  --border: #2d464b;
-  --accent: #66d2df;
-  --accent-soft: #113a40;
-  --danger: #ff8f8f;
-  --star: #f3cf6b;
-  --star-off: #5b757b;
-  color-scheme: dark;
-}
-
-/* Minimal neutrals: shadow black and slate gray on warm gray and light gray-blue. */
-.theme[data-theme="minimal-neutrals"],
-.theme[data-theme-preview="minimal-neutrals"],
-:global(html):has(.theme[data-theme="minimal-neutrals"]) {
-  --bg: #e6e6e6;
-  --surface: #f4f4f4;
-  --hover: #dadbe3;
-  --text: #101014;
-  --muted: #4e4e58;
-  --border: #c9cad4;
-  --accent: #3d3d47;
-  --accent-soft: #d0d1db;
-  --danger: #a3262a;
-  --star: #8f6200;
-  --star-off: #7a7a84;
-  color-scheme: light;
-}
-
-/* Pastels: amethyst, tawny, slate and moss. */
-.theme[data-theme="pastels"],
-.theme[data-theme-preview="pastels"],
-:global(html):has(.theme[data-theme="pastels"]) {
-  --bg: #f5f2f7;
-  --surface: #ffffff;
-  --hover: #ece6f0;
-  --text: #2e2833;
-  --muted: #5d5566;
-  --border: #e2dbe8;
-  --accent: #6e5281;
-  --accent-soft: #ede5f3;
-  --danger: #b03a48;
-  --star: #b0753a;
-  --star-off: #708a9c;
-  color-scheme: light;
-}
-
-/* Vivid nightfall: dark amethyst through indigo and royal violet to mauve. */
-.theme[data-theme="vivid-nightfall"],
-.theme[data-theme-preview="vivid-nightfall"],
-:global(html):has(.theme[data-theme="vivid-nightfall"]) {
-  --bg: #10002b;
-  --surface: #240046;
-  --hover: #320a5e;
-  --text: #f5ebff;
-  --muted: #cfadf2;
-  --border: #5a189a;
-  --accent: #c77dff;
-  --accent-soft: #3c096c;
-  --danger: #ff8fa3;
-  --star: #ffd166;
-  --star-off: #8a66b8;
-  color-scheme: dark;
-}
-
-/* Iron: gunmetal, with rust. */
-.theme[data-theme="iron"],
-.theme[data-theme-preview="iron"],
-:global(html):has(.theme[data-theme="iron"]) {
-  --bg: #1b1e21;
-  --surface: #24282c;
-  --hover: #2f3439;
-  --text: #e4e7ea;
-  --muted: #9ea6ad;
-  --border: #394046;
-  --accent: #e58a5e;
-  --accent-soft: #3c2a21;
-  --danger: #ff8a9a;
-  --star: #f2c14e;
-  --star-off: #6c757d;
+/* Dark mode: true black (off pixels on OLED screens), with violet. New accounts'
+   theme, and the one logged out (lib/themes.ts, defaultTheme). */
+.theme[data-theme="dark-2"],
+.theme[data-theme-preview="dark-2"],
+:global(html):has(.theme[data-theme="dark-2"]) {
+  --bg: #000000;
+  --surface: #0f0f0f;
+  --hover: #1f1f1f;
+  --text: #ffffff;
+  --muted: #b3b3b3;
+  --border: #2b2b2b;
+  --accent: #b69cff;
+  --accent-soft: #221a3d;
+  --danger: #ff6b6b;
+  --star: #ffd43b;
+  --star-off: #6b6b6b;
   color-scheme: dark;
 }
 
@@ -235,6 +127,24 @@
   color-scheme: dark;
 }
 
+/* Ocean: midnight navy, with sky blue. */
+.theme[data-theme="dark-1"],
+.theme[data-theme-preview="dark-1"],
+:global(html):has(.theme[data-theme="dark-1"]) {
+  --bg: #0b1120;
+  --surface: #131c2e;
+  --hover: #1e293b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #26324a;
+  --accent: #38bdf8;
+  --accent-soft: #0c2a40;
+  --danger: #fb7185;
+  --star: #fbbf24;
+  --star-off: #64748b;
+  color-scheme: dark;
+}
+
 /* Blueprint: white lines and cyan on drafting blue (with a grid, below). */
 .theme[data-theme="blueprint"],
 .theme[data-theme-preview="blueprint"],
@@ -250,42 +160,6 @@
   --danger: #ffb3b3;
   --star: #ffd166;
   --star-off: #7f9fc6;
-  color-scheme: dark;
-}
-
-/* Grass: meadow greens. */
-.theme[data-theme="grass"],
-.theme[data-theme-preview="grass"],
-:global(html):has(.theme[data-theme="grass"]) {
-  --bg: #f1f6ec;
-  --surface: #fbfdf8;
-  --hover: #e3edd9;
-  --text: #1a2e14;
-  --muted: #4b5e42;
-  --border: #d3e2c6;
-  --accent: #2c6e1c;
-  --accent-soft: #deedd2;
-  --danger: #b42318;
-  --star: #a16207;
-  --star-off: #7a8c74;
-  color-scheme: light;
-}
-
-/* Rocky Mountains: snow on night granite, with pine and alpenglow. */
-.theme[data-theme="rocky-mountains"],
-.theme[data-theme-preview="rocky-mountains"],
-:global(html):has(.theme[data-theme="rocky-mountains"]) {
-  --bg: #19212b;
-  --surface: #222c38;
-  --hover: #2c3847;
-  --text: #eef3f8;
-  --muted: #a6b3c3;
-  --border: #36435a;
-  --accent: #8dcb9f;
-  --accent-soft: #1f3a33;
-  --danger: #ff9488;
-  --star: #f6b97a;
-  --star-off: #66768a;
   color-scheme: dark;
 }
 

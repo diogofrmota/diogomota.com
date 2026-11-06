@@ -106,7 +106,7 @@ export async function showTheme(page: Page, theme: string) {
 
 /**
  * axe on what is showing now, in every theme (lib/themes.ts). checkView runs it
- * in Light 2 and Dark 2 on every view; themes.spec.ts in all of them on the views
+ * in Light mode and Dark mode on every view; themes.spec.ts in all of them on the views
  * that between them have every pair of the themes' colors.
  */
 export async function checkThemes(page: Page, view: string) {
@@ -131,7 +131,7 @@ export function rgb(hex: string) {
 
 /**
  * Checks what is showing now: its layout at each of the project's sizes, then
- * axe, inside the apps in Light 2 and Dark 2 (the site's pages are always
+ * axe, inside the apps in Light mode and Dark mode (the site's pages are always
  * black; themes.spec.ts checks every theme).
  */
 export async function checkView(page: Page, view: string) {

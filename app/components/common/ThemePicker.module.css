@@ -99,3 +99,18 @@
   margin: 0;
   accent-color: var(--accent);
 }
+
+/* A recommended theme's star, after its name: yellow in every theme, with a
+   dark amber edge so it stands out (3:1) on the light ones too. */
+.star {
+  display: inline-flex;
+  flex: none;
+  margin-left: -0.25rem;
+}
+
+.star svg {
+  fill: #facc15;
+  stroke: #a16207;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
