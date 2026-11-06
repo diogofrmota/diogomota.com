@@ -1,0 +1,70 @@
+/* The login call to action on /apps (LoginCallout), in the apps' card look with
+   an accent border and icon, so it doesn't read as another app card. Phones:
+   the icon and text, then Login and Sign Up side by side under them. Wider: all
+   three in one row, the buttons at the right end. */
+.callout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 2rem;
+  padding: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+/* Like an app's logo tile, in the accent: the colors every theme pairs (themes.module.css). */
+.icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.text {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.description {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+/* Two classes, to win over ui.module.css's justify-self whatever the order. */
+.actions .action {
+  justify-self: stretch;
+  padding-inline: 1.125rem;
+}
+
+@media (min-width: 40rem) {
+  .callout {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 1.25rem;
+    padding: 1.25rem 1.5rem 1.25rem 1.25rem;
+  }
+
+  .actions {
+    grid-column: auto;
+    display: flex;
+  }
+}

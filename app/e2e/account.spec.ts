@@ -47,6 +47,9 @@ test("the account menu opens settings, and closes with Escape or a click outside
   await settings.click();
   await expect(page).toHaveURL("/account");
   await expect(page.getByRole("heading", { level: 1, name: "account" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to Apps" }).click();
+  await expect(page).toHaveURL("/apps");
 });
 
 test("change username", async ({ page }) => {

@@ -1,28 +1,83 @@
 /* One column (ui.view): the back link, the title, the dropdowns and Logout. */
+
+/* Back to Apps, in the look of the account menu's pill in the top bar: a 44px
+   tap target, and inside it a pill with the chevron in an accent circle. Pulled
+   up and left by the room around the pill, so the pill lines up with the
+   column and sits as close under the top bar as the title did. */
 .back {
-  margin: -0.75rem 0 0;
-  font-size: 0.875rem;
+  margin: -0.25rem 0 0 -0.25rem;
 }
 
-.back a {
+.backLink {
   display: inline-flex;
   align-items: center;
-  gap: 0.5ch;
   min-height: 2.75rem;
+  padding-inline: 0.25rem;
   color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 500;
   text-decoration: none;
 }
 
+.backPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0.1875rem 0.875rem 0.1875rem 0.1875rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.backIcon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  transition: transform 150ms ease;
+}
+
+.backIcon svg {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 2.25;
+}
+
+/* The ring around the pill rather than the whole tap target. */
+.backLink:focus-visible {
+  outline: none;
+}
+
+.backLink:focus-visible .backPill {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 @media (hover: hover) {
-  .back a:hover {
+  .backLink:hover {
     color: var(--text);
-    text-decoration: underline;
+  }
+
+  .backLink:hover .backPill {
+    border-color: var(--muted);
+    background: var(--hover);
+  }
+
+  /* The chevron leans the way it goes. */
+  .backLink:hover .backIcon {
+    transform: translateX(-2px);
   }
 }
 
 /* Two classes, to win over ui.module.css's margin whatever the order. */
 .title.title {
-  margin: 0.25rem 0 1.25rem;
+  margin: 0.75rem 0 1.25rem;
 }
 
 /* The dropdowns: one card, a line between each. */
@@ -88,6 +143,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .backPill,
+  .backIcon,
   .summary,
   .summary::after {
     transition: none;

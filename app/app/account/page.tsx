@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/auth";
 import { PasswordForm, ThemeForm, UsernameForm } from "@/components/account/AccountSettings";
 import { AppFrame } from "@/components/common/AppShell";
+import { ChevronLeftIcon } from "@/components/common/icons";
 import ui from "@/components/common/ui.module.css";
 import { appViewport } from "@/lib/apps";
 import { findUserById } from "@/lib/users";
@@ -44,8 +45,13 @@ export default async function AccountPage() {
     <AppFrame theme={user.themePreference} username={user.username}>
       <div className={ui.view}>
         <p className={styles.back}>
-          <Link href="/apps">
-            <span aria-hidden="true">←</span>Back to Apps
+          <Link href="/apps" className={styles.backLink}>
+            <span className={styles.backPill}>
+              <span className={styles.backIcon}>
+                <ChevronLeftIcon />
+              </span>
+              Back to Apps
+            </span>
           </Link>
         </p>
         <h1 className={`${ui.heading} ${styles.title}`}>Account</h1>

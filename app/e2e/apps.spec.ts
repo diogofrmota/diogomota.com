@@ -43,6 +43,27 @@ test("/apps top bar has Login and Sign Up", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "sign up" })).toBeVisible();
 });
 
+test("/apps, logged out, asks to log in or sign up over the cards", async ({ page }) => {
+  await page.goto("/apps");
+  const callout = page.getByRole("region", { name: "Log in to use the apps" });
+  await expect(callout).toContainText("Shared and Shows need an account.");
+  const calloutBox = (await callout.boundingBox())!;
+  const headingBox = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
+  expect(calloutBox.y + calloutBox.height).toBeLessThanOrEqual(headingBox.y);
+
+  await callout.getByRole("link", { name: "Login" }).click();
+  await expect(page).toHaveURL("/login");
+  await page.goto("/apps");
+  await callout.getByRole("link", { name: "Sign Up" }).click();
+  await expect(page).toHaveURL("/signup");
+
+  // Sent here from a protected page: like the top bar's, they return there.
+  await page.goto("/account");
+  await expect(page).toHaveURL("/apps?next=%2Faccount");
+  await expect(callout.getByRole("link", { name: "Login" })).toHaveAttribute("href", "/login?next=%2Faccount");
+  await expect(callout.getByRole("link", { name: "Sign Up" })).toHaveAttribute("href", "/signup?next=%2Faccount");
+});
+
 for (const app of apps) {
   test(`clicking the ${app.name} card while logged out opens the login prompt`, async ({ page }) => {
     await page.goto("/apps");

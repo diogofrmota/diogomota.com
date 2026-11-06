@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { AppFrame } from "@/components/common/AppShell";
 import ui from "@/components/common/ui.module.css";
 import { AppList } from "@/components/site/AppList";
+import { LoginCallout } from "@/components/site/LoginCallout";
 import { appViewport, apps, appsDescription as description } from "@/lib/apps";
 import { safeNextPath } from "@/lib/next-path";
 import { baseOpenGraph, siteName } from "@/lib/site";
@@ -20,7 +21,8 @@ export const viewport = appViewport;
 
 // The way into the apps, and between them (Switch app in the apps' account menu).
 // In the apps' frame and the user's theme (dark when logged out); the top bar
-// has diogomota.com and the account menu, or Login and Sign Up.
+// has diogomota.com and the account menu, or Login and Sign Up. Logged out, a
+// call to action over the cards has them too (LoginCallout).
 //
 // `next` is set when a logged-out user was sent here from a protected page
 // (proxy.ts): Login and Sign Up return there, and for an app its login prompt opens.
@@ -35,6 +37,7 @@ export default async function AppsPage({ searchParams }: PageProps<"/apps">) {
   return (
     <AppFrame theme={await themeOf(session?.user.id)} username={username} next={next}>
       <div className={ui.view}>
+        {!username && <LoginCallout apps={apps} next={next} />}
         <h1 className={ui.heading}>
           Apps <span className={styles.version}>({version})</span>
         </h1>

@@ -79,3 +79,11 @@ export function ChevronDownIcon() {
     </Icon>
   );
 }
+
+export function ChevronLeftIcon() {
+  return (
+    <Icon>
+      <path d="m15 6-6 6 6 6" />
+    </Icon>
+  );
+}

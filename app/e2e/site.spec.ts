@@ -106,8 +106,8 @@ test("keyboard focus is visible", async ({ page }) => {
   await expect(richemont).toHaveCSS("outline-color", "rgb(255, 255, 255)");
 
   await page.goto("/apps");
-  // diogomota.com, Login, Sign Up, then the first card.
-  for (let i = 0; i < 4; i++) await page.keyboard.press("Tab");
+  // diogomota.com, Login and Sign Up in the top bar, then in the call to action over the cards, then the first card.
+  for (let i = 0; i < 6; i++) await page.keyboard.press("Tab");
   const card = page.getByRole("main").getByRole("listitem").filter({ has: page.getByRole("link", { name: "Shared", exact: true }) });
   await expect(card.getByRole("link")).toBeFocused();
   // The link covers its card, so the ring is drawn around the card.
