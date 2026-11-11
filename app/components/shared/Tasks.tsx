@@ -2,7 +2,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ChevronDownIcon, CloseIcon, PlusIcon } from "@/components/common/icons";
 import { Spinner } from "@/components/common/Spinner";
-import ui from "@/components/common/ui.module.css";
 import { useAppView } from "@/hooks/useAppView";
 import { localParts } from "@/lib/calendar";
 import type { Space } from "@/lib/space-types";
@@ -18,7 +17,7 @@ const listKey = "shared-tasks-list";
 function storedList() { try { return localStorage.getItem(listKey); } catch { return null; } }
 
 export function Tasks({ space }: { space: Space }) {
-  const { lists, loadError, error, deleting, saving, reload, actions, dismissError } = useTasks();
+  const { lists, loadError, error, deleting, ticking, saving, reload, actions, dismissError } = useTasks();
   const { panels, openPanel, closePanel } = useAppView();
   const [selectedId, setSelectedId] = useState(storedList);
   const [doneOpen, setDoneOpen] = useState(false);
@@ -32,7 +31,10 @@ export function Tasks({ space }: { space: Space }) {
   }, [reload]);
 
   const list = lists?.find((l) => l.id === selectedId) ?? lists?.[0];
+  // A task just ticked off stays here, ticked, until it moves to Done; it no
+  // longer counts as one to do.
   const active = list?.tasks.filter((t) => !t.isComplete) ?? [];
+  const toDo = active.filter((t) => !ticking.has(t.id)).length;
   const done = list?.tasks.filter((t) => t.isComplete) ?? [];
   const panel = panels.at(-1);
   const opened = panel?.startsWith("task:") ? lists?.flatMap((l) => l.tasks).find((t) => t.id === panel.slice(5)) : undefined;
@@ -49,24 +51,22 @@ export function Tasks({ space }: { space: Space }) {
     return value;
   }
   const rowProps = (task: Task) => ({
-    task, space, today,
-    onToggle: (isComplete: boolean) => actions.updateTask(task.id, { isComplete }),
+    task, space, today, ticking: ticking.has(task.id),
+    onToggle: (isComplete: boolean) => task.isComplete ? actions.updateTask(task.id, { isComplete })
+      : isComplete ? actions.tickTask(task.id) : actions.untickTask(task.id),
     onOpen: () => openPanel(`task:${task.id}`),
     onDelete: () => actions.deleteTask(task),
   });
 
-  // The top bar's Tasks tab names the view, so the h1 is for screen readers;
-  // what shows is whose tasks they are, the space's name. Then the lists to
-  // pick from, with Edit lists at their end.
+  // The view's title, then the lists to pick from, with Edit lists at their end.
   return <section className={styles.tasks} aria-label="Shared tasks">
-    <h1 className={ui.srOnly}>Tasks</h1>
-    <p className={styles.spaceName}>{space.name}</p>
+    <h1 className={styles.heading}>Tasks</h1>
     {error && <div role="alert" className={styles.alert}><p>{error}</p><button type="button" className={styles.iconButton} aria-label="Dismiss" onClick={dismissError}><CloseIcon /></button></div>}
     {loadError && <div role="alert" className={styles.alert}><p>{loadError}</p><button type="button" onClick={reload}>Retry</button></div>}
     {!lists && !loadError && <Spinner label="Loading tasks…" />}
     {lists?.length === 0 && <form className={styles.card} onSubmit={(e) => { const name = submitted(e, "name"); if (name) select(actions.createList(name)); }}>
       <h2>Start your first list</h2>
-      <p className={styles.muted}>Groceries, chores, a trip: everyone in {space.name} can add and tick off tasks.</p>
+      <p className={styles.muted}>Groceries, chores, a trip: everyone in your space can add and tick off tasks.</p>
       <label>List name<input name="name" required maxLength={80} placeholder="e.g. Groceries" autoComplete="off" /></label>
       <button type="submit" className={styles.primary}>Create list</button>
     </form>}
@@ -79,14 +79,15 @@ export function Tasks({ space }: { space: Space }) {
         <button type="button" className={styles.editLists} onClick={() => openPanel("lists")}>Edit lists</button>
       </div>
       <section className={styles.list} aria-labelledby="task-list-name">
-        <div className={styles.listHeader}><h2 id="task-list-name">{list.name}</h2>
-          <span className={styles.count}>{saving && <span className={styles.saving}>Saving…</span>}{active.length} to do</span></div>
+        {/* The list's name with how many tasks are left to do: "Groceries (3)". */}
+        <div className={styles.listHeader}><h2 id="task-list-name">{list.name} <span className={styles.count}>({toDo})</span></h2>
+          {saving && <span className={styles.saving}>Saving…</span>}</div>
         {active.length > 0 ? <SortableList id="task-order" items={active.map((t) => ({ id: t.id, label: t.title }))}
           onMove={(id, beforeId) => actions.moveTask(list.id, id, beforeId)}>
           <ul className={styles.items} aria-label="To do">{active.map((task) => <SortableTask key={task.id} {...rowProps(task)} />)}</ul>
         </SortableList> : <p className={styles.empty}>{done.length ? "All done — nice work!" : "Nothing to do yet — add your first task!"}</p>}
         <form className={styles.add} onSubmit={(e) => { const title = submitted(e, "title"); if (title) actions.addTask(list.id, title); }}>
-          <input name="title" aria-label="Add a task" placeholder="Add a task" required maxLength={200} autoComplete="off" />
+          <input name="title" aria-label="Write a task" placeholder="Write a task" required maxLength={200} autoComplete="off" />
           <button type="submit">Add</button>
         </form>
         {done.length > 0 && <details className={styles.done} open={doneOpen} onToggle={(e) => setDoneOpen(e.currentTarget.open)}>

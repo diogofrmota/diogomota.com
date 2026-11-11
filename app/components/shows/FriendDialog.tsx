@@ -1,5 +1,6 @@
 "use client";
 import { useId } from "react";
+import { Avatar } from "@/components/common/Avatar";
 import { Dialog } from "@/components/common/Dialog";
 import { CloseIcon } from "@/components/common/icons";
 import { useAppView } from "@/hooks/useAppView";
@@ -11,14 +12,14 @@ import { LoadError } from "./TitleGrid";
 import { TmdbAttribution } from "./TmdbAttribution";
 import styles from "./Shows.module.css";
 
-// Usernames by id, so the panel can name the friend while their profile loads.
-const seen = new Map<string, string>();
+// People by id, so the panel can name (and show) the friend while their profile loads.
+const seen = new Map<string, Person>();
 
 /** Opens a friend's profile (panel id "friend:<user id>"). */
 export function useOpenFriend() {
   const { openPanel } = useAppView();
   return (person: Person) => {
-    seen.set(person.id, person.username);
+    seen.set(person.id, person);
     openPanel(`friend:${person.id}`);
   };
 }
@@ -32,7 +33,8 @@ export function FriendDialog({ id }: { id: string }) {
   const { closePanel } = useAppView();
   const headingId = useId();
   const { data: friend, error, errorStatus, retry } = useShowsData<FriendProfile>(`/friends/${id}`, false);
-  const username = friend?.username ?? seen.get(id);
+  const person = friend ?? seen.get(id);
+  const username = person?.username;
   const items = friend?.items ?? null;
   // Watching and Completed say the status in their heading; Favourites mixes them, so its posters say it.
   const section = (heading: string, status: "watching" | "completed" | null, empty: string) =>
@@ -43,7 +45,10 @@ export function FriendDialog({ id }: { id: string }) {
   return <Dialog className={`${styles.dialog} ${styles.friendDialog}`} aria-labelledby={headingId} onClose={closePanel}>
     <div className={styles.dialogBody}>
       <div className={styles.dialogHeader}>
-        <h2 id={headingId}>{username ?? "Friend"}</h2>
+        <div className={styles.friendHeading}>
+          {person && <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />}
+          <h2 id={headingId}>{username ?? "Friend"}</h2>
+        </div>
         <button type="button" className={styles.close} aria-label="Close" onClick={closePanel}><CloseIcon /></button>
       </div>
       {error ? (errorStatus === 404 ? <p className={styles.empty}>{error}</p> : <LoadError message={error} onRetry={retry} />) : <>

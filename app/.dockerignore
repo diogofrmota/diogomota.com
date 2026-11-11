@@ -1,6 +1,7 @@
 # Keep secrets, host build output and test files out of the build context.
 .env*
 node_modules
+data
 .next
 next-env.d.ts
 *.tsbuildinfo

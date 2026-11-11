@@ -38,6 +38,12 @@ COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 COPY --from=builder /app/scripts ./scripts
 COPY --from=migrations / ./db/migrations/
 
+# What the app writes while it runs: the profile pictures (lib/avatars.ts).
+# docker-compose.prod.yml mounts a volume here, which takes this folder's owner
+# when it is first created, so the app (user node) can write to it.
+RUN mkdir -p /app/data/avatars && chown -R node:node /app/data
+ENV AVATAR_DIR=/app/data/avatars
+
 # The image's version tag (vX.Y.Z), passed in by deploy.yml and shown on /apps.
 # Set last so a new version doesn't invalidate the layers above.
 ARG APP_VERSION=dev

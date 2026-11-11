@@ -12,8 +12,9 @@ async function register(page: Page) {
   await expect(page.getByRole("heading", { name: "Your shared space" })).toBeVisible();
   return user;
 }
-async function create(page: Page, name = "Our home") {
-  await page.getByLabel("Space name").fill(name);
+/** Creates a space: a button, as a space has no name. */
+async function create(page: Page) {
+  await expect(page.getByLabel("Space name")).toHaveCount(0);
   await page.getByRole("button", { name: "Create space" }).click();
   await expect(page.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
   return (await (await page.request.get(base)).json()).data as Space;
@@ -39,7 +40,7 @@ async function leave(page: Page) {
   await expect(page.getByRole("heading", { name: "Your shared space" })).toBeVisible();
 }
 
-test("two users create, copy invite, join, rename, transfer ownership and delete the last space", async ({ page, browser }) => {
+test("two users create, copy invite, join, transfer ownership and delete the last space", async ({ page, browser }) => {
   const owner = await register(page);
   const space = await create(page);
   await settings(page);
@@ -61,30 +62,25 @@ test("two users create, copy invite, join, rename, transfer ownership and delete
     await join(other, code.toLowerCase());
     await expect(other.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
     await settings(other);
-    await expect(other.getByLabel("Space name")).toBeDisabled();
     await expect(other.getByRole("button", { name: "Generate invite" })).toHaveCount(0);
+    await expect(other.getByRole("region", { name: "Members" })).toContainText("Only the owner can invite people.");
     const members = other.getByRole("region", { name: "Members" });
     await expect(members).toContainText(owner.username);
     await expect(members).toContainText(member.username);
     const data: Space = (await (await other.request.get(base)).json()).data;
     expect(new Set(data.members.map((member) => member.color)).size).toBe(2);
-    expect((await other.request.patch(`${base}/${space.id}`, { data: { name: "Forbidden" } })).status()).toBe(403);
+    // No name, and nothing to rename it with.
+    expect(data).not.toHaveProperty("name");
+    expect((await page.request.patch(`${base}/${space.id}`, { data: { name: "Renamed" } })).status()).toBe(405);
     expect((await other.request.post(`${base}/${space.id}/invites`, { data: {} })).status()).toBe(403);
-    expect((await other.request.post(base, { data: { name: "Second" } })).status()).toBe(409);
+    expect((await other.request.post(base, { data: {} })).status()).toBe(409);
 
-    await page.getByLabel("Space name").fill("Lisbon home");
-    await page.getByRole("button", { name: "Save name" }).click();
-    await expect(page.getByRole("status")).toHaveText("Space name saved.");
-    // The other member's settings show the new name once shown again: the tab loads the space each time.
-    await sharedTab(other, "Calendar").click();
-    await settings(other);
-    await expect(other.getByLabel("Space name")).toHaveValue("Lisbon home");
     await leave(page);
     expect((await page.request.get(`${base}/${space.id}`)).status()).toBe(404);
     // Now the owner, once the tab loads the space again.
     await sharedTab(other, "Calendar").click();
     await settings(other);
-    await expect(other.getByRole("button", { name: "Save name" })).toBeVisible();
+    await expect(other.getByRole("button", { name: "Generate invite" })).toBeVisible();
     await expect(other.getByRole("region", { name: "Members" })).toContainText("Owner");
     await leave(other);
     await withDatabase(async (db) => {
@@ -121,28 +117,26 @@ test("invalid, expired and used invite codes show clear errors; a member can lea
 
 test("another space's data and mutations are denied, with and without a space", async ({ page, browser }) => {
   await register(page);
-  const secret = await create(page, "Private space");
+  const secret = await create(page);
   const context = await browser.newContext(contextOptions());
   const other = await context.newPage();
   try {
     await register(other);
     for (const hasSpace of [false, true]) {
-      if (hasSpace) await create(other, "Other space");
+      if (hasSpace) await create(other);
       const read = await other.request.get(`${base}/${secret.id}`);
       expect(read.status()).toBe(404);
-      expect(await read.text()).not.toContain("Private space");
-      expect((await other.request.patch(`${base}/${secret.id}`, { data: { name: "Hacked" } })).status()).toBe(404);
+      expect(await read.text()).not.toContain(secret.ownerId);
       for (const action of ["invites", "leave"]) expect((await other.request.post(`${base}/${secret.id}/${action}`, { data: {} })).status()).toBe(404);
     }
-    expect((await (await page.request.get(base)).json()).data.name).toBe("Private space");
-    expect((await page.request.patch(`${base}/${secret.id}`, { data: { name: " " } })).status()).toBe(400);
+    expect((await (await page.request.get(base)).json()).data.id).toBe(secret.id);
     expect((await page.request.post(`${base}/${secret.id}/invites`, { data: {}, headers: { Origin: "https://untrusted.example" } })).status()).toBe(403);
   } finally { await context.close(); }
 });
 
 test("concurrent creates and joins preserve one space per user and single-use invites", async ({ page, browser }) => {
   await register(page);
-  const responses = await Promise.all([1, 2].map((n) => page.request.post(base, { data: { name: `Space ${n}` } })));
+  const responses = await Promise.all([1, 2].map(() => page.request.post(base, { data: {} })));
   expect(responses.map((r) => r.status()).sort()).toEqual([200, 409]);
   const space: Space = (await (await page.request.get(base)).json()).data;
   const code = await generate(page, space.id);
@@ -169,7 +163,7 @@ test("on mobile the welcome and Settings fit both themes", async ({ page }) => {
     if (theme === "graphite") await page.locator("[data-theme]").evaluate((shell) => shell.setAttribute("data-theme", "graphite"));
     await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", theme);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await expect(page.getByRole("button", { name: "Save name" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Leave space", exact: true })).toBeVisible();
   }
 });
 

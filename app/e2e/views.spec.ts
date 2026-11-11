@@ -60,7 +60,6 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "Your shared space" })).toBeVisible();
   await checkView(page, "Shared welcome");
 
-  await page.getByLabel("Space name").fill("Walk-through");
   await page.getByRole("button", { name: "Create space" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
   await expect(page.getByText("Nothing planned yet — tap a day to add your first event!")).toBeVisible();
@@ -96,8 +95,8 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await expect(page.getByText("Nothing to do yet — add your first task!")).toBeVisible();
   await checkView(page, "Tasks, empty list");
   for (const title of ["Apples", "Bread", "Coffee"]) {
-    await page.getByLabel("Add a task").fill(title);
-    await page.getByLabel("Add a task").press("Enter");
+    await page.getByLabel("Write a task").fill(title);
+    await page.getByLabel("Write a task").press("Enter");
   }
   // Ticked off, it moves to the Done section, which opens with a click.
   await page.getByRole("checkbox", { name: "Coffee" }).click();
@@ -244,7 +243,6 @@ test("a load that fails says so, and Retry loads it again", async ({ page }) => 
   };
 
   await signUp(page, newUser(), "/signup?next=/shared");
-  await page.getByLabel("Space name").fill("Offline");
   await page.getByRole("button", { name: "Create space" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
   await failing("**/api/shared/events", async () => { await page.reload(); }, "Calendar");

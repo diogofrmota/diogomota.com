@@ -1,4 +1,5 @@
 import { type Page } from "@playwright/test";
+import sharp from "sharp";
 import { accountButton, expect, formAlert, logIn, logOut, newUser, signUp, test } from "./fixtures";
 
 const section = (page: Page, name: string) => page.getByRole("region", { name, exact: true });
@@ -235,6 +236,68 @@ test("theme preference persists after logging in again", async ({ page }) => {
   await page.goto("/shared");
   await expect(app).toHaveAttribute("data-theme", "graphite");
   await expect(app).toHaveCSS("background-color", "rgb(31, 32, 35)");
+});
+
+test("a profile picture, chosen or dropped, is made small and shows in the account menu; Remove picture takes it away", async ({ page, request }) => {
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/apps");
+  await page.goto("/account");
+  // After Password.
+  await expect(page.getByRole("main").getByRole("heading", { level: 2 }))
+    .toHaveText(["Username", "Password", "Profile picture", "Theme"]);
+  const picture = await openSection(page, "Profile picture");
+  // The account menu's button (the menu repeats it, for phones, once open).
+  const menuPicture = accountButton(page, user.username).locator("img");
+  await expect(menuPicture).toHaveCount(0);
+
+  // A landscape phone photo, with metadata that mustn't be kept.
+  const photo = await sharp({ create: { width: 1600, height: 1200, channels: 3, background: "#3366cc" } })
+    .withExif({ IFD0: { Copyright: "Where it was taken" } }).jpeg().toBuffer();
+  await picture.locator('input[type="file"]').setInputFiles({ name: "me.jpg", mimeType: "image/jpeg", buffer: photo });
+  await expect(picture.getByRole("status").filter({ hasText: "Profile picture" })).toHaveText("Profile picture saved.");
+  await expect(menuPicture).toHaveAttribute("src", /^\/api\/avatars\/[0-9a-f-]{36}\?v=\d+$/);
+  const url = (await menuPicture.getAttribute("src"))!;
+  await expect(page.getByRole("main").locator(`img[src="${url}"]`)).toHaveCount(2);
+
+  // Saved square, 512 px, as WebP without the photo's metadata, and only for those logged in.
+  const saved = await page.request.get(url);
+  expect(saved.headers()["content-type"]).toBe("image/webp");
+  const info = await sharp(await saved.body()).metadata();
+  expect({ format: info.format, width: info.width, height: info.height, exif: info.exif }).toEqual({ format: "webp", width: 512, height: 512, exif: undefined });
+  expect((await request.get(url)).status()).toBe(401);
+
+  // Shown on the other pages too.
+  await page.goto("/apps");
+  await expect(menuPicture).toHaveAttribute("src", url);
+  await page.goto("/account");
+  await openSection(page, "Profile picture");
+
+  // Dropped on the drop zone: a new picture, at a new URL.
+  const dropped = await page.evaluateHandle(async (base64) => {
+    const transfer = new DataTransfer();
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    transfer.items.add(new File([bytes], "dropped.png", { type: "image/png" }));
+    return transfer;
+  }, (await sharp({ create: { width: 300, height: 500, channels: 4, background: "#ff8800" } }).png().toBuffer()).toString("base64"));
+  await picture.locator("label").dispatchEvent("drop", { dataTransfer: dropped });
+  await expect(picture.getByRole("status").filter({ hasText: "Profile picture" })).toHaveText("Profile picture saved.");
+  await expect(menuPicture).not.toHaveAttribute("src", url);
+
+  // What isn't a picture says so, here or (pretending to be one) from the server.
+  await picture.locator('input[type="file"]').setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+  await expect(picture.getByRole("alert")).toHaveText("That isn't a picture. Choose a JPEG, PNG or WebP.");
+  await picture.locator('input[type="file"]').setInputFiles({ name: "fake.png", mimeType: "image/png", buffer: Buffer.from("not really a png") });
+  await expect(picture.getByRole("alert")).toHaveText("That file isn't a picture that can be read. Try a JPEG, PNG or WebP.");
+  await expect(menuPicture).toHaveCount(1);
+
+  // Removed: the initial again, and the picture is gone.
+  const current = (await menuPicture.getAttribute("src"))!;
+  await picture.getByRole("button", { name: "Remove picture" }).click();
+  await expect(picture.getByRole("status").filter({ hasText: "Profile picture" })).toHaveText("Profile picture removed.");
+  await expect(menuPicture).toHaveCount(0);
+  await expect(accountButton(page, user.username)).toContainText(user.username.charAt(0).toUpperCase());
+  expect((await page.request.get(current)).status()).toBe(404);
 });
 
 test("forgot password, under Password in account settings, opens the reset by email", async ({ page }) => {

@@ -1,11 +1,16 @@
 "use client";
 
-import { useActionState, useEffect, useId, useState } from "react";
-import { changePassword, changeUsername, saveTheme } from "@/app/account/actions";
+import { useActionState, useEffect, useId, useState, type DragEvent } from "react";
+import { avatarChanged, changePassword, changeUsername, saveTheme } from "@/app/account/actions";
+import { Avatar } from "@/components/common/Avatar";
+import { PhotoIcon } from "@/components/common/icons";
+import { InlineSpinner, PendingOverlay } from "@/components/common/Spinner";
 import { ThemeOptions } from "@/components/common/ThemePicker";
+import ui from "@/components/common/ui.module.css";
 import { Field, FormMessage, SubmitButton } from "@/components/site/Form";
 import formStyles from "@/components/site/Form.module.css";
 import {
+  AVATAR_MAX_BYTES,
   PASSWORD_MIN,
   normalizeUsername,
   passwordHint,
@@ -124,6 +129,130 @@ export function PasswordForm() {
       <FormMessage error={state.error} success={state.success} />
       <SubmitButton label="Change password" pending={pending} />
     </form>
+  );
+}
+
+const avatarMaxMb = AVATAR_MAX_BYTES / 1024 / 1024;
+
+/**
+ * The profile picture: the one there is (or the username's initial), and a
+ * place to drop a photo or tap to choose one, which is sent straight away. The
+ * server makes it small and square (lib/avatars.ts). While it goes, the photo
+ * chosen shows in the circle, under a spinner; then the saved one, and the
+ * account menu has it too (avatarChanged). Remove picture goes back to the
+ * initial.
+ */
+export function AvatarForm({ username, avatarUrl }: { username: string; avatarUrl: string | null }) {
+  const hintId = useId();
+  // The photo being sent (an object URL), and the URL saved since the page loaded.
+  const [preview, setPreview] = useState<string | null>(null);
+  const [saved, setSaved] = useState<string | null | undefined>(undefined);
+  const [pending, setPending] = useState<"upload" | "remove" | null>(null);
+  const [result, setResult] = useState<{ error?: string; success?: string }>({});
+  const [dragging, setDragging] = useState(false);
+  const shown = preview ?? (saved === undefined ? avatarUrl : saved);
+
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  async function send(change: "upload" | "remove", file?: File) {
+    setPending(change);
+    setResult({});
+    if (file) setPreview(URL.createObjectURL(file));
+    try {
+      let body: FormData | undefined;
+      if (file) {
+        body = new FormData();
+        body.append("picture", file);
+      }
+      const data = await apiRequest<{ avatarUrl: string | null }>("/api/account/avatar", {
+        method: file ? "POST" : "DELETE",
+        body,
+        fallback: file ? "Couldn't save the picture. Try again." : "Couldn't remove the picture. Try again.",
+      });
+      setSaved(data.avatarUrl);
+      setResult({ success: file ? "Profile picture saved." : "Profile picture removed." });
+      void avatarChanged();
+    } catch (error) {
+      setResult({ error: error instanceof Error ? error.message : "Couldn't save the picture. Try again." });
+    } finally {
+      setPending(null);
+      setPreview(null);
+    }
+  }
+
+  function choose(file: File | undefined) {
+    if (!file || pending) return;
+    // Some systems give no type for a photo (HEIC, say): the server decides then.
+    if (file.type && !file.type.startsWith("image/")) {
+      setResult({ error: "That isn't a picture. Choose a JPEG, PNG or WebP." });
+    } else if (file.size > AVATAR_MAX_BYTES) {
+      setResult({ error: `That picture is over ${avatarMaxMb} MB. Try a smaller one.` });
+    } else {
+      void send("upload", file);
+    }
+  }
+
+  function dragOver(event: DragEvent<HTMLLabelElement>) {
+    if (!event.dataTransfer.types.includes("Files")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = pending ? "none" : "copy";
+    setDragging(true);
+  }
+
+  return (
+    <div className={formStyles.form}>
+      <div className={styles.avatarRow}>
+        <span className={styles.avatarFrame}>
+          <Avatar username={username} url={shown} className={styles.avatar} />
+          {pending === "upload" && <span className={styles.avatarBusy}><InlineSpinner /></span>}
+        </span>
+        {/* The input is in the label, so a click or tap anywhere on it chooses a
+            file, and its focus ring goes around the whole drop zone. */}
+        <label
+          className={`${styles.dropZone} ${dragging ? styles.dragging : ""}`}
+          aria-disabled={pending !== null}
+          onDragEnter={dragOver}
+          onDragOver={dragOver}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            choose(event.dataTransfer.files[0]);
+          }}
+        >
+          <PhotoIcon />
+          <span className={styles.dropText}>
+            <span className={styles.dropAction}>{shown ? "Choose a new photo" : "Choose a photo"}</span> or drag one here
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            className={ui.srOnly}
+            aria-describedby={hintId}
+            disabled={pending !== null}
+            onChange={(event) => {
+              choose(event.target.files?.[0]);
+              event.target.value = "";
+            }}
+          />
+        </label>
+      </div>
+      <p id={hintId} className={formStyles.hint}>
+        JPEG, PNG or WebP, up to {avatarMaxMb} MB. It&apos;s cut to a square and made smaller. Your friends in Shows
+        and the people in your shared space see it.
+      </p>
+      <p role="status" className={ui.srOnly}>{pending === "upload" ? "Saving your picture…" : ""}</p>
+      <FormMessage error={result.error} success={result.success} />
+      {shown && !preview && (
+        <button type="button" className={`${ui.button} ${ui.remove}`} disabled={pending !== null}
+          aria-busy={pending === "remove"} onClick={() => void send("remove")}>
+          Remove picture
+          <PendingOverlay pending={pending === "remove"} />
+        </button>
+      )}
+    </div>
   );
 }
 

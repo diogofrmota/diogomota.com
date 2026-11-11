@@ -28,12 +28,12 @@ function Panels() {
   </>;
 }
 
-export function ShowsApp({ username, theme }: { username: string; theme: Theme }) {
+export function ShowsApp({ username, avatarUrl, theme }: { username: string; avatarUrl: string | null; theme: Theme }) {
   return <LibraryProvider>
-    <AppShell name="Shows" username={username} theme={theme} tabs={[
+    <AppShell name="Shows" username={username} avatarUrl={avatarUrl} theme={theme} tabs={[
       { id: "home", label: "Home", view: <Home username={username} /> },
       { id: "discover", label: "Discover", view: <Discover /> },
-      { id: "profile", label: "Profile", view: <Profile username={username} /> },
+      { id: "profile", label: "Profile", view: <Profile username={username} avatarUrl={avatarUrl} /> },
     ]}>
       <Panels />
     </AppShell>

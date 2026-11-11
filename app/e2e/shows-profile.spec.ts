@@ -181,7 +181,7 @@ test("two people become friends: a request, accepting it, each other's libraries
   expect(response.status()).toBe(200);
   const entry = (status: string, fields: object = {}) => ({ status, rating: null, currentSeason: null, currentEpisode: null, isFavourite: false, ...fields });
   expect((await response.json()).data).toEqual({
-    id: bob.id, username: bobName,
+    id: bob.id, username: bobName, avatarUrl: null,
     stats: { tvCompleted: 1, moviesCompleted: 0, episodesWatched: 33, minutesWatched: 1590 },
     items: [
       { type: "tv", tmdbId: series2.tmdbId, title: "Top Rated Series 2", year: 2001, posterPath: `/e2e-poster-${series2.tmdbId}.jpg`,
@@ -261,7 +261,7 @@ test("declining and cancelling requests, a request that's gone, and asking each 
   await expect(friendButton(page, annName)).toBeVisible();
   await expect(section(page, "Friend requests")).toHaveCount(0);
   await expect(sent).toHaveCount(0);
-  expect((await friendsState(ann.page)).friends).toEqual([{ id: await userId(me.username), username: me.username }]);
+  expect((await friendsState(ann.page)).friends).toEqual([{ id: await userId(me.username), username: me.username, avatarUrl: null }]);
   await addFriend(page, annName);
   await expect(friends.getByRole("alert")).toHaveText(`You're already friends with ${annName}.`);
   await ann.context.close();
@@ -277,7 +277,7 @@ test("only accepted friends can read a library through the API, and every friend
   const post = (from: Page, path: string, data: object = {}, headers: Record<string, string> = {}) =>
     from.request.post(`/api/shows/friends${path}`, { data, headers });
   const remove = (from: Page, id: string) => from.request.delete(`/api/shows/friends/${id}`);
-  const person = (who: { id: string; user: { username: string } }) => ({ id: who.id, username: who.user.username });
+  const person = (who: { id: string; user: { username: string } }) => ({ id: who.id, username: who.user.username, avatarUrl: null });
   const noOne = { friends: [], incoming: [], outgoing: [] };
 
   // Nobody's library before a request is accepted, and never a stranger's, my
@@ -302,12 +302,12 @@ test("only accepted friends can read a library through the API, and every friend
     expect((await response.json()).error).toBe("This friend request isn't there anymore.");
   }
   expect((await remove(friend.page, meId)).status()).toBe(404);
-  expect(await friendsState(friend.page)).toEqual({ ...noOne, incoming: [{ id: meId, username: me.username }] });
+  expect(await friendsState(friend.page)).toEqual({ ...noOne, incoming: [{ id: meId, username: me.username, avatarUrl: null }] });
 
   // Accepted: we see each other's libraries; the stranger still sees neither.
   const accepted = await post(friend.page, `/${meId}/accept`);
   expect(accepted.status()).toBe(200);
-  expect((await accepted.json()).data).toEqual({ ...noOne, friends: [{ id: meId, username: me.username }] });
+  expect((await accepted.json()).data).toEqual({ ...noOne, friends: [{ id: meId, username: me.username, avatarUrl: null }] });
   const friendProfile = await profileOf(page, friend.id);
   expect(friendProfile.status()).toBe(200);
   expect((await friendProfile.json()).data).toMatchObject({
@@ -315,7 +315,7 @@ test("only accepted friends can read a library through the API, and every friend
     items: [{ title: "The Quiet Orchard", library: { status: "watching", currentSeason: 1, currentEpisode: 2 } }],
   });
   expect((await (await profileOf(friend.page, meId)).json()).data).toEqual({
-    id: meId, username: me.username, stats: { tvCompleted: 0, moviesCompleted: 0, episodesWatched: 0, minutesWatched: 0 }, items: [],
+    id: meId, username: me.username, avatarUrl: null, stats: { tvCompleted: 0, moviesCompleted: 0, episodesWatched: 0, minutesWatched: 0 }, items: [],
   });
   expect((await profileOf(stranger.page, friend.id)).status()).toBe(404);
   expect((await profileOf(stranger.page, meId)).status()).toBe(404);
@@ -342,7 +342,7 @@ test("only accepted friends can read a library through the API, and every friend
   const both = await Promise.all([post(page, "", { username: stranger.user.username }), post(stranger.page, "", { username: me.username })]);
   expect(both.map((response) => response.status())).toEqual([201, 201]);
   expect((await friendsState(page)).friends).toEqual([person(stranger)]);
-  expect((await friendsState(stranger.page)).friends).toEqual([{ id: meId, username: me.username }]);
+  expect((await friendsState(stranger.page)).friends).toEqual([{ id: meId, username: me.username, avatarUrl: null }]);
 
   // Refused requests.
   expect((await post(page, "", { username: friend.user.username })).status()).toBe(201);
@@ -443,7 +443,7 @@ test("Add a friend suggests usernames while typing, and says whether an account 
   const search = async (q: string) => (await (await page.request.get(`/api/shows/friends/search?${new URLSearchParams({ q })}`)).json()).data;
   expect(await search("e")).toEqual({ matches: [], exact: false, self: false });
   expect(await search(`@${bob.user.username.toUpperCase()}`)).toEqual({
-    matches: [{ id: bob.id, username: bob.user.username, relation: "outgoing" }], exact: true, self: false,
+    matches: [{ id: bob.id, username: bob.user.username, avatarUrl: null, relation: "outgoing" }], exact: true, self: false,
   });
   expect(await search(me.username)).toEqual({ matches: [], exact: false, self: true });
   expect((await search("e2e_")).matches.length).toBeLessThanOrEqual(6);

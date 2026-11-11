@@ -25,6 +25,9 @@ playwright/.cache/
 # Backups
 backups/
 
+# What the app writes while it runs (profile pictures: app/lib/avatars.ts)
+app/data/
+
 # Logs
 *.log
 npm-debug.log*

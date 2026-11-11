@@ -79,6 +79,15 @@ async function saveThemePreference(userId: string, theme: Theme): Promise<void> 
   revalidatePath("/", "layout");
 }
 
+// Called once the profile picture has changed (set or removed) through
+// /api/account/avatar. Like a new theme, it shows on every page (the account
+// menu): this makes the pages the browser kept render again when next shown,
+// and this one now. The change itself is in the API, which checks it.
+export async function avatarChanged(): Promise<void> {
+  if (!(await auth())) return;
+  revalidatePath("/", "layout");
+}
+
 export async function logOut(): Promise<void> {
   await signOut({ redirectTo: "/apps" });
 }

@@ -207,8 +207,8 @@ export function libraryStats(items: readonly StatsItem[]): LibraryStats {
 export const formatHours = (minutes: number) =>
   (Math.round(minutes / 6) / 10).toLocaleString("en-GB", { maximumFractionDigits: 1 });
 
-/** A friend, a request someone sent the user, or one the user sent. */
-export type Person = { id: string; username: string };
+/** A friend, a request someone sent the user, or one the user sent: with their profile picture, if they have one. */
+export type Person = { id: string; username: string; avatarUrl: string | null };
 
 /** The user's friends and pending friend requests, each by username. */
 export type FriendsState = { friends: Person[]; incoming: Person[]; outgoing: Person[] };

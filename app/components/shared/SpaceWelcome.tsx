@@ -16,13 +16,14 @@ export function SpaceWelcome({ onJoined }: { onJoined: (space: Space) => void })
     const values = new FormData(event.currentTarget);
     setBusy(true); setError("");
     try {
-      const space = await spaceRequest<Space>(join ? "/join" : "", "POST", join ? { code: values.get("code") } : { name: values.get("name") });
+      const space = await spaceRequest<Space>(join ? "/join" : "", "POST", join ? { code: values.get("code") } : {});
       onJoined(space);
       void spaceChanged();
     } catch (error) { setError(error instanceof Error ? error.message : "Could not connect. Try again."); }
     finally { setBusy(false); }
   }
-  // What a space is, a picture of one (as on /apps), then the two ways in.
+  // What a space is, a picture of one (as on /apps), then the two ways in. A
+  // space has no name: creating one is a button.
   return <section className={ui.view}>
     <h1 className={ui.heading}>Start your shared space</h1>
     <p className={ui.muted}>One calendar and set of task lists for your group, up to 10 people. Create a space, or join one with an invite code.</p>
@@ -30,10 +31,7 @@ export function SpaceWelcome({ onJoined }: { onJoined: (space: Space) => void })
     <div className={styles.options}>
       <form className={ui.card} onSubmit={(event) => submit(event, false)}>
         <h2 className={ui.cardHeading}>New space</h2>
-        <div className={ui.field}>
-          <label htmlFor="space-name">Space name</label>
-          <input id="space-name" name="name" className={ui.input} required maxLength={80} placeholder="Home, together" disabled={busy} />
-        </div>
+        <p className={ui.muted}>Start a calendar and task lists of your own, then invite people from Settings.</p>
         <button className={`${ui.button} ${ui.primary}`} disabled={busy}>Create space</button>
       </form>
       <form className={ui.card} onSubmit={(event) => submit(event, true)}>

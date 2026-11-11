@@ -3,6 +3,7 @@ import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import { getPool } from "./db";
 import { memberColors, type Space } from "./space-types";
+import { avatarUrlSql } from "./users";
 
 export class SpaceError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -33,17 +34,11 @@ export async function readSpace(db: PoolClient, userId: string, id?: string): Pr
   const current = await membership(db, userId);
   if (id && current !== id) throw new SpaceError("Space not found.", 404);
   if (!current) return null;
-  const { rows } = await db.query('SELECT id, name, created_by AS "ownerId" FROM spaces WHERE id = $1', [current]);
-  const members = await db.query(`SELECT id, username, space_color AS color,
+  const { rows } = await db.query('SELECT id, created_by AS "ownerId" FROM spaces WHERE id = $1', [current]);
+  const members = await db.query(`SELECT id, username, ${avatarUrlSql()} AS "avatarUrl", space_color AS color,
     CASE WHEN id = $2 THEN 'owner' ELSE 'member' END AS role
     FROM users WHERE space_id = $1 ORDER BY space_joined_at, id`, [current, rows[0].ownerId]);
   return { ...rows[0], members: members.rows };
-}
-
-function spaceName(value: unknown): string {
-  if (typeof value !== "string" || !value.trim() || value.trim().length > 80)
-    throw new SpaceError("Enter a space name between 1 and 80 characters.");
-  return value.trim();
 }
 
 async function addMember(db: PoolClient, userId: string, spaceId: string) {
@@ -53,9 +48,11 @@ async function addMember(db: PoolClient, userId: string, spaceId: string) {
   await db.query("UPDATE users SET space_id = $2, space_color = $3, space_joined_at = clock_timestamp() WHERE id = $1", [userId, spaceId, color.hex]);
 }
 
-export async function createSpace(db: PoolClient, userId: string, name: unknown) {
+// A space has no name (012_unnamed_spaces_profile_pictures.sql): it is its
+// members, calendar and task lists.
+export async function createSpace(db: PoolClient, userId: string) {
   if (await membership(db, userId)) throw new SpaceError("Leave your current space before creating another.", 409);
-  const { rows } = await db.query("INSERT INTO spaces (name, created_by) VALUES ($1, $2) RETURNING id", [spaceName(name), userId]);
+  const { rows } = await db.query("INSERT INTO spaces (created_by) VALUES ($1) RETURNING id", [userId]);
   await addMember(db, userId, rows[0].id);
   return readSpace(db, userId);
 }
@@ -74,14 +71,10 @@ export async function joinSpace(db: PoolClient, userId: string, value: unknown) 
   return readSpace(db, userId);
 }
 
-export async function manageSpace(db: PoolClient, userId: string, id: string, action: "rename" | "invite" | "leave", name?: unknown) {
+export async function manageSpace(db: PoolClient, userId: string, id: string, action: "invite" | "leave") {
   const space = await readSpace(db, userId, id);
   if (!space) throw new SpaceError("Space not found.", 404);
   if (action !== "leave" && space.ownerId !== userId) throw new SpaceError("Only the owner can do that.", 403);
-  if (action === "rename") {
-    await db.query("UPDATE spaces SET name = $2 WHERE id = $1", [id, spaceName(name)]);
-    return readSpace(db, userId, id);
-  }
   if (action === "invite") {
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     for (;;) {

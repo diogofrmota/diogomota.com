@@ -24,10 +24,12 @@ export function NavLabel({ children }: { children: string }) {
  * Log in and Sign up, the call to action: a filled pill, as tall as the
  * account menu's.
  */
-export function AppHeader({ pathname, username, next, tabs, brand = true, account = true }: {
+export function AppHeader({ pathname, username, avatarUrl, next, tabs, brand = true, account = true }: {
   /** The page's path: /apps has no Switch app. */
   pathname?: string;
   username: string | null;
+  /** The user's profile picture, in place of their initial in the account menu. */
+  avatarUrl?: string | null;
   next?: string | null;
   /** The open app's tabs (HeaderTabs), in the middle. */
   tabs?: React.ReactNode;
@@ -42,7 +44,7 @@ export function AppHeader({ pathname, username, next, tabs, brand = true, accoun
     </div>
     {tabs}
     {account && <nav aria-label="Account" className={styles.account}>
-      {username ? <AccountMenu username={username} switchApp={pathname !== "/apps"} /> : <>
+      {username ? <AccountMenu username={username} avatarUrl={avatarUrl} switchApp={pathname !== "/apps"} /> : <>
         <Link href={authHref("/login", next)} className={styles.authLink}>Log in<LinkPending /></Link>
         <Link href={authHref("/signup", next)} className={`${styles.authLink} ${styles.cta}`}>
           <span className={styles.ctaPill}>Sign up<LinkPending /></span>

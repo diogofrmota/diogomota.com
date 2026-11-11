@@ -5,6 +5,7 @@ import { query } from "./db";
 import { friendRequestLimit, userSearchLimit } from "./rate-limit";
 import type { FriendProfile, FriendsState, PeopleSearch, Person, PersonMatch } from "./show-types";
 import { sharedLibrary, ShowsError } from "./shows";
+import { avatarUrlSql } from "./users";
 
 // Friendships of the Shows app: one row per pair of users (001_initial.sql),
 // user_id sent the request and friend_id received it. Pending until the
@@ -25,14 +26,14 @@ function personId(value: string, notFound: string): string {
 /** The user's friends, the requests they received and the ones they sent, each by username. */
 export async function readFriends(userId: string): Promise<FriendsState> {
   const { rows } = await query<Person & { status: "pending" | "accepted"; sent: boolean }>(
-    `SELECT u.id, u.username, f.status, f.user_id = $1 AS sent
+    `SELECT u.id, u.username, ${avatarUrlSql("u")} AS "avatarUrl", f.status, f.user_id = $1 AS sent
      FROM friendships f JOIN users u ON u.id = CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END
      WHERE $1 IN (f.user_id, f.friend_id) ORDER BY u.username`,
     [userId],
   );
   const state: FriendsState = { friends: [], incoming: [], outgoing: [] };
-  for (const { id, username, status, sent } of rows) {
-    (status === "accepted" ? state.friends : sent ? state.outgoing : state.incoming).push({ id, username });
+  for (const { id, username, avatarUrl, status, sent } of rows) {
+    (status === "accepted" ? state.friends : sent ? state.outgoing : state.incoming).push({ id, username, avatarUrl });
   }
   return state;
 }
@@ -48,7 +49,7 @@ export async function sendFriendRequest(userId: string, body: Record<string, unk
   if (usernameError(username)) throw new ShowsError(`Usernames have ${usernameHint}`);
   if (!friendRequestLimit(userId)) throw new ShowsError("Too many friend requests. Try again later.", 429);
 
-  const { rows: [other] } = await query<Person>("SELECT id, username FROM users WHERE username = $1", [username]);
+  const { rows: [other] } = await query<Pick<Person, "id" | "username">>("SELECT id, username FROM users WHERE username = $1", [username]);
   if (!other) throw new ShowsError(`No account has the username ${username}.`, 404);
   if (other.id === userId) throw new ShowsError("That's your own username.");
   try {
@@ -98,7 +99,7 @@ export async function searchPeople(userId: string, value: unknown): Promise<Peop
   // Usernames are stored in lowercase: a plain prefix LIKE, which
   // users_username_prefix_idx serves. "_" matches any character in LIKE.
   const { rows } = await query<PersonMatch>(
-    `SELECT u.id, u.username::text AS username,
+    `SELECT u.id, u.username::text AS username, ${avatarUrlSql("u")} AS "avatarUrl",
        CASE WHEN f.status = 'accepted' THEN 'friend' WHEN f.user_id = $1 THEN 'outgoing'
          WHEN f.friend_id = $1 THEN 'incoming' ELSE 'none' END AS relation
      FROM users u
@@ -168,7 +169,8 @@ const onlyFriends = "Only friends can see each other's libraries.";
  */
 export async function readFriend(userId: string, friendId: string): Promise<FriendProfile> {
   const { rows: [friend] } = await query<Person>(
-    `SELECT u.id, u.username FROM friendships f JOIN users u ON u.id = $2 WHERE f.status = 'accepted' AND ${pair}`,
+    `SELECT u.id, u.username, ${avatarUrlSql("u")} AS "avatarUrl"
+     FROM friendships f JOIN users u ON u.id = $2 WHERE f.status = 'accepted' AND ${pair}`,
     [userId, personId(friendId, onlyFriends)],
   );
   if (!friend) throw new ShowsError(onlyFriends, 404);

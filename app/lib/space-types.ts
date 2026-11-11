@@ -8,8 +8,10 @@ export const memberColors = [
   { hex: "#009988", name: "Teal" }, { hex: "#997700", name: "Ochre" },
 ] as const;
 
+// No name: a space is its members, calendar and task lists.
 export type Space = {
-  id: string; name: string; ownerId: string;
-  members: { id: string; username: string; color: string; role: "owner" | "member" }[];
+  id: string; ownerId: string;
+  /** With their profile picture (lib/users.ts), or null for their initial. */
+  members: { id: string; username: string; avatarUrl: string | null; color: string; role: "owner" | "member" }[];
 };
 export type Invite = { code: string; expiresAt: string };

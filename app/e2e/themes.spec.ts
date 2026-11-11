@@ -71,7 +71,6 @@ test.describe("in every theme, axe finds nothing serious", () => {
 
   test("Shared: Calendar and Tasks, with an event and a task open", async ({ page }) => {
     await signUp(page, newUser(), "/signup?next=/shared");
-    await page.getByLabel("Space name").fill("Themes");
     await page.getByRole("button", { name: "Create space" }).click();
     await expect(viewHeading(page)).toHaveText("Calendar");
     await page.getByRole("button", { name: "Add event", exact: true }).click();
@@ -92,8 +91,8 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await page.getByLabel("List name").fill("Groceries");
     await page.getByRole("button", { name: "Create list" }).click();
     for (const title of ["Apples", "Bread"]) {
-      await page.getByLabel("Add a task").fill(title);
-      await page.getByLabel("Add a task").press("Enter");
+      await page.getByLabel("Write a task").fill(title);
+      await page.getByLabel("Write a task").press("Enter");
     }
     await page.getByRole("checkbox", { name: "Bread" }).click();
     await page.getByText("Done (1)").click();

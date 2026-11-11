@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { Avatar } from "@/components/common/Avatar";
 import { ChevronRightIcon } from "@/components/common/icons";
 import { ApiError } from "@/lib/api-request";
 import { libraryStats, type FriendsState, type Person } from "@/lib/show-types";
@@ -81,7 +82,7 @@ function FriendRow({ person, busy, onRemove }: { person: Person; busy: boolean; 
   return <li>
     <div className={styles.personRow}>
       <button type="button" className={styles.personLink} onClick={() => openFriend(person)}>
-        <span className={styles.avatar} aria-hidden="true">{person.username[0]}</span>
+        <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />
         <span className={styles.personName}>{person.username}</span>
         <span className={styles.chevron} aria-hidden="true"><ChevronRightIcon /></span>
       </button>
@@ -101,7 +102,7 @@ function FriendRow({ person, busy, onRemove }: { person: Person; busy: boolean; 
 const counted = (count: number, word: string) => `${count.toLocaleString("en-GB")} ${word}${count === 1 ? "" : "s"}`;
 
 /** The Profile view: whose it is, friend requests, stats, favourites and friends. */
-export function Profile({ username }: { username: string }) {
+export function Profile({ username, avatarUrl }: { username: string; avatarUrl: string | null }) {
   const library = useLibrary();
   const { state, loadError, load, send } = useFriends();
   const requestsId = useId();
@@ -136,7 +137,7 @@ export function Profile({ username }: { username: string }) {
     {/* The Profile tab in the top bar shows which view this is; the page shows whose. */}
     <h1 className={styles.srOnly}>Profile</h1>
     <div className={styles.profileHeader}>
-      <span className={styles.avatar} aria-hidden="true">{username[0]}</span>
+      <Avatar username={username} url={avatarUrl} className={`${styles.avatar} ${styles.profileAvatar}`} />
       <div>
         <p className={styles.profileName}>{username}</p>
         <p className={styles.profileCounts}>{counts || "\u00a0"}</p>
@@ -149,7 +150,7 @@ export function Profile({ username }: { username: string }) {
       {notice?.where === "requests" && <NoticeLine notice={notice} />}
       {incoming.length > 0 && <ul className={styles.people} aria-labelledby={requestsId}>
         {incoming.map((person) => <li key={person.id} className={styles.personRow}>
-          <span className={styles.avatar} aria-hidden="true">{person.username[0]}</span>
+          <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />
           <span className={styles.personName}>{person.username}</span>
           <span className={styles.personActions}>
             <button type="button" className={styles.primary} disabled={busy} aria-label={`Accept ${person.username}`}
@@ -187,7 +188,7 @@ export function Profile({ username }: { username: string }) {
           <h3 id={sentId} className={styles.subheading}>Sent requests</h3>
           <ul className={styles.people} aria-labelledby={sentId}>
             {state.outgoing.map((person) => <li key={person.id} className={styles.personRow}>
-              <span className={styles.avatar} aria-hidden="true">{person.username[0]}</span>
+              <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />
               <span className={styles.personName}>{person.username}</span>
               <button type="button" disabled={busy} aria-label={`Cancel request to ${person.username}`}
                 onClick={() => act("friends", `/friends/${person.id}/cancel`, "POST", `Cancelled your friend request to ${person.username}.`)}>Cancel</button>

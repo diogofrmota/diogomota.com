@@ -1,10 +1,14 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { Dialog } from "@/components/common/Dialog";
-import { CloseIcon } from "@/components/common/icons";
-import { addStatuses, formatRuntime, statusNames, titleKey, type LibraryStatus, type TitleDetail, type TitleSummary } from "@/lib/show-types";
+import { CheckIcon, CloseIcon } from "@/components/common/icons";
+import {
+  addStatuses, formatRuntime, progressOf, statusNames, titleKey,
+  type LibraryItem, type LibraryStatus, type TitleDetail, type TitleSummary,
+} from "@/lib/show-types";
+import { statusIcons } from "./AddToLibrary";
 import { useLibrary } from "./library";
-import { LibraryControls } from "./LibraryControls";
+import { LibraryControls, RemoveFromLibrary } from "./LibraryControls";
 import { seenTitle, useShowsData } from "./shows-data";
 import { LoadError, Poster, titleFacts } from "./TitleGrid";
 import styles from "./Shows.module.css";
@@ -22,7 +26,60 @@ function lengthFacts(detail: TitleDetail): string {
     detail.episodeRuntime && `${detail.episodeRuntime} min episodes`].filter(Boolean).join(" · ");
 }
 
-/** A title's detail panel (panel id "title:tv:123"): Add to Library, or the library controls once it is there. */
+/** The poster's `sizes`, for the poster and the blurred copy behind the top, so both are the same file. */
+const posterSizes = "(min-width: 48rem) 208px, 104px";
+
+// The overview, cut to four lines with More to read the rest (and Less), when
+// it's longer: the actions stay near the top. ResizeObserver says whether it
+// is cut, once shown and whenever its width changes.
+function Overview({ text }: { text: string }) {
+  const id = useId();
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [open, setOpen] = useState(false);
+  const [cut, setCut] = useState(false);
+  useEffect(() => {
+    const paragraph = ref.current;
+    if (!paragraph || open) return;
+    const observer = new ResizeObserver(() => setCut(paragraph.scrollHeight > paragraph.clientHeight + 1));
+    observer.observe(paragraph);
+    return () => observer.disconnect();
+  }, [open, text]);
+  return <div className={styles.overviewBlock}>
+    <p ref={ref} id={id} className={`${styles.overview} ${open ? "" : styles.overviewCut}`}>{text}</p>
+    {(cut || open) && <button type="button" className={styles.textButton} aria-expanded={open} aria-controls={id}
+      onClick={() => setOpen(!open)}>{open ? "Less" : "More"}</button>}
+  </div>;
+}
+
+// A TV show's seasons with their episodes; for one in the library, which are
+// watched (a tick) and how far into the current one.
+function Seasons({ seasons, item }: { seasons: readonly number[]; item: LibraryItem | undefined }) {
+  const status = item?.library.status;
+  const progress = item && status === "watching" ? progressOf(item.library) : null;
+  return <section className={styles.seasons} aria-label="Seasons">
+    <h3>Seasons</h3>
+    <ol>{seasons.map((count, i) => {
+      const season = i + 1;
+      const watched = status === "completed" || (!!progress && (season < progress.season || (season === progress.season && progress.episode >= count)));
+      const current = !watched && progress?.season === season ? progress : null;
+      return <li key={i} data-state={watched ? "watched" : current ? "current" : undefined}>
+        <span>Season {season}</span>
+        <span className={styles.seasonEpisodes}>
+          {current ? `${current.episode} of ${plural(count, "episode")}` : plural(count, "episode")}
+          {watched && <><CheckIcon /><span className={styles.srOnly}>, watched</span></>}
+        </span>
+      </li>;
+    })}</ol>
+  </section>;
+}
+
+/**
+ * A title's detail panel (panel id "title:tv:123"), laid out as the title's
+ * page: the poster with the title and its facts, over a blurred copy of the
+ * poster; then what can be done with it (Add to Library, or the library
+ * controls once it is there); then the overview and the seasons; Remove from
+ * library last. Side by side on a wide screen, the poster staying in view.
+ */
 export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "type" | "tmdbId">; onClose: () => void }) {
   const headingId = useId();
   const addId = useId();
@@ -37,6 +94,7 @@ export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "typ
   useEffect(() => { if (removed) firstAdd.current?.focus(); }, [removed]);
   const shown: TitleSummary | undefined = detail ?? seenTitle(key);
   const item = library.find(title);
+  const length = detail && lengthFacts(detail);
 
   async function add(status: (typeof addStatuses)[number]) {
     setAdding(status); setAddError(""); setRemoved(false);
@@ -49,42 +107,52 @@ export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "typ
 
   return <Dialog className={`${styles.dialog} ${styles.titleDialog}`} aria-labelledby={headingId} onClose={onClose}>
     <div className={styles.dialogBody}>
-      <div className={styles.dialogHeader}>
-        <h2 id={headingId}>{shown?.title ?? "Loading…"}</h2>
+      {shown?.posterPath && <div className={styles.titleBackdrop} aria-hidden="true">
+        <Poster title={shown} sizes={posterSizes} />
+      </div>}
+      {/* Stays at the top while the panel scrolls; takes no room of its own. */}
+      <div className={styles.closeBar}>
         <button type="button" className={styles.close} aria-label="Close" onClick={onClose}><CloseIcon /></button>
       </div>
-      <div className={styles.detail}>
-        {shown ? <Poster title={shown} sizes="(min-width: 48rem) 176px, 128px" className={styles.detailPoster} />
-          : <span className={`${styles.poster} ${styles.skeleton} ${styles.detailPoster}`} />}
-        <div className={styles.facts}>
-          {shown && <p>{titleFacts(shown, true).text}</p>}
-          {detail ? <p>{lengthFacts(detail)}</p> : !error && <span className={`${styles.skeletonLine} ${styles.skeleton}`} />}
+      <div className={styles.titlePage}>
+        <div className={styles.titlePoster}>
+          {shown ? <Poster title={shown} sizes={posterSizes} className={styles.detailPoster} />
+            : <span className={`${styles.poster} ${styles.skeleton} ${styles.detailPoster}`} />}
+        </div>
+        <div className={styles.titleHead}>
+          <h2 id={headingId}>{shown?.title ?? "Loading…"}</h2>
+          {shown && <p className={styles.titleFacts}>{titleFacts(shown, true).text}</p>}
+          {detail ? length && <p className={styles.titleFacts}>{length}</p>
+            : !error && <span className={`${styles.skeletonLine} ${styles.skeleton} ${styles.skeletonShort}`} />}
           <p className={styles.source}>Rating and details from TMDB</p>
         </div>
+        <div className={styles.titleMain}>
+          {error ? <LoadError message={error} onRetry={retry} /> : !detail ? <div className={styles.overviewSkeleton} aria-busy="true">
+            <p role="status" className={styles.srOnly}>Loading details…</p>
+            {[1, 2, 3].map((line) => <span key={line} className={`${styles.skeletonLine} ${styles.skeleton}`} />)}
+          </div> : <>
+            {!library.items ? (library.loadError ? <LoadError message={library.loadError} onRetry={library.reload} />
+              : <span className={`${styles.skeletonLine} ${styles.skeleton}`} />)
+              : item ? <LibraryControls item={item} detail={detail} />
+              : <div className={styles.addGroup} role="group" aria-labelledby={addId}>
+                {removed && <p role="status" className={styles.muted}>Removed from your library.</p>}
+                <h3 id={addId}>Add to Library</h3>
+                <div className={styles.addButtons}>
+                  {addStatuses.map((status, i) => {
+                    const Icon = statusIcons[status];
+                    return <button key={status} type="button" className={styles.addOption} data-status={status} disabled={adding !== null}
+                      ref={i === 0 ? firstAdd : undefined}
+                      onClick={() => add(status)}><Icon />{adding === status ? "Adding…" : statusNames[status]}</button>;
+                  })}
+                </div>
+              </div>}
+            {addError && <p role="alert" className={styles.error}>{addError}</p>}
+            <Overview key={detail.overview} text={detail.overview || "No overview on TMDB yet."} />
+            {detail.type === "tv" && !!detail.episodesPerSeason?.length && <Seasons seasons={detail.episodesPerSeason} item={item} />}
+            {item && <RemoveFromLibrary item={item} onRemoved={() => setRemoved(true)} />}
+          </>}
+        </div>
       </div>
-      {error ? <LoadError message={error} onRetry={retry} /> : !detail ? <div className={styles.overviewSkeleton} aria-busy="true">
-        <p role="status" className={styles.srOnly}>Loading details…</p>
-        {[1, 2, 3].map((line) => <span key={line} className={`${styles.skeletonLine} ${styles.skeleton}`} />)}
-      </div> : <>
-        <p className={styles.overview}>{detail.overview || "No overview on TMDB yet."}</p>
-        {!library.items ? (library.loadError ? <LoadError message={library.loadError} onRetry={library.reload} />
-          : <span className={`${styles.skeletonLine} ${styles.skeleton}`} />)
-          : item ? <LibraryControls item={item} detail={detail} onRemoved={() => setRemoved(true)} />
-          : <div className={styles.addGroup} role="group" aria-labelledby={addId}>
-            {removed && <p role="status" className={styles.muted}>Removed from your library.</p>}
-            <h3 id={addId}>Add to Library</h3>
-            <div className={styles.addButtons}>
-              {addStatuses.map((status, i) => <button key={status} type="button" className={styles.primary} disabled={adding !== null}
-                ref={i === 0 ? firstAdd : undefined}
-                onClick={() => add(status)}>{adding === status ? "Adding…" : statusNames[status]}</button>)}
-            </div>
-          </div>}
-        {addError && <p role="alert" className={styles.error}>{addError}</p>}
-        {detail.type === "tv" && !!detail.episodesPerSeason?.length && <section className={styles.seasons} aria-label="Seasons">
-          <h3>Seasons</h3>
-          <ol>{detail.episodesPerSeason.map((count, i) => <li key={i}><span>Season {i + 1}</span><span>{plural(count, "episode")}</span></li>)}</ol>
-        </section>}
-      </>}
     </div>
   </Dialog>;
 }

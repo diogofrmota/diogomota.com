@@ -9,6 +9,7 @@ import styles from "./Tasks.module.css";
 
 type RowProps = {
   task: Task; space: Space; /** YYYY-MM-DD in the calendar's time zone. */ today: string;
+  /** Just ticked off: shown ticked and crossed out, fading out, until it moves to Done. */ ticking?: boolean;
   onToggle: (isComplete: boolean) => void; onOpen: () => void; onDelete: () => void;
 };
 
@@ -63,19 +64,19 @@ function useSwipe(onSwipe: () => void) {
   };
 }
 
-export function TaskRow({ task, space, today, onToggle, onOpen, onDelete, sortable }: RowProps & { sortable?: ReturnType<typeof useSortableItem> }) {
+export function TaskRow({ task, space, today, ticking = false, onToggle, onOpen, onDelete, sortable }: RowProps & { sortable?: ReturnType<typeof useSortableItem> }) {
   const swipe = useSwipe(onDelete);
   const member = space.members.find((m) => m.id === task.assigneeId);
   const due = task.dueDate && dueText(task.dueDate, today, task.isComplete);
   return <li ref={sortable?.ref} style={sortable?.style}
-    className={`${styles.task} ${sortable?.isDragging ? styles.dragging : ""} ${task.isComplete ? styles.complete : ""}`}>
+    className={`${styles.task} ${sortable?.isDragging ? styles.dragging : ""} ${task.isComplete || ticking ? styles.complete : ""} ${ticking ? styles.ticking : ""}`}>
     {swipe.offset !== null && <div className={styles.swipeBehind} aria-hidden="true"><TrashIcon />Delete</div>}
     <div className={`${styles.row} ${swipe.offset !== null ? styles.swiping : ""}`}
       style={swipe.offset ? { transform: `translateX(${swipe.offset}px)` } : undefined} {...swipe.handlers}>
       {sortable ? <button type="button" className={styles.handle} aria-label={`Reorder ${task.title}`} {...sortable.handle}><GripIcon /></button>
         : <span className={styles.handle} />}
       <label className={styles.check}>
-        <input type="checkbox" checked={task.isComplete} aria-label={task.title} onChange={(e) => onToggle(e.target.checked)} />
+        <input type="checkbox" checked={task.isComplete || ticking} aria-label={task.title} onChange={(e) => onToggle(e.target.checked)} />
       </label>
       <button type="button" className={styles.open} onClick={onOpen}>
         <span className={styles.title}>{task.title}</span>

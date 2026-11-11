@@ -68,7 +68,7 @@ export function sharedTab(page: Page, view: "Calendar" | "Tasks" | "Settings") {
 }
 
 /**
- * Opens Shared's Settings tab: the space's name, members, invites and leaving.
+ * Opens Shared's Settings tab: the space's members, invites and leaving.
  * The space loads again each time the tab is shown.
  */
 export async function openSpaceSettings(page: Page) {

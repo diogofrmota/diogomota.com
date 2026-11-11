@@ -9,7 +9,7 @@ import { SpaceSettings } from "./SpaceSettings";
 import { Calendar } from "./Calendar";
 import { Tasks } from "./Tasks";
 
-// Calendar, Tasks and Settings (the space's name, members, invites, leaving)
+// Calendar, Tasks and Settings (the space's members, invites, leaving)
 // for the user's space, tabs in the middle of the top bar, or before there is
 // one, creating or joining one (and no tabs).
 export function SharedApp({ user, initialSpace }: { user: User; initialSpace: Space | null }) {
@@ -22,7 +22,7 @@ export function SharedApp({ user, initialSpace }: { user: User; initialSpace: Sp
     setSpace((shown) => JSON.stringify(shown) === JSON.stringify(current) ? shown : current);
   }, []);
   // The page may be one the browser kept for Back, rendered before the space
-  // changed (left or renamed): checked once shown, and replaced if it did. A
+  // changed (left, or members came or went): checked once shown, and replaced if it did. A
   // failed check keeps what's shown; the views say so themselves if the space
   // can't be reached.
   useEffect(() => {
@@ -36,7 +36,7 @@ export function SharedApp({ user, initialSpace }: { user: User; initialSpace: Sp
     joined.current = true;
     setSpace(next);
   }
-  return <AppShell key={space?.id ?? "welcome"} name="Shared" username={user.username} theme={user.themePreference}
+  return <AppShell key={space?.id ?? "welcome"} name="Shared" username={user.username} avatarUrl={user.avatarUrl} theme={user.themePreference}
     hideNavigation={!space} tabs={space ? [
       { id: "calendar", label: "Calendar", view: <Calendar space={space} userId={user.id} /> },
       { id: "tasks", label: "Tasks", view: <Tasks space={space} /> },

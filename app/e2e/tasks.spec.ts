@@ -11,7 +11,6 @@ const contextOptions = () => ({ extraHTTPHeaders: { "X-Forwarded-For": `10.${[..
 
 async function setup(page: Page) {
   await signUp(page, newUser(), "/signup?next=/shared");
-  await page.getByLabel("Space name").fill("Task home");
   await page.getByRole("button", { name: "Create space" }).click();
   await expect(page.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
   return (await (await page.request.get("/api/shared/spaces")).json()).data as Space;
@@ -33,8 +32,8 @@ function saved(page: Page, path: RegExp, method = "POST") {
 async function addTasks(page: Page, ...titles: string[]) {
   for (const title of titles) {
     const created = saved(page, /\/lists\/[^/]+\/tasks$/);
-    await page.getByLabel("Add a task").fill(title);
-    await page.getByLabel("Add a task").press("Enter");
+    await page.getByLabel("Write a task").fill(title);
+    await page.getByLabel("Write a task").press("Enter");
     await created;
   }
 }
@@ -169,8 +168,9 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await createFirstList(page, "House");
   await addTasks(page, "Buy milk", "Fix the door", "Water plants");
   await expect.poll(() => todoTitles(page)).toEqual(["Buy milk", "Fix the door", "Water plants"]);
-  await expect(page.getByLabel("Add a task")).toBeFocused();
-  await expect(page.getByText("3 to do")).toBeVisible();
+  await expect(page.getByLabel("Write a task")).toBeFocused();
+  // How many are left to do, after the list's name.
+  await expect(page.getByRole("heading", { level: 2, name: "House (3)", exact: true })).toBeVisible();
 
   let moved = saved(page, /\/move$/);
   await mouseDrag(page, handle(page, "Water plants"), row(page, "Buy milk"));
@@ -188,9 +188,30 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await openTasks(page);
   await expect.poll(() => todoTitles(page)).toEqual(["Buy milk", "Fix the door", "Water plants"]);
 
+  // Ticked off, a task stays where it is for a moment, ticked (it no longer
+  // counts as one to do), before it moves; unticked in that moment, it stays
+  // and nothing is sent. Clicked from inside the page, so the moment is timed
+  // there and not by the test's round trips.
+  const patches: string[] = [];
+  page.on("request", (request) => { if (request.method() === "PATCH") patches.push(request.url()); });
+  const tick = page.getByRole("list", { name: "To do" }).getByRole("checkbox", { name: "Fix the door" });
+  expect(await tick.evaluate(async (box: HTMLInputElement) => {
+    box.click();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const shown = { checked: box.checked, inToDo: box.closest("ul")?.getAttribute("aria-label") === "To do" };
+    box.click();
+    return shown;
+  })).toEqual({ checked: true, inToDo: true });
+  await expect(tick).not.toBeChecked();
+  await expect(page.getByRole("heading", { level: 2, name: "House (3)", exact: true })).toBeVisible();
+  await page.waitForTimeout(1000);
+  expect(patches).toEqual([]);
+  await expect.poll(() => todoTitles(page)).toEqual(["Buy milk", "Fix the door", "Water plants"]);
+
   // Complete: into the collapsed Done section, and back out at the end of the list.
   let changed = saved(page, /\/tasks\/[^/]+$/, "PATCH");
   await page.getByRole("checkbox", { name: "Fix the door" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "House (2)", exact: true })).toBeVisible();
   await changed;
   await expect.poll(() => todoTitles(page)).toEqual(["Buy milk", "Water plants"]);
   const done = page.locator("details", { hasText: "Done (1)" });
@@ -354,8 +375,8 @@ test("changes show before the server answers, and roll back when it refuses", as
   await page.unrouteAll();
 
   await page.route(`**${base}/lists/*/tasks`, (route) => route.abort());
-  await page.getByLabel("Add a task").fill("Ghost task");
-  await page.getByLabel("Add a task").press("Enter");
+  await page.getByLabel("Write a task").fill("Ghost task");
+  await page.getByLabel("Write a task").press("Enter");
   await expect(alert).toContainText("Could not reach the server. Check your connection. Your change was undone.");
   await expect.poll(() => todoTitles(page)).toEqual(["Call the plumber", "Pay rent"]);
   await page.unrouteAll();

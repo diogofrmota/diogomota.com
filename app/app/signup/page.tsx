@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AuthPage } from "@/components/auth/AuthPage";
 import { SignUpForm } from "@/components/auth/SignUpForm";
-import { appAt, appNames, appViewport } from "@/lib/apps";
+import { appAt, appViewport } from "@/lib/apps";
 import { authHref, safeNextPath } from "@/lib/next-path";
 
 export const metadata: Metadata = { title: "sign up", robots: { index: false } };
@@ -19,7 +19,7 @@ export default async function SignUpPage({ searchParams }: PageProps<"/signup">)
   return (
     <AuthPage
       title={app ? `Sign up to use ${app.name}` : "Create your account"}
-      intro={`One account for ${appNames}.`}
+      intro="One account for all apps."
       form={<SignUpForm next={next} />}
     >
       <p>

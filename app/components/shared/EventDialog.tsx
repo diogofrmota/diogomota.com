@@ -13,16 +13,16 @@ export function eventRequest<T>(path = "", method = "GET", body?: object, signal
   return apiRequest<T>(`/api/shared/events${path}`, { method, body, signal, fallback: "Could not reach your calendar. Try again." });
 }
 
-/** "Wed 12 Nov", with the year when it isn't this one. */
+/** "12 Nov (Wed)": the date first, its weekday after it; with the year when it isn't this one ("12 Nov 2027 (Fri)"). */
 export function shortDate(date: string) {
   const thisYear = date.slice(0, 4) === localParts(new Date()).date.slice(0, 4);
-  return dateLabel(date, { weekday: "short", day: "numeric", month: "short", ...(thisYear ? {} : { year: "numeric" }) });
+  return `${dateLabel(date, { day: "numeric", month: "short", ...(thisYear ? {} : { year: "numeric" }) })} (${dateLabel(date, { weekday: "short" })})`;
 }
 
 const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
 const clock = (total: number) => `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 
-// A date or a time as a chip that shows it in words ("Wed 12 Nov", "09:30"),
+// A date or a time as a chip that shows it in words ("12 Nov (Wed)", "09:30"),
 // over the browser's own field, which is invisible and fills the chip: a tap or
 // a click opens the browser's picker (a calendar, or the time wheels on a phone).
 function PickerChip({ type, label, value, onChange }: {

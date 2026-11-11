@@ -7,7 +7,8 @@ import { LoginCallout } from "@/components/site/LoginCallout";
 import { appAt, appViewport, apps, appsDescription as description } from "@/lib/apps";
 import { safeNextPath } from "@/lib/next-path";
 import { baseOpenGraph, siteName } from "@/lib/site";
-import { themeOf } from "@/lib/users";
+import { defaultTheme } from "@/lib/themes";
+import { findUserById } from "@/lib/users";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export const viewport = appViewport;
 // (proxy.ts): Login and Sign Up return there, and for an app its login prompt opens.
 export default async function AppsPage({ searchParams }: PageProps<"/apps">) {
   const session = await auth();
+  const user = session ? await findUserById(session.user.id) : null;
   const username = session?.user.username ?? null;
   const next = username ? null : safeNextPath((await searchParams).next);
   const prompted = appAt(next);
@@ -36,7 +38,7 @@ export default async function AppsPage({ searchParams }: PageProps<"/apps">) {
   const version = process.env.APP_VERSION ?? "dev";
 
   return (
-    <AppFrame theme={await themeOf(session?.user.id)} username={username} next={next}>
+    <AppFrame theme={user?.themePreference ?? defaultTheme} username={username} avatarUrl={user?.avatarUrl} next={next}>
       <div className={styles.view}>
         {!username && <LoginCallout next={next} />}
         <h1 className={ui.heading}>Apps</h1>

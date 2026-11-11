@@ -14,7 +14,8 @@
 .members { list-style: none; padding: 0; margin: 0; }
 .members li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; }
 .members li + li { border-top: 1px solid var(--border); }
-.swatch { width: 1.25rem; height: 1.25rem; flex-shrink: 0; border-radius: 50%; outline: 1px solid var(--muted); outline-offset: 2px; }
+/* A member's picture or initial, ringed in their color (the one their events have). */
+.memberAvatar { display: grid; place-items: center; flex-shrink: 0; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: color-mix(in srgb, var(--member-color) 22%, var(--surface)); color: var(--text); font-weight: var(--weight-semibold); line-height: 1; text-box: trim-both cap alphabetic; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--member-color); margin: 4px; }
 .memberName { min-width: 0; overflow-wrap: anywhere; }
 /* The owner's mark, at the end of their row. */
 .role { margin-left: auto; color: var(--muted); font-size: var(--text-sm); }

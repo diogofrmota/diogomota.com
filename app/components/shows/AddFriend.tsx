@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useState } from "react";
+import { Avatar } from "@/components/common/Avatar";
 import { CheckIcon } from "@/components/common/icons";
 import { usernameHint, USERNAME_MAX } from "@/lib/account-rules";
 import type { FriendsState, PeopleSearch, PersonMatch } from "@/lib/show-types";
@@ -129,7 +130,7 @@ export function AddFriend({ username, busy, onAdd }: { username: string; busy: b
             className={styles.suggestion}
             // Not blurring the field: the list would close before the click lands.
             onMouseDown={(event) => event.preventDefault()} onClick={() => choose(match)}>
-            <span className={styles.avatar} aria-hidden="true">{match.username[0]}</span>
+            <Avatar username={match.username} url={match.avatarUrl} className={styles.avatar} />
             <span className={styles.personName}>{match.username}</span>
             {match.relation !== "none" && <span className={styles.relation}>{relationNames[match.relation]}</span>}
           </li>)}

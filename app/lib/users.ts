@@ -7,9 +7,23 @@ export type User = {
   username: string;
   email: string;
   themePreference: Theme;
+  /** Their profile picture (avatarUrlSql), or null without one. */
+  avatarUrl: string | null;
 };
 
-const userColumns = `id, username, email, theme_preference AS "themePreference"`;
+/**
+ * SQL for a user's profile picture URL, or NULL without one, from the users
+ * row `alias` (or the only one): /api/avatars/<id>?v=<when it was set, in ms>.
+ * A new picture is a new URL, so browsers can keep each one for good
+ * (app/api/avatars/[id]/route.ts). The picture itself is in lib/avatars.ts.
+ */
+export function avatarUrlSql(alias?: string): string {
+  const column = (name: string) => (alias ? `${alias}.${name}` : name);
+  return `CASE WHEN ${column("avatar_updated_at")} IS NOT NULL THEN '/api/avatars/' || ${column("id")} || '?v='
+    || (extract(epoch FROM ${column("avatar_updated_at")}) * 1000)::bigint END`;
+}
+
+const userColumns = `id, username, email, theme_preference AS "themePreference", ${avatarUrlSql()} AS "avatarUrl"`;
 
 type LoginUser = {
   id: string;
@@ -35,8 +49,8 @@ export async function findUserById(id: string): Promise<User | null> {
 }
 
 /**
- * The theme of a page that is open logged out too (/apps, the password reset
- * pages): the user's saved one, or the default without a user.
+ * The theme of a page that is open logged out too (the password reset pages):
+ * the user's saved one, or the default without a user.
  */
 export async function themeOf(userId: string | undefined): Promise<Theme> {
   return (userId && (await findUserById(userId))?.themePreference) || defaultTheme;
@@ -113,4 +127,21 @@ export async function updatePasswordHash(id: string, passwordHash: string): Prom
 
 export async function updateThemePreference(id: string, theme: Theme): Promise<void> {
   await query(`UPDATE users SET theme_preference = $2 WHERE id = $1`, [id, theme]);
+}
+
+/**
+ * Records that the user's profile picture was just set (lib/avatars.ts has
+ * the file), and returns its new URL; null when there is no such user.
+ */
+export async function setAvatarUpdated(id: string): Promise<string | null> {
+  const { rows } = await query<{ avatarUrl: string }>(
+    `UPDATE users SET avatar_updated_at = clock_timestamp() WHERE id = $1 RETURNING ${avatarUrlSql()} AS "avatarUrl"`,
+    [id],
+  );
+  return rows[0]?.avatarUrl ?? null;
+}
+
+/** Records that the user has no profile picture. */
+export async function clearAvatarUpdated(id: string): Promise<void> {
+  await query(`UPDATE users SET avatar_updated_at = NULL WHERE id = $1`, [id]);
 }

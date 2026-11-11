@@ -11,7 +11,6 @@ test.use({ timezoneId: "America/New_York" });
 async function setup(page: Page) {
   const user = newUser();
   await signUp(page, user, "/signup?next=/shared");
-  await page.getByLabel("Space name").fill("Calendar home");
   await page.getByRole("button", { name: "Create space" }).click();
   await expect(page.getByText("Nothing planned yet — tap a day to add your first event!")).toBeVisible();
   return { user, space: (await (await page.request.get("/api/shared/spaces")).json()).data as Space };
@@ -174,7 +173,7 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
   await expect(dialog.getByLabel("Start time")).toHaveValue("09:00");
   await expect(dialog.getByLabel("End time")).toHaveValue("10:00");
   // The date in words over the browser's field, which opens its picker.
-  await expect(dialog.getByRole("group", { name: "Starts" })).toContainText(dateLabel(first, { weekday: "short", day: "numeric", month: "short" }));
+  await expect(dialog.getByRole("group", { name: "Starts" })).toContainText(`${dateLabel(first, { day: "numeric", month: "short" })} (${dateLabel(first, { weekday: "short" })})`);
 
   // All day: no times.
   await dialog.getByLabel("Title", { exact: true }).fill("Holiday");

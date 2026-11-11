@@ -31,10 +31,12 @@ export type TabNavProps = {
  * the page has the whole width; without (/apps and the rest, Shared before
  * there is a space) it is a centered column.
  */
-export function AppFrame({ theme, username, next, brand, account, nav, children, overlay }: {
+export function AppFrame({ theme, username, avatarUrl, next, brand, account, nav, children, overlay }: {
   theme: Theme;
   /** Null when logged out: the top bar has Login and Sign Up. */
   username: string | null;
+  /** The user's profile picture, in the account menu (lib/users.ts). */
+  avatarUrl?: string | null;
   /** Where Login and Sign Up return to. */
   next?: string | null;
   /** diogomota.com on the left of the top bar (AppHeader). */
@@ -52,7 +54,7 @@ export function AppFrame({ theme, username, next, brand, account, nav, children,
     <div className={`${themeStyles.theme} ${styles.shell} ${nav ? "" : styles.withoutNav}`} data-theme={theme}>
       {/* Browser UI color on mobile. React moves it into <head>. */}
       <meta name="theme-color" content={themeBackground(theme)} />
-      <AppHeader pathname={pathname} username={username} next={next} brand={brand} account={account}
+      <AppHeader pathname={pathname} username={username} avatarUrl={avatarUrl} next={next} brand={brand} account={account}
         tabs={nav && <HeaderTabs {...nav} />} />
       <main className={styles.main}>{children}</main>
       {overlay}
@@ -75,6 +77,7 @@ export function AppShell({
   name,
   tabs,
   username,
+  avatarUrl,
   theme,
   hideNavigation = false,
   children,
@@ -83,6 +86,8 @@ export function AppShell({
   /** The first tab is the default view. */
   tabs: readonly AppTab[];
   username: string;
+  /** The user's profile picture, in the account menu. */
+  avatarUrl?: string | null;
   /** The user's saved theme, rendered by the server. It is changed in /account. */
   theme: Theme;
   hideNavigation?: boolean;
@@ -109,7 +114,7 @@ export function AppShell({
   const nav = { label: name, tabs, current: view, onSelect: selectTab };
   return (
     <AppViewContext value={appView}>
-      <AppFrame theme={theme} username={username} brand={false} nav={hideNavigation ? undefined : nav} overlay={children}>
+      <AppFrame theme={theme} username={username} avatarUrl={avatarUrl} brand={false} nav={hideNavigation ? undefined : nav} overlay={children}>
         <div className={styles.views} data-direction={direction}>
           {tabs.map((tab) => (
             <Activity key={tab.id} mode={tab.id === view ? "visible" : "hidden"}>

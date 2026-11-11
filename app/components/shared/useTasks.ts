@@ -4,6 +4,12 @@ import { ApiError, apiRequest } from "@/lib/api-request";
 import { moveBefore, type Task, type TaskFields, type TaskList } from "@/lib/task-types";
 
 export const undoSeconds = 5;
+/**
+ * How long a task just ticked off stays in its list, ticked and crossed out,
+ * before it moves to Done. Its row fades out over the end of it (Tasks.module.css,
+ * .ticking): change both together.
+ */
+export const tickedMs = 650;
 
 function taskRequest<T>(path = "", method = "GET", body?: object): Promise<T> {
   // keepalive: a change made just before leaving the page still gets there.
@@ -47,6 +53,10 @@ export function useTasks() {
   const [deleting, setDeleting] = useState<Task | null>(null);
   const deletingRef = useRef<Task | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Ticked off, but only moved to Done (and sent) once tickedMs has passed, so
+  // the tick is seen first: unticking one before then only cancels it.
+  const [ticking, setTicking] = useState<ReadonlySet<string>>(() => new Set());
+  const tickTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const queue = useRef<Promise<void>>(null);
 
   const enqueue = useCallback((job: () => Promise<void>) => { queue.current = (queue.current ?? Promise.resolve()).then(job); }, []);
@@ -90,17 +100,40 @@ export function useTasks() {
     clearTimeout(undoTimer.current);
     if (deletingRef.current) undoTimer.current = setTimeout(commitDelete, undoSeconds * 1000);
   }, [commitDelete]);
+  const untickTask = useCallback((id: string) => {
+    clearTimeout(tickTimers.current.get(id));
+    if (!tickTimers.current.delete(id)) return;
+    setTicking((current) => { const next = new Set(current); next.delete(id); return next; });
+  }, []);
+  const completeTask = useCallback((id: string) => {
+    const fields = { isComplete: true };
+    change({ apply: (lists) => lists.map((l) => ({ ...l, tasks: updateTask(l.tasks, id, fields) })), send: () => taskRequest(`/${id}`, "PATCH", fields) });
+  }, [change]);
+  const tickTask = useCallback((id: string) => {
+    if (tickTimers.current.has(id)) return;
+    setTicking((current) => new Set(current).add(id));
+    tickTimers.current.set(id, setTimeout(() => { untickTask(id); completeTask(id); }, tickedMs));
+  }, [completeTask, untickTask]);
+
   const deleteTask = useCallback((task: Task) => {
+    // Deleted while ticked off: as it was, if the delete is undone.
+    untickTask(task.id);
     commitDelete();
     deletingRef.current = task;
     setDeleting(task);
     resumeUndo();
-  }, [commitDelete, resumeUndo]);
+  }, [commitDelete, resumeUndo, untickTask]);
 
-  // Leaving the Tasks view ends the undo window; so does leaving the page, where
-  // the request has to start right away.
+  // Leaving the Tasks view ends the undo window, and moves the tasks just ticked
+  // off to Done; so does leaving the page, where the requests have to start
+  // right away.
   useEffect(() => {
+    const timers = tickTimers.current;
     function leave() {
+      for (const id of [...timers.keys()]) {
+        untickTask(id);
+        void taskRequest(`/${id}`, "PATCH", { isComplete: true }).catch(() => {});
+      }
       const task = deletingRef.current;
       if (!task) return;
       undoDelete();
@@ -108,8 +141,12 @@ export function useTasks() {
       void taskRequest(`/${task.id}`, "DELETE").catch(() => {});
     }
     window.addEventListener("pagehide", leave);
-    return () => { window.removeEventListener("pagehide", leave); commitDelete(); };
-  }, [commitDelete, undoDelete]);
+    return () => {
+      window.removeEventListener("pagehide", leave);
+      for (const id of [...timers.keys()]) { untickTask(id); completeTask(id); }
+      commitDelete();
+    };
+  }, [commitDelete, undoDelete, untickTask, completeTask]);
 
   const lists = useMemo(() => {
     if (!confirmed) return null;
@@ -154,11 +191,17 @@ export function useTasks() {
         send: () => taskRequest(`/${id}/move`, "POST", { beforeId }),
       });
     },
+    /** Ticks a task off: it moves to Done once tickedMs has passed. */
+    tickTask,
+    /** Unticks a task ticked off within tickedMs, which leaves it where it was. */
+    untickTask,
     deleteTask, undoDelete, pauseUndo, resumeUndo,
-  }), [change, deleteTask, undoDelete, pauseUndo, resumeUndo]);
+  }), [change, tickTask, untickTask, deleteTask, undoDelete, pauseUndo, resumeUndo]);
 
   return {
     lists, loadError, error, deleting, reload, actions,
+    /** The tasks ticked off in the last tickedMs, still in the to-do list until then. */
+    ticking,
     saving: pending.length > 0,
     dismissError: () => setError(""),
   };

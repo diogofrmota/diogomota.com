@@ -66,7 +66,7 @@ What the symptoms usually mean:
 
 A service stopped with `docker compose stop` stays stopped across reboots (`restart: unless-stopped`); `docker compose up -d` starts it again.
 
-Never run `docker compose down -v`: `-v` deletes the `pgdata` volume, which is the database. `docker compose down` without `-v` keeps the data but takes the site down until `docker compose up -d`.
+Never run `docker compose down -v`: `-v` deletes the `pgdata` volume, which is the database, and `appdata`, which has the profile pictures. `docker compose down` without `-v` keeps the data but takes the site down until `docker compose up -d`.
 
 ## Roll back to a previous image
 
@@ -89,7 +89,7 @@ Every deploy's image stays on Docker Hub as `diogofrmota/diogomota-com:<short SH
 
 ## Backups
 
-[infra/backup.sh](../infra/backup.sh) runs from cron ([infra/crontab](../infra/crontab)) at 03:00 server time (UTC) every 3 days. It writes `backups/diogomota_YYYYMMDD-HHMMSS.sql.gz`: plain SQL without owners or grants, gzipped and tested. Once the dump has succeeded, it deletes the dumps older than 14 days, so there are about five on disk. A failing backup never deletes the old ones.
+[infra/backup.sh](../infra/backup.sh) runs from cron ([infra/crontab](../infra/crontab)) at 03:00 server time (UTC) every 3 days. It writes `backups/diogomota_YYYYMMDD-HHMMSS.sql.gz`: plain SQL without owners or grants, gzipped and tested. Beside it, `backups/avatars_YYYYMMDD-HHMMSS.tar.gz` has the profile pictures (the `avatars` folder of the app's `appdata` volume, read from the running app; skipped, with a line in the log, while the app is down). Once the dump has succeeded, it deletes both kinds older than 14 days, so there are about five of each on disk. A failing backup never deletes the old ones. The offsite backup copies only the dumps: the pictures can be set again, the accounts and libraries can't.
 
 The dumps are on the VPS's own disk: if the VPS is lost, so are they. Set up the [offsite backup](#offsite-backup-optional), or copy one to your PC now and then.
 
@@ -171,6 +171,16 @@ Then log in and look at whatever you restored for.
 
 **Undo**: the dump from step 1 is now the newest file in `backups/` (`ls -t backups | head -n 1`); restore it the same way.
 
+### Profile pictures
+
+`restore.sh` only restores the database. The pictures are files on the `appdata` volume; to put back an archive `infra/backup.sh` made (the app running):
+
+```sh
+docker compose exec -T app tar -xzf - -C /app/data < backups/avatars_20261102-030000.tar.gz
+```
+
+That replaces the pictures in the archive and leaves any newer ones. A picture whose user has none in the database (`users.avatar_updated_at`) isn't shown; a user whose picture file is missing shows their initial until they set a new one.
+
 ### Onto a new VPS
 
 If the VPS is gone, start from a dump on your PC or [offsite](#offsite-backup-optional):
@@ -187,7 +197,7 @@ If the VPS is gone, start from a dump on your PC or [offsite](#offsite-backup-op
 
 4. On the VPS as `deploy`: `docker login -u diogofrmota` with a read-only Docker Hub token (see [Docker Hub tokens](#docker-hub-tokens)).
 5. `cp .env.production.example .env && chmod 600 .env`, then fill it in with `nano .env`: a new `POSTGRES_PASSWORD` (`openssl rand -hex 32`), a new `AUTH_SECRET` (`openssl rand -base64 32`; everyone logs in again), and `RESEND_API_KEY` and `TMDB_READ_TOKEN` from your local `.env` or their dashboards.
-6. `docker compose up -d --wait postgres`, then `bash infra/restore.sh backups/diogomota_20261102-030000.sql.gz`. The app isn't running yet, so the restore only swaps the databases.
+6. `docker compose up -d --wait postgres`, then `bash infra/restore.sh backups/diogomota_20261102-030000.sql.gz`. The app isn't running yet, so the restore only swaps the databases. With an `avatars_*.tar.gz` too, put it back once the app is running (step 9), as in [Profile pictures](#profile-pictures).
 7. `bash infra/issue-cert.sh you@example.com` (once DNS points here), then `crontab infra/crontab`.
 8. GitHub → Settings → Secrets and variables → Actions: set `VPS_HOST` to the new IP and `VPS_KNOWN_HOSTS` to the output of `ssh-keyscan NEW_IP`.
 9. GitHub → Actions → Deploy → Run workflow with `image_tag` set to the tag that was live, or empty to build `main`. It applies the migrations the dump lacks and starts the app.

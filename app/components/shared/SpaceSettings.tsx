@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { spaceChanged } from "@/app/shared/actions";
+import { Avatar } from "@/components/common/Avatar";
 import { Spinner } from "@/components/common/Spinner";
 import ui from "@/components/common/ui.module.css";
 import type { Invite, Space } from "@/lib/space-types";
@@ -8,7 +9,7 @@ import { spaceRequest } from "./space-request";
 import styles from "./Spaces.module.css";
 
 /** The card an action was made in, where what it did (or why not) is shown. */
-type Card = "name" | "invite" | "leave";
+type Card = "invite" | "leave";
 type Notice = { card: Card; text: string; error?: boolean };
 
 function NoticeLine({ notice }: { notice: Notice }) {
@@ -34,40 +35,23 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
       setNotice({ card, text: error instanceof Error ? error.message : "Could not connect. Try again.", error: true });
     } finally { setPending(null); }
   }
-  function rename(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const name = new FormData(event.currentTarget).get("name");
-    void run("name", async () => {
-      onChange(await spaceRequest<Space>(`/${space.id}`, "PATCH", { name }));
-      void spaceChanged();
-      return "Space name saved.";
-    });
-  }
   const status = (card: Card) => <>
     {pending === card && <Spinner label="Saving…" />}
     {notice?.card === card && <NoticeLine notice={notice} />}
   </>;
 
   return <>
-    <form className={ui.card} onSubmit={rename}>
-      <h2 className={ui.cardHeading}>Space name</h2>
-      <div className={ui.field}>
-        {/* The card's heading says it. */}
-        <label htmlFor="edit-space-name" className={ui.srOnly}>Space name</label>
-        <input key={space.name} id="edit-space-name" name="name" className={ui.input} defaultValue={space.name} required maxLength={80} disabled={!owner || busy} />
-      </div>
-      {owner ? <button className={`${ui.button} ${ui.primary}`} disabled={busy}>Save name</button>
-        : <p className={ui.muted}>Only the owner can change the name and invite people.</p>}
-      {status("name")}
-    </form>
     <section className={ui.card} aria-labelledby="members-heading">
       <h2 id="members-heading" className={ui.cardHeading}>Members</h2>
-      {/* Each in their color, as in the calendar; only the owner is marked. */}
+      {/* Each with their picture (or initial) in a ring of their color, as in
+          the calendar; only the owner is marked. */}
       <ul className={styles.members}>{space.members.map((member) => <li key={member.id}>
-        <span className={styles.swatch} style={{ backgroundColor: member.color }} aria-hidden="true" />
+        <Avatar username={member.username} url={member.avatarUrl} className={styles.memberAvatar}
+          style={{ "--member-color": member.color } as CSSProperties} />
         <span className={styles.memberName}>{member.username}{member.id === userId ? " (you)" : ""}</span>
         {member.role === "owner" && <span className={styles.role}>Owner</span>}
       </li>)}</ul>
+      {!owner && <p className={ui.muted}>Only the owner can invite people.</p>}
     </section>
     {owner && <section className={ui.card} aria-labelledby="invite-heading">
       <h2 id="invite-heading" className={ui.cardHeading}>Invite people</h2>
@@ -88,7 +72,7 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
     <section className={ui.card} aria-labelledby="leave-heading">
       <h2 id="leave-heading" className={ui.cardHeading}>Leave space</h2>
       <p className={ui.muted}>{space.members.length === 1 ? "You are the last member. Leaving deletes this space and its data." : owner ? "Ownership will pass to the member who joined earliest." : "You can create or join another space after leaving."}</p>
-      {confirmLeave ? <div className={ui.confirm}><p>Leave {space.name}?</p>
+      {confirmLeave ? <div className={ui.confirm}><p>Leave this space?</p>
         <div className={ui.actions}>
           <button className={`${ui.button} ${ui.danger}`} disabled={busy}
             onClick={() => run("leave", async () => {
@@ -105,10 +89,10 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
 }
 
 /**
- * Shared's Settings tab: the space's name, members, invites and leaving. The
- * space is SharedApp's, and every change goes back to it (onChange): a new
- * name shows in the other tabs, and leaving takes Shared back to creating or
- * joining a space.
+ * Shared's Settings tab: the space's members, invites and leaving. The space
+ * is SharedApp's, and every change goes back to it (onChange): members who
+ * came or went show in the other tabs, and leaving takes Shared back to
+ * creating or joining a space.
  */
 export function SpaceSettings({ space, userId, onChange }: {
   space: Space;

@@ -8,6 +8,8 @@ export const PASSWORD_MIN = 10;
 // rather than silently cut.
 export const PASSWORD_MAX_BYTES = 72;
 export const EMAIL_MAX = 254;
+/** The largest profile picture file accepted (lib/avatars.ts makes it small). nginx lets 21 MB through to its upload. */
+export const AVATAR_MAX_BYTES = 20 * 1024 * 1024;
 
 export const usernameHint = `${USERNAME_MIN}-${USERNAME_MAX} characters: a-z, 0-9 and _.`;
 export const passwordHint = `At least ${PASSWORD_MIN} characters.`;

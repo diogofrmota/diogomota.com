@@ -41,6 +41,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Files the app writes: the profile pictures (data/avatars), kept across
+    # redeploys, and archived with every backup (infra/backup.sh).
+    volumes:
+      - appdata:/app/data
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
       interval: 30s
@@ -84,4 +88,5 @@ networks:
 
 volumes:
   pgdata:
+  appdata:
   certbot-webroot:

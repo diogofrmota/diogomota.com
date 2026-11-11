@@ -4,22 +4,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { logOut } from "@/app/account/actions";
+import { Avatar } from "@/components/common/Avatar";
 import { AppsIcon, ChevronDownIcon, LogoutIcon, UserIcon } from "@/components/common/icons";
 import { LinkPending } from "@/components/common/LinkPending";
 import { LogoutButton } from "./LogoutButton";
 import styles from "./AccountMenu.module.css";
 
-// The username in the top bar, drawn as a button (a pill with the username's
-// initial, the username and a chevron that turns over when open; on a phone
-// only the initial, as a round avatar), opening
+// The username in the top bar, drawn as a button (a pill with the user's
+// profile picture, or their initial without one, the username and a chevron
+// that turns over when open; on a phone only the picture or initial, as a round
+// avatar), opening
 // Account (/account), Switch app (/apps, the way from one app to another; not
 // on /apps itself) and Log out, each with its icon. A disclosure (a button that
 // shows a list) rather than an ARIA menu, so Tab moves through it like any
 // links. Escape, a click outside or tabbing away closes it. A chosen item
 // keeps it open, with a spinner in place of its icon, until the page it opens
 // is there (and the menu with it, closed); the current page's closes it at once.
-export function AccountMenu({ username, switchApp }: {
+export function AccountMenu({ username, avatarUrl, switchApp }: {
   username: string;
+  /** Their profile picture (lib/users.ts), or null for their initial. */
+  avatarUrl?: string | null;
   /** Whether to offer Switch app: everywhere but /apps, where the apps already are. */
   switchApp: boolean;
 }) {
@@ -60,7 +64,7 @@ export function AccountMenu({ username, switchApp }: {
         if (!rootRef.current?.contains(event.relatedTarget)) setOpen(false);
       }}
     >
-      {/* Named by the username alone: the initial and the chevron are hidden. */}
+      {/* Named by the username alone: the picture (or initial) and the chevron are hidden. */}
       <button
         ref={buttonRef}
         type="button"
@@ -70,9 +74,7 @@ export function AccountMenu({ username, switchApp }: {
         onClick={() => setOpen(!open)}
       >
         <span className={styles.pill}>
-          <span aria-hidden="true" className={styles.avatar}>
-            {username.charAt(0).toUpperCase()}
-          </span>
+          <Avatar username={username} url={avatarUrl} className={styles.avatar} />
           <span className={styles.name}>{username}</span>
           <span className={styles.chevron}>
             <ChevronDownIcon />
@@ -82,9 +84,7 @@ export function AccountMenu({ username, switchApp }: {
       <div id={listId} className={styles.list} hidden={!open}>
         {/* On a phone the button shows only the initial: the username, at the top. */}
         <p className={styles.who}>
-          <span aria-hidden="true" className={styles.avatar}>
-            {username.charAt(0).toUpperCase()}
-          </span>
+          <Avatar username={username} url={avatarUrl} className={styles.avatar} />
           <span className={styles.whoName}>{username}</span>
         </p>
         <ul className={styles.items}>

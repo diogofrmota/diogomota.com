@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/auth";
-import { PasswordForm, ThemeForm, UsernameForm } from "@/components/account/AccountSettings";
+import { AvatarForm, PasswordForm, ThemeForm, UsernameForm } from "@/components/account/AccountSettings";
 import { LogoutButton } from "@/components/account/LogoutButton";
 import { AppFrame } from "@/components/common/AppShell";
+import { Avatar } from "@/components/common/Avatar";
 import { ChevronDownIcon, ChevronLeftIcon } from "@/components/common/icons";
 import { LinkPending } from "@/components/common/LinkPending";
 import ui from "@/components/common/ui.module.css";
@@ -58,7 +59,7 @@ export default async function AccountPage() {
   const theme = themes.find((info) => info.id === user.themePreference);
 
   return (
-    <AppFrame theme={user.themePreference} username={user.username}>
+    <AppFrame theme={user.themePreference} username={user.username} avatarUrl={user.avatarUrl}>
       <div className={ui.view}>
         <p className={styles.back}>
           <Link href="/apps" className={`${ui.button} ${ui.quiet}`}>
@@ -68,9 +69,7 @@ export default async function AccountPage() {
         </p>
         <h1 className={`${ui.heading} ${styles.title}`}>Account</h1>
         <div className={styles.identity}>
-          <span className={styles.avatar} aria-hidden="true">
-            {user.username.charAt(0).toUpperCase()}
-          </span>
+          <Avatar username={user.username} url={user.avatarUrl} className={styles.avatar} />
           <p className={styles.who}>
             <span className={styles.username}>{user.username}</span>
             <span className={styles.email}>{user.email}</span>
@@ -87,6 +86,10 @@ export default async function AccountPage() {
             <p className={styles.forgot}>
               Don&apos;t know your current password? <Link href="/forgot-password">Reset it by email</Link>
             </p>
+          </Dropdown>
+
+          <Dropdown id="avatar" title="Profile picture">
+            <AvatarForm username={user.username} avatarUrl={user.avatarUrl} />
           </Dropdown>
 
           <Dropdown id="theme" title="Theme" value={theme?.name}>

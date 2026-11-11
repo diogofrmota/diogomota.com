@@ -57,7 +57,7 @@ test("/apps, logged out, asks to log in or sign up over the cards", async ({ pag
   await page.goto("/apps");
   // Logged out, in Light mode.
   await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "light-2");
-  const callout = page.getByRole("region", { name: "One account for Shared and Shows" });
+  const callout = page.getByRole("region", { name: "One account for all apps" });
   await expect(callout.getByRole("paragraph")).toHaveText(
     "Plan with your group in a shared calendar and task lists, and keep track of what you watch.");
   // No icon: the title, the paragraph under it, then the two buttons side by
@@ -74,6 +74,10 @@ test("/apps, logged out, asks to log in or sign up over the cards", async ({ pag
   expect(signUp.y).toBeGreaterThanOrEqual(text.y + text.height);
   expect(login.y).toBe(signUp.y);
   expect(login.x).toBeGreaterThan(signUp.x + signUp.width);
+  // The paragraph is as wide as the box (less its padding), not broken off mid-box.
+  expect(text.width).toBeGreaterThan(calloutBox.width - 60);
+  // Log in stands out from the tinted box: a 2px outline.
+  await expect(callout.getByRole("link", { name: "Log in" })).toHaveCSS("border-top-width", "2px");
 
   await callout.getByRole("link", { name: "Log in" }).click();
   await expect(page).toHaveURL("/login");

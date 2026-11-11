@@ -19,7 +19,6 @@ async function openApp(page: Page, path: string) {
   await signUp(page, user, `/signup?${new URLSearchParams({ next: path })}`);
   await expect(page).toHaveURL(path);
   if (path === "/shared") {
-    await page.getByLabel("Space name").fill("Shell test space");
     await page.getByRole("button", { name: "Create space" }).click();
     await expect(viewHeading(page)).toHaveText("Calendar");
   }
@@ -72,7 +71,7 @@ test("back and forward move between views, and out of the app to /apps", async (
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
-  expect((await page.request.post("/api/shared/spaces", { data: { name: "History space" } })).ok()).toBe(true);
+  expect((await page.request.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
   await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
   await expect(viewHeading(page)).toHaveText("Calendar");
@@ -266,7 +265,6 @@ test("Shared's Settings tab: only once there is a space, and leaving there goes 
   // No tabs yet: the top bar has only the account menu.
   await expect(page.getByRole("banner").getByRole("button")).toHaveCount(1);
   await expect(page.getByRole("banner").getByRole("link")).toHaveCount(0);
-  await page.getByLabel("Space name").fill("Back test space");
   let done = refreshed();
   await page.getByRole("button", { name: "Create space" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
@@ -274,15 +272,10 @@ test("Shared's Settings tab: only once there is a space, and leaving there goes 
 
   await tab(page, "Shared", "Settings").click();
   await expect(viewHeading(page)).toHaveText("Settings");
-  await expect(page.getByLabel("Space name")).toHaveValue("Back test space");
-  // A new name shows in the other tabs straight away.
-  await page.getByLabel("Space name").fill("Renamed space");
-  done = refreshed();
-  await page.getByRole("button", { name: "Save name" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("Space name saved.");
-  await done;
+  // A space has no name to change: Tasks is titled Tasks.
+  await expect(page.getByLabel("Space name")).toHaveCount(0);
   await tab(page, "Shared", "Tasks").click();
-  await expect(page.getByRole("region", { name: "Shared tasks" }).getByText("Renamed space", { exact: true })).toBeVisible();
+  await expect(viewHeading(page)).toHaveText("Tasks");
 
   await tab(page, "Shared", "Settings").click();
   await page.getByRole("button", { name: "Leave space", exact: true }).click();
@@ -368,7 +361,7 @@ test.describe("on a phone", () => {
     const user = { ...newUser(), username: `e2e_${Date.now()}abc` };
     await signUp(page, user, "/signup?next=%2Fshows");
     await expect(page).toHaveURL("/shows");
-    expect((await page.request.post("/api/shared/spaces", { data: { name: "Narrow space" } })).ok()).toBe(true);
+    expect((await page.request.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
     const account = accountButton(page, user.username);
     for (const app of appViews) {
       await page.goto(app.path);
