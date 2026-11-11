@@ -123,11 +123,11 @@ export async function readTitle(userId: string, type: MediaType, id: number): Pr
   return detail(show, rows[0] ?? null);
 }
 
-/** Adds a title to the user's library as watching or planned. */
+/** Adds a title to the user's library as watching, planned or completed. */
 export async function addToLibrary(userId: string, body: Record<string, unknown>): Promise<TitleDetail> {
   const type = mediaType(body.type);
   const id = tmdbId(body.tmdbId);
-  if (!addStatuses.includes(body.status as (typeof addStatuses)[number])) throw new ShowsError("Add it as Watching or Planned.");
+  if (!addStatuses.includes(body.status as (typeof addStatuses)[number])) throw new ShowsError("Add it as Watching, Planned or Completed.");
   // Fetched from TMDB outside any transaction, so no lock waits on the network.
   const show = await cachedTitle(type, id);
   try {

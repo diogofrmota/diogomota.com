@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Locator, Page } from "@playwright/test";
 import { expect, newUser, test } from "./fixtures";
-import { card, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, otherPerson, row, section, tab, userId, viewHeading } from "./shows";
+import { card, cardButtons, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, otherPerson, row, section, tab, userId, viewHeading } from "./shows";
 
 // Titles of the fake TMDB (lib/tmdb-mock.ts). Its TV shows have two seasons, of
 // 10 and 8 episodes, 45 minutes each (Harbor Lights: 52, its latest episode's).
@@ -136,7 +136,7 @@ test("two people become friends: a request, accepting it, each other's libraries
   await expect(friendButton(page, bobName)).toBeVisible();
   await expect(sent).toHaveCount(0);
   await tab(page, "Discover").click();
-  await expect(grid(section(page, "Added by Friends"), "Added by Friends TV shows").getByRole("button"))
+  await expect(cardButtons(grid(section(page, "Added by Friends"), "Added by Friends TV shows")))
     .toHaveText([/Harbor Lights/, /The Quiet Orchard/, /Top Rated Series 2/]);
 
   // Bob's profile: his stats, what he's watching, has completed and his

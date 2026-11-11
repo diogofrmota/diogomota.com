@@ -45,11 +45,24 @@ test("/apps top bar has Login and Sign Up", async ({ page }) => {
 
 test("/apps, logged out, asks to log in or sign up over the cards", async ({ page }) => {
   await page.goto("/apps");
-  const callout = page.getByRole("region", { name: "Log in to use the apps" });
-  await expect(callout).toContainText("Shared and Shows need an account.");
+  // Logged out, in Light mode.
+  await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "light-2");
+  const callout = page.getByRole("region", { name: "Create an account to start using the apps" });
+  await expect(callout.getByRole("paragraph")).toHaveText(
+    "To use the apps you need to create an account. Log in, or sign up if you are a new user.");
+  // No icon: the title, the paragraph under it, then the two buttons side by side under that.
+  await expect(callout.locator("svg, img")).toHaveCount(0);
   const calloutBox = (await callout.boundingBox())!;
   const headingBox = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
   expect(calloutBox.y + calloutBox.height).toBeLessThanOrEqual(headingBox.y);
+  const title = (await callout.getByRole("heading").boundingBox())!;
+  const text = (await callout.getByRole("paragraph").boundingBox())!;
+  const login = (await callout.getByRole("link", { name: "Login" }).boundingBox())!;
+  const signUp = (await callout.getByRole("link", { name: "Sign Up" }).boundingBox())!;
+  expect(text.y).toBeGreaterThanOrEqual(title.y + title.height);
+  expect(login.y).toBeGreaterThanOrEqual(text.y + text.height);
+  expect(signUp.y).toBe(login.y);
+  expect(signUp.x).toBeGreaterThan(login.x + login.width);
 
   await callout.getByRole("link", { name: "Login" }).click();
   await expect(page).toHaveURL("/login");

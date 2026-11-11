@@ -1,10 +1,10 @@
 import "server-only";
 import type { PoolClient } from "pg";
-import type { CalendarEvent } from "./calendar";
+import { localParts, type CalendarEvent } from "./calendar";
 import { readSpace, SpaceError } from "./spaces";
 
 const select = `SELECT e.id, e.title, coalesce(e.notes, '') AS notes, e.starts_at AS "startsAt",
-  e.ends_at AS "endsAt", e.is_group AS "isGroup", a.user_id AS "assigneeId"
+  e.ends_at AS "endsAt", e.all_day AS "allDay", e.is_group AS "isGroup", a.user_id AS "assigneeId"
   FROM events e LEFT JOIN event_assignees a ON a.event_id = e.id`;
 export async function eventOperation(db: PoolClient, userId: string, method: string, id?: string, body: Record<string, unknown> = {}) {
   const space = await readSpace(db, userId);
@@ -19,7 +19,7 @@ export async function eventOperation(db: PoolClient, userId: string, method: str
     return [];
   }
   if (method === "POST" || method === "PATCH") {
-    const { title, notes = "", startsAt, endsAt, isGroup, assigneeId } = body;
+    const { title, notes = "", startsAt, endsAt, allDay = false, isGroup, assigneeId } = body;
     if (typeof title !== "string" || !title.trim() || title.trim().length > 200) throw new SpaceError("Enter a title between 1 and 200 characters.");
     if (typeof notes !== "string" || notes.length > 10000) throw new SpaceError("Notes must be at most 10,000 characters.");
     const validInstant = (value: unknown): value is string => typeof value === "string" &&
@@ -27,12 +27,15 @@ export async function eventOperation(db: PoolClient, userId: string, method: str
       new Date(value).toISOString().slice(0, 19) === value.slice(0, 19);
     if (!validInstant(startsAt) || !validInstant(endsAt) || Date.parse(endsAt) <= Date.parse(startsAt))
       throw new SpaceError("Provide valid UTC times, with the end after the start.");
+    // An all-day event runs from a day's start to a day's start, in the calendar's zone.
+    if (typeof allDay !== "boolean" || (allDay && [startsAt, endsAt].some((instant) => localParts(instant).time !== "00:00")))
+      throw new SpaceError("An all-day event starts and ends at midnight.");
     if (typeof isGroup !== "boolean" || (!isGroup && !space.members.some((m) => m.id === assigneeId)) || (isGroup && assigneeId != null))
       throw new SpaceError("Assign the event to a current member or the whole group.");
-    const values = [space.id, title.trim(), notes, startsAt, endsAt, isGroup];
+    const values = [space.id, title.trim(), notes, startsAt, endsAt, isGroup, allDay];
     const saved = id
-      ? await db.query(`UPDATE events SET title=$2, notes=$3, starts_at=$4, ends_at=$5, is_group=$6 WHERE space_id=$1 AND id=$7 RETURNING id`, [...values, id])
-      : await db.query(`INSERT INTO events (space_id,title,notes,starts_at,ends_at,is_group) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`, values);
+      ? await db.query(`UPDATE events SET title=$2, notes=$3, starts_at=$4, ends_at=$5, is_group=$6, all_day=$7 WHERE space_id=$1 AND id=$8 RETURNING id`, [...values, id])
+      : await db.query(`INSERT INTO events (space_id,title,notes,starts_at,ends_at,is_group,all_day) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`, values);
     id = saved.rows[0].id;
     await db.query("DELETE FROM event_assignees WHERE event_id=$1", [id]);
     if (!isGroup) await db.query("INSERT INTO event_assignees (event_id,user_id) VALUES ($1,$2)", [id, assigneeId]);

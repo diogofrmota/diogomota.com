@@ -1,7 +1,7 @@
 import { randomBytes, randomInt } from "node:crypto";
 import { expect, test } from "./fixtures";
 import { withDatabase } from "./db";
-import { card, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, otherPerson, row, section, tab, tmdbRequests, typeSwitch, userId, viewHeading, wholeCard } from "./shows";
+import { card, cardButtons, expectNoHorizontalScroll, grid, libraryRows, mockBase, openShows, otherPerson, row, section, tab, tmdbRequests, typeSwitch, userId, viewHeading, wholeCard } from "./shows";
 
 async function cachedShow(type: "tv" | "movie", tmdbId: number) {
   const { rows } = await withDatabase((client) => client.query(
@@ -30,10 +30,10 @@ test("Discover shows TMDB's lists, three genres and Added by Friends, for TV sho
 
   // One row of 20 that scrolls sideways.
   const topList = grid(page, "Top Rated TV shows");
-  await expect(topList.getByRole("button")).toHaveCount(20);
+  await expect(cardButtons(topList)).toHaveCount(20);
   await expect(topRated).toHaveAttribute("aria-busy", "false");
   await expect(topRated.getByTestId("skeleton")).toHaveCount(0);
-  const first = topList.getByRole("button").first();
+  const first = cardButtons(topList).first();
   await expect(first).toHaveAccessibleName("The Quiet Orchard, 2016, rated 9.1 out of 10");
   await expect(first).toContainText("The Quiet Orchard");
   await expect(wholeCard(first)).toContainText("2016 · ★ 9.1");
@@ -64,15 +64,15 @@ test("Discover shows TMDB's lists, three genres and Added by Friends, for TV sho
   const trending = grid(page, "Trending This Week TV shows");
   await expect(trending.getByRole("button").first()).toHaveAccessibleName("Glass Meridian, 2026, rated 8.2 out of 10");
   const popular = grid(page, "Popular TV shows");
-  await expect(popular.getByRole("button")).toHaveCount(20);
-  await expect(popular.getByRole("button").first()).toHaveAccessibleName("Harbor Lights, 2021, rated 7.8 out of 10");
+  await expect(cardButtons(popular)).toHaveCount(20);
+  await expect(cardButtons(popular).first()).toHaveAccessibleName("Harbor Lights, 2021, rated 7.8 out of 10");
   await expect(card(popular, "Glass Meridian")).toHaveCount(0);
   const comedy = grid(page, "Comedy TV shows");
-  await expect(comedy.getByRole("button")).toHaveCount(20);
-  await expect(comedy.getByRole("button").first()).toHaveAccessibleName("Laugh Track, 2022, rated 7.9 out of 10");
+  await expect(cardButtons(comedy)).toHaveCount(20);
+  await expect(cardButtons(comedy).first()).toHaveAccessibleName("Laugh Track, 2022, rated 7.9 out of 10");
   await expect(card(comedy, "Harbor Lights")).toHaveCount(0);
-  await expect(grid(page, "Crime TV shows").getByRole("button").first()).toHaveAccessibleName("Cold Case Avenue, 2020, rated 8.0 out of 10");
-  await expect(grid(page, "Sci-Fi & Fantasy TV shows").getByRole("button").first()).toHaveAccessibleName("Starbound, 2024, rated 8.1 out of 10");
+  await expect(cardButtons(grid(page, "Crime TV shows")).first()).toHaveAccessibleName("Cold Case Avenue, 2020, rated 8.0 out of 10");
+  await expect(cardButtons(grid(page, "Sci-Fi & Fantasy TV shows")).first()).toHaveAccessibleName("Starbound, 2024, rated 8.1 out of 10");
   await expect(section(page, "Added by Friends")).toContainText("No TV shows from friends yet.");
   // In this order. For You is made from the library's titles: none without any.
   const headings = page.getByRole("main").getByRole("heading", { level: 2 });
@@ -82,28 +82,28 @@ test("Discover shows TMDB's lists, three genres and Added by Friends, for TV sho
   await typeSwitch(page, "Movies").click();
   await expect(typeSwitch(page, "Movies")).toHaveAttribute("aria-pressed", "true");
   await expect(typeSwitch(page, "TV Shows")).toHaveAttribute("aria-pressed", "false");
-  await expect(grid(page, "Top Rated movies").getByRole("button")).toHaveCount(20);
-  await expect(grid(page, "Top Rated movies").getByRole("button").first()).toHaveAccessibleName("Paper Moons, 1994, rated 8.9 out of 10");
-  await expect(grid(page, "Popular movies").getByRole("button").first()).toHaveAccessibleName("Northern Line, 2025, rated 7.2 out of 10");
+  await expect(cardButtons(grid(page, "Top Rated movies"))).toHaveCount(20);
+  await expect(cardButtons(grid(page, "Top Rated movies")).first()).toHaveAccessibleName("Paper Moons, 1994, rated 8.9 out of 10");
+  await expect(cardButtons(grid(page, "Popular movies")).first()).toHaveAccessibleName("Northern Line, 2025, rated 7.2 out of 10");
   await expect(section(page, "Added by Friends")).toContainText("No movies from friends yet.");
   // A 9.8 from 7 votes isn't trending either.
   const trendingMovies = grid(page, "Trending This Week movies");
-  await expect(trendingMovies.getByRole("button").first()).toHaveAccessibleName("Copper Sky, 2026, rated 7.6 out of 10");
-  await expect(trendingMovies.getByRole("button")).toHaveCount(20);
+  await expect(cardButtons(trendingMovies).first()).toHaveAccessibleName("Copper Sky, 2026, rated 7.6 out of 10");
+  await expect(cardButtons(trendingMovies)).toHaveCount(20);
   await expect(card(trendingMovies, "Festival Darling")).toHaveCount(0);
   await expect(section(page, "Coming Soon")).toHaveAccessibleDescription("In cinemas soon.");
-  await expect(grid(page, "Coming Soon movies").getByRole("button").first()).toHaveAccessibleName("Tomorrow's Tide, 2027, rated 7.0 out of 10");
-  await expect(grid(page, "Action movies").getByRole("button").first()).toHaveAccessibleName("Iron Tide, 2025, rated 7.4 out of 10");
-  await expect(grid(page, "Comedy movies").getByRole("button").first()).toHaveAccessibleName("Best Man Down, 2023, rated 7.1 out of 10");
-  await expect(grid(page, "Science Fiction movies").getByRole("button").first()).toHaveAccessibleName("Orbit Nine, 2026, rated 7.7 out of 10");
+  await expect(cardButtons(grid(page, "Coming Soon movies")).first()).toHaveAccessibleName("Tomorrow's Tide, 2027, rated 7.0 out of 10");
+  await expect(cardButtons(grid(page, "Action movies")).first()).toHaveAccessibleName("Iron Tide, 2025, rated 7.4 out of 10");
+  await expect(cardButtons(grid(page, "Comedy movies")).first()).toHaveAccessibleName("Best Man Down, 2023, rated 7.1 out of 10");
+  await expect(cardButtons(grid(page, "Science Fiction movies")).first()).toHaveAccessibleName("Orbit Nine, 2026, rated 7.7 out of 10");
   await expect(headings).toHaveText(["Trending This Week", "Popular", "Coming Soon", "Top Rated", "Action", "Comedy", "Science Fiction", "Added by Friends"]);
 
   // Back to TV shows: shown at once, from what the page already loaded.
   const requests: string[] = [];
   page.on("request", (request) => { if (request.url().includes("/api/shows/")) requests.push(request.url()); });
   await typeSwitch(page, "TV Shows").click();
-  await expect(grid(page, "Top Rated TV shows").getByRole("button")).toHaveCount(20);
-  await expect(grid(page, "Popular TV shows").getByRole("button")).toHaveCount(20);
+  await expect(cardButtons(grid(page, "Top Rated TV shows"))).toHaveCount(20);
+  await expect(cardButtons(grid(page, "Popular TV shows"))).toHaveCount(20);
   expect(requests).toEqual([]);
 
   // TMDB's logo and notice, as its terms require.
@@ -159,11 +159,11 @@ test("search opens from Discover and an empty Home (not the top bar), waits for 
   // Typing at a normal pace sends one search, once typing stops.
   await input.pressSequentially("Harbor", { delay: 60 });
   const results = grid(dialog, "Search results");
-  await expect(results.getByRole("button")).toHaveCount(2);
+  await expect(cardButtons(results)).toHaveCount(2);
   expect(searches).toEqual(["Harbor"]);
   // TV shows and movies alike; the person TMDB also finds is left out.
-  await expect(results.getByRole("button").nth(0)).toHaveAccessibleName("Harbor Lights, TV show, 2021, rated 7.8 out of 10");
-  await expect(results.getByRole("button").nth(1)).toHaveAccessibleName("Harbor Lights: Low Tide, Movie, 2024, rated 6.4 out of 10");
+  await expect(cardButtons(results).nth(0)).toHaveAccessibleName("Harbor Lights, TV show, 2021, rated 7.8 out of 10");
+  await expect(cardButtons(results).nth(1)).toHaveAccessibleName("Harbor Lights: Low Tide, Movie, 2024, rated 6.4 out of 10");
   await expect(dialog.getByRole("status")).toHaveText("2 results for “Harbor”");
 
   // A result's detail opens over the search; back returns to the results.
@@ -174,7 +174,7 @@ test("search opens from Discover and an empty Home (not the top bar), waits for 
   await page.goBack();
   await expect(detail).toBeHidden();
   await expect(input).toHaveValue("Harbor");
-  await expect(results.getByRole("button")).toHaveCount(2);
+  await expect(cardButtons(results)).toHaveCount(2);
 
   await input.fill("Nothing like this");
   await expect(dialog.getByRole("status")).toHaveText("No TV shows or movies found for “Nothing like this”.");
@@ -268,7 +268,7 @@ test.describe("on a phone", () => {
     const dialog = page.getByRole("dialog", { name: "Search" });
     // Popular Series 2 to 20 but 6 (the first popular TV show is Harbor Lights, the sixth Glass Meridian).
     await dialog.getByRole("searchbox").fill("Popular Series");
-    await expect(grid(dialog, "Search results").getByRole("button")).toHaveCount(18);
+    await expect(cardButtons(grid(dialog, "Search results"))).toHaveCount(18);
     expect(await dialog.boundingBox()).toEqual({ x: 0, y: 0, width: 390, height: 844 });
     // At least 16px, so iOS doesn't zoom in on it.
     await expect(dialog.getByRole("searchbox")).toHaveCSS("font-size", "16px");
@@ -290,7 +290,9 @@ test("the library API checks what it adds, and who asks", async ({ page, baseURL
   expect(again.status()).toBe(409);
   expect((await again.json()).error).toBe("This title is already in your library.");
 
-  expect((await add({ type: "tv", tmdbId: mockBase + 3, status: "completed" })).status()).toBe(400);
+  expect((await add({ type: "tv", tmdbId: mockBase + 3, status: "dropped" })).status()).toBe(400);
+  // Completed is one too (the guide and the cards' + add as any status).
+  expect((await add({ type: "movie", tmdbId: mockBase + 201, status: "completed" })).status()).toBe(201);
   expect((await add({ type: "book", tmdbId: mockBase + 3, status: "planned" })).status()).toBe(404);
   for (const tmdbId of [-4, 0, 1.5, "12abc", 2 ** 31]) expect((await add({ type: "tv", tmdbId, status: "planned" })).status()).toBe(404);
   const unknown = await add({ type: "movie", tmdbId: 12345, status: "planned" });
@@ -298,7 +300,9 @@ test("the library API checks what it adds, and who asks", async ({ page, baseURL
   expect((await unknown.json()).error).toBe("TMDB doesn't have this title.");
   expect((await add({ type: "tv", tmdbId: mockBase + 3, status: "planned" }, { Origin: "https://evil.example" })).status()).toBe(403);
   expect((await page.request.post("/api/shows/library", { data: "not json", headers: { "Content-Type": "text/plain" } })).status()).toBe(415);
-  expect(await libraryRows(user.username)).toEqual([row("tv", mockBase + 2, { status: "planned" })]);
+  expect(await libraryRows(user.username)).toEqual([
+    row("tv", mockBase + 2, { status: "planned" }), row("movie", mockBase + 201, { status: "completed" }),
+  ]);
 
   for (const path of ["/discover/tv/upcoming", "/discover/anime/popular", "/discover/tv", "/titles/book/1", "/titles/tv/abc"]) {
     expect((await page.request.get(`/api/shows${path}`)).status(), path).toBe(404);
@@ -378,14 +382,14 @@ test("For You recommends titles like the ones in the library, leaving out the on
 
   // No movies in the library: no For You for movies, until one is added.
   await typeSwitch(page, "Movies").click();
-  await expect(grid(page, "Popular movies").getByRole("button")).toHaveCount(20);
+  await expect(cardButtons(grid(page, "Popular movies"))).toHaveCount(20);
   await expect(section(page, "For You")).toHaveCount(0);
   await card(grid(page, "Popular movies"), "Northern Line").click();
   const detail = page.getByRole("dialog", { name: "Northern Line" });
   await detail.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Planned" }).click();
   await expect(detail.getByRole("status")).toHaveText("✓ In your library");
   await page.keyboard.press("Escape");
-  const movies = grid(section(page, "For You"), "For You movies").getByRole("button");
+  const movies = cardButtons(grid(section(page, "For You"), "For You movies"));
   await expect(movies.nth(0)).toHaveAccessibleName("Paper Moons, 1994, rated 8.9 out of 10");
   await expect(movies.nth(1)).toHaveAccessibleName("The Last Ferry, 2018, rated 8.1 out of 10");
 });
@@ -417,10 +421,10 @@ test("Added by Friends shows the titles in accepted friends' libraries", async (
 
   await tab(page, "Discover").click();
   const friendsSection = section(page, "Added by Friends");
-  await expect(grid(friendsSection, "Added by Friends TV shows").getByRole("button")).toHaveCount(1);
-  await expect(grid(friendsSection, "Added by Friends TV shows").getByRole("button")).toHaveAccessibleName("Harbor Lights, 2021, rated 7.8 out of 10");
+  await expect(cardButtons(grid(friendsSection, "Added by Friends TV shows"))).toHaveCount(1);
+  await expect(cardButtons(grid(friendsSection, "Added by Friends TV shows"))).toHaveAccessibleName("Harbor Lights, 2021, rated 7.8 out of 10");
   await typeSwitch(page, "Movies").click();
-  await expect(grid(friendsSection, "Added by Friends movies").getByRole("button"))
+  await expect(cardButtons(grid(friendsSection, "Added by Friends movies")))
     .toHaveText([/Northern Line/, /Paper Moons/]);
   // Cards open the same detail panel.
   await card(grid(friendsSection, "Added by Friends movies"), "Northern Line").click();

@@ -33,7 +33,7 @@ export type Library = {
   reload: () => void;
   find: (title: TitleRef) => LibraryItem | undefined;
   /** Adds a title; rejects with the error message if the server refuses. */
-  add: (title: TitleRef, status: Extract<LibraryStatus, "watching" | "planned">) => Promise<void>;
+  add: (title: TitleRef, status: LibraryStatus) => Promise<void>;
   change: (title: TitleRef, fields: LibraryChange) => void;
   remove: (title: TitleRef) => void;
 };

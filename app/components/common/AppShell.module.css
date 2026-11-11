@@ -63,3 +63,38 @@
     padding: var(--main-padding-top) 2.5rem var(--main-padding-bottom);
   }
 }
+
+/* The app's views, one shown at a time (AppShell). Hidden ones are display:
+   none, so the one shown starts its animation again: it slides in from the side
+   of its tab. */
+.views {
+  min-width: 0;
+}
+
+.views > * {
+  animation: view-from-end 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+.views[data-direction="back"] > * {
+  animation-name: view-from-start;
+}
+
+@keyframes view-from-end {
+  from {
+    opacity: 0;
+    transform: translateX(1.25rem);
+  }
+}
+
+@keyframes view-from-start {
+  from {
+    opacity: 0;
+    transform: translateX(-1.25rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .views > * {
+    animation: none;
+  }
+}

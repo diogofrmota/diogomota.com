@@ -1,6 +1,7 @@
 "use client";
 import { useId, useState } from "react";
 import { Dialog } from "@/components/common/Dialog";
+import { CloseIcon } from "@/components/common/icons";
 import { Spinner } from "@/components/common/Spinner";
 import { useAppView } from "@/hooks/useAppView";
 import { titleKey, type MediaType, type TitleSummary } from "@/lib/show-types";
@@ -49,7 +50,7 @@ export function QuickActions({ title }: { title: { type: MediaType; tmdbId: numb
     <div className={styles.dialogBody}>
       <div className={styles.dialogHeader}>
         <h2 id={headingId}>{item?.title ?? (library.items ? "Not in your library" : "Quick actions")}</h2>
-        <button type="button" className={styles.close} aria-label="Close" onClick={closePanel}>×</button>
+        <button type="button" className={styles.close} aria-label="Close" onClick={closePanel}><CloseIcon /></button>
       </div>
       <ChangeError className={styles.error} />
       {item ? <>

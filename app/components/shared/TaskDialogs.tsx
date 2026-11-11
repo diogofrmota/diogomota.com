@@ -1,7 +1,7 @@
 "use client";
 import { useId, useState, type FormEvent } from "react";
 import { Dialog } from "@/components/common/Dialog";
-import { GripIcon, TrashIcon } from "@/components/common/icons";
+import { CloseIcon, GripIcon, TrashIcon } from "@/components/common/icons";
 import type { Space } from "@/lib/space-types";
 import type { Task, TaskFields, TaskList } from "@/lib/task-types";
 import { SortableList, useSortableItem } from "./Sortable";
@@ -11,7 +11,7 @@ import styles from "./Tasks.module.css";
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   const heading = useId();
   return <Dialog className={styles.dialog} aria-labelledby={heading} onClose={onClose}><div className={styles.dialogBody}>
-    <div className={styles.dialogHeader}><h2 id={heading}>{title}</h2><button type="button" aria-label="Close" onClick={onClose}>×</button></div>
+    <div className={styles.dialogHeader}><h2 id={heading}>{title}</h2><button type="button" className={styles.close} aria-label="Close" onClick={onClose}><CloseIcon /></button></div>
     {children}
   </div></Dialog>;
 }

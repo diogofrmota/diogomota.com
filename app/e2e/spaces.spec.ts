@@ -164,9 +164,9 @@ test("on mobile the welcome and Settings fit both themes", async ({ page }) => {
   await settings(page);
   await page.getByRole("button", { name: "Generate invite" }).click();
   await expect(page.getByLabel("Invite code")).toHaveValue(/.{8}/);
-  for (const theme of ["dark-2", "light-2"]) {
+  for (const theme of ["light-2", "graphite"]) {
     // Shown without saving it (the theme is chosen in Account settings): every color comes from data-theme.
-    if (theme === "light-2") await page.locator("[data-theme]").evaluate((shell) => shell.setAttribute("data-theme", "light-2"));
+    if (theme === "graphite") await page.locator("[data-theme]").evaluate((shell) => shell.setAttribute("data-theme", "graphite"));
     await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", theme);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await expect(page.getByRole("button", { name: "Save name" })).toBeVisible();

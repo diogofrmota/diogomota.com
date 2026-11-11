@@ -87,3 +87,82 @@ export function ChevronLeftIcon() {
     </Icon>
   );
 }
+
+export function ChevronRightIcon() {
+  return (
+    <Icon>
+      <path d="m9 6 6 6-6 6" />
+    </Icon>
+  );
+}
+
+/** A dialog's close button. */
+export function CloseIcon() {
+  return (
+    <Icon>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </Icon>
+  );
+}
+
+export function PlusIcon() {
+  return (
+    <Icon>
+      <path d="M12 5v14M5 12h14" />
+    </Icon>
+  );
+}
+
+export function CheckIcon() {
+  return (
+    <Icon>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </Icon>
+  );
+}
+
+/** Watching: a play button. */
+export function PlayIcon() {
+  return (
+    <Icon>
+      <path d="M8 5.5v13l10.5-6.5z" />
+    </Icon>
+  );
+}
+
+/** Planned: a bookmark. */
+export function BookmarkIcon() {
+  return (
+    <Icon>
+      <path d="M7 4.5h10v15l-5-3.5-5 3.5z" />
+    </Icon>
+  );
+}
+
+/** Completed: a tick in a circle. */
+export function DoneIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m8.25 12.25 2.5 2.5 5-5" />
+    </Icon>
+  );
+}
+
+export function ClockIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </Icon>
+  );
+}
+
+export function CalendarIcon() {
+  return (
+    <Icon>
+      <rect x="4" y="5.5" width="16" height="14.5" rx="2.5" />
+      <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" />
+    </Icon>
+  );
+}

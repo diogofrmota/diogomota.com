@@ -17,7 +17,7 @@ test("every theme saves from Account, and colors the page, the page behind it an
   const form = page.getByRole("region", { name: "Theme", exact: true });
   await form.getByRole("heading", { name: "Theme", exact: true }).click();
   // New accounts start in the default theme.
-  await expect(form.getByRole("radio", { name: "Neutral", exact: true })).toBeChecked();
+  await expect(form.getByRole("radio", { name: "Light mode", exact: true })).toBeChecked();
   // All in one list, in lib/themes.ts's order, with no headings between them.
   const radios = form.getByRole("radio");
   await expect(radios).toHaveCount(themes.length);

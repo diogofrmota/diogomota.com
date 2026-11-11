@@ -11,12 +11,22 @@
 .calendar button, .dialog button, .dialog a { min-height: 44px; border: 1px solid var(--border); background: var(--surface); border-radius: .5rem; padding: .5rem .85rem; cursor: pointer; }
 /* ‹ Today ›, and the dialogs' × */
 .actions button, .dialogHeader button { min-width: 44px; }
+/* ‹ and ›: chevrons big enough to see at a glance. */
+.calendar .arrow { display: inline-grid; place-items: center; width: 44px; padding: 0; border-radius: 50%; }
+.arrow svg { width: 1.5rem; height: 1.5rem; stroke-width: 2.25; }
+/* The dialogs' ×: a round button with a drawn cross. */
+.dialog .close { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border-color: transparent; border-radius: 50%; background: var(--hover); color: var(--muted); }
+.close svg { width: 1.375rem; height: 1.375rem; stroke-width: 2.25; }
 .calendar .primary, .dialog .primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 650; }
 /* .danger confirms something that can't be undone; .remove starts it (components/common/ui.module.css). */
 .dialog .danger { background: var(--danger); border-color: var(--danger); color: var(--bg); font-weight: 650; }
 .dialog .remove { padding-inline: 0; border-color: transparent; background: none; color: var(--danger); font-weight: 600; }
 @media (hover: hover) {
   .calendar button:hover, .dialog button:hover { background: var(--hover); }
+  .dialog .close:hover { background: var(--border); color: var(--text); }
+  /* A day, or an hour, can be tapped to add an event there. */
+  .cell:hover, .hour:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  .outside:hover { background: color-mix(in srgb, var(--accent) 6%, var(--hover)); }
   .calendar .primary:hover, .dialog .primary:hover { filter: brightness(.93); background: var(--accent); }
   .dialog .danger:hover { filter: brightness(.93); background: var(--danger); }
   .dialog .remove:hover { background: none; text-decoration: underline; }
@@ -40,7 +50,7 @@
 .scroller { flex: 1; min-height: 20rem; border: 1px solid var(--border); border-radius: .75rem; overflow: auto; }
 .month { height: 100%; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto repeat(6, minmax(0, 1fr)); }
 .weekday { position: sticky; top: 0; z-index: 2; background: var(--surface); padding: .4rem .25rem; text-align: center; color: var(--muted); font-size: .8rem; border-bottom: 1px solid var(--border); }
-.cell { min-height: 0; min-width: 0; overflow: auto; padding: .2rem; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.cell { min-height: 0; min-width: 0; overflow: auto; padding: .2rem; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: pointer; }
 .outside { background: var(--hover); }
 .calendar .dayNumber { display: block; border: 0; background: transparent; padding: .25rem; width: 44px; margin: 0 auto .25rem; font-size: .85rem; border-radius: 50%; }
 .calendar .today { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
@@ -53,11 +63,30 @@
 .hours { height: 1440px; }
 .hours span { display: block; height: 60px; font-size: .65rem; color: var(--muted); padding: .2rem; text-align: right; }
 .dayColumn { position: relative; height: 1440px; border-left: 1px solid var(--border); }
-.hour { height: 60px; border-bottom: 1px solid var(--border); }
+.hour { height: 60px; border-bottom: 1px solid var(--border); cursor: pointer; }
+/* All-day events, in a row over the hours. */
+.allDayLabel { display: grid; place-items: center; padding: .2rem; border-bottom: 1px solid var(--border); color: var(--muted); font-size: .65rem; text-align: center; }
+.allDayCell { min-width: 0; padding: .2rem; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.calendar .allDayEvent { background: color-mix(in srgb, var(--event-color) 26%, var(--surface)); }
+/* Another period or view: the new grid slides in from the side of its dates, or fades in. */
+.month[data-slide], .timeGrid[data-slide] { animation: grid-from-end .3s cubic-bezier(.2, .8, .2, 1) backwards; }
+.month[data-slide="back"], .timeGrid[data-slide="back"] { animation-name: grid-from-start; }
+.month[data-slide="fade"], .timeGrid[data-slide="fade"] { animation-name: grid-fade; animation-duration: .2s; }
+@keyframes grid-from-end { from { opacity: 0; transform: translateX(1.5rem); } }
+@keyframes grid-from-start { from { opacity: 0; transform: translateX(-1.5rem); } }
+@keyframes grid-fade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .month[data-slide], .timeGrid[data-slide] { animation: none; } }
+/* Events fade in as they show (a new one, or another period's). */
+.calendar .event { animation: event-in .25s ease-out both; }
+@keyframes event-in { from { opacity: 0; transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) { .calendar .event { animation: none; } }
 /* The content fills the dialog, so a click on the dialog itself is on the backdrop (components/common/Dialog). */
 .dialog { margin: auto; width: min(540px, calc(100% - 2rem)); max-height: 90dvh; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface); color: var(--text); box-shadow: 0 24px 90px #0006; }
 .dialog[open] { display: flex; flex-direction: column; }
-.dialog::backdrop { background: #0008; }
+.dialog::backdrop { background: #0008; animation: backdrop-in .2s ease-out; }
+.dialog[open] { animation: dialog-in .22s cubic-bezier(.2, .9, .3, 1.1); }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(8px) scale(.97); } }
+@keyframes backdrop-in { from { opacity: 0; } }
 .dialogBody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1.5rem; }
 .dialogHeader { flex-wrap: nowrap; align-items: flex-start; margin-bottom: 1rem; }
 .dialogHeader h2 { margin: .3rem 0; overflow-wrap: anywhere; font-size: 1.4rem; }
@@ -66,7 +95,34 @@
 .form label { display: grid; gap: .35rem; font-size: .875rem; min-width: 0; }
 .form input, .form select, .form textarea { font: inherit; font-size: 1rem; width: 100%; min-width: 0; min-height: 44px; padding: .6rem .75rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: .5rem; }
 .form textarea { resize: vertical; }
-.fields { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+/* A select's own arrow, inset from the right edge (EventDialog's Select). */
+.select { position: relative; display: block; min-width: 0; }
+.form .select select { appearance: none; -webkit-appearance: none; padding-right: 2.75rem; cursor: pointer; }
+.select svg { position: absolute; top: 50%; right: .9rem; width: 1.125rem; height: 1.125rem; color: var(--muted); transform: translateY(-50%); pointer-events: none; }
+/* When: All day, Starts and Ends, in one card with lines between. */
+.when { display: grid; border: 1px solid var(--border); border-radius: .75rem; background: var(--bg); }
+.when > * + * { border-top: 1px solid var(--border); }
+.form .switchRow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 52px; padding: .25rem .9rem; font-size: 1rem; cursor: pointer; }
+.whenRow { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1rem; min-height: 52px; padding: .4rem .5rem .4rem .9rem; }
+.whenLabel { font-size: 1rem; }
+.chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; margin-left: auto; }
+/* A switch, from a checkbox: the knob slides over when it's on. */
+.form .switch { position: relative; flex: none; width: 3rem; height: 1.75rem; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 1rem; background: var(--border); appearance: none; -webkit-appearance: none; cursor: pointer; transition: background-color .2s; }
+.switch::after { content: ""; position: absolute; top: .1875rem; left: .1875rem; width: 1.375rem; height: 1.375rem; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0005; transition: transform .2s cubic-bezier(.3, 1.4, .6, 1); }
+.form .switch:checked { background: var(--accent); }
+.switch:checked::after { transform: translateX(1.25rem); }
+.form .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* A date or time: its value in words, over the browser's field (invisible, the size of the chip). */
+.chip { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 0 .85rem; border-radius: .6rem; background: var(--hover); color: var(--text); font-size: 1rem; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; transition: background-color .15s; }
+.timeChip { min-width: 4.5rem; justify-content: center; }
+.form .chip input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; opacity: 0; font-size: 1rem; cursor: pointer; }
+.form .chip input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: auto; height: auto; cursor: pointer; }
+.chip:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) { .chip:hover { background: var(--border); } }
+@media (prefers-reduced-motion: reduce) { .form .switch, .switch::after, .chip { transition: none; } }
+.whenDetails { display: grid; gap: .5rem; }
+.details .whenDetails p { display: flex; align-items: center; gap: .6rem; }
+.whenDetails svg { flex: none; width: 1.25rem; height: 1.25rem; color: var(--muted); }
 .details { display: grid; gap: 1rem; }
 .details p { margin: 0; }
 .details a { display: inline-flex; align-items: center; font-size: .85rem; }
@@ -103,12 +159,15 @@
   .calendar .dayNumber { width: 100%; max-width: 44px; }
   .weekday { font-size: .7rem; }
   .dialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-bottom: 0; border-radius: 1rem 1rem 0 0; }
+  .dialog[open] { animation-name: sheet-in; animation-duration: .28s; }
   .dialogBody { padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 25rem) {
   .addLabel { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .calendar .add { min-width: 44px; padding-inline: 0; font-size: 1.25rem; line-height: 1; }
 }
+@keyframes sheet-in { from { transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) { .dialog[open], .dialog::backdrop { animation: none; } }
 @media (max-width: 47.99rem) and (max-height: 50rem) {
   .calendar { margin-block: -.75rem; height: calc(var(--app-view-height) + 1.5rem); }
   .toolbar { gap: .25rem .5rem; margin-bottom: .5rem; }

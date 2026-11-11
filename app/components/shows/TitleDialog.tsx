@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { Dialog } from "@/components/common/Dialog";
+import { CloseIcon } from "@/components/common/icons";
 import { addStatuses, formatRuntime, statusNames, titleKey, type LibraryStatus, type TitleDetail, type TitleSummary } from "@/lib/show-types";
 import { useLibrary } from "./library";
 import { LibraryControls } from "./LibraryControls";
@@ -50,7 +51,7 @@ export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "typ
     <div className={styles.dialogBody}>
       <div className={styles.dialogHeader}>
         <h2 id={headingId}>{shown?.title ?? "Loading…"}</h2>
-        <button type="button" className={styles.close} aria-label="Close" onClick={onClose}>×</button>
+        <button type="button" className={styles.close} aria-label="Close" onClick={onClose}><CloseIcon /></button>
       </div>
       <div className={styles.detail}>
         {shown ? <Poster title={shown} sizes="(min-width: 48rem) 176px, 128px" className={styles.detailPoster} />

@@ -41,7 +41,7 @@ export function AppList({
       <ul className={styles.grid}>
         {apps.map((app, i) => (
           <li key={app.href} className={styles.card}>
-            <Image src={app.logo} alt="" width={48} height={48} className={styles.logo} />
+            <Image src={app.logo} alt="" width={56} height={56} className={styles.logo} />
             <div>
               <h2 className={styles.name}>
                 {loggedIn ? (

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 export const viewport = appViewport;
 
 // The way into the apps, and between them (Switch app in the apps' account menu).
-// In the apps' frame and the user's theme (dark when logged out); the top bar
+// In the apps' frame and the user's theme (Light mode when logged out); the top bar
 // has diogomota.com and the account menu, or Login and Sign Up. Logged out, a
 // call to action over the cards has them too (LoginCallout).
 //
@@ -37,7 +37,7 @@ export default async function AppsPage({ searchParams }: PageProps<"/apps">) {
   return (
     <AppFrame theme={await themeOf(session?.user.id)} username={username} next={next}>
       <div className={ui.view}>
-        {!username && <LoginCallout apps={apps} next={next} />}
+        {!username && <LoginCallout next={next} />}
         <h1 className={ui.heading}>
           Apps <span className={styles.version}>({version})</span>
         </h1>

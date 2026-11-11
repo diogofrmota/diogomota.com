@@ -8,7 +8,7 @@ export type AppInfo = {
   href: `/${string}`;
   /** One sentence for its card on /apps. */
   description: string;
-  /** Square SVG in public/logos, shown at 48x48 on a black background. */
+  /** Square SVG in public/logos: an app icon with its own colored tile, shown at 56x56. */
   logo: `/logos/${string}.svg`;
 };
 

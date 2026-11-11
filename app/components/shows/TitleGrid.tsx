@@ -2,6 +2,8 @@
 import Image, { type ImageLoader } from "next/image";
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { titleKey, tmdbImageUrl, type TitleSummary } from "@/lib/show-types";
+import { AddMark, StatusChooser, useTitleStatus } from "./AddToLibrary";
+import { useOpenActions } from "./QuickActions";
 import styles from "./Shows.module.css";
 
 // Posters come straight from TMDB's image server, which has them in fixed sizes:
@@ -36,14 +38,37 @@ export const cardSizes = "(min-width: 48rem) 160px, 34vw";
 // but covered by it, so a tap there opens the card too (Shows.module.css). Its
 // label says the facts in words, and what a control shows has to be in its
 // label, in order, for speech input (WCAG 2.5.3).
-function TitleCard({ title, withType, onOpen }: { title: TitleSummary; withType: boolean; onOpen: (title: TitleSummary) => void }) {
+//
+// At the poster's bottom right, + adds the title: it opens the status chooser
+// over the poster (Watching, Planned, Completed). Once the title is in the
+// library it is a tick, which opens its quick actions (status and rating).
+// Cards fade in one after another (--i, their place in the list).
+function TitleCard({ title, withType, onOpen, index }: {
+  title: TitleSummary; withType: boolean; onOpen: (title: TitleSummary) => void; index: number;
+}) {
   const facts = titleFacts(title, withType);
-  return <li className={styles.cardItem}>
-    <button type="button" className={styles.card} aria-label={facts.label} onClick={() => onOpen(title)}>
+  const status = useTitleStatus(title);
+  const openActions = useOpenActions();
+  const [choosing, setChoosing] = useState(false);
+  const addButton = useRef<HTMLButtonElement>(null);
+  const { item } = status;
+  return <li className={styles.cardItem} style={{ "--i": index } as React.CSSProperties}>
+    <button type="button" className={styles.card} aria-label={facts.label} onClick={() => { if (choosing) setChoosing(false); else onOpen(title); }}>
       <Poster title={title} sizes={cardSizes} />
       <span className={styles.cardTitle}>{title.title}</span>
     </button>
-    <span className={styles.cardMeta}>{facts.text}</span>
+    {status.error ? <span role="alert" className={styles.cardError}>{status.error}</span>
+      : <span className={styles.cardMeta}>{facts.text}</span>}
+    <span className={styles.posterSpot}>
+      {choosing ? <StatusChooser title={title} status={status} onClose={() => setChoosing(false)} returnFocus={() => addButton.current} />
+        // Not disabled while adding: it keeps focus, which a choice hands back to it.
+        : <button ref={addButton} type="button" className={styles.addButton} aria-busy={status.busy || undefined}
+          aria-label={item ? `Quick actions for ${title.title}` : `Add ${title.title} to your library`}
+          aria-haspopup={item ? "dialog" : undefined} aria-expanded={item ? undefined : false}
+          onClick={(e) => { if (status.busy) return; if (item) openActions(item, e.currentTarget.getBoundingClientRect()); else setChoosing(true); }}>
+          <AddMark added={!!item} busy={status.busy} />
+        </button>}
+    </span>
   </li>;
 }
 
@@ -52,7 +77,7 @@ export function TitleGrid({ titles, label, withType = false, onOpen }: {
   titles: readonly TitleSummary[]; label: string; withType?: boolean; onOpen: (title: TitleSummary) => void;
 }) {
   return <ul className={styles.grid} aria-label={label}>
-    {titles.map((title) => <TitleCard key={titleKey(title)} title={title} withType={withType} onOpen={onOpen} />)}
+    {titles.map((title, i) => <TitleCard key={titleKey(title)} title={title} withType={withType} onOpen={onOpen} index={i} />)}
   </ul>;
 }
 
@@ -130,7 +155,7 @@ export function TitleRow({ titles, label, onOpen }: {
   // Out of the tab order: the cards are in it, and focusing one scrolls it into view.
   return <div className={styles.row} data-start={edges.start} data-end={edges.end}>
     <ul ref={list} className={styles.rowList} aria-label={label} onScroll={update} {...drag}>
-      {titles.map((title) => <TitleCard key={titleKey(title)} title={title} withType={false} onOpen={onOpen} />)}
+      {titles.map((title, i) => <TitleCard key={titleKey(title)} title={title} withType={false} onOpen={onOpen} index={i} />)}
     </ul>
     <button type="button" className={`${styles.rowArrow} ${styles.rowBack}`} tabIndex={-1} aria-label="Scroll left"
       disabled={edges.start} onClick={() => scrollPage(-1)}><span aria-hidden="true">‹</span></button>

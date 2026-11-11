@@ -7,8 +7,8 @@ export type LibraryStatus = "watching" | "planned" | "completed";
 /** In the order of Home's sections. */
 export const libraryStatuses: readonly LibraryStatus[] = ["watching", "planned", "completed"];
 export const statusNames: Record<LibraryStatus, string> = { watching: "Watching", planned: "Planned", completed: "Completed" };
-/** What a title can be added to the library as, from Discover. */
-export const addStatuses = ["watching", "planned"] as const satisfies readonly LibraryStatus[];
+/** What a title can be added to the library as, from Discover, search and the guide. */
+export const addStatuses = ["watching", "planned", "completed"] as const satisfies readonly LibraryStatus[];
 
 /** A title as shown on a card: in a Discover section or search results. */
 export type TitleSummary = {

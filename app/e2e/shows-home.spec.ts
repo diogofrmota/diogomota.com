@@ -30,55 +30,80 @@ async function longPress(page: Page, locator: Locator) {
   await cdp.detach();
 }
 
-test("a new account's Home is a guide: what they're watching, what they want to watch, then their friends", async ({ page, browser }) => {
+test("a new account's Home is a guide: their TV shows, then their movies (each Watching, Planned or Completed), friends, and what they added", async ({ page, browser }) => {
   const user = await openShows(page);
   const friend = await otherPerson(browser);
   const main = page.getByRole("main");
   await expect(viewHeading(page)).toHaveText("Home");
-  const watching = main.getByRole("region", { name: "What are you watching right now?" });
-  await expect(watching).toContainText("Set up your library · Step 1 of 3");
-  await pressed(typeSwitch(page, "TV Shows"));
+  const shows = main.getByRole("region", { name: "Which TV shows do you watch?" });
+  await expect(shows).toContainText("Set up your library · Step 1 of 3");
+  // What each status means, over the posters.
+  await expect(shows.getByRole("list", { name: "Where a title can go" }).getByRole("listitem"))
+    .toHaveText([/^Watching/, /^Planned/, /^Completed/]);
 
-  // This week's trending titles: a tap adds one as Watching, another takes it out again.
-  const glass = card(grid(watching, "Trending this week: TV shows"), "Glass Meridian");
-  await expect(glass).toHaveAttribute("aria-pressed", "false");
+  // What's trending and popular: a tap on a poster opens the chooser over it.
+  const glass = card(grid(shows, "TV shows to choose from"), "Glass Meridian");
+  await expect(glass).toHaveAttribute("aria-expanded", "false");
   await glass.click();
-  await pressed(glass);
+  await expect(glass).toHaveAttribute("aria-expanded", "true");
+  const chooser = shows.getByRole("group", { name: "Add Glass Meridian as" });
+  await expect(chooser.getByRole("button", { name: "Watching" })).toBeFocused();
+  await chooser.getByRole("button", { name: "Watching" }).click();
+  await expect(chooser).toBeHidden();
+  await expect(glass).toBeFocused();
   await expect(glass).toHaveAccessibleName("Glass Meridian, 2026, rated 8.2 out of 10, in your library as Watching");
   await expect(wholeCard(glass)).toContainText("✓ Watching");
-  await expect(main.getByText("1 title in your library")).toBeVisible();
+  await expect(main.getByText("1 TV show added")).toBeVisible();
   await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401)]);
+  // Another status moves it there; its own status again takes it out.
   await glass.click();
-  await expect(glass).toHaveAttribute("aria-pressed", "false");
+  const glassChooser = shows.getByRole("group", { name: "Glass Meridian", exact: true });
+  await pressed(glassChooser.getByRole("button", { name: "Watching" }));
+  await glassChooser.getByRole("button", { name: "Completed" }).click();
+  await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401, { status: "completed" })]);
+  await glass.click();
+  await glassChooser.getByRole("button", { name: "Completed" }).click();
   await expect.poll(() => libraryRows(user.username)).toEqual([]);
+  await expect(glass).toHaveAccessibleName("Glass Meridian, 2026, rated 8.2 out of 10");
+  // Escape, or a tap elsewhere, closes it with nothing changed.
   await glass.click();
-  await pressed(glass);
+  await page.keyboard.press("Escape");
+  await expect(chooser).toBeHidden();
+  await expect(glass).toBeFocused();
+  await glass.click();
+  await shows.getByRole("heading", { level: 2 }).click();
+  await expect(chooser).toBeHidden();
+  await glass.click();
+  await chooser.getByRole("button", { name: "Watching" }).click();
 
-  // Or any title, TV show or movie, found by a search.
-  await watching.getByRole("searchbox", { name: "Search for a TV show or movie" }).fill("Paper Moons");
-  const moons = card(grid(watching, "Results for “Paper Moons”"), "Paper Moons");
-  await expect(moons).toHaveAccessibleName("Paper Moons, Movie, 1994, rated 8.9 out of 10");
-  await moons.click();
-  await pressed(moons);
+  // Or one found by a search, of the step's kind only.
+  await shows.getByRole("searchbox", { name: "Search for a TV show" }).fill("Harbor");
+  const results = grid(shows, "Results for “Harbor”");
+  await expect(card(results, "Harbor Lights")).toBeVisible();
+  await expect(results.getByRole("button", { name: /^Harbor Lights: Low Tide,/ })).toHaveCount(0);
+  await card(results, "Harbor Lights").click();
+  await shows.getByRole("group", { name: "Add Harbor Lights as" }).getByRole("button", { name: "Completed" }).click();
+  await expect(main.getByText("2 TV shows added")).toBeVisible();
 
-  // What they want to watch: the most popular, added as Planned. Focus moves to the step.
+  // Then movies, the same way. Focus moves to the step.
   await main.getByRole("button", { name: "Next" }).click();
-  const planned = main.getByRole("region", { name: "What do you want to watch next?" });
-  await expect(planned.getByRole("heading", { level: 2 })).toBeFocused();
-  await expect(planned).toContainText("Step 2 of 3");
-  await typeSwitch(page, "Movies").click();
-  const northern = card(grid(planned, "Popular right now: movies"), "Northern Line");
+  const movies = main.getByRole("region", { name: "And which movies?" });
+  await expect(movies.getByRole("heading", { level: 2 })).toBeFocused();
+  await expect(movies).toContainText("Step 2 of 3");
+  const northern = card(grid(movies, "Movies to choose from"), "Northern Line");
   await northern.click();
+  await movies.getByRole("group", { name: "Add Northern Line as" }).getByRole("button", { name: "Planned" }).click();
   await expect(northern).toHaveAccessibleName("Northern Line, 2025, rated 7.2 out of 10, in your library as Planned");
-  await expect(main.getByText("3 titles in your library")).toBeVisible();
-  expect(await libraryRows(user.username)).toEqual([
-    row("tv", mockBase + 401), row("movie", paperMoons.tmdbId), row("movie", mockBase + 301, { status: "planned" }),
+  await expect(main.getByText("1 movie added")).toBeVisible();
+  await expect.poll(() => libraryRows(user.username)).toEqual([
+    row("tv", harbor.tmdbId, { status: "completed" }), row("tv", mockBase + 401), row("movie", mockBase + 301, { status: "planned" }),
   ]);
 
   // Their friends, by username: the field says the account is there before sending.
   await main.getByRole("button", { name: "Next" }).click();
   const friends = main.getByRole("region", { name: "Watch together" });
   await expect(friends.getByRole("heading", { level: 2 })).toBeFocused();
+  await expect(friends).toContainText("Step 3 of 3");
   await friends.getByLabel("Add a friend").fill(friend.user.username);
   await expect(friends.getByText(`✓ ${friend.user.username} has an account`)).toBeVisible();
   await friends.getByRole("button", { name: "Send request" }).click();
@@ -87,14 +112,20 @@ test("a new account's Home is a guide: what they're watching, what they want to 
 
   // Back keeps what was picked.
   await main.getByRole("button", { name: "Back" }).click();
-  await expect(planned.getByRole("heading", { level: 2 })).toBeFocused();
-  await typeSwitch(page, "Movies").click();
-  await pressed(card(grid(planned, "Popular right now: movies"), "Northern Line"));
+  await expect(movies.getByRole("heading", { level: 2 })).toBeFocused();
+  await expect(card(grid(movies, "Movies to choose from"), "Northern Line")).toHaveAccessibleName(/, in your library as Planned$/);
   await main.getByRole("button", { name: "Next" }).click();
 
-  // Done: Home is the library, and the request is in Profile.
-  await main.getByRole("button", { name: "Done" }).click();
+  // Finish: what they added, by status; then Home is the library, and the request is in Profile.
+  await main.getByRole("button", { name: "Finish" }).click();
+  const allSet = main.getByRole("region", { name: "You’re all set!" });
+  await expect(allSet.getByRole("heading", { level: 2 })).toBeFocused();
+  await expect(allSet.getByRole("list", { name: "In your library" }).getByRole("listitem"))
+    .toHaveText(["1 Watching", "1 Planned", "1 Completed"]);
+  await expect(main.getByRole("button", { name: "Skip" })).toHaveCount(0);
+  await allSet.getByRole("button", { name: "Go to my library" }).click();
   await expect(card(grid(section(page, "Watching"), "Watching TV shows"), "Glass Meridian")).toBeVisible();
+  await expect(card(grid(section(page, "Completed"), "Completed TV shows"), "Harbor Lights")).toBeVisible();
   await tab(page, "Profile").click();
   await expect(page.getByRole("list", { name: "Sent requests" })).toContainText(friend.user.username);
   await friend.context.close();
@@ -103,19 +134,76 @@ test("a new account's Home is a guide: what they're watching, what they want to 
 test("the guide gives way to the library when Home is shown again with titles in it, and comes back from an empty Home", async ({ page }) => {
   await openShows(page);
   const main = page.getByRole("main");
-  const guide = main.getByRole("region", { name: "What are you watching right now?" });
+  const guide = main.getByRole("region", { name: "Which TV shows do you watch?" });
   // Away and back with nothing added: still the guide.
   await expect(guide).toBeVisible();
   await tab(page, "Discover").click();
+  await expect(viewHeading(page)).toHaveText("Discover");
   await tab(page, "Home").click();
   await expect(guide).toBeVisible();
 
-  await card(grid(guide, "Trending this week: TV shows"), "Glass Meridian").click();
-  await expect(main.getByText("1 title in your library")).toBeVisible();
+  await card(grid(guide, "TV shows to choose from"), "Glass Meridian").click();
+  await guide.getByRole("group", { name: "Add Glass Meridian as" }).getByRole("button", { name: "Watching" }).click();
+  await expect(main.getByText("1 TV show added")).toBeVisible();
   await tab(page, "Discover").click();
+  await expect(viewHeading(page)).toHaveText("Discover");
   await tab(page, "Home").click();
   await expect(guide).toHaveCount(0);
   await expect(card(grid(section(page, "Watching"), "Watching TV shows"), "Glass Meridian")).toBeVisible();
+});
+
+test("a poster's + adds the title as Watching, Planned or Completed; once it's in the library, its tick opens the quick actions", async ({ page }) => {
+  const user = await openShows(page);
+  await page.getByRole("main").getByRole("button", { name: "Skip" }).click();
+  await tab(page, "Discover").click();
+  const trending = grid(page, "Trending This Week TV shows");
+  const glass = card(trending, "Glass Meridian");
+  const add = trending.getByRole("button", { name: "Add Glass Meridian to your library" });
+  // At the poster's bottom right, with the + in the middle of its circle.
+  const poster = (await glass.locator("img").boundingBox())!;
+  const button = (await add.boundingBox())!;
+  expect(Math.abs(button.x + button.width - (poster.x + poster.width))).toBeLessThanOrEqual(1);
+  expect(Math.abs(button.y + button.height - (poster.y + poster.height))).toBeLessThanOrEqual(1);
+  const circle = (await add.locator("span").first().boundingBox())!;
+  const plus = (await add.locator("svg").boundingBox())!;
+  expect(Math.abs(circle.x + circle.width / 2 - (plus.x + plus.width / 2))).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(circle.y + circle.height / 2 - (plus.y + plus.height / 2))).toBeLessThanOrEqual(0.5);
+
+  await add.click();
+  const chooser = trending.getByRole("group", { name: "Add Glass Meridian as" });
+  await expect(chooser.getByRole("button")).toHaveText(["Watching", "Planned", "Completed", "Cancel"]);
+  await chooser.getByRole("button", { name: "Completed" }).click();
+  await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401, { status: "completed" })]);
+  const tick = trending.getByRole("button", { name: "Quick actions for Glass Meridian" });
+  await expect(tick).toBeFocused();
+  await tick.click();
+  const actions = page.getByRole("dialog", { name: "Glass Meridian" });
+  await pressed(actions.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" }));
+  await page.keyboard.press("Escape");
+  await expect(actions).toBeHidden();
+
+  // The poster itself still opens the title; so does a tap on it while the chooser is open, which only closes it.
+  await trending.getByRole("button", { name: /^Add Trending Series 2 to your library$/ }).click();
+  await expect(trending.getByRole("group", { name: "Add Trending Series 2 as" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await glass.click();
+  await expect(page.getByRole("dialog", { name: "Glass Meridian" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // In search results too, where Escape closes the chooser and not the search.
+  await page.getByRole("main").getByRole("button", { name: "Search TV shows and movies" }).click();
+  const search = page.getByRole("dialog", { name: "Search" });
+  await search.getByRole("searchbox").fill("Northern");
+  await search.getByRole("button", { name: "Add Northern Line to your library" }).click();
+  await page.keyboard.press("Escape");
+  await expect(search.getByRole("group", { name: "Add Northern Line as" })).toBeHidden();
+  await expect(search).toBeVisible();
+  await search.getByRole("button", { name: "Add Northern Line to your library" }).click();
+  await search.getByRole("group", { name: "Add Northern Line as" }).getByRole("button", { name: "Planned" }).click();
+  await expect(search.getByRole("button", { name: "Quick actions for Northern Line" })).toBeVisible();
+  await expect.poll(() => libraryRows(user.username)).toEqual([
+    row("tv", mockBase + 401, { status: "completed" }), row("movie", mockBase + 301, { status: "planned" }),
+  ]);
 });
 
 test("Home starts with a welcome, fills up from Discover, and the TV Shows | Movies switch filters every section", async ({ page }) => {
@@ -126,7 +214,7 @@ test("Home starts with a welcome, fills up from Discover, and the TV Shows | Mov
   await main.getByRole("button", { name: "Skip" }).click();
   await expect(main.getByRole("heading", { name: "Start by discovering shows!" })).toBeVisible();
   await main.getByRole("button", { name: "Set up step by step" }).click();
-  await expect(main.getByRole("region", { name: "What are you watching right now?" })).toBeVisible();
+  await expect(main.getByRole("region", { name: "Which TV shows do you watch?" })).toBeVisible();
   await main.getByRole("button", { name: "Skip" }).click();
   await expect(main.getByRole("heading", { name: "Start by discovering shows!" })).toBeVisible();
   await expect(typeSwitch(page, "TV Shows")).toHaveCount(0);

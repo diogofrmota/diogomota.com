@@ -14,13 +14,9 @@ export const themes = [
   { id: "light-2", name: "Light mode", background: "#f1f5f9", recommended: true },
   { id: "minimal-neutrals", name: "Neutral", background: "#e6e6e6", recommended: true },
   { id: "warm-neutrals", name: "Warm", background: "#fff3db", recommended: false },
-  { id: "earth-tones", name: "Earth tones", background: "#f8f3ec", recommended: false },
-  { id: "dark-2", name: "Dark mode", background: "#000000", recommended: false },
   { id: "graphite", name: "Graphite", background: "#1f2023", recommended: true },
   { id: "dark-1", name: "Ocean", background: "#0b1120", recommended: false },
   { id: "space", name: "Space", background: "#070818", recommended: false },
-  { id: "blueprint", name: "Blueprint", background: "#123a6b", recommended: false },
-  { id: "retro", name: "Retro", background: "#0a0f0b", recommended: false },
 ] as const;
 
 export type Theme = (typeof themes)[number]["id"];
@@ -30,7 +26,7 @@ export type Theme = (typeof themes)[number]["id"];
  * until they pick another in Account (lib/users.ts sets it at sign-up; it is
  * the database's default too).
  */
-export const defaultTheme: Theme = "minimal-neutrals";
+export const defaultTheme: Theme = "light-2";
 
 const ids: ReadonlySet<string> = new Set(themes.map((theme) => theme.id));
 

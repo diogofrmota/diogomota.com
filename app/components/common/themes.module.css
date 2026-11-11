@@ -18,7 +18,8 @@
    compiled into one :is(), as specific as html:has(...), which would win over
    every theme's rule. */
 
-/* Light mode: cool slate, with indigo. */
+/* Light mode: cool slate, with indigo. New accounts' theme, and the one
+   logged out (lib/themes.ts, defaultTheme). */
 .theme[data-theme="light-2"],
 .theme[data-theme-preview="light-2"],
 :global(html):has(.theme[data-theme="light-2"]) {
@@ -36,8 +37,7 @@
   color-scheme: light;
 }
 
-/* Neutral: shadow black and slate gray on warm gray and light gray-blue. New
-   accounts' theme, and the one logged out (lib/themes.ts, defaultTheme). */
+/* Neutral: shadow black and slate gray on warm gray and light gray-blue. */
 .theme[data-theme="minimal-neutrals"],
 .theme[data-theme-preview="minimal-neutrals"],
 :global(html):has(.theme[data-theme="minimal-neutrals"]) {
@@ -71,42 +71,6 @@
   --star: #a8641b;
   --star-off: #98826a;
   color-scheme: light;
-}
-
-/* Earth tones: olive, terra cotta, warm beige and acorn brown. */
-.theme[data-theme="earth-tones"],
-.theme[data-theme-preview="earth-tones"],
-:global(html):has(.theme[data-theme="earth-tones"]) {
-  --bg: #f8f3ec;
-  --surface: #fffcf7;
-  --hover: #efe6da;
-  --text: #3a2a21;
-  --muted: #6b5245;
-  --border: #e3d5c3;
-  --accent: #5c6636;
-  --accent-soft: #e8ebd8;
-  --danger: #a3391f;
-  --star: #c26a4f;
-  --star-off: #9a8878;
-  color-scheme: light;
-}
-
-/* Dark mode: true black (off pixels on OLED screens), with violet. */
-.theme[data-theme="dark-2"],
-.theme[data-theme-preview="dark-2"],
-:global(html):has(.theme[data-theme="dark-2"]) {
-  --bg: #000000;
-  --surface: #0f0f0f;
-  --hover: #1f1f1f;
-  --text: #ffffff;
-  --muted: #b3b3b3;
-  --border: #2b2b2b;
-  --accent: #b69cff;
-  --accent-soft: #221a3d;
-  --danger: #ff6b6b;
-  --star: #ffd43b;
-  --star-off: #6b6b6b;
-  color-scheme: dark;
 }
 
 /* Graphite: charcoal, with silver. */
@@ -163,63 +127,12 @@
   color-scheme: dark;
 }
 
-/* Blueprint: white lines and cyan on drafting blue (with a grid, below). */
-.theme[data-theme="blueprint"],
-.theme[data-theme-preview="blueprint"],
-:global(html):has(.theme[data-theme="blueprint"]) {
-  --bg: #123a6b;
-  --surface: #18467d;
-  --hover: #20528f;
-  --text: #f4f8fc;
-  --muted: #bcd0e6;
-  --border: #3b6aa3;
-  --accent: #9fe1ff;
-  --accent-soft: #0d2e57;
-  --danger: #ffb3b3;
-  --star: #ffd166;
-  --star-off: #7f9fc6;
-  color-scheme: dark;
-}
-
-/* Retro: an old computer's green phosphor screen, with amber stars (and
-   scanlines, below). */
-.theme[data-theme="retro"],
-.theme[data-theme-preview="retro"],
-:global(html):has(.theme[data-theme="retro"]) {
-  --bg: #0a0f0b;
-  --surface: #101a12;
-  --hover: #18271b;
-  --text: #c8f7d0;
-  --muted: #86c495;
-  --border: #28452e;
-  --accent: #5df08a;
-  --accent-soft: #123620;
-  --danger: #ff8a70;
-  --star: #ffcc4d;
-  --star-off: #4f7d5a;
-  color-scheme: dark;
-}
-
 :global(html):has(.theme[data-theme]) {
   background: var(--bg);
 }
 
-/* Drafting paper's grid, faintly. Not behind the top bar, dialogs or cards:
-   they have backgrounds of their own. */
-.theme[data-theme="blueprint"],
-.theme[data-theme-preview="blueprint"] {
-  background-image:
-    linear-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.06) 1px, transparent 1px);
-  background-size: 1.5rem 1.5rem;
-}
-
-.theme[data-theme-preview="blueprint"] {
-  background-size: 0.5rem 0.5rem;
-}
-
-/* A scattering of stars, some brighter than others, repeating. Like
-   Blueprint's grid, only behind what has no background of its own. */
+/* A scattering of stars, some brighter than others, repeating. Only behind
+   what has no background of its own: the top bar, dialogs and cards have theirs. */
 .theme[data-theme="space"],
 .theme[data-theme-preview="space"] {
   background-image:
@@ -234,10 +147,4 @@
 
 .theme[data-theme-preview="space"] {
   background-size: 3rem 2.5rem;
-}
-
-/* A CRT's scanlines, faintly. */
-.theme[data-theme="retro"],
-.theme[data-theme-preview="retro"] {
-  background-image: repeating-linear-gradient(rgb(93 240 138 / 0.04) 0 1px, transparent 1px 3px);
 }

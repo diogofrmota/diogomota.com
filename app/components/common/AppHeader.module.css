@@ -41,8 +41,8 @@
 }
 
 /* As wide as its column (no auto margin, which would size it to the whole
-   username), the menu at its right end. A container, so the menu can leave out
-   the username's initial when the column is narrow (AccountMenu.module.css). */
+   username), the menu at its right end. A size container, so its width comes
+   from the column, never from the username. */
 .withTabs .account {
   justify-content: flex-end;
   margin-left: 0;

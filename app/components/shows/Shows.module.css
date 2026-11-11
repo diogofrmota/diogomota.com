@@ -6,6 +6,7 @@
 .view { max-width: 72rem; margin: auto; }
 .heading { font-size: 1.75rem; margin: 0 0 1rem; letter-spacing: -.04em; }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.view button.srOnly, .dialog button.srOnly { min-height: 0; padding: 0; border: 0; }
 
 .view button, .dialog button { min-height: 44px; border: 1px solid var(--border); background: var(--surface); border-radius: .5rem; padding: .5rem .85rem; cursor: pointer; }
 .view button:disabled, .dialog button:disabled { opacity: .6; cursor: wait; }
@@ -62,6 +63,53 @@
 .card::after { content: ""; position: absolute; inset: 0; }
 .cardTitle { margin-top: .35rem; font-size: .875rem; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .cardMeta { display: block; margin-top: .2rem; color: var(--muted); font-size: .75rem; }
+.cardError { display: block; margin-top: .2rem; color: var(--danger); font-size: .75rem; font-weight: 600; }
+/* Cards fade up into place one after another (--i: their place in the list). */
+.cardItem { animation: card-in .3s ease-out both; animation-delay: calc(min(var(--i, 0), 10) * 25ms); }
+@keyframes card-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* Over a card's poster, the size of the poster (AddToLibrary.tsx): the + to add
+   it at its bottom right, and the status chooser over all of it. Only what is
+   in it takes taps. */
+.posterSpot { position: absolute; top: 0; left: 0; z-index: 2; width: 100%; aspect-ratio: 2 / 3; container-type: inline-size; pointer-events: none; }
+/* A 44px tap target in the corner; what shows is the round mark inside it. */
+.view .addButton, .dialog .addButton { position: absolute; right: 0; bottom: 0; display: grid; place-items: end; width: 44px; height: 44px; min-height: 0; padding: .375rem; border: 0; border-radius: 0 0 .5rem 0; background: none; pointer-events: auto; }
+@media (hover: hover) { .view .addButton:hover, .dialog .addButton:hover { background: none; } .addButton:hover .addMark { transform: scale(1.1); } }
+.addButton:focus-visible { outline: none; }
+.addButton:focus-visible .addMark { outline: 2px solid #fff; outline-offset: 2px; }
+/* + or a tick, centered in a circle. */
+.addMark { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: rgb(0 0 0 / .78); color: #fff; box-shadow: 0 0 0 1.5px rgb(255 255 255 / .55), 0 1px 4px #0006; transition: transform .15s, background-color .2s; }
+.posterSpot > .addMark { position: absolute; right: .375rem; bottom: .375rem; }
+.addMark svg { display: block; width: 1.125rem; height: 1.125rem; stroke-width: 2.5; }
+.addMark[data-added="true"] { background: var(--accent); color: var(--bg); }
+.addMark[data-added="true"] svg { animation: mark-pop .35s cubic-bezier(.3, 1.6, .6, 1); }
+@keyframes mark-pop { from { transform: scale(.3) rotate(-45deg); opacity: 0; } }
+.addRing { width: 1rem; height: 1rem; border: 2px solid rgb(255 255 255 / .35); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(1turn); } }
+/* The chooser: the poster dimmed, and Watching, Planned and Completed over it. */
+.chooser { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: .3rem; padding: .375rem; border-radius: .5rem; background: rgb(12 12 16 / .8); backdrop-filter: blur(3px); pointer-events: auto; animation: chooser-in .18s ease-out; }
+@keyframes chooser-in { from { opacity: 0; } }
+.chooserHeading { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.view .chooserOption, .dialog .chooserOption { display: flex; align-items: center; gap: .45rem; width: 100%; min-height: 44px; padding: 0 .6rem; border: 0; border-radius: 999px; background: rgb(255 255 255 / .14); color: #fff; font-size: .8125rem; font-weight: 650; text-align: left; animation: option-in .24s cubic-bezier(.2, .9, .3, 1.2) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.chooserOption svg { flex: none; width: 1.05rem; height: 1.05rem; stroke-width: 2.25; }
+.chooserOption span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) { .view .chooserOption:hover, .dialog .chooserOption:hover { background: rgb(255 255 255 / .26); } }
+.view .chooserOption[aria-pressed="true"], .dialog .chooserOption[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #fff; }
+.view .chooserOption[data-status="watching"][aria-pressed="true"], .dialog .chooserOption[data-status="watching"][aria-pressed="true"] { background: #1d4ed8; }
+.view .chooserOption[data-status="planned"][aria-pressed="true"], .dialog .chooserOption[data-status="planned"][aria-pressed="true"] { background: #525252; }
+.view .chooserOption[data-status="completed"][aria-pressed="true"], .dialog .chooserOption[data-status="completed"][aria-pressed="true"] { background: #15803d; }
+.chooserOption:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+@keyframes option-in { from { opacity: 0; transform: translateY(6px) scale(.94); } }
+/* Narrow posters (phones): the words without the icons. */
+@container (max-width: 7rem) {
+  .view .chooserOption, .dialog .chooserOption { justify-content: center; padding: 0 .25rem; font-size: .78rem; }
+  .chooserOption svg { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cardItem, .chooser, .view .chooserOption, .dialog .chooserOption, .addMark[data-added="true"] svg, .cardItem .badge { animation: none; }
+  .addMark { transition: none; }
+  .addRing { animation-duration: 3s; }
+}
 
 /* Discover's rows (TitleGrid.tsx, TitleRow): one line of cards that scrolls
    sideways, about three and a bit across on a phone (the next one peeking in
@@ -100,6 +148,7 @@
 .badge.watching { background: #1d4ed8; } /* white text: 6.7:1 */
 .badge.planned { background: #525252; } /* 7.8:1 */
 .badge.completed { background: #15803d; } /* 5:1 */
+.cardItem .badge { animation: mark-pop .35s cubic-bezier(.3, 1.6, .6, 1); }
 .favouriteMark { right: .4rem; bottom: .4rem; display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: #000c; color: #f87171; font-size: .85rem; line-height: 1; }
 .cardStars .starOn { color: var(--star); letter-spacing: .05em; }
 .cardStars .starOff { color: var(--star-off); letter-spacing: .05em; }
@@ -129,11 +178,17 @@
    is on the backdrop (Dialog.tsx). */
 .dialog { margin: auto; width: min(36rem, calc(100% - 2rem)); max-height: 90dvh; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface); color: var(--text); box-shadow: 0 24px 90px #0006; }
 .dialog[open] { display: flex; flex-direction: column; }
-.dialog::backdrop { background: #0008; }
+.dialog::backdrop { background: #0008; animation: backdrop-in .2s ease-out; }
+.dialog[open] { animation: dialog-in .22s cubic-bezier(.2, .9, .3, 1.1); }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(8px) scale(.97); } }
+@keyframes backdrop-in { from { opacity: 0; } }
+@keyframes sheet-in { from { transform: translateY(100%); } }
 .dialogBody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1.5rem; }
 .dialogHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; margin-bottom: 1rem; }
 .dialogHeader h2 { margin: .3rem 0; font-size: 1.4rem; overflow-wrap: anywhere; }
-.dialog .close { flex-shrink: 0; width: 44px; padding: 0; font-size: 1.5rem; line-height: 1; }
+.dialog .close { display: inline-grid; flex-shrink: 0; place-items: center; width: 44px; height: 44px; padding: 0; border-color: transparent; border-radius: 50%; background: var(--hover); color: var(--muted); }
+.close svg { width: 1.375rem; height: 1.375rem; stroke-width: 2.25; }
+@media (hover: hover) { .dialog .close:hover { background: var(--border); color: var(--text); } }
 
 .searchDialog { width: min(60rem, calc(100% - 2rem)); height: min(48rem, 90dvh); margin-top: 5vh; }
 .searchBar { position: sticky; top: -1.5rem; z-index: 1; display: flex; align-items: center; gap: .5rem; margin: -1.5rem -1.5rem 1.25rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--surface); }
@@ -258,24 +313,69 @@ div.people { padding: .25rem 1rem .75rem; }
 .onboardingKicker { margin: 0; color: var(--muted); font-size: .85rem; font-weight: 600; letter-spacing: .01em; }
 .view .textLink { min-height: 44px; padding: 0 .5rem; border: 0; background: none; color: var(--accent); font-weight: 650; }
 @media (hover: hover) { .view .textLink:hover { background: none; text-decoration: underline; } }
-.stepDots { display: flex; gap: .4rem; margin: .25rem 0 1.25rem; padding: 0; list-style: none; }
-.stepDots li { width: 2rem; height: .3rem; border-radius: 1rem; background: var(--border); }
-.stepDots li[data-state="done"] { background: var(--accent); opacity: .55; }
-.stepDots li[data-state="current"] { background: var(--accent); }
 .onboardingHeading { margin: 0 0 .5rem; font-size: 1.45rem; letter-spacing: -.02em; }
 .onboardingHeading:focus { outline: none; }
 .onboardingHeading:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: .25rem; }
 .onboardingLead { max-width: 40rem; margin: 0 0 1.25rem; color: var(--muted); line-height: 1.55; }
-.pickTools { display: flex; align-items: center; gap: .75rem 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
-.pickSearch { display: flex; flex: 1 1 16rem; align-items: center; gap: .5rem; max-width: 28rem; padding: 0 .85rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+.pickSearch { display: flex; align-items: center; gap: .5rem; max-width: 28rem; margin-bottom: 1.25rem; padding: 0 .85rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
 .pickSearch svg { flex-shrink: 0; width: 1.2rem; height: 1.2rem; color: var(--muted); }
 .pickSearch input { flex: 1; min-width: 0; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; font-size: 1rem; color: var(--text); outline: none; }
 .pickSearch:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-/* A card to pick: + on the poster, ✓ and an outline once it's in the library. */
-.pickMark { position: absolute; top: .4rem; right: .4rem; display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 50%; background: #000c; color: #fff; font-size: 1.1rem; font-weight: 700; line-height: 1; box-shadow: 0 1px 3px #0005; pointer-events: none; }
-.pick[aria-pressed="true"] .poster { outline: 3px solid var(--accent); outline-offset: 2px; }
-.pickMark[data-added="true"] { background: var(--accent); color: var(--bg); }
+/* A card to pick: once in the library, an outline, its status on the poster and under it. */
+.pick[data-status] .poster { outline: 3px solid var(--accent); outline-offset: 2px; }
 .pickAdded { display: block; margin-top: .2rem; color: var(--accent); font-size: .75rem; font-weight: 700; }
+/* The steps, numbered, each ticked once done; the current one filled. */
+.stepper { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: .5rem 0 1.5rem; padding: 0; list-style: none; }
+.stepper li { display: flex; align-items: center; gap: .5rem; color: var(--muted); font-size: .875rem; font-weight: 600; }
+.stepper li + li::before { content: ""; width: 1.75rem; height: 2px; border-radius: 1px; background: var(--border); transition: background-color .3s; }
+.stepper li[data-state="done"]::before, .stepper li[data-state="current"]::before { background: var(--accent); }
+.stepper li[data-state="current"] { color: var(--text); }
+.stepNumber { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border: 2px solid var(--border); border-radius: 50%; font-size: .8rem; font-weight: 700; transition: background-color .3s, border-color .3s, transform .3s; }
+.stepNumber svg { width: .95rem; height: .95rem; stroke-width: 3; }
+.stepper li[data-state="current"] .stepNumber { border-color: var(--accent); background: var(--accent); color: var(--bg); transform: scale(1.08); }
+.stepper li[data-state="done"] .stepNumber { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+@media (max-width: 26rem) {
+  .stepper li + li::before { width: .75rem; }
+  .stepper li:not([data-state="current"]) .stepLabel { display: none; }
+}
+.onboardingStep { min-width: 0; }
+/* A new step slides in from its side (not the first, which the page opens on). */
+.onboardingStep[data-direction] { animation: step-from-end .3s cubic-bezier(.2, .8, .2, 1) backwards; }
+.onboardingStep[data-direction="back"] { animation-name: step-from-start; }
+@keyframes step-from-end { from { opacity: 0; transform: translateX(1.5rem); } }
+@keyframes step-from-start { from { opacity: 0; transform: translateX(-1.5rem); } }
+@media (prefers-reduced-motion: reduce) { .onboardingStep[data-direction] { animation: none; } }
+/* What the statuses mean, each with its icon in its color (as the badges'). */
+.legend { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+.legend li, .allSetCounts li { display: inline-flex; align-items: center; gap: .45rem; padding: .3rem .8rem .3rem .3rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--muted); font-size: .8125rem; }
+.legend b, .allSetCounts b { color: var(--text); font-weight: 650; }
+.legend svg, .allSetCounts svg { flex: none; box-sizing: content-box; width: 1rem; height: 1rem; padding: .3rem; border-radius: 50%; color: #fff; stroke-width: 2.25; }
+.legend [data-status="watching"] svg, .allSetCounts [data-status="watching"] svg { background: #1d4ed8; }
+.legend [data-status="planned"] svg, .allSetCounts [data-status="planned"] svg { background: #525252; }
+.legend [data-status="completed"] svg, .allSetCounts [data-status="completed"] svg { background: #15803d; }
+/* Phones: the names only, so the three fit in a row or two. */
+@media (max-width: 40rem) {
+  .legend { gap: .375rem; }
+  .legend li { gap: .35rem; padding-right: .65rem; font-size: .78rem; }
+  .legend svg { width: .9rem; height: .9rem; padding: .25rem; }
+  .legendHint { display: none; }
+}
+/* The end: a tick that draws itself, the counts, and a fan of posters. */
+.allSet { display: grid; justify-items: center; gap: .25rem; padding: 1.5rem 0 2rem; text-align: center; }
+.allSet .onboardingLead { margin-inline: auto; }
+.allSetMark { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; margin-bottom: .75rem; border-radius: 50%; background: var(--accent); color: var(--bg); box-shadow: 0 10px 30px color-mix(in srgb, var(--accent) 35%, transparent); animation: mark-pop .5s cubic-bezier(.3, 1.5, .6, 1) both; }
+.allSetMark svg { width: 2.25rem; height: 2.25rem; stroke-width: 2.75; stroke-dasharray: 24; animation: draw .45s .3s ease-out both; }
+@keyframes draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+.allSetCounts { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; margin: .25rem 0 0; padding: 0; list-style: none; }
+.collage { display: flex; justify-content: center; margin: 1.5rem 0 1.75rem; padding: 0 0 0 1rem; list-style: none; }
+.collage li { width: clamp(3.5rem, 15vw, 5rem); margin-left: -1rem; border-radius: .5rem; transform: rotate(calc((var(--i) - 2.5) * 4deg)); animation: collage-in .45s cubic-bezier(.2, .9, .3, 1.2) both; animation-delay: calc(var(--i) * 70ms + .25s); }
+.collage .poster { border: 2px solid var(--surface); box-shadow: 0 6px 18px #0004; }
+@keyframes collage-in { from { opacity: 0; transform: translateY(18px) scale(.85); } }
+.view .allSetButton { min-width: 12rem; margin-top: .5rem; }
+@media (prefers-reduced-motion: reduce) {
+  .allSetMark, .allSetMark svg, .collage li { animation: none; }
+  .stepper li + li::before, .stepNumber { transition: none; }
+}
 .onboardingFriends { max-width: 36rem; }
 .onboardingNav { position: sticky; bottom: 0; z-index: 2; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .75rem; margin-top: 1.5rem; padding: .75rem 0 calc(.75rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--bg); }
 .onboardingNav .primary { min-width: 7rem; }
@@ -302,9 +402,13 @@ div.people { padding: .25rem 1rem .75rem; }
   .switcher { width: 100%; }
   .view .switcher button { flex: 1; }
   .titleDialog, .menuDialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-radius: 1rem 1rem 0 0; border-bottom: 0; }
+  .titleDialog[open], .menuDialog[open] { animation-name: sheet-in; animation-duration: .28s; }
   .titleDialog .dialogBody, .menuDialog .dialogBody { padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
   .searchDialog, .friendDialog { margin: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
   .searchDialog .dialogBody { padding: 1rem max(1rem, env(safe-area-inset-right)) calc(1.5rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
   .friendDialog .dialogBody { padding: calc(1rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) calc(1.5rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
   .searchDialog .searchBar { top: -1rem; margin: -1rem -1rem 1rem; padding: calc(.75rem + env(safe-area-inset-top)) 1rem .75rem; }
 }
+
+/* Last, so it wins over the phone sheets' slide (in the media query above). */
+@media (prefers-reduced-motion: reduce) { .dialog[open], .dialog::backdrop { animation: none; } }

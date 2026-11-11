@@ -211,12 +211,12 @@ test("theme preference persists after logging in again", async ({ page }) => {
 
   const app = page.locator("[data-theme]");
   await page.goto("/shared");
-  await expect(app).toHaveAttribute("data-theme", "minimal-neutrals");
+  await expect(app).toHaveAttribute("data-theme", "light-2");
 
   await page.goto("/account");
   const form = await openSection(page, "Theme");
-  await expect(form.getByRole("radio", { name: "Neutral", exact: true })).toBeChecked();
-  await form.getByRole("radio", { name: "Light mode", exact: true }).check();
+  await expect(form.getByRole("radio", { name: "Light mode", exact: true })).toBeChecked();
+  await form.getByRole("radio", { name: "Graphite", exact: true }).check();
   await form.getByRole("button", { name: "Save theme" }).click();
   await expect(form.getByRole("status")).toHaveText("Theme saved.");
 
@@ -226,10 +226,10 @@ test("theme preference persists after logging in again", async ({ page }) => {
 
   await page.goto("/account");
   await openSection(page, "Theme");
-  await expect(form.getByRole("radio", { name: "Light mode", exact: true })).toBeChecked();
+  await expect(form.getByRole("radio", { name: "Graphite", exact: true })).toBeChecked();
   await page.goto("/shared");
-  await expect(app).toHaveAttribute("data-theme", "light-2");
-  await expect(app).toHaveCSS("background-color", "rgb(241, 245, 249)");
+  await expect(app).toHaveAttribute("data-theme", "graphite");
+  await expect(app).toHaveCSS("background-color", "rgb(31, 32, 35)");
 });
 
 test("forgot password in account settings opens the reset by email", async ({ page }) => {

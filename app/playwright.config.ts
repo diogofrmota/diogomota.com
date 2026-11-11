@@ -27,6 +27,10 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
+    // The apps' entrance animations (cards fading in, dialogs sliding up, views
+    // sliding in) all stop with reduced motion, so axe never sees something
+    // half faded in, nor a test measures a sheet halfway up.
+    reducedMotion: "reduce",
   },
   // Every test runs on the desktop. The phone runs only views.spec.ts, the walk
   // through every view and dialog at a phone's size (tap targets, the home

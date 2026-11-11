@@ -1,6 +1,7 @@
 "use client";
 import { useId } from "react";
 import { Dialog } from "@/components/common/Dialog";
+import { CloseIcon } from "@/components/common/icons";
 import { useAppView } from "@/hooks/useAppView";
 import type { FriendProfile, Person } from "@/lib/show-types";
 import { LibrarySection } from "./LibraryGrid";
@@ -42,7 +43,7 @@ export function FriendDialog({ id }: { id: string }) {
     <div className={styles.dialogBody}>
       <div className={styles.dialogHeader}>
         <h2 id={headingId}>{username ?? "Friend"}</h2>
-        <button type="button" className={styles.close} aria-label="Close" onClick={closePanel}>×</button>
+        <button type="button" className={styles.close} aria-label="Close" onClick={closePanel}><CloseIcon /></button>
       </div>
       {error ? (errorStatus === 404 ? <p className={styles.empty}>{error}</p> : <LoadError message={error} onRetry={retry} />) : <>
         <StatsSection stats={friend?.stats ?? null} />

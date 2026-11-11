@@ -27,7 +27,7 @@ async function openApp(page: Page, path: string) {
 }
 
 /** Saves a theme in Account (/account), opened from the account menu. */
-async function chooseTheme(page: Page, theme: "Light mode" | "Dark mode") {
+async function chooseTheme(page: Page, theme: "Graphite" | "Neutral") {
   await followAccountMenu(page, "Account");
   await expect(page).toHaveURL("/account");
   await saveTheme(page, theme);
@@ -304,34 +304,34 @@ test("the theme saved in Account is in the page as served, in the apps and the p
   await openApp(page, "/shows");
   const shell = page.locator("[data-theme]");
   const themeColor = page.locator('meta[name="theme-color"]');
-  // New accounts start in Neutral.
-  await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
-  await expect(shell).toHaveCSS("background-color", "rgb(230, 230, 230)");
-
-  await chooseTheme(page, "Light mode");
+  // New accounts start in Light mode.
   await expect(shell).toHaveAttribute("data-theme", "light-2");
   await expect(shell).toHaveCSS("background-color", "rgb(241, 245, 249)");
-  await expect(themeColor).toHaveAttribute("content", "#f1f5f9");
+
+  await chooseTheme(page, "Graphite");
+  await expect(shell).toHaveAttribute("data-theme", "graphite");
+  await expect(shell).toHaveCSS("background-color", "rgb(31, 32, 35)");
+  await expect(themeColor).toHaveAttribute("content", "#1f2023");
 
   // The server renders the saved theme into the HTML, so it applies before any
   // script runs (no flash of the other theme on load). The same preference
   // everywhere: both apps, /apps and Account.
   for (const path of ["/shows", "/shared", "/apps", "/account"]) {
     await page.goto(path);
-    expect(await reloadHtml(page)).toContain('data-theme="light-2"');
-    await expect(shell).toHaveAttribute("data-theme", "light-2");
-    await expect(page.locator("html")).toHaveCSS("background-color", "rgb(241, 245, 249)");
-    await expect(themeColor).toHaveAttribute("content", "#f1f5f9");
+    expect(await reloadHtml(page)).toContain('data-theme="graphite"');
+    await expect(shell).toHaveAttribute("data-theme", "graphite");
+    await expect(page.locator("html")).toHaveCSS("background-color", "rgb(31, 32, 35)");
+    await expect(themeColor).toHaveAttribute("content", "#1f2023");
   }
 
   await page.goto("/shows");
-  await chooseTheme(page, "Dark mode");
-  await expect(shell).toHaveAttribute("data-theme", "dark-2");
+  await chooseTheme(page, "Neutral");
+  await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
   await page.goto("/shows");
-  expect(await reloadHtml(page)).toContain('data-theme="dark-2"');
-  await expect(shell).toHaveAttribute("data-theme", "dark-2");
-  await expect(shell).toHaveCSS("background-color", "rgb(0, 0, 0)");
-  await expect(themeColor).toHaveAttribute("content", "#000000");
+  expect(await reloadHtml(page)).toContain('data-theme="minimal-neutrals"');
+  await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
+  await expect(shell).toHaveCSS("background-color", "rgb(230, 230, 230)");
+  await expect(themeColor).toHaveAttribute("content", "#e6e6e6");
 });
 
 test("theme changes show on pages reached with the back button, and keep the view history", async ({
@@ -340,24 +340,24 @@ test("theme changes show on pages reached with the back button, and keep the vie
   await openApp(page, "/shows");
   const shell = page.locator("[data-theme]");
   await tab(page, "Shows", "Discover").click();
-  await chooseTheme(page, "Light mode");
-  await expect(shell).toHaveAttribute("data-theme", "light-2");
+  await chooseTheme(page, "Graphite");
+  await expect(shell).toHaveAttribute("data-theme", "graphite");
 
   // Back in the app: in the new theme, on the view Account was opened from.
   await page.goBack();
   await expect(page).toHaveURL("/shows");
   await expect(viewHeading(page)).toHaveText("Discover");
-  await expect(shell).toHaveAttribute("data-theme", "light-2");
+  await expect(shell).toHaveAttribute("data-theme", "graphite");
 
   // The same for a change in Account reached with forward.
   await page.goForward();
   await expect(page).toHaveURL("/account");
-  await saveTheme(page, "Dark mode");
-  await expect(shell).toHaveAttribute("data-theme", "dark-2");
+  await saveTheme(page, "Neutral");
+  await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
   await page.goBack();
   await expect(page).toHaveURL("/shows");
   await expect(viewHeading(page)).toHaveText("Discover");
-  await expect(shell).toHaveAttribute("data-theme", "dark-2");
+  await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
 });
 
 test.describe("on a phone", () => {

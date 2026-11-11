@@ -63,7 +63,7 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await page.getByLabel("Space name").fill("Walk-through");
   await page.getByRole("button", { name: "Create a Space" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
-  await expect(page.getByText("Nothing planned yet — add your first event!")).toBeVisible();
+  await expect(page.getByText("Nothing planned yet — tap a day to add your first event!")).toBeVisible();
   await checkView(page, "Calendar, empty");
 
   await page.getByRole("button", { name: "+ Add event" }).click();
@@ -137,20 +137,33 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
 
 test("Shows: every view and dialog, each closed with Back", async ({ page, browser }) => {
   const me = await openShows(page);
-  // A new account's guide: picking titles, then adding friends.
-  const guide = page.getByRole("main").getByRole("region", { name: "What are you watching right now?" });
-  await expect(card(grid(guide, "Trending this week: TV shows"), "Glass Meridian")).toBeVisible();
+  // A new account's guide: TV shows, movies, friends, then what was added.
+  const main = page.getByRole("main");
+  const guide = main.getByRole("region", { name: "Which TV shows do you watch?" });
+  const glass = card(grid(guide, "TV shows to choose from"), "Glass Meridian");
+  await expect(glass).toBeVisible();
   await expect(guide.getByTestId("skeleton")).toHaveCount(0);
-  await card(grid(guide, "Trending this week: TV shows"), "Glass Meridian").click();
-  await expect(card(grid(guide, "Trending this week: TV shows"), "Glass Meridian")).toHaveAttribute("aria-pressed", "true");
+  await glass.click();
+  const chooser = guide.getByRole("group", { name: "Add Glass Meridian as" });
+  await expect(chooser.getByRole("button")).toHaveText(["Watching", "Planned", "Completed", "Cancel"]);
+  await checkView(page, "Home, the guide's status chooser");
+  await chooser.getByRole("button", { name: "Watching" }).click();
+  await expect(glass).toHaveAccessibleName(/, in your library as Watching$/);
   await checkView(page, "Home, the guide");
-  await page.getByRole("main").getByRole("button", { name: "Next" }).click();
-  await page.getByRole("main").getByRole("button", { name: "Next" }).click();
-  await expect(page.getByRole("main").getByRole("region", { name: "Watch together" })).toBeVisible();
+  await main.getByRole("button", { name: "Next" }).click();
+  await expect(main.getByRole("region", { name: "And which movies?" })).toBeVisible();
+  await main.getByRole("button", { name: "Next" }).click();
+  await expect(main.getByRole("region", { name: "Watch together" })).toBeVisible();
   await checkView(page, "Home, the guide's friends step");
-  await page.getByRole("main").getByRole("button", { name: "Back" }).click();
-  await page.getByRole("main").getByRole("button", { name: "Back" }).click();
+  await main.getByRole("button", { name: "Back" }).click();
+  await main.getByRole("button", { name: "Back" }).click();
   await expect(guide).toBeVisible();
+  for (let i = 0; i < 3; i++) await main.getByRole("button", { name: /^(Next|Finish)$/ }).click();
+  const allSet = main.getByRole("region", { name: "You’re all set!" });
+  await expect(allSet.getByRole("list", { name: "In your library" }).getByRole("listitem")).toHaveText(["1 Watching", "0 Planned", "0 Completed"]);
+  await checkView(page, "Home, the guide's end");
+  await allSet.getByRole("button", { name: "Go to my library" }).click();
+  await expect(card(grid(section(page, "Watching"), "Watching TV shows"), "Glass Meridian")).toBeVisible();
 
   await tab(page, "Discover").click();
   await expect(card(grid(page, "Popular TV shows"), "Harbor Lights")).toBeVisible();
@@ -235,14 +248,14 @@ test("a load that fails says so, and Retry loads it again", async ({ page }) => 
   await page.getByRole("button", { name: "Create a Space" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
   await failing("**/api/shared/events", async () => { await page.reload(); }, "Calendar");
-  await expect(page.getByText("Nothing planned yet — add your first event!")).toBeVisible();
+  await expect(page.getByText("Nothing planned yet — tap a day to add your first event!")).toBeVisible();
   await failing("**/api/shared/tasks", () => sharedTab(page, "Tasks").click(), "Tasks");
   await expect(page.getByRole("heading", { name: "No lists yet — start your first one!" })).toBeVisible();
   await failing("**/api/shared/spaces", () => sharedTab(page, "Settings").click(), "Settings");
   await expect(page.getByRole("listitem").filter({ hasText: "(you)" })).toBeVisible();
 
   await failing("**/api/shows/library", async () => { await page.goto("/shows"); }, "Shows Home");
-  await expect(page.getByRole("heading", { name: "What are you watching right now?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Which TV shows do you watch?" })).toBeVisible();
   await failing("**/api/shows/discover/tv/popular", () => tab(page, "Discover").click(), "Discover");
   await expect(card(grid(page, "Popular TV shows"), "Harbor Lights")).toBeVisible();
   await failing("**/api/shows/friends", () => tab(page, "Profile").click(), "Profile");

@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Activity, useMemo } from "react";
+import { Activity, useCallback, useMemo, useState } from "react";
 import { AppViewContext, useAppViewHistory } from "@/hooks/useAppView";
 import { themeBackground, type Theme } from "@/lib/themes";
 import { AppHeader } from "./AppHeader";
@@ -66,7 +66,11 @@ export function AppFrame({ theme, username, next, brand, account, nav, children,
 // same; useAppView keeps the view in history entries for the back button.
 //
 // Views that are switched away from stay mounted but hidden (<Activity>), so
-// they keep their state; their effects stop until they are shown again.
+// they keep their state; their effects stop until they are shown again. The
+// view shown slides in from the side of its tab (AppShell.module.css: a hidden
+// view's animation starts again when it is shown): from the right for a tab
+// further right, from the left for one further left. The switch itself is
+// immediate, so nothing waits on the animation.
 export function AppShell({
   name,
   tabs,
@@ -86,22 +90,33 @@ export function AppShell({
   children?: React.ReactNode;
 }) {
   const ids = useMemo(() => tabs.map((tab) => tab.id), [tabs]);
-  const appView = useAppViewHistory(ids);
+  const history = useAppViewHistory(ids);
+  const { view, setView: showView } = history;
+  // Which side the next view comes in from: every switch of view, from the
+  // tabs or from inside a view (a link to Discover), says.
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
+  const setView = useCallback((next: string) => {
+    if (next !== view) setDirection(ids.indexOf(next) > ids.indexOf(view) ? "forward" : "back");
+    showView(next);
+  }, [ids, view, showView]);
+  const appView = useMemo(() => ({ ...history, setView }), [history, setView]);
 
   function selectTab(id: string) {
-    if (id !== appView.view) window.scrollTo(0, 0);
-    appView.setView(id);
+    if (id !== view) window.scrollTo(0, 0);
+    setView(id);
   }
 
-  const nav = { label: name, tabs, current: appView.view, onSelect: selectTab };
+  const nav = { label: name, tabs, current: view, onSelect: selectTab };
   return (
     <AppViewContext value={appView}>
       <AppFrame theme={theme} username={username} brand={false} nav={hideNavigation ? undefined : nav} overlay={children}>
-        {tabs.map((tab) => (
-          <Activity key={tab.id} mode={tab.id === appView.view ? "visible" : "hidden"}>
-            {tab.view}
-          </Activity>
-        ))}
+        <div className={styles.views} data-direction={direction}>
+          {tabs.map((tab) => (
+            <Activity key={tab.id} mode={tab.id === view ? "visible" : "hidden"}>
+              {tab.view}
+            </Activity>
+          ))}
+        </div>
       </AppFrame>
     </AppViewContext>
   );

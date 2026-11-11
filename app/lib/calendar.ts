@@ -1,6 +1,8 @@
 export const calendarZone = "Europe/Lisbon";
 export type CalendarEvent = {
   id: string; title: string; notes: string; startsAt: string; endsAt: string;
+  /** From the start of its first day to the start of the day after its last (Lisbon), shown without times. */
+  allDay: boolean;
   isGroup: boolean; assigneeId: string | null;
 };
 
@@ -29,6 +31,20 @@ export function localInstants(date: string, time: string): string[] {
     return local.date === date && local.time === time;
   }).sort();
 }
+/**
+ * An all-day event's instants: the start of its first day, and the start of the
+ * day after its last. Midnight always exists, once, in Lisbon (the clocks change
+ * at 01:00 and 02:00).
+ */
+export function allDayInstants(startDate: string, endDate: string): { startsAt: string; endsAt: string } | null {
+  const [startsAt] = localInstants(startDate, "00:00");
+  const [endsAt] = localInstants(datePlus(endDate, 1), "00:00");
+  return startsAt && endsAt ? { startsAt, endsAt } : null;
+}
+/** The local days an event is on: its first, and its last (an end at midnight belongs to the day before). */
+export function eventDates(event: Pick<CalendarEvent, "startsAt" | "endsAt">) {
+  return { start: localParts(event.startsAt), end: localParts(new Date(Date.parse(event.endsAt) - 1)) };
+}
 export function datePlus(date: string, days: number) {
   const value = new Date(`${date}T12:00:00Z`);
   value.setUTCDate(value.getUTCDate() + days);
@@ -38,10 +54,14 @@ export function dateLabel(date: string, options: Intl.DateTimeFormatOptions) {
   return new Intl.DateTimeFormat("en-GB", { ...options, timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 }
 export function utcStamp(instant: string) { return new Date(instant).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
+/** An all-day event's first day and the day after its last, as iCalendar and Google write dates: 20260710. */
+function dateStamps(event: Pick<CalendarEvent, "startsAt" | "endsAt">) {
+  return [event.startsAt, event.endsAt].map((instant) => localParts(instant).date.replace(/-/g, ""));
+}
 export function googleCalendarLink(event: CalendarEvent) {
+  const dates = event.allDay ? dateStamps(event).join("/") : `${utcStamp(event.startsAt)}/${utcStamp(event.endsAt)}`;
   return `https://calendar.google.com/calendar/render?${new URLSearchParams({
-    action: "TEMPLATE", text: event.title, dates: `${utcStamp(event.startsAt)}/${utcStamp(event.endsAt)}`,
-    details: event.notes, ctz: calendarZone,
+    action: "TEMPLATE", text: event.title, dates, details: event.notes, ctz: calendarZone,
   })}`;
 }
 function escapeText(value: string) { return value.replace(/\\/g, "\\\\").replace(/\r\n|\r|\n/g, "\\n").replace(/[,;]/g, "\\$&"); }
@@ -59,7 +79,8 @@ export function calendarIcs(events: CalendarEvent[]) {
   const stamp = utcStamp(new Date().toISOString());
   return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//diogomota.com//Shared//EN", "CALSCALE:GREGORIAN",
     ...events.flatMap((event) => ["BEGIN:VEVENT", `UID:${event.id}@diogomota.com`, `DTSTAMP:${stamp}`,
-      `DTSTART:${utcStamp(event.startsAt)}`, `DTEND:${utcStamp(event.endsAt)}`,
+      ...(event.allDay ? dateStamps(event).map((date, i) => `${i ? "DTEND" : "DTSTART"};VALUE=DATE:${date}`)
+        : [`DTSTART:${utcStamp(event.startsAt)}`, `DTEND:${utcStamp(event.endsAt)}`]),
       `SUMMARY:${escapeText(event.title)}`, `DESCRIPTION:${escapeText(event.notes)}`, "END:VEVENT"]),
     "END:VCALENDAR", ""].map(fold).join("\r\n");
 }

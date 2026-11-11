@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
+import { CloseIcon } from "@/components/common/icons";
 import ui from "@/components/common/ui.module.css";
 import type { AppInfo } from "@/lib/apps";
 import { authHref } from "@/lib/next-path";
@@ -59,7 +60,7 @@ export function LoginPrompt({
             aria-label="Close"
             onClick={() => ref.current?.close()}
           >
-            ×
+            <CloseIcon />
           </button>
         </div>
       )}

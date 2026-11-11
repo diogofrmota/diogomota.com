@@ -39,6 +39,12 @@ export const grid = (scope: Page | Locator, name: string) => scope.getByRole("li
 /** A card by its title: cards are named "<title>, <year>, ...". */
 export const card = (scope: Page | Locator, title: string) =>
   scope.getByRole("button", { name: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")},`) });
+/**
+ * The cards of a list of titles, by their buttons (the poster and title): each
+ * card in Discover and search also has its + (or tick) button, left out here.
+ */
+export const cardButtons = (list: Locator) =>
+  list.getByRole("listitem").getByRole("button", { name: /^(?!Add .* to your library$|Quick actions for )/ });
 /** All of a card: its button (the poster and title), with its status badge and the facts under it. */
 export const wholeCard = (cardButton: Locator) => cardButton.locator("..");
 export const typeSwitch = (page: Page, name: "TV Shows" | "Movies") =>
