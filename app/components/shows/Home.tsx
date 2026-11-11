@@ -22,11 +22,12 @@ function Empty({ status, type }: { status: LibraryStatus; type: MediaType }) {
     : `No ${kind} completed yet. Finished one? Mark it as Completed from its card.`;
 }
 
+// The section's heading says the status: no badge on each poster saying it again.
 function Section({ status, type, items }: { status: LibraryStatus; type: MediaType; items: LibraryItem[] | null }) {
   const heading = statusNames[status];
   const kind = type === "tv" ? "TV shows" : "movies";
   return <LibrarySection heading={heading} label={`${heading} ${kind}`} loadingLabel={`Loading your ${heading.toLowerCase()} ${kind}…`}
-    items={items} empty={<Empty status={status} type={type} />} />;
+    items={items} empty={<Empty status={status} type={type} />} showStatus={false} />;
 }
 
 // An empty library once the guide is skipped or done, or emptied again.
@@ -66,7 +67,8 @@ export function Home({ username }: { username: string }) {
   }, []);
   const ofType = items?.filter((item) => item.type === type) ?? null;
   return <div className={styles.view}>
-    <h1 className={styles.heading}>Home</h1>
+    {/* The Home tab in the top bar shows which view this is. */}
+    <h1 className={styles.srOnly}>Home</h1>
     <ChangeError className={`${styles.error} ${styles.viewError}`} />
     {!items && loadError ? <LoadError message={loadError} onRetry={reload} />
       : items && guide ? <Onboarding username={username} onDone={() => setGuide(false)} />

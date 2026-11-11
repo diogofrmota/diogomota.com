@@ -1,4 +1,5 @@
-/* One narrow column in the middle of the page; the form is in a card. */
+/* One narrow column in the middle of the page: the title, the form in a card,
+   the links that belong to it close under it, then, set apart, the way back. */
 .column {
   width: min(24rem, 100%);
   margin: 0 auto;
@@ -6,20 +7,29 @@
 
 @media (min-width: 48rem) {
   .column {
-    padding-top: 2rem;
+    padding-top: var(--space-8);
   }
 }
 
 /* Two classes, to win over ui.module.css's margins whatever the order. */
+.column .title {
+  margin-bottom: var(--space-2);
+}
+
 .column .intro {
-  margin: -0.25rem 0 1.25rem;
-  font-size: 0.875rem;
+  margin: 0 0 var(--space-5);
+  font-size: var(--text-sm);
+}
+
+/* With no intro, the card keeps the heading's usual room above it. */
+.title + :not(.intro) {
+  margin-top: var(--space-5);
 }
 
 .column .links {
   display: grid;
-  margin-top: 1rem;
-  font-size: 0.875rem;
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
 }
 
 .links p {
@@ -30,11 +40,23 @@
 .links a {
   display: inline-flex;
   align-items: center;
-  min-height: 2.75rem;
+  min-height: var(--control-height);
   color: var(--accent);
+  font-weight: var(--weight-medium);
   text-underline-offset: 0.2em;
 }
 
-.column .back {
-  margin: 1.25rem 0 0;
+.action {
+  display: grid;
+  margin: var(--space-5) 0 0;
+}
+
+/* Two classes, to win over ui.module.css's justify-self whatever the order. */
+.action .wide {
+  justify-self: stretch;
+}
+
+/* Back to apps: a quiet link, its chevron lined up with the column's edge. */
+.back {
+  margin: var(--space-6) 0 0 calc(-1 * var(--space-1));
 }

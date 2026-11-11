@@ -63,6 +63,7 @@ export function UsernameForm({ username }: { username: string }) {
       <div className={formStyles.field}>
         <Field
           label="Username"
+          hideLabel
           name="username"
           aria-describedby={statusId}
           aria-invalid={error ? true : undefined}
@@ -137,7 +138,7 @@ export function ThemeForm({ theme, labelledBy }: { theme: Theme; labelledBy: str
     <form action={action} className={formStyles.form}>
       <fieldset className={styles.fieldset} aria-labelledby={labelledBy} aria-describedby={hintId}>
         <p id={hintId} className={formStyles.hint}>
-          Your theme preference applies across your apps, and on this page.
+          Applies to both apps, and to this page.
         </p>
         <ThemeOptions defaultValue={selected} />
       </fieldset>

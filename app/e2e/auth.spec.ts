@@ -14,7 +14,7 @@ test("sign up logs the new user in, and the cards go straight into the apps", as
   const account = page.getByRole("navigation", { name: "Account" });
   await expect(accountButton(page, user.username)).toBeVisible();
   await expect(account.getByRole("link")).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Create an account to start using the apps" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "One account for Shared and Shows" })).toHaveCount(0);
 
   await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
@@ -55,11 +55,11 @@ test("log out from the account menu", async ({ page }) => {
   await expect(page).toHaveURL("/apps");
 
   await accountButton(page, user.username).click();
-  await page.getByRole("button", { name: "Logout" }).click();
+  await page.getByRole("button", { name: "Log out" }).click();
 
   await expect(page).toHaveURL("/apps");
   const account = page.getByRole("navigation", { name: "Account" });
-  await expect(account.getByRole("link", { name: "Login" })).toBeVisible();
+  await expect(account.getByRole("link", { name: "Log in" })).toBeVisible();
   await expect(account.getByRole("link", { name: "Sign Up" })).toBeVisible();
   await page.goto("/shared");
   await expect(page).toHaveURL(`/apps?${next("/shared")}`);
@@ -114,7 +114,7 @@ test("logged out, the apps redirect to /apps, which logs in and goes back", asyn
   await page.goto("/shows");
   const prompt = page.getByRole("dialog", { name: "Log in to open Shows" });
   await expect(prompt).toBeVisible();
-  await prompt.getByRole("link", { name: "Login" }).click();
+  await prompt.getByRole("link", { name: "Log in" }).click();
   await expect(page).toHaveURL(`/login?${next("/shows")}`);
 
   await page.getByLabel("Username or email").fill(user.username);

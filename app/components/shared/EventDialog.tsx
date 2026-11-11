@@ -1,7 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { Dialog } from "@/components/common/Dialog";
-import { CalendarIcon, ChevronDownIcon, ClockIcon, CloseIcon } from "@/components/common/icons";
+import { CalendarIcon, ChevronDownIcon, ClockIcon, CloseIcon, ExternalIcon } from "@/components/common/icons";
 import { apiRequest } from "@/lib/api-request";
 import {
   allDayInstants, dateLabel, datePlus, eventDates, googleCalendarLink, localInstants, localParts, type CalendarEvent,
@@ -120,7 +120,8 @@ export function EventDialog({ event, date, time, space, userId, onClose, onSaved
     setStartDate(start.date); setEndDate(end.date); setStartTime(start.time); setEndTime(end.time);
     setError(""); setEditing(false);
   }
-  const assignee = event?.isGroup ? "Whole group" : space.members.find((m) => m.id === event?.assigneeId)?.username ?? "Former member";
+  const member = event && !event.isGroup ? space.members.find((m) => m.id === event.assigneeId) : undefined;
+  const assignee = event?.isGroup ? "Whole group" : member?.username ?? "Former member";
   const sameDay = start.date === end.date;
   return <Dialog className={styles.dialog} aria-labelledby="event-heading" onClose={onClose}><div className={styles.dialogBody}>
     <div className={styles.dialogHeader}><h2 id="event-heading">{editing ? event ? "Edit event" : "New event" : event?.title}</h2>
@@ -167,8 +168,10 @@ export function EventDialog({ event, date, time, space, userId, onClose, onSaved
           <button type="button" onClick={cancelEdit}>Cancel</button></div>
       </fieldset>
     </form> : event && <div className={styles.details}>
-      <p className={styles.badge}>{assignee}</p>
+      {/* Who, when: each a line after its mark (the member's color, or the icons). */}
       <div className={styles.whenDetails}>
+        <p><span className={styles.assigneeDot} style={{ "--event-color": member?.color ?? "var(--muted)" } as React.CSSProperties} aria-hidden="true" />
+          <span>{assignee}</span></p>
         <p><CalendarIcon />
           <span><time dateTime={start.date}>{shortDate(start.date)}</time>{!sameDay && <> – <time dateTime={end.date}>{shortDate(end.date)}</time></>}</span>
         </p>
@@ -179,7 +182,7 @@ export function EventDialog({ event, date, time, space, userId, onClose, onSaved
       </div>
       {event.notes && <p className={styles.notes}>{event.notes}</p>}
       {/* This event only: to Google Calendar, or as a file for any other calendar. */}
-      <div className={styles.actions}><a href={googleCalendarLink(event)} target="_blank" rel="noopener noreferrer">Export to Google Calendar ↗</a>
+      <div className={styles.actions}><a href={googleCalendarLink(event)} target="_blank" rel="noopener noreferrer">Export to Google Calendar<ExternalIcon /></a>
         <a href={`/api/shared/events/${event.id}/export`} download>Download event .ics</a></div>
       <div className={styles.actions}><button className={styles.primary} onClick={() => { setError(""); setEditing(true); setDeleting(false); }}>Edit event</button>
         <button className={styles.remove} onClick={() => setDeleting(true)}>Delete event</button></div>

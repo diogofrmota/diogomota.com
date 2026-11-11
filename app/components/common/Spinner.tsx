@@ -10,3 +10,21 @@ export function Spinner({ label }: { label: string }) {
     </p>
   );
 }
+
+/**
+ * A ring that turns, the size of the text around it: in place of an icon
+ * while what it stands for loads.
+ */
+export function InlineSpinner() {
+  return <span className={styles.inline} aria-hidden="true" />;
+}
+
+/**
+ * Over a button's label while what it started runs: the label goes clear (it
+ * stays the button's name, and keeps its width) and the ring turns in its
+ * place (ui.module.css, `.button:has(> [data-pending])`). Fades in after a
+ * moment, so a quick answer doesn't flash it.
+ */
+export function PendingOverlay({ pending }: { pending: boolean }) {
+  return <span className={styles.overlay} data-pending={pending || undefined} aria-hidden="true" />;
+}

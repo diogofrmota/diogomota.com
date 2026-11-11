@@ -12,12 +12,12 @@ async function setup(page: Page) {
   const user = newUser();
   await signUp(page, user, "/signup?next=/shared");
   await page.getByLabel("Space name").fill("Calendar home");
-  await page.getByRole("button", { name: "Create a Space" }).click();
+  await page.getByRole("button", { name: "Create space" }).click();
   await expect(page.getByText("Nothing planned yet — tap a day to add your first event!")).toBeVisible();
   return { user, space: (await (await page.request.get("/api/shared/spaces")).json()).data as Space };
 }
 async function add(page: Page, title: string, assignee: string, date = localParts(new Date()).date) {
-  await page.getByRole("button", { name: "+ Add event", exact: true }).click();
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
   await page.getByLabel("Title", { exact: true }).fill(title);
   await page.getByLabel("Start date", { exact: true }).fill(date);
   await page.getByLabel("End date", { exact: true }).fill(date);
@@ -89,7 +89,7 @@ for (const mobile of [false, true]) {
     }
     await expect(page.getByText("Nothing planned yet — tap a day to add your first event!")).toBeVisible();
     await withDatabase(async (db) => expect((await db.query("SELECT id FROM events WHERE space_id=$1", [space.id])).rowCount).toBe(0));
-    await page.getByRole("button", { name: "+ Add event" }).click();
+    await page.getByRole("button", { name: "Add event", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape"); await expect(page.getByRole("dialog")).toHaveCount(0);
   });
@@ -134,7 +134,7 @@ test("calendar uses Lisbon in a different browser timezone, stores UTC, rejects 
     const row = (await db.query("SELECT starts_at FROM events WHERE id=$1", [events[0].id])).rows[0];
     expect(row.starts_at.toISOString()).toBe(events[0].startsAt);
   });
-  await page.getByRole("button", { name: "+ Add event" }).click();
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
   await page.getByLabel("Title", { exact: true }).fill("Clock change");
   await page.getByLabel("Start date", { exact: true }).fill("2026-03-29");
   await page.getByLabel("End date").fill("2026-03-29");

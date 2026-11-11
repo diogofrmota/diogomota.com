@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
+import { ChevronDownIcon, CloseIcon, PlusIcon } from "@/components/common/icons";
 import { Spinner } from "@/components/common/Spinner";
+import ui from "@/components/common/ui.module.css";
 import { useAppView } from "@/hooks/useAppView";
 import { localParts } from "@/lib/calendar";
 import type { Space } from "@/lib/space-types";
@@ -53,30 +55,32 @@ export function Tasks({ space }: { space: Space }) {
     onDelete: () => actions.deleteTask(task),
   });
 
+  // The top bar's Tasks tab names the view, so the h1 is for screen readers;
+  // what shows is whose tasks they are, the space's name. Then the lists to
+  // pick from, with Edit lists at their end.
   return <section className={styles.tasks} aria-label="Shared tasks">
-    <div className={styles.heading}>
-      <div><p className={styles.muted}>{space.name}</p><h1>Tasks</h1></div>
-      <div className={styles.headingActions}>
-        {saving && <span className={styles.saving}>Saving…</span>}
-        {!!lists?.length && <button type="button" onClick={() => openPanel("lists")}>Edit lists</button>}
-      </div>
-    </div>
-    {error && <div role="alert" className={styles.alert}><p>{error}</p><button type="button" aria-label="Dismiss" onClick={dismissError}>×</button></div>}
+    <h1 className={ui.srOnly}>Tasks</h1>
+    <p className={styles.spaceName}>{space.name}</p>
+    {error && <div role="alert" className={styles.alert}><p>{error}</p><button type="button" className={styles.iconButton} aria-label="Dismiss" onClick={dismissError}><CloseIcon /></button></div>}
     {loadError && <div role="alert" className={styles.alert}><p>{loadError}</p><button type="button" onClick={reload}>Retry</button></div>}
     {!lists && !loadError && <Spinner label="Loading tasks…" />}
     {lists?.length === 0 && <form className={styles.card} onSubmit={(e) => { const name = submitted(e, "name"); if (name) select(actions.createList(name)); }}>
-      <h2>No lists yet — start your first one!</h2>
+      <h2>Start your first list</h2>
       <p className={styles.muted}>Groceries, chores, a trip: everyone in {space.name} can add and tick off tasks.</p>
       <label>List name<input name="name" required maxLength={80} placeholder="e.g. Groceries" autoComplete="off" /></label>
       <button type="submit" className={styles.primary}>Create list</button>
     </form>}
     {lists && list && <>
-      <div className={styles.chips} role="group" aria-label="Task lists">
-        {lists.map((l) => <button key={l.id} type="button" aria-pressed={l.id === list.id} onClick={() => select(l.id)}>{l.name}</button>)}
-        <button type="button" className={styles.newList} onClick={() => openPanel("lists:new")}>+ New list</button>
+      <div className={styles.toolbar}>
+        <div className={styles.chips} role="group" aria-label="Task lists">
+          {lists.map((l) => <button key={l.id} type="button" aria-pressed={l.id === list.id} onClick={() => select(l.id)}>{l.name}</button>)}
+          <button type="button" className={styles.newList} onClick={() => openPanel("lists:new")}><PlusIcon />New list</button>
+        </div>
+        <button type="button" className={styles.editLists} onClick={() => openPanel("lists")}>Edit lists</button>
       </div>
       <section className={styles.list} aria-labelledby="task-list-name">
-        <div className={styles.listHeader}><h2 id="task-list-name">{list.name}</h2><span className={styles.muted}>{active.length} to do</span></div>
+        <div className={styles.listHeader}><h2 id="task-list-name">{list.name}</h2>
+          <span className={styles.count}>{saving && <span className={styles.saving}>Saving…</span>}{active.length} to do</span></div>
         {active.length > 0 ? <SortableList id="task-order" items={active.map((t) => ({ id: t.id, label: t.title }))}
           onMove={(id, beforeId) => actions.moveTask(list.id, id, beforeId)}>
           <ul className={styles.items} aria-label="To do">{active.map((task) => <SortableTask key={task.id} {...rowProps(task)} />)}</ul>
@@ -86,7 +90,7 @@ export function Tasks({ space }: { space: Space }) {
           <button type="submit">Add</button>
         </form>
         {done.length > 0 && <details className={styles.done} open={doneOpen} onToggle={(e) => setDoneOpen(e.currentTarget.open)}>
-          <summary>Done ({done.length})</summary>
+          <summary><ChevronDownIcon />Done ({done.length})</summary>
           <ul className={styles.items} aria-label="Done">{done.map((task) => <TaskRow key={task.id} {...rowProps(task)} />)}</ul>
         </details>}
       </section>

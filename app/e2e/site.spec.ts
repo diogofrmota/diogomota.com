@@ -106,7 +106,7 @@ test("keyboard focus is visible", async ({ page }) => {
   await expect(richemont).toHaveCSS("outline-color", "rgb(255, 255, 255)");
 
   await page.goto("/apps");
-  // diogomota.com, Login and Sign Up in the top bar, then in the call to action over the cards, then the first card.
+  // diogomota.com, Log in and Sign up in the top bar, then Sign up and Log in in the call to action over the cards, then the first card.
   for (let i = 0; i < 6; i++) await page.keyboard.press("Tab");
   const card = page.getByRole("main").getByRole("listitem").filter({ has: page.getByRole("link", { name: "Shared", exact: true }) });
   await expect(card.getByRole("link")).toBeFocused();
@@ -114,7 +114,7 @@ test("keyboard focus is visible", async ({ page }) => {
   await expect(card).toHaveCSS("outline-style", "solid");
 
   await page.keyboard.press("Enter");
-  const login = page.getByRole("dialog").getByRole("link", { name: "Login" });
+  const login = page.getByRole("dialog").getByRole("link", { name: "Log in" });
   await expect(login).toBeFocused();
   await expect(login).toHaveCSS("outline-style", "solid");
 });

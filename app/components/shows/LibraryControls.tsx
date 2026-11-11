@@ -1,5 +1,6 @@
 "use client";
 import { useId, useRef, useState } from "react";
+import { CheckIcon, HeartIcon, StarIcon } from "@/components/common/icons";
 import {
   formatEpisode, isLastEpisode, libraryStatuses, nextEpisode, progressOf, statusNames,
   type Episode, type LibraryItem, type LibraryStatus, type TitleDetail,
@@ -22,7 +23,8 @@ export function StarRating({ rating, onChange }: { rating: number | null; onChan
     <span id={id} className={styles.label}>Your rating</span>
     <span className={styles.stars}>
       {[1, 2, 3, 4, 5].map((n) => <button key={n} type="button" className={styles.star} data-filled={rating !== null && n <= rating}
-        aria-pressed={n === rating} aria-label={`${n} star${n === 1 ? "" : "s"}`} onClick={() => onChange(n === rating ? null : n)}>★</button>)}
+        aria-pressed={n === rating} aria-label={`${n} star${n === 1 ? "" : "s"}`} onClick={() => onChange(n === rating ? null : n)}>
+        <StarIcon filled /></button>)}
     </span>
     {rating !== null && <button type="button" className={styles.textButton} aria-label="Clear rating" onClick={() => onChange(null)}>Clear</button>}
   </div>;
@@ -94,10 +96,10 @@ export function LibraryControls({ item, detail, onRemoved }: { item: LibraryItem
   const entry = item.library;
   return <section className={styles.library} aria-label="Your library">
     <div className={styles.libraryHeader}>
-      <p role="status" className={styles.inLibrary}>✓ In your library</p>
+      <p role="status" className={styles.inLibrary}><CheckIcon />In your library</p>
       <button type="button" className={styles.favourite} aria-pressed={entry.isFavourite}
         onClick={() => change(item, { isFavourite: !entry.isFavourite })}>
-        <span aria-hidden="true">{entry.isFavourite ? "♥" : "♡"}</span> Favourite
+        <HeartIcon filled={entry.isFavourite} />Favourite
       </button>
     </div>
     <ChangeError className={styles.error} />

@@ -48,7 +48,9 @@ test("the account menu opens settings, and closes with Escape or a click outside
   await expect(page).toHaveURL("/account");
   await expect(page.getByRole("heading", { level: 1, name: "account" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Back to Apps" }).click();
+  // Who is logged in, under the title.
+  await expect(page.getByRole("main")).toContainText(user.email);
+  await page.getByRole("link", { name: "Back to apps" }).click();
   await expect(page).toHaveURL("/apps");
 });
 
@@ -63,7 +65,7 @@ test("change username", async ({ page }) => {
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
 
-  const form = await openSection(page, "Change username");
+  const form = await openSection(page, "Username");
   const field = form.getByLabel("Username");
   const save = form.getByRole("button", { name: "Save username" });
   await expect(field).toHaveValue(user.username);
@@ -106,7 +108,7 @@ test("username checks ignore old responses and recover after a network failure",
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
-  const form = await openSection(page, "Change username");
+  const form = await openSection(page, "Username");
   const field = form.getByLabel("Username");
   const status = form.getByRole("status");
   const endpoint = "**/api/account/username?*";
@@ -172,7 +174,7 @@ test("change password, which logs out every device", async ({ page, browser }) =
   await expect(other).toHaveURL("/apps");
   await page.goto("/account");
 
-  const form = await openSection(page, "Change password");
+  const form = await openSection(page, "Password");
   const newPassword = "a whole new password";
   async function submit(current: string, password: string, confirm: string) {
     await form.getByLabel("Current password").fill(current);
@@ -215,6 +217,8 @@ test("theme preference persists after logging in again", async ({ page }) => {
 
   await page.goto("/account");
   const form = await openSection(page, "Theme");
+  // The theme in use, on the row, before it's opened.
+  await expect(form.locator("summary")).toContainText("Light mode");
   await expect(form.getByRole("radio", { name: "Light mode", exact: true })).toBeChecked();
   await form.getByRole("radio", { name: "Graphite", exact: true }).check();
   await form.getByRole("button", { name: "Save theme" }).click();
@@ -225,6 +229,7 @@ test("theme preference persists after logging in again", async ({ page }) => {
   await expect(page).toHaveURL("/apps");
 
   await page.goto("/account");
+  await expect(form.locator("summary")).toContainText("Graphite");
   await openSection(page, "Theme");
   await expect(form.getByRole("radio", { name: "Graphite", exact: true })).toBeChecked();
   await page.goto("/shared");
@@ -232,24 +237,24 @@ test("theme preference persists after logging in again", async ({ page }) => {
   await expect(app).toHaveCSS("background-color", "rgb(31, 32, 35)");
 });
 
-test("forgot password in account settings opens the reset by email", async ({ page }) => {
+test("forgot password, under Password in account settings, opens the reset by email", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
 
-  const forgot = await openSection(page, "Forgot password");
-  await expect(forgot).toContainText(`Reset it with a link sent to ${user.email}.`);
-  await forgot.getByRole("link", { name: "Reset by email" }).click();
+  const password = await openSection(page, "Password");
+  await expect(password).toContainText("Don't know your current password?");
+  await password.getByRole("link", { name: "Reset it by email" }).click();
   await expect(page).toHaveURL("/forgot-password");
 });
 
-test("logged out, /account redirects to /apps and Login comes back to it", async ({ page }) => {
+test("logged out, /account redirects to /apps and Log in comes back to it", async ({ page }) => {
   await page.goto("/account");
   await expect(page).toHaveURL("/apps?next=%2Faccount");
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(
-    page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Login" }),
+    page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" }),
   ).toHaveAttribute("href", "/login?next=%2Faccount");
 });
 

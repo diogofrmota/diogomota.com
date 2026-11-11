@@ -20,7 +20,7 @@ async function openApp(page: Page, path: string) {
   await expect(page).toHaveURL(path);
   if (path === "/shared") {
     await page.getByLabel("Space name").fill("Shell test space");
-    await page.getByRole("button", { name: "Create a Space" }).click();
+    await page.getByRole("button", { name: "Create space" }).click();
     await expect(viewHeading(page)).toHaveText("Calendar");
   }
   return user;
@@ -232,7 +232,7 @@ test("the top bar: in an app, its tabs in the middle and the account menu; elsew
   }
 });
 
-test("the account menu: a button that shows it opens, with Account, Switch app and Logout, each with an icon; no Settings", async ({ page }) => {
+test("the account menu: a button that shows it opens, with Account, Switch app and Log out, each with an icon; no Settings", async ({ page }) => {
   const user = await openApp(page, "/shows");
   const button = accountButton(page, user.username);
   // The username's initial and a chevron, both hidden: the button is named by the username alone.
@@ -262,13 +262,13 @@ test("Shared's Settings tab: only once there is a space, and leaving there goes 
   const refreshed = () => page.waitForResponse((response) =>
     response.request().method() === "POST" && "next-action" in response.request().headers());
   await signUp(page, newUser(), "/signup?next=%2Fshared");
-  await expect(viewHeading(page)).toHaveText("Your shared space");
+  await expect(viewHeading(page)).toHaveText("Start your shared space");
   // No tabs yet: the top bar has only the account menu.
   await expect(page.getByRole("banner").getByRole("button")).toHaveCount(1);
   await expect(page.getByRole("banner").getByRole("link")).toHaveCount(0);
   await page.getByLabel("Space name").fill("Back test space");
   let done = refreshed();
-  await page.getByRole("button", { name: "Create a Space" }).click();
+  await page.getByRole("button", { name: "Create space" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
   await done;
 
@@ -288,7 +288,7 @@ test("Shared's Settings tab: only once there is a space, and leaving there goes 
   await page.getByRole("button", { name: "Leave space", exact: true }).click();
   done = refreshed();
   await page.getByRole("button", { name: "Confirm leave" }).click();
-  await expect(viewHeading(page)).toHaveText("Your shared space");
+  await expect(viewHeading(page)).toHaveText("Start your shared space");
   await expect(tabBar(page, "Shared")).toHaveCount(0);
   await done;
 
@@ -297,7 +297,7 @@ test("Shared's Settings tab: only once there is a space, and leaving there goes 
   await expect(page).toHaveURL("/apps");
   await page.goBack();
   await expect(page).toHaveURL("/shared");
-  await expect(viewHeading(page)).toHaveText("Your shared space");
+  await expect(viewHeading(page)).toHaveText("Start your shared space");
 });
 
 test("the theme saved in Account is in the page as served, in the apps and the pages around them", async ({ page }) => {

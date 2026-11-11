@@ -11,14 +11,15 @@
 
 /* The whole card is the tap target. The picked one is outlined in the accent.
    No transition on the background: it changes with the theme, and would fade
-   between them. */
+   between them. Corners nest: the card's, less the room around the sample, is
+   the sample's; the sample's, less the room around its card, is that card's. */
 .option {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--space-2);
   min-width: 0;
-  padding: 0.5rem;
+  padding: 0.375rem 0.375rem var(--space-2);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   cursor: pointer;
 }
 
@@ -40,9 +41,9 @@
   align-items: center;
   gap: 0.375rem;
   height: 3.25rem;
-  padding: 0.5rem;
+  padding: 0.375rem;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: calc(var(--radius-lg) - 0.375rem);
   background-color: var(--bg);
 }
 
@@ -55,7 +56,7 @@
   height: 100%;
   padding: 0 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 0.375rem;
+  border-radius: 2px;
   background-color: var(--surface);
 }
 
@@ -86,9 +87,10 @@
 .name {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   min-height: 1.5rem;
-  font-size: 0.875rem;
+  padding-inline: 0.125rem;
+  font-size: var(--text-sm);
   line-height: 1.25;
 }
 
@@ -98,19 +100,4 @@
   height: 1.125rem;
   margin: 0;
   accent-color: var(--accent);
-}
-
-/* A recommended theme's star, after its name: yellow in every theme, with a
-   dark amber edge so it stands out (3:1) on the light ones too. */
-.star {
-  display: inline-flex;
-  flex: none;
-  margin-left: -0.25rem;
-}
-
-.star svg {
-  fill: #facc15;
-  stroke: #a16207;
-  stroke-width: 1.5;
-  stroke-linejoin: round;
 }

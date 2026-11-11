@@ -106,7 +106,7 @@ test("two people become friends: a request, accepting it, each other's libraries
   await expect(page.getByLabel("Add a friend")).toHaveValue("");
   const sent = page.getByRole("list", { name: "Sent requests" });
   await expect(sent.getByRole("listitem")).toHaveCount(1);
-  await expect(sent.getByRole("listitem")).toContainText(`${bobName} Pending`);
+  await expect(sent.getByRole("listitem")).toContainText(bobName);
   await expect(friends).toContainText("No friends yet.");
 
   // Asking again: refused, saying why.
@@ -160,7 +160,7 @@ test("two people become friends: a request, accepting it, each other's libraries
   await cards("Watching").click();
   const detail = page.getByRole("dialog", { name: "Harbor Lights" });
   await detail.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Planned" }).click();
-  await expect(detail.getByRole("status")).toHaveText("✓ In your library");
+  await expect(detail.getByRole("status")).toHaveText("In your library");
   await page.keyboard.press("Escape");
   await expect(detail).toBeHidden();
   await expect(profile).toBeVisible();
@@ -413,7 +413,7 @@ test("Add a friend suggests usernames while typing, and says whether an account 
   await field.press("Enter");
   await expect(field).toHaveValue(bob.user.username);
   await expect(list).toBeHidden();
-  await expect(friends.getByText(`✓ ${bob.user.username} has an account`)).toBeVisible();
+  await expect(friends.getByText(`${bob.user.username} has an account`)).toBeVisible();
   await friends.getByRole("button", { name: "Send request" }).click();
   await expect(friends.getByRole("status")).toHaveText(`Friend request sent to ${bob.user.username}.`);
 
@@ -424,7 +424,7 @@ test("Add a friend suggests usernames while typing, and says whether an account 
   await field.press("Escape");
   await expect(list).toBeHidden();
   await field.fill(bob.user.username);
-  await expect(friends.getByText(`✓ ${bob.user.username} has an account · Request sent`)).toBeVisible();
+  await expect(friends.getByText(`${bob.user.username} has an account · Request sent`)).toBeVisible();
   await field.fill(bob.user.username.slice(0, 12));
   await list.getByRole("option", { name: new RegExp(`^${bob.user.username}`) }).click();
   await expect(field).toHaveValue(bob.user.username);

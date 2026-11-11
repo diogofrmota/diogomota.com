@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { AppFrame } from "@/components/common/AppShell";
+import { ChevronLeftIcon } from "@/components/common/icons";
+import { LinkPending } from "@/components/common/LinkPending";
 import ui from "@/components/common/ui.module.css";
 import { defaultTheme, type Theme } from "@/lib/themes";
 import styles from "./AuthPage.module.css";
 
 // Frame for /login, /signup and the password reset pages, in the apps' frame
 // and look: the top bar with only diogomota.com (these pages are the way to log
-// in), then a centered column with the form in a card, a few lines of links
-// under it, and a way back to /apps. In the default theme, unless the user is
-// logged in (the reset pages are open then too): then in theirs.
+// in), then a centered column with the form in a card (its button as wide as
+// the card: the page's one action), a few lines of links under it, and a quiet
+// way back to /apps. In the default theme, unless the user is logged in (the
+// reset pages are open then too): then in theirs.
 export function AuthPage({
   title,
   intro,
@@ -30,18 +33,22 @@ export function AuthPage({
   return (
     <AppFrame theme={theme} username={null} account={false}>
       <div className={styles.column}>
-        <h1 className={ui.heading}>{title}</h1>
+        <h1 className={`${ui.heading} ${styles.title}`}>{title}</h1>
         {intro && <p className={`${ui.muted} ${styles.intro}`}>{intro}</p>}
         {form && <div className={ui.card}>{form}</div>}
         {children && <div className={`${ui.muted} ${styles.links}`}>{children}</div>}
-        <p className={`${ui.actions} ${styles.back}`}>
-          {action && (
-            <Link href={action.href} className={`${ui.button} ${ui.primary}`}>
+        {action && (
+          <p className={styles.action}>
+            <Link href={action.href} className={`${ui.button} ${ui.primary} ${styles.wide}`}>
               {action.label}
+              <LinkPending />
             </Link>
-          )}
-          <Link href="/apps" className={ui.button}>
-            Back to Apps
+          </p>
+        )}
+        <p className={styles.back}>
+          <Link href="/apps" className={`${ui.button} ${ui.quiet}`}>
+            <LinkPending icon={<ChevronLeftIcon />} />
+            Back to apps
           </Link>
         </p>
       </div>

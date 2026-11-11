@@ -1,26 +1,29 @@
 .calendar { max-width: 90rem; margin: auto; height: var(--app-view-height); display: flex; flex-direction: column; }
 .calendar > * { flex-shrink: 0; }
-.calendar h2 { font-size: 1.25rem; font-weight: 600; margin: 0; }
+.calendar h2 { font-size: var(--text-lg); font-weight: var(--weight-semibold); margin: 0; }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .toolbar, .actions, .dialogHeader { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .dialogHeader { justify-content: space-between; }
-.muted { color: var(--muted); margin: 0; font-size: .875rem; }
+.muted { color: var(--muted); margin: 0; font-size: var(--text-sm); }
 /* ‹ Today ›, the period, the colors, Month | Week | Day and Add event in one row. */
 .toolbar { gap: .5rem 1rem; margin-bottom: .75rem; }
 .toolbar h2 { white-space: nowrap; }
-.calendar button, .dialog button, .dialog a { min-height: 44px; border: 1px solid var(--border); background: var(--surface); border-radius: .5rem; padding: .5rem .85rem; cursor: pointer; }
+.calendar button, .dialog button, .dialog a { min-height: 44px; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-md); padding: .5rem .85rem; cursor: pointer; }
 /* ‹ Today ›, and the dialogs' × */
 .actions button, .dialogHeader button { min-width: 44px; }
 /* ‹ and ›: chevrons big enough to see at a glance. */
 .calendar .arrow { display: inline-grid; place-items: center; width: 44px; padding: 0; border-radius: 50%; }
-.arrow svg { width: 1.5rem; height: 1.5rem; stroke-width: 2.25; }
+.arrow svg { width: 1.5rem; height: 1.5rem; }
 /* The dialogs' ×: a round button with a drawn cross. */
 .dialog .close { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border-color: transparent; border-radius: 50%; background: var(--hover); color: var(--muted); }
-.close svg { width: 1.375rem; height: 1.375rem; stroke-width: 2.25; }
-.calendar .primary, .dialog .primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 650; }
+.close svg { width: var(--icon-md); height: var(--icon-md); }
+.calendar .primary, .dialog .primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: var(--weight-semibold); transition: transform var(--duration-fast) var(--ease-out); }
+/* Pressed, the main action gives a little, so the tap is felt. */
+.calendar .primary:active, .dialog .primary:active { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce) { .calendar .primary:active, .dialog .primary:active { transform: none; } }
 /* .danger confirms something that can't be undone; .remove starts it (components/common/ui.module.css). */
-.dialog .danger { background: var(--danger); border-color: var(--danger); color: var(--bg); font-weight: 650; }
-.dialog .remove { padding-inline: 0; border-color: transparent; background: none; color: var(--danger); font-weight: 600; }
+.dialog .danger { background: var(--danger); border-color: var(--danger); color: var(--bg); font-weight: var(--weight-semibold); }
+.dialog .remove { padding-inline: 0; border-color: transparent; background: none; color: var(--danger); font-weight: var(--weight-semibold); }
 @media (hover: hover) {
   .calendar button:hover, .dialog button:hover { background: var(--hover); }
   .dialog .close:hover { background: var(--border); color: var(--text); }
@@ -32,40 +35,45 @@
   .dialog .remove:hover { background: none; text-decoration: underline; }
   .calendar .event:hover { background: color-mix(in srgb, var(--event-color) 30%, var(--surface)); }
 }
+/* Add event: the plus and the label on one line, the plus taking some of the
+   room on its side so the button looks even. */
+.calendar .add { display: inline-flex; align-items: center; justify-content: center; gap: .375rem; padding-left: .7rem; }
+.add svg { flex: none; width: var(--icon-md); height: var(--icon-md); }
 /* On the right, also when a narrow window wraps it onto a second row. */
-.switcher { display: flex; margin-left: auto; padding: 3px; border-radius: .65rem; background: var(--hover); }
+/* Its corners: its buttons' (--radius-md), plus the 3px around them. */
+.switcher { display: flex; margin-left: auto; padding: 3px; border-radius: calc(var(--radius-md) + 3px); background: var(--hover); }
 .switcher button { border: 0; background: transparent; }
-.switcher button[aria-pressed="true"] { background: var(--surface); box-shadow: 0 1px 4px #0003; color: var(--accent); font-weight: 600; }
+.switcher button[aria-pressed="true"] { background: var(--surface); box-shadow: var(--shadow-sm); color: var(--accent); font-weight: var(--weight-semibold); }
 /* Takes the room between the period and the switcher, its colors on the right. */
-.legend { flex: 1 1 auto; justify-content: flex-end; display: flex; gap: .25rem .875rem; flex-wrap: wrap; font-size: .75rem; color: var(--muted); margin: 0; padding: 0; list-style: none; }
+.legend { flex: 1 1 auto; justify-content: flex-end; display: flex; gap: .25rem .875rem; flex-wrap: wrap; font-size: var(--text-xs); color: var(--muted); margin: 0; padding: 0; list-style: none; }
 .legend li { display: flex; align-items: center; gap: .4rem; overflow-wrap: anywhere; }
-.legend i { height: .6rem; width: .6rem; border-radius: 50%; flex-shrink: 0; }
+.dot { height: .625rem; width: .625rem; border-radius: 50%; flex-shrink: 0; }
 .groupDot { background: var(--muted); }
-.groupBadge { border: 1px solid var(--muted); border-radius: .2rem; padding: 0 .15rem; }
-.alert { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; padding: .5rem .5rem .5rem .75rem; border-left: 3px solid var(--danger); border-radius: .4rem; background: var(--hover); }
+.alert { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; padding: .5rem .5rem .5rem .75rem; border-left: 3px solid var(--danger); border-radius: var(--radius-sm); background: var(--hover); }
 .alert p { margin: 0; }
-.empty { margin: 0 0 .5rem; padding: .5rem .75rem; font-size: .875rem; background: var(--accent-soft); border-radius: .75rem; color: var(--accent); }
+.empty { margin: 0 0 .5rem; padding: .5rem .75rem; font-size: var(--text-sm); background: var(--accent-soft); border-radius: var(--radius-lg); color: var(--accent); }
 /* Fit all six weeks below the controls; only busy days and time views scroll.
    Keep dates usable on unusually short screens, where page scrolling is needed. */
-.scroller { flex: 1; min-height: 20rem; border: 1px solid var(--border); border-radius: .75rem; overflow: auto; }
+.scroller { flex: 1; min-height: 20rem; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: auto; }
 .month { height: 100%; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto repeat(6, minmax(0, 1fr)); }
-.weekday { position: sticky; top: 0; z-index: 2; background: var(--surface); padding: .4rem .25rem; text-align: center; color: var(--muted); font-size: .8rem; border-bottom: 1px solid var(--border); }
+.weekday { position: sticky; top: 0; z-index: 2; background: var(--surface); padding: .4rem .25rem; text-align: center; color: var(--muted); font-size: var(--text-xs); border-bottom: 1px solid var(--border); }
 .cell { min-height: 0; min-width: 0; overflow: auto; padding: .2rem; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: pointer; }
 .outside { background: var(--hover); }
-.calendar .dayNumber { display: block; border: 0; background: transparent; padding: .25rem; width: 44px; margin: 0 auto .25rem; font-size: .85rem; border-radius: 50%; }
-.calendar .today { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
-.calendar .event { display: flex; flex-direction: column; text-align: left; width: 100%; min-height: 44px; margin-bottom: .2rem; padding: .25rem .35rem; background: color-mix(in srgb, var(--event-color) 15%, var(--surface)); color: var(--text); border: 1px solid var(--border); border-left: 4px solid var(--event-color); border-radius: .3rem; overflow: hidden; }
-.eventTitle { font-size: .8rem; font-weight: 600; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.eventMeta { font-size: .65rem; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar .dayNumber { display: block; border: 0; background: transparent; padding: .25rem; width: 44px; margin: 0 auto .25rem; font-size: var(--text-sm); font-variant-numeric: tabular-nums; border-radius: 50%; }
+.calendar .today { background: var(--accent-soft); color: var(--accent); font-weight: var(--weight-bold); }
+/* The member's color down its side and in its fill: no other border. */
+.calendar .event { display: flex; flex-direction: column; text-align: left; width: 100%; min-height: 44px; margin-bottom: .2rem; padding: .25rem .35rem; background: color-mix(in srgb, var(--event-color) 15%, var(--surface)); color: var(--text); border: 0; border-left: 4px solid var(--event-color); border-radius: var(--radius-xs); overflow: hidden; }
+.eventTitle { font-size: var(--text-xs); font-weight: var(--weight-semibold); width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eventMeta { font-size: var(--text-2xs); font-variant-numeric: tabular-nums; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .timeGrid { display: grid; grid-template-columns: 50px repeat(var(--days), minmax(0, 1fr)); }
 .week { min-width: 700px; }
-.calendar .timeHead, .timeHead { position: sticky; top: 0; z-index: 3; min-height: 50px; border: 0; border-bottom: 1px solid var(--border); background: var(--surface); border-radius: 0; text-align: center; font-size: .85rem; }
+.calendar .timeHead, .timeHead { position: sticky; top: 0; z-index: 3; min-height: 50px; border: 0; border-bottom: 1px solid var(--border); background: var(--surface); border-radius: 0; text-align: center; font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
 .hours { height: 1440px; }
-.hours span { display: block; height: 60px; font-size: .65rem; color: var(--muted); padding: .2rem; text-align: right; }
+.hours span { display: block; height: 60px; font-size: var(--text-xs); font-variant-numeric: tabular-nums; color: var(--muted); padding: .2rem; text-align: right; }
 .dayColumn { position: relative; height: 1440px; border-left: 1px solid var(--border); }
 .hour { height: 60px; border-bottom: 1px solid var(--border); cursor: pointer; }
 /* All-day events, in a row over the hours. */
-.allDayLabel { display: grid; place-items: center; padding: .2rem; border-bottom: 1px solid var(--border); color: var(--muted); font-size: .65rem; text-align: center; }
+.allDayLabel { display: grid; place-items: center; padding: .2rem; border-bottom: 1px solid var(--border); color: var(--muted); font-size: var(--text-2xs); text-align: center; }
 .allDayCell { min-width: 0; padding: .2rem; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .calendar .allDayEvent { background: color-mix(in srgb, var(--event-color) 26%, var(--surface)); }
 /* Another period or view: the new grid slides in from the side of its dates, or fades in. */
@@ -81,7 +89,7 @@
 @keyframes event-in { from { opacity: 0; transform: translateY(3px); } }
 @media (prefers-reduced-motion: reduce) { .calendar .event { animation: none; } }
 /* The content fills the dialog, so a click on the dialog itself is on the backdrop (components/common/Dialog). */
-.dialog { margin: auto; width: min(540px, calc(100% - 2rem)); max-height: 90dvh; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface); color: var(--text); box-shadow: 0 24px 90px #0006; }
+.dialog { margin: auto; width: min(540px, calc(100% - 2rem)); max-height: 90dvh; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); }
 .dialog[open] { display: flex; flex-direction: column; }
 .dialog::backdrop { background: #0008; animation: backdrop-in .2s ease-out; }
 .dialog[open] { animation: dialog-in .22s cubic-bezier(.2, .9, .3, 1.1); }
@@ -89,33 +97,34 @@
 @keyframes backdrop-in { from { opacity: 0; } }
 .dialogBody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1.5rem; }
 .dialogHeader { flex-wrap: nowrap; align-items: flex-start; margin-bottom: 1rem; }
-.dialogHeader h2 { margin: .3rem 0; overflow-wrap: anywhere; font-size: 1.4rem; }
+.dialogHeader h2 { margin: .3rem 0; overflow-wrap: anywhere; font-size: var(--text-xl); }
 .dialogHeader button { flex-shrink: 0; }
 .form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 1rem; }
-.form label { display: grid; gap: .35rem; font-size: .875rem; min-width: 0; }
-.form input, .form select, .form textarea { font: inherit; font-size: 1rem; width: 100%; min-width: 0; min-height: 44px; padding: .6rem .75rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: .5rem; }
+.form label { display: grid; gap: .35rem; font-size: var(--text-sm); min-width: 0; }
+.form input, .form select, .form textarea { font: inherit; font-size: var(--text-md); width: 100%; min-width: 0; min-height: 44px; padding: .6rem .75rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); }
 .form textarea { resize: vertical; }
 /* A select's own arrow, inset from the right edge (EventDialog's Select). */
 .select { position: relative; display: block; min-width: 0; }
 .form .select select { appearance: none; -webkit-appearance: none; padding-right: 2.75rem; cursor: pointer; }
 .select svg { position: absolute; top: 50%; right: .9rem; width: 1.125rem; height: 1.125rem; color: var(--muted); transform: translateY(-50%); pointer-events: none; }
 /* When: All day, Starts and Ends, in one card with lines between. */
-.when { display: grid; border: 1px solid var(--border); border-radius: .75rem; background: var(--bg); }
+.when { display: grid; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg); }
 .when > * + * { border-top: 1px solid var(--border); }
-.form .switchRow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 52px; padding: .25rem .9rem; font-size: 1rem; cursor: pointer; }
-.whenRow { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1rem; min-height: 52px; padding: .4rem .5rem .4rem .9rem; }
-.whenLabel { font-size: 1rem; }
+.form .switchRow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 52px; padding: .25rem .9rem; font-size: var(--text-md); cursor: pointer; }
+/* The chips sit .375rem in from the card's edge: their corners are the card's less that. */
+.whenRow { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1rem; min-height: 52px; padding: .375rem .375rem .375rem .9rem; }
+.whenLabel { font-size: var(--text-md); }
 .chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; margin-left: auto; }
 /* A switch, from a checkbox: the knob slides over when it's on. */
-.form .switch { position: relative; flex: none; width: 3rem; height: 1.75rem; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 1rem; background: var(--border); appearance: none; -webkit-appearance: none; cursor: pointer; transition: background-color .2s; }
+.form .switch { position: relative; flex: none; width: 3rem; height: 1.75rem; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: var(--radius-xl); background: var(--border); appearance: none; -webkit-appearance: none; cursor: pointer; transition: background-color .2s; }
 .switch::after { content: ""; position: absolute; top: .1875rem; left: .1875rem; width: 1.375rem; height: 1.375rem; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0005; transition: transform .2s cubic-bezier(.3, 1.4, .6, 1); }
 .form .switch:checked { background: var(--accent); }
 .switch:checked::after { transform: translateX(1.25rem); }
 .form .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* A date or time: its value in words, over the browser's field (invisible, the size of the chip). */
-.chip { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 0 .85rem; border-radius: .6rem; background: var(--hover); color: var(--text); font-size: 1rem; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; transition: background-color .15s; }
+.chip { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 0 .85rem; border-radius: calc(var(--radius-lg) - .375rem); background: var(--hover); color: var(--text); font-size: var(--text-md); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; white-space: nowrap; transition: background-color .15s; }
 .timeChip { min-width: 4.5rem; justify-content: center; }
-.form .chip input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; opacity: 0; font-size: 1rem; cursor: pointer; }
+.form .chip input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; opacity: 0; font-size: var(--text-md); cursor: pointer; }
 .form .chip input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: auto; height: auto; cursor: pointer; }
 .chip:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (hover: hover) { .chip:hover { background: var(--border); } }
@@ -125,11 +134,17 @@
 .whenDetails svg { flex: none; width: 1.25rem; height: 1.25rem; color: var(--muted); }
 .details { display: grid; gap: 1rem; }
 .details p { margin: 0; }
-.details a { display: inline-flex; align-items: center; font-size: .85rem; }
-.badge { width: fit-content; padding: .25rem .6rem; border-radius: .4rem; background: var(--hover); }
+.details a { display: inline-flex; align-items: center; gap: .375rem; font-size: var(--text-sm); }
+.details a svg { flex: none; width: 1rem; height: 1rem; }
+/* Who the event is for: their color, in the place of the icons under it. */
+.assigneeDot { display: grid; flex: none; place-items: center; width: 1.25rem; height: 1.25rem; }
+.assigneeDot::before { content: ""; width: .75rem; height: .75rem; border-radius: 50%; background: var(--event-color); }
 .notes { white-space: pre-wrap; overflow-wrap: anywhere; }
-.error { margin: 0 0 1rem; padding: .5rem .75rem; border-left: 3px solid var(--danger); border-radius: .4rem; background: var(--hover); color: var(--text); }
-.confirm { padding: .85rem 1rem; border-left: 3px solid var(--danger); border-radius: .4rem; background: var(--hover); }
+.error, .alert { animation: feedback-in var(--duration) var(--ease-out); }
+/* A message comes in from just above, so it is seen to be new. */
+@keyframes feedback-in { from { opacity: 0; transform: translateY(-4px); } }
+.error { margin: 0 0 1rem; padding: .5rem .75rem; border-left: 3px solid var(--danger); border-radius: var(--radius-sm); background: var(--hover); color: var(--text); }
+.confirm { padding: .85rem 1rem; border-left: 3px solid var(--danger); border-radius: var(--radius-sm); background: var(--hover); }
 .confirm p { margin: 0; }
 .confirm .actions { margin-top: .65rem; }
 .dialog button:disabled { opacity: .6; cursor: wait; }
@@ -145,29 +160,31 @@
   .prev { grid-column: 1; justify-self: start; }
   .next { grid-column: 3; justify-self: end; }
   /* Across the whole row, so it's centered, clear of the arrows either side. */
-  .toolbar h2 { grid-row: 1; grid-column: 1 / -1; padding-inline: 3.25rem; text-align: center; font-size: 1rem; white-space: normal; }
+  .toolbar h2 { grid-row: 1; grid-column: 1 / -1; padding-inline: 3.25rem; text-align: center; font-size: var(--text-md); white-space: normal; }
   .goToday, .switcher, .add { grid-row: 2; }
   .switcher { margin-left: 0; }
   .calendar .goToday { padding-inline: .6rem; }
-  .switcher button { flex: 1; min-width: 0; padding-inline: 0; font-size: .9375rem; }
+  .switcher button { flex: 1; min-width: 0; padding-inline: 0; font-size: var(--text-sm); }
   .calendar .add { grid-column: 3; padding-inline: .6rem; white-space: nowrap; }
   .legend { grid-row: 3; grid-column: 1 / -1; justify-content: flex-start; }
   .cell { padding: 1px; }
   .calendar .event { padding: .15rem; border-left-width: 3px; }
-  .eventTitle { font-size: .65rem; }
-  .eventMeta { font-size: .6rem; }
+  /* A month's day is too narrow for the time and who: the title alone (its name says the rest). */
+  .month .eventMeta { display: none; }
+  .eventTitle { font-size: var(--text-2xs); }
+  .eventMeta { font-size: var(--text-2xs); }
   .calendar .dayNumber { width: 100%; max-width: 44px; }
-  .weekday { font-size: .7rem; }
-  .dialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-bottom: 0; border-radius: 1rem 1rem 0 0; }
+  .weekday { font-size: var(--text-xs); }
+  .dialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-bottom: 0; border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
   .dialog[open] { animation-name: sheet-in; animation-duration: .28s; }
   .dialogBody { padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 25rem) {
   .addLabel { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .calendar .add { min-width: 44px; padding-inline: 0; font-size: 1.25rem; line-height: 1; }
+  .calendar .add { min-width: 44px; padding-inline: 0; }
 }
 @keyframes sheet-in { from { transform: translateY(100%); } }
-@media (prefers-reduced-motion: reduce) { .dialog[open], .dialog::backdrop { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .dialog[open], .dialog::backdrop, .error, .alert { animation: none; } }
 @media (max-width: 47.99rem) and (max-height: 50rem) {
   .calendar { margin-block: -.75rem; height: calc(var(--app-view-height) + 1.5rem); }
   .toolbar { gap: .25rem .5rem; margin-bottom: .5rem; }

@@ -1,7 +1,8 @@
 /* The apps' common parts: a view's heading, cards, fields, buttons and
    messages, in the one look both apps share. The colors come from the shell's
-   theme (AppShell.module.css). Shows, Tasks and Calendar keep their own copies
-   of some of these in their modules, with the same values: change both together.
+   theme, and the sizes from its scales (AppShell.module.css). Shows, Tasks and
+   Calendar keep their own copies of some of these in their modules, from the
+   same scales: change both together.
 
    Only class selectors, so the parts combine (`${ui.button} ${ui.primary}`)
    and a later rule here wins over an earlier one. */
@@ -16,13 +17,13 @@
 .eyebrow {
   margin: 0;
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .heading {
-  margin: 0 0 1rem;
-  font-size: 1.75rem;
-  letter-spacing: -0.04em;
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
 }
 
 .muted {
@@ -31,55 +32,72 @@
 }
 
 .note {
-  margin: 1.25rem 0 0;
+  margin: var(--space-5) 0 0;
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
+}
+
+/* Only for screen readers. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Cards one under the other. */
 .stack {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--space-5);
   min-width: 0;
 }
 
 .card {
   display: grid;
-  gap: 0.875rem;
+  gap: var(--space-3);
   min-width: 0;
   margin: 0;
-  padding: 1.25rem;
+  padding: var(--space-5);
   border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-radius: var(--radius-xl);
   background: var(--surface);
 }
 
 .cardHeading {
   margin: 0;
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
   overflow-wrap: anywhere;
 }
 
 /* A label over its input or select. */
 .field {
   display: grid;
-  gap: 0.35rem;
+  gap: var(--space-1);
   min-width: 0;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .input {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
-  padding: 0.6rem 0.75rem;
+  min-height: var(--control-height);
+  padding: 0.625rem var(--space-3);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: var(--bg);
   color: var(--text);
   font: inherit;
-  font-size: 1rem; /* 16px, so iOS doesn't zoom in on it */
+  font-size: var(--text-md); /* 16px, so iOS doesn't zoom in on it */
+}
+
+.input:focus-visible {
+  border-color: var(--accent);
 }
 
 .input:disabled {
@@ -89,44 +107,66 @@
 /* A fieldset of choices under its hint, such as the themes (ThemePicker). */
 .choices {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
   min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
-/* Buttons, and links that look like one. */
+/* Buttons, and links that look like one. --spinner-color is the label's
+   color, for the ring that turns over it while it loads (Spinner). */
 .button {
+  --spinner-color: var(--text);
+
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
   justify-self: start;
-  min-height: 44px;
-  padding: 0.5rem 0.85rem;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-4);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
   font: inherit;
+  font-weight: var(--weight-medium);
   text-decoration: none;
   cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.button svg {
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+/* Pressed: it gives a little, so the tap is felt. */
+.button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 /* The main action of a card or dialog. */
 .primary {
+  --spinner-color: var(--bg);
+
   border-color: var(--accent);
   background: var(--accent);
   color: var(--bg);
-  font-weight: 650;
+  font-weight: var(--weight-semibold);
 }
 
 /* Confirms something that can't be undone. */
 .danger {
+  --spinner-color: var(--bg);
+
   border-color: var(--danger);
   background: var(--danger);
   color: var(--bg);
-  font-weight: 650;
+  font-weight: var(--weight-semibold);
 }
 
 /* Starts something destructive, which a .danger button then confirms. */
@@ -135,12 +175,33 @@
   border-color: transparent;
   background: none;
   color: var(--danger);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
+}
+
+/* A link in the look of text: going back, or somewhere secondary. */
+.quiet {
+  --spinner-color: var(--muted);
+
+  padding-inline: var(--space-1);
+  border-color: transparent;
+  background: none;
+  color: var(--muted);
+  font-weight: var(--weight-medium);
 }
 
 .button:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+/* Waiting on what it started: the ring turns over the (clear) label. */
+.button:has(> [data-pending]) {
+  color: transparent;
+}
+
+.button[aria-busy="true"]:disabled {
+  opacity: 1;
+  cursor: progress;
 }
 
 @media (hover: hover) {
@@ -162,12 +223,27 @@
     background: none;
     text-decoration: underline;
   }
+
+  .quiet:hover {
+    background: none;
+    color: var(--text);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+
+  .button:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 /* An error, with Retry or similar after it. */
@@ -176,13 +252,14 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: var(--space-3);
   margin: 0;
-  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
   border-left: 3px solid var(--danger);
-  border-radius: 0.4rem;
+  border-radius: var(--radius-sm);
   background: var(--hover);
   color: var(--text);
+  animation: feedback-in var(--duration) var(--ease-out), nudge 0.3s 0.1s ease-in-out;
 }
 
 .alertText {
@@ -192,24 +269,53 @@
 /* What an action did. */
 .success {
   margin: 0;
-  padding: 0.6rem 0.85rem;
-  border-radius: 0.5rem;
+  padding: 0.625rem var(--space-4);
+  border-radius: var(--radius-md);
   background: var(--accent-soft);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
+  animation: feedback-in var(--duration) var(--ease-out);
 }
 
 /* "Are you sure?", with a .danger button and Cancel. */
 .confirm {
   display: grid;
-  gap: 0.65rem;
-  padding: 0.85rem 1rem;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-left: 3px solid var(--danger);
-  border-radius: 0.4rem;
+  border-radius: var(--radius-sm);
   background: var(--hover);
+  animation: feedback-in var(--duration) var(--ease-out);
 }
 
 .confirm p {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+/* A message comes in from just above; an error also shakes, once and a
+   little, so a second failed try doesn't look like nothing happened. */
+@keyframes feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes nudge {
+  25% {
+    transform: translateX(-3px);
+  }
+
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alert,
+  .success,
+  .confirm {
+    animation: none;
+  }
 }

@@ -14,7 +14,7 @@ async function register(page: Page) {
 }
 async function create(page: Page, name = "Our home") {
   await page.getByLabel("Space name").fill(name);
-  await page.getByRole("button", { name: "Create a Space" }).click();
+  await page.getByRole("button", { name: "Create space" }).click();
   await expect(page.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
   return (await (await page.request.get(base)).json()).data as Space;
 }
@@ -30,7 +30,7 @@ async function generate(page: Page, id: string) {
 }
 async function join(page: Page, code: string) {
   await page.getByLabel("Invite code").fill(code);
-  await page.getByRole("button", { name: "Join with Code" }).click();
+  await page.getByRole("button", { name: "Join space" }).click();
 }
 /** Leaves the space from its settings; Shared then offers to create or join one. */
 async function leave(page: Page) {
@@ -85,7 +85,7 @@ test("two users create, copy invite, join, rename, transfer ownership and delete
     await sharedTab(other, "Calendar").click();
     await settings(other);
     await expect(other.getByRole("button", { name: "Save name" })).toBeVisible();
-    await expect(other.getByRole("region", { name: "Members" })).toContainText("owner");
+    await expect(other.getByRole("region", { name: "Members" })).toContainText("Owner");
     await leave(other);
     await withDatabase(async (db) => {
       expect((await db.query("SELECT id FROM spaces WHERE id = $1", [space.id])).rowCount).toBe(0);

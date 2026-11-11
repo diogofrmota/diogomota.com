@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useState } from "react";
+import { CheckIcon } from "@/components/common/icons";
 import { usernameHint, USERNAME_MAX } from "@/lib/account-rules";
 import type { FriendsState, PeopleSearch, PersonMatch } from "@/lib/show-types";
 import { showsRequest, useDebounced } from "./shows-data";
@@ -36,7 +37,7 @@ function checkText(text: string, search: PeopleSearch | null, searched: boolean)
   const exact = search.matches.find((match) => match.username === text);
   if (search.exact) {
     const relation = exact && exact.relation !== "none" ? ` · ${relationNames[exact.relation]}` : "";
-    return { text: `✓ ${text} has an account${relation}`, found: true };
+    return { text: `${text} has an account${relation}`, found: true };
   }
   // The start of usernames that have accounts: the suggestions say it. And 2
   // characters can't be a whole username.
@@ -137,7 +138,7 @@ export function AddFriend({ username, busy, onAdd }: { username: string; busy: b
       <button type="submit" className={styles.primary} disabled={busy}>Send request</button>
     </div>
     <p id={checkId} aria-live="polite" className={check?.found === true ? styles.checkFound : check?.found === false ? styles.checkMissing : styles.check}>
-      {check?.text}
+      {check?.found && <CheckIcon />}{check?.text}
     </p>
     <p id={hintId} className={styles.hint}>Friends add you by your username, <strong>{username}</strong>.</p>
   </form>;

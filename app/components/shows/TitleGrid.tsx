@@ -1,6 +1,7 @@
 "use client";
 import Image, { type ImageLoader } from "next/image";
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/common/icons";
 import { titleKey, tmdbImageUrl, type TitleSummary } from "@/lib/show-types";
 import { AddMark, StatusChooser, useTitleStatus } from "./AddToLibrary";
 import { useOpenActions } from "./QuickActions";
@@ -158,9 +159,9 @@ export function TitleRow({ titles, label, onOpen }: {
       {titles.map((title, i) => <TitleCard key={titleKey(title)} title={title} withType={false} onOpen={onOpen} index={i} />)}
     </ul>
     <button type="button" className={`${styles.rowArrow} ${styles.rowBack}`} tabIndex={-1} aria-label="Scroll left"
-      disabled={edges.start} onClick={() => scrollPage(-1)}><span aria-hidden="true">‹</span></button>
+      disabled={edges.start} onClick={() => scrollPage(-1)}><ChevronLeftIcon /></button>
     <button type="button" className={`${styles.rowArrow} ${styles.rowForward}`} tabIndex={-1} aria-label="Scroll right"
-      disabled={edges.end} onClick={() => scrollPage(1)}><span aria-hidden="true">›</span></button>
+      disabled={edges.end} onClick={() => scrollPage(1)}><ChevronRightIcon /></button>
   </div>;
 }
 

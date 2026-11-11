@@ -22,7 +22,7 @@ export function LoginForm({ next }: { next: string | null }) {
       />
       <Field label="Password" name="password" type="password" autoComplete="current-password" required />
       <FormMessage error={state.error} />
-      <SubmitButton label="Log in" pending={pending} />
+      <SubmitButton label="Log in" pending={pending} wide />
     </form>
   );
 }

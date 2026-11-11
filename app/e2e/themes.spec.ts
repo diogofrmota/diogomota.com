@@ -23,13 +23,8 @@ test("every theme saves from Account, and colors the page, the page behind it an
   await expect(radios).toHaveCount(themes.length);
   for (const [index, { name }] of themes.entries()) await expect(radios.nth(index)).toHaveAccessibleName(name);
   await expect(form.getByRole("heading")).toHaveText(["Theme"]);
-  // The recommended ones have a star, and say so to screen readers.
-  await expect(form.locator("label").filter({ has: page.getByTitle("Recommended") })).toHaveText(
-    themes.filter((theme) => theme.recommended).map((theme) => theme.name),
-  );
-  for (const [index, { recommended }] of themes.entries()) {
-    await expect(radios.nth(index)).toHaveAccessibleDescription(recommended ? "Recommended" : "");
-  }
+  // Each one's name and sample, nothing else: no badges.
+  await expect(form.locator("label svg")).toHaveCount(0);
 
   // Each one differs from the one before, so the page changes with every save.
   for (const { id, name, background } of themes) {
@@ -77,9 +72,9 @@ test.describe("in every theme, axe finds nothing serious", () => {
   test("Shared: Calendar and Tasks, with an event and a task open", async ({ page }) => {
     await signUp(page, newUser(), "/signup?next=/shared");
     await page.getByLabel("Space name").fill("Themes");
-    await page.getByRole("button", { name: "Create a Space" }).click();
+    await page.getByRole("button", { name: "Create space" }).click();
     await expect(viewHeading(page)).toHaveText("Calendar");
-    await page.getByRole("button", { name: "+ Add event" }).click();
+    await page.getByRole("button", { name: "Add event", exact: true }).click();
     const newEvent = page.getByRole("dialog", { name: "New event" });
     await newEvent.getByLabel("Title").fill("Dinner");
     await newEvent.getByRole("button", { name: "Save event" }).click();
@@ -121,7 +116,7 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await card(popular, "Harbor Lights").click();
     const title = page.getByRole("dialog", { name: "Harbor Lights" });
     await title.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Watching" }).click();
-    await expect(title.getByRole("status")).toHaveText("✓ In your library");
+    await expect(title.getByRole("status")).toHaveText("In your library");
     await page.goBack();
     await expect(title).toBeHidden();
 

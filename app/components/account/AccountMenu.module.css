@@ -67,6 +67,8 @@
   font-size: 0.875rem;
   font-weight: 600;
   line-height: 1;
+  /* The letter's cap height in the middle (where supported), not its line box. */
+  text-box: trim-both cap alphabetic;
 }
 
 /* Cut off with an ellipsis when the top bar is too narrow for it. */
@@ -142,9 +144,9 @@
   margin: 0.25rem 0 0;
   padding: 0.25rem;
   border: 1px solid var(--menu-border);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   background: var(--menu-bg);
-  box-shadow: 0 12px 40px #0004;
+  box-shadow: var(--shadow-md);
   transform-origin: top right;
   animation: menu-in 140ms ease-out;
 }
@@ -216,7 +218,8 @@
   min-height: 2.75rem;
   padding: 0 0.75rem;
   border: 0;
-  border-radius: 0.5rem;
+  /* The list's corners less the room around the item (concentric). */
+  border-radius: var(--radius-md);
   background: none;
   text-align: left;
   text-decoration: none;
@@ -224,11 +227,20 @@
   cursor: pointer;
 }
 
-.item svg {
+/* The icon, or the spinner in its place (the same size) while its page loads. */
+.item svg,
+.item > span[aria-hidden="true"] {
   flex-shrink: 0;
+  color: var(--menu-muted);
+}
+
+.item svg {
   width: 1.25rem;
   height: 1.25rem;
-  color: var(--menu-muted);
+}
+
+.item:disabled {
+  cursor: progress;
 }
 
 /* Inside the box, so the ring isn't drawn over the menu's border. */

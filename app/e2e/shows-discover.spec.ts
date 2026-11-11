@@ -230,7 +230,7 @@ test.describe("on a phone", () => {
     expect(await libraryRows(user.username)).toEqual([]);
 
     await detail.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Watching" }).tap();
-    await expect(detail.getByRole("status")).toHaveText("✓ In your library");
+    await expect(detail.getByRole("status")).toHaveText("In your library");
     await expect(detail.getByRole("group", { name: "Status" }).getByRole("button", { name: "Watching" })).toHaveAttribute("aria-pressed", "true");
     await expect(detail.getByRole("group", { name: "Add to Library" })).toHaveCount(0);
     expect(await libraryRows(user.username)).toEqual([row("tv", mockBase + 101)]);
@@ -239,7 +239,7 @@ test.describe("on a phone", () => {
     await page.goBack();
     await expect(detail).toBeHidden();
     await card(grid(page, "Popular TV shows"), "Harbor Lights").tap();
-    await expect(detail.getByRole("status")).toHaveText("✓ In your library");
+    await expect(detail.getByRole("status")).toHaveText("In your library");
     await expect(detail.getByRole("group", { name: "Status" }).getByRole("button", { name: "Watching" })).toHaveAttribute("aria-pressed", "true");
     await detail.getByRole("button", { name: "Close", exact: true }).tap();
     await expect(detail).toBeHidden();
@@ -250,7 +250,7 @@ test.describe("on a phone", () => {
     await expect(movie).toContainText("Movie · 1994 · ★ 8.9");
     await expect(movie).toContainText("2h 8m");
     await movie.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Planned" }).tap();
-    await expect(movie.getByRole("status")).toHaveText("✓ In your library");
+    await expect(movie.getByRole("status")).toHaveText("In your library");
     await expect(movie.getByRole("group", { name: "Status" }).getByRole("button", { name: "Planned" })).toHaveAttribute("aria-pressed", "true");
     expect(await cachedShow("movie", mockBase + 201)).toMatchObject({
       title: "Paper Moons", year: 1994, runtime: 128, episode_runtime: null, episodes_per_season: null,
@@ -387,7 +387,7 @@ test("For You recommends titles like the ones in the library, leaving out the on
   await card(grid(page, "Popular movies"), "Northern Line").click();
   const detail = page.getByRole("dialog", { name: "Northern Line" });
   await detail.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Planned" }).click();
-  await expect(detail.getByRole("status")).toHaveText("✓ In your library");
+  await expect(detail.getByRole("status")).toHaveText("In your library");
   await page.keyboard.press("Escape");
   const movies = cardButtons(grid(section(page, "For You"), "For You movies"));
   await expect(movies.nth(0)).toHaveAccessibleName("Paper Moons, 1994, rated 8.9 out of 10");

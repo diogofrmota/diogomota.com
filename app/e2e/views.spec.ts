@@ -61,18 +61,18 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await checkView(page, "Shared welcome");
 
   await page.getByLabel("Space name").fill("Walk-through");
-  await page.getByRole("button", { name: "Create a Space" }).click();
+  await page.getByRole("button", { name: "Create space" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
   await expect(page.getByText("Nothing planned yet — tap a day to add your first event!")).toBeVisible();
   await checkView(page, "Calendar, empty");
 
-  await page.getByRole("button", { name: "+ Add event" }).click();
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
   const newEvent = page.getByRole("dialog", { name: "New event" });
   await expect(newEvent.getByLabel("Title")).toBeFocused();
   await checkView(page, "new event");
   await page.goBack();
   await expect(newEvent).toBeHidden();
-  await page.getByRole("button", { name: "+ Add event" }).click();
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
   await newEvent.getByLabel("Title").fill("Dinner");
   await newEvent.getByRole("button", { name: "Save event" }).click();
   await expect(newEvent).toBeHidden();
@@ -89,7 +89,7 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   }
 
   await sharedTab(page, "Tasks").click();
-  await expect(page.getByRole("heading", { name: "No lists yet — start your first one!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your first list" })).toBeVisible();
   await checkView(page, "Tasks, no lists");
   await page.getByLabel("List name").fill("Groceries");
   await page.getByRole("button", { name: "Create list" }).click();
@@ -180,7 +180,7 @@ test("Shows: every view and dialog, each closed with Back", async ({ page, brows
   await expect(title.getByRole("group", { name: "Add to Library" })).toBeVisible();
   await checkView(page, "title");
   await title.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Watching" }).click();
-  await expect(title.getByRole("status")).toHaveText("✓ In your library");
+  await expect(title.getByRole("status")).toHaveText("In your library");
   await checkView(page, "title in the library");
   await page.goBack();
   await expect(title).toBeHidden();
@@ -245,12 +245,12 @@ test("a load that fails says so, and Retry loads it again", async ({ page }) => 
 
   await signUp(page, newUser(), "/signup?next=/shared");
   await page.getByLabel("Space name").fill("Offline");
-  await page.getByRole("button", { name: "Create a Space" }).click();
+  await page.getByRole("button", { name: "Create space" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
   await failing("**/api/shared/events", async () => { await page.reload(); }, "Calendar");
   await expect(page.getByText("Nothing planned yet — tap a day to add your first event!")).toBeVisible();
   await failing("**/api/shared/tasks", () => sharedTab(page, "Tasks").click(), "Tasks");
-  await expect(page.getByRole("heading", { name: "No lists yet — start your first one!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your first list" })).toBeVisible();
   await failing("**/api/shared/spaces", () => sharedTab(page, "Settings").click(), "Settings");
   await expect(page.getByRole("listitem").filter({ hasText: "(you)" })).toBeVisible();
 

@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { spaceChanged } from "@/app/shared/actions";
 import { Spinner } from "@/components/common/Spinner";
 import ui from "@/components/common/ui.module.css";
-import { memberColors, type Invite, type Space } from "@/lib/space-types";
+import type { Invite, Space } from "@/lib/space-types";
 import { spaceRequest } from "./space-request";
 import styles from "./Spaces.module.css";
 
@@ -50,9 +50,10 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
 
   return <>
     <form className={ui.card} onSubmit={rename}>
-      <h2 className={ui.cardHeading}>Your space</h2>
+      <h2 className={ui.cardHeading}>Space name</h2>
       <div className={ui.field}>
-        <label htmlFor="edit-space-name">Space name</label>
+        {/* The card's heading says it. */}
+        <label htmlFor="edit-space-name" className={ui.srOnly}>Space name</label>
         <input key={space.name} id="edit-space-name" name="name" className={ui.input} defaultValue={space.name} required maxLength={80} disabled={!owner || busy} />
       </div>
       {owner ? <button className={`${ui.button} ${ui.primary}`} disabled={busy}>Save name</button>
@@ -61,11 +62,11 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
     </form>
     <section className={ui.card} aria-labelledby="members-heading">
       <h2 id="members-heading" className={ui.cardHeading}>Members</h2>
+      {/* Each in their color, as in the calendar; only the owner is marked. */}
       <ul className={styles.members}>{space.members.map((member) => <li key={member.id}>
         <span className={styles.swatch} style={{ backgroundColor: member.color }} aria-hidden="true" />
-        <span className={styles.memberName}>{member.username}{member.id === userId ? " (you)" : ""}
-          <small>{memberColors.find((color) => color.hex === member.color)?.name ?? member.color}</small></span>
-        <span className={styles.role}>{member.role}</span>
+        <span className={styles.memberName}>{member.username}{member.id === userId ? " (you)" : ""}</span>
+        {member.role === "owner" && <span className={styles.role}>Owner</span>}
       </li>)}</ul>
     </section>
     {owner && <section className={ui.card} aria-labelledby="invite-heading">
@@ -125,9 +126,9 @@ export function SpaceSettings({ space, userId, onChange }: {
     return () => { active = false; };
   }, [attempt, onChange]);
 
+  // The top bar's Settings tab names the view; the h1 is for screen readers.
   return <div className={ui.view}>
-    <p className={ui.eyebrow}>{space.name}</p>
-    <h1 className={ui.heading}>Settings</h1>
+    <h1 className={ui.srOnly}>Settings</h1>
     <div className={ui.stack}>
       {loadError && <div role="alert" className={ui.alert}><p className={ui.alertText}>{loadError}</p>
         <button className={ui.button} onClick={() => { setLoadError(""); setAttempt((n) => n + 1); }}>Retry</button></div>}

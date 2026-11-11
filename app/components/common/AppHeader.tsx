@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AccountMenu } from "@/components/account/AccountMenu";
 import { authHref } from "@/lib/next-path";
+import { LinkPending } from "./LinkPending";
 import { siteDomain } from "@/lib/site";
 import styles from "./AppHeader.module.css";
 
@@ -20,7 +21,8 @@ export function NavLabel({ children }: { children: string }) {
  * Inside an app, the app's tabs (HeaderTabs) in the middle; on /apps,
  * /account and the login pages, diogomota.com on the left. On the right, the
  * account menu (where Switch app goes to /apps, except on /apps itself), or
- * Login and Sign Up.
+ * Log in and Sign up, the call to action: a filled pill, as tall as the
+ * account menu's.
  */
 export function AppHeader({ pathname, username, next, tabs, brand = true, account = true }: {
   /** The page's path: /apps has no Switch app. */
@@ -31,7 +33,7 @@ export function AppHeader({ pathname, username, next, tabs, brand = true, accoun
   tabs?: React.ReactNode;
   /** diogomota.com on the left. The apps leave it out. */
   brand?: boolean;
-  /** The account menu, or Login and Sign Up. The login pages leave it out. */
+  /** The account menu, or Log in and Sign up. The login pages leave it out. */
   account?: boolean;
 }) {
   return <header className={`${styles.header} ${tabs ? styles.withTabs : ""}`}>
@@ -41,8 +43,10 @@ export function AppHeader({ pathname, username, next, tabs, brand = true, accoun
     {tabs}
     {account && <nav aria-label="Account" className={styles.account}>
       {username ? <AccountMenu username={username} switchApp={pathname !== "/apps"} /> : <>
-        <Link href={authHref("/login", next)} className={styles.authLink}>Login</Link>
-        <Link href={authHref("/signup", next)} className={styles.authLink}>Sign Up</Link>
+        <Link href={authHref("/login", next)} className={styles.authLink}>Log in<LinkPending /></Link>
+        <Link href={authHref("/signup", next)} className={`${styles.authLink} ${styles.cta}`}>
+          <span className={styles.ctaPill}>Sign up<LinkPending /></span>
+        </Link>
       </>}
     </nav>}
   </header>;

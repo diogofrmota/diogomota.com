@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, type CSSProperties } from "react";
-import { ChevronLeftIcon, ChevronRightIcon } from "@/components/common/icons";
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "@/components/common/icons";
 import { Spinner } from "@/components/common/Spinner";
 import { useAppView } from "@/hooks/useAppView";
 import { dateLabel, datePlus, eventDates, localParts, type CalendarEvent } from "@/lib/calendar";
@@ -86,7 +86,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
     const when = event.allDay ? "All day" : localParts(event.startsAt).time;
     return <button key={event.id} className={`${styles.event} ${event.allDay ? styles.allDayEvent : ""}`} style={{ ...style, "--event-color": event.isGroup ? "var(--muted)" : member?.color ?? "var(--muted)" } as CSSProperties}
       aria-label={`${event.title}, ${when}, ${who}`} onClick={(e) => { e.stopPropagation(); openPanel(`event:${event.id}`); }}>
-      <span className={styles.eventTitle}>{event.title}</span>{" "}<span className={styles.eventMeta}>{when} · {event.isGroup ? <span className={styles.groupBadge}>Group</span> : who}</span>
+      <span className={styles.eventTitle}>{event.title}</span>{" "}<span className={styles.eventMeta}>{when} · {who}</span>
     </button>;
   }
   // One toolbar over the grid, so the grid gets the rest of the screen. The
@@ -100,10 +100,10 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
         <button className={`${styles.arrow} ${styles.next}`} aria-label="Next period" onClick={() => navigate(1)}><ChevronRightIcon /></button>
       </div>
       <h2 aria-live="polite">{view === "day" ? dateLabel(date, { day: "numeric", month: "long", year: "numeric" }) : view === "week" ? `${dateLabel(first, { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short", year: "numeric" })}` : dateLabel(date, { month: "long", year: "numeric" })}</h2>
-      <ul className={styles.legend} aria-label="Event colors">{space.members.map((m) => <li key={m.id}><i style={{ background: m.color }} />{m.username}</li>)}<li><i className={styles.groupDot} />Group</li></ul>
+      <ul className={styles.legend} aria-label="Event colors">{space.members.map((m) => <li key={m.id}><span className={styles.dot} style={{ background: m.color }} />{m.username}</li>)}<li><span className={`${styles.dot} ${styles.groupDot}`} />Group</li></ul>
       <div className={styles.switcher} role="group" aria-label="Calendar view">{(["month", "week", "day"] as const).map((item) => <button key={item} aria-pressed={view === item} onClick={() => move(date, item)}>{item[0].toUpperCase() + item.slice(1)}</button>)}</div>
-      {/* Just "+" on phones up to 400px wide; the name stays "+ Add event". */}
-      <button className={`${styles.primary} ${styles.add}`} onClick={() => addOn(date)}>+<span className={styles.addLabel}> Add event</span></button>
+      {/* Just the plus on phones up to 400px wide; the name stays "Add event". */}
+      <button className={`${styles.primary} ${styles.add}`} onClick={() => addOn(date)}><PlusIcon /><span className={styles.addLabel}>Add event</span></button>
     </div>
     {loading && <Spinner label="Loading calendar…" />}
     {error && <div role="alert" className={styles.alert}><p>{error}</p><button onClick={() => { setError(""); setLoading(true); setRevision((r) => r + 1); }}>Retry</button></div>}
@@ -126,7 +126,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
         </>}
         <div className={styles.hours}>{Array.from({ length: 24 }, (_, h) => <span key={h}>{String(h).padStart(2, "0")}:00</span>)}</div>
         {days.map((day) => <div className={styles.dayColumn} key={day}>
-          {/* A tap on an hour adds an event then; "+ Add event" does the same from the keyboard. */}
+          {/* A tap on an hour adds an event then; "Add event" does the same from the keyboard. */}
           {Array.from({ length: 24 }, (_, h) => <div className={styles.hour} key={h} onClick={() => addOn(day, `${String(h).padStart(2, "0")}:00`)} />)}
           {timedEvents(eventsOn(day).filter((event) => !event.allDay), day).map(({ event, top, bottom, lane, lanes }) => eventButton(event, {
             position: "absolute", top, height: Math.min(1440 - top, bottom - top), left: `${lane * 100 / lanes}%`, width: `${100 / lanes}%`,

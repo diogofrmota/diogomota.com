@@ -53,7 +53,7 @@ export async function logIn(page: Page, login: string, password: string, path = 
 }
 
 /** The account menu's items, top to bottom; on /apps, without Switch app. */
-export const accountMenuItems = ["Account", "Switch app", "Logout"];
+export const accountMenuItems = ["Account", "Switch app", "Log out"];
 export const appsMenuItems = accountMenuItems.filter((item) => item !== "Switch app");
 
 /** Opens the account menu in the top bar (the username) and follows its link named `name`. */
@@ -102,8 +102,8 @@ export function accountButton(page: Page, username: string) {
 export async function logOut(page: Page, username: string) {
   await page.goto("/apps");
   await accountButton(page, username).click();
-  await page.getByRole("button", { name: "Logout" }).click();
-  await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Login" })).toBeVisible();
+  await page.getByRole("button", { name: "Log out" }).click();
+  await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" })).toBeVisible();
 }
 
 /** A form's error message. Scoped to main: Next.js has a route announcer with role alert too. */

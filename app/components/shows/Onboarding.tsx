@@ -36,8 +36,8 @@ const debounceMs = 300;
 const kindOf = (type: MediaType, count = 2) => type === "tv" ? count === 1 ? "TV show" : "TV shows" : count === 1 ? "movie" : "movies";
 
 // A title to pick: a tap on its poster opens the status chooser over it
-// (StatusChooser); its status again takes it out. Once added, its status is on
-// the poster and under it, and the + at its corner is a tick.
+// (StatusChooser); its status again takes it out. Once added, the poster is
+// outlined, the + at its corner is a tick, and its status is under it.
 function PickCard({ title, index, withType }: { title: TitleSummary; index: number; withType: boolean }) {
   const status = useTitleStatus(title, { toggle: true });
   const [choosing, setChoosing] = useState(false);
@@ -55,9 +55,8 @@ function PickCard({ title, index, withType }: { title: TitleSummary; index: numb
       <Poster title={title} sizes={cardSizes} />
       <span className={styles.cardTitle}>{title.title}</span>
     </button>
-    {item && <span key={item.library.status} className={`${styles.badge} ${styles[item.library.status]}`} aria-hidden="true">{added}</span>}
     {status.error ? <span role="alert" className={styles.cardError}>{status.error}</span>
-      : <span className={item ? styles.pickAdded : styles.cardMeta}>{busy ? "Adding…" : added ? `✓ ${added}` : facts.text}</span>}
+      : <span className={item ? styles.pickAdded : styles.cardMeta}>{busy ? "Adding…" : added || facts.text}</span>}
     <span className={styles.posterSpot}>
       {choosing ? <StatusChooser title={title} status={status} onClose={() => setChoosing(false)} returnFocus={() => button.current} />
         : <AddMark added={!!item} busy={busy} />}

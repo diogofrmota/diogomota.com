@@ -22,7 +22,7 @@ export function ForgotPasswordForm() {
         defaultValue={state.values?.email}
       />
       <FormMessage error={state.error} success={state.success} />
-      <SubmitButton label="Send reset link" pending={pending} />
+      <SubmitButton label="Send reset link" pending={pending} wide />
     </form>
   );
 }

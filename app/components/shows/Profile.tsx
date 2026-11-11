@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { ChevronRightIcon } from "@/components/common/icons";
 import { ApiError } from "@/lib/api-request";
 import { libraryStats, type FriendsState, type Person } from "@/lib/show-types";
 import { AddFriend, requestSentText } from "./AddFriend";
@@ -82,7 +83,7 @@ function FriendRow({ person, busy, onRemove }: { person: Person; busy: boolean; 
       <button type="button" className={styles.personLink} onClick={() => openFriend(person)}>
         <span className={styles.avatar} aria-hidden="true">{person.username[0]}</span>
         <span className={styles.personName}>{person.username}</span>
-        <span className={styles.chevron} aria-hidden="true">›</span>
+        <span className={styles.chevron} aria-hidden="true"><ChevronRightIcon /></span>
       </button>
       <button ref={removeButton} type="button" className={styles.remove} aria-label={`Remove ${person.username}`}
         aria-expanded={confirming} onClick={() => setConfirming(!confirming)}>Remove</button>
@@ -97,7 +98,9 @@ function FriendRow({ person, busy, onRemove }: { person: Person; busy: boolean; 
   </li>;
 }
 
-/** The Profile view: friend requests, stats, favourites and friends. */
+const counted = (count: number, word: string) => `${count.toLocaleString("en-GB")} ${word}${count === 1 ? "" : "s"}`;
+
+/** The Profile view: whose it is, friend requests, stats, favourites and friends. */
 export function Profile({ username }: { username: string }) {
   const library = useLibrary();
   const { state, loadError, load, send } = useFriends();
@@ -127,8 +130,18 @@ export function Profile({ username }: { username: string }) {
   });
 
   const incoming = state?.incoming ?? [];
+  // What's in it, once loaded: "12 titles · 3 friends".
+  const counts = [items && counted(items.length, "title"), state && counted(state.friends.length, "friend")].filter(Boolean).join(" · ");
   return <div className={styles.view}>
-    <h1 className={styles.heading}>Profile</h1>
+    {/* The Profile tab in the top bar shows which view this is; the page shows whose. */}
+    <h1 className={styles.srOnly}>Profile</h1>
+    <div className={styles.profileHeader}>
+      <span className={styles.avatar} aria-hidden="true">{username[0]}</span>
+      <div>
+        <p className={styles.profileName}>{username}</p>
+        <p className={styles.profileCounts}>{counts || "\u00a0"}</p>
+      </div>
+    </div>
     <ChangeError className={`${styles.error} ${styles.viewError}`} />
 
     {(incoming.length > 0 || notice?.where === "requests") && <section className={styles.section} aria-labelledby={requestsId}>
@@ -152,7 +165,7 @@ export function Profile({ username }: { username: string }) {
       <StatsSection stats={items && libraryStats(items)} />
       <LibrarySection heading="Favourites" label="Your favourites" loadingLabel="Loading your favourites…"
         items={items && items.filter((item) => item.library.isFavourite)}
-        empty="No favourites yet. Open a title in your library and tap ♡ Favourite." />
+        empty="No favourites yet. Open a title in your library and tap Favourite." />
     </>}
 
     <section className={styles.section} aria-labelledby={friendsId} aria-busy={!state && !loadError}>
@@ -175,7 +188,7 @@ export function Profile({ username }: { username: string }) {
           <ul className={styles.people} aria-labelledby={sentId}>
             {state.outgoing.map((person) => <li key={person.id} className={styles.personRow}>
               <span className={styles.avatar} aria-hidden="true">{person.username[0]}</span>
-              <span className={styles.personName}>{person.username} <span className={styles.pending}>Pending</span></span>
+              <span className={styles.personName}>{person.username}</span>
               <button type="button" disabled={busy} aria-label={`Cancel request to ${person.username}`}
                 onClick={() => act("friends", `/friends/${person.id}/cancel`, "POST", `Cancelled your friend request to ${person.username}.`)}>Cancel</button>
             </li>)}

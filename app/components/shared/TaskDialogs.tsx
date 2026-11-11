@@ -44,7 +44,7 @@ export function TaskDialog({ task, list, space, onClose, onSave, onDelete }: {
             {dueDate && <button type="button" onClick={() => setDueDate("")}>Clear</button>}</span>
         </label>
         <label>Assignee
-          <span className={styles.inputRow}><i className={styles.swatch} style={{ background: color ?? "transparent" }} aria-hidden="true" />
+          <span className={styles.inputRow}><span className={styles.swatch} style={{ background: color ?? "transparent" }} aria-hidden="true" />
             <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
               <option value="">Unassigned</option>
               {space.members.map((m) => <option key={m.id} value={m.id}>{m.username}</option>)}

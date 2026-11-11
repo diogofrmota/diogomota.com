@@ -5,14 +5,20 @@
 .options { display: grid; gap: 1.25rem; margin-top: 1.5rem; }
 @media (min-width: 48rem) { .options { grid-template-columns: 1fr 1fr; align-items: start; } }
 .welcomeError { margin-top: 1.25rem; }
+/* A picture of a space (as on /apps), framed: from 40rem, where there's room
+   for it over the two cards. */
+/* Two classes, to win over AppPreview's own whatever the order. */
+.preview.preview { --preview-radius: var(--radius-xl); display: none; margin-top: 1.5rem; border: 1px solid var(--border); }
+@media (min-width: 40rem) { .preview.preview { display: block; aspect-ratio: 7 / 2; } }
 
 .members { list-style: none; padding: 0; margin: 0; }
 .members li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; }
 .members li + li { border-top: 1px solid var(--border); }
 .swatch { width: 1.25rem; height: 1.25rem; flex-shrink: 0; border-radius: 50%; outline: 1px solid var(--muted); outline-offset: 2px; }
 .memberName { min-width: 0; overflow-wrap: anywhere; }
-.memberName small { display: block; color: var(--muted); font-size: 0.875rem; }
-.role { margin-left: auto; color: var(--muted); font-size: 0.875rem; }
+/* The owner's mark, at the end of their row. */
+.role { margin-left: auto; color: var(--muted); font-size: var(--text-sm); }
 
 .invite { display: grid; gap: 0.75rem; }
-.invite .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.25rem; letter-spacing: 0.2em; }
+/* The one place for a monospace font: a code to read out or type, character by character. */
+.invite .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--text-lg); letter-spacing: 0.2em; }

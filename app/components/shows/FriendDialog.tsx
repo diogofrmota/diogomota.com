@@ -34,8 +34,9 @@ export function FriendDialog({ id }: { id: string }) {
   const { data: friend, error, errorStatus, retry } = useShowsData<FriendProfile>(`/friends/${id}`, false);
   const username = friend?.username ?? seen.get(id);
   const items = friend?.items ?? null;
+  // Watching and Completed say the status in their heading; Favourites mixes them, so its posters say it.
   const section = (heading: string, status: "watching" | "completed" | null, empty: string) =>
-    <LibrarySection heading={heading} label={heading} readOnly
+    <LibrarySection heading={heading} label={heading} readOnly showStatus={!status}
       loadingLabel={`Loading ${heading.toLowerCase()}…`} empty={empty}
       items={items && items.filter((item) => status ? item.library.status === status : item.library.isFavourite)} />;
 

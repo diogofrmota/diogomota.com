@@ -63,7 +63,8 @@ export function Discover() {
   const forYou = !!items?.some((item) => item.type === type);
   const sections = discoverSections[type].filter((section) => section.id !== "for-you" || forYou);
   return <div className={styles.view}>
-    <h1 className={styles.heading}>Discover</h1>
+    {/* The Discover tab in the top bar shows which view this is. */}
+    <h1 className={styles.srOnly}>Discover</h1>
     <SearchLauncher />
     <TypeSwitch type={type} onChange={setType} />
     {/* Keyed by type, so each list starts collapsed. */}

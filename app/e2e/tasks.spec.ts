@@ -12,7 +12,7 @@ const contextOptions = () => ({ extraHTTPHeaders: { "X-Forwarded-For": `10.${[..
 async function setup(page: Page) {
   await signUp(page, newUser(), "/signup?next=/shared");
   await page.getByLabel("Space name").fill("Task home");
-  await page.getByRole("button", { name: "Create a Space" }).click();
+  await page.getByRole("button", { name: "Create space" }).click();
   await expect(page.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
   return (await (await page.request.get("/api/shared/spaces")).json()).data as Space;
 }
@@ -95,11 +95,11 @@ async function center(locator: Locator) {
 test("lists: empty state, create, rename, reorder with the keyboard and delete, all persisted", async ({ page }) => {
   await setup(page);
   await openTasks(page);
-  await expect(page.getByRole("heading", { name: "No lists yet — start your first one!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your first list" })).toBeVisible();
   await createFirstList(page, "House");
   await expect(page.getByText("Nothing to do yet — add your first task!")).toBeVisible();
 
-  await chips(page).getByRole("button", { name: "+ New list" }).click();
+  await chips(page).getByRole("button", { name: "New list" }).click();
   const dialog = page.getByRole("dialog", { name: "Lists" });
   await expect(dialog.getByLabel("New list")).toBeFocused();
   for (const name of ["Trip", "Groceries"]) {
@@ -130,13 +130,13 @@ test("lists: empty state, create, rename, reorder with the keyboard and delete, 
   await deleted;
   await dialog.getByRole("button", { name: "Done", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(chips(page).getByRole("button")).toHaveText(["Groceries", "Trip planning", "+ New list"]);
+  await expect(chips(page).getByRole("button")).toHaveText(["Groceries", "Trip planning", "New list"]);
 
   // The open list is remembered on this device.
   await chips(page).getByRole("button", { name: "Trip planning" }).click();
   await page.reload();
   await openTasks(page);
-  await expect(chips(page).getByRole("button")).toHaveText(["Groceries", "Trip planning", "+ New list"]);
+  await expect(chips(page).getByRole("button")).toHaveText(["Groceries", "Trip planning", "New list"]);
   await expect(chips(page).getByRole("button", { name: "Trip planning" })).toHaveAttribute("aria-pressed", "true");
   expect((await readLists(page)).map((l) => l.name)).toEqual(["Groceries", "Trip planning"]);
 

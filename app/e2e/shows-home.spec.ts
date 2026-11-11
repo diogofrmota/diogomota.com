@@ -52,7 +52,7 @@ test("a new account's Home is a guide: their TV shows, then their movies (each W
   await expect(chooser).toBeHidden();
   await expect(glass).toBeFocused();
   await expect(glass).toHaveAccessibleName("Glass Meridian, 2026, rated 8.2 out of 10, in your library as Watching");
-  await expect(wholeCard(glass)).toContainText("✓ Watching");
+  await expect(wholeCard(glass)).toContainText("Watching");
   await expect(main.getByText("1 TV show added")).toBeVisible();
   await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401)]);
   // Another status moves it there; its own status again takes it out.
@@ -105,7 +105,7 @@ test("a new account's Home is a guide: their TV shows, then their movies (each W
   await expect(friends.getByRole("heading", { level: 2 })).toBeFocused();
   await expect(friends).toContainText("Step 3 of 3");
   await friends.getByLabel("Add a friend").fill(friend.user.username);
-  await expect(friends.getByText(`✓ ${friend.user.username} has an account`)).toBeVisible();
+  await expect(friends.getByText(`${friend.user.username} has an account`)).toBeVisible();
   await friends.getByRole("button", { name: "Send request" }).click();
   await expect(friends.getByRole("status")).toHaveText(`Friend request sent to ${friend.user.username}.`);
   await expect(friends.getByLabel("Add a friend")).toHaveValue("");
@@ -225,13 +225,13 @@ test("Home starts with a welcome, fills up from Discover, and the TV Shows | Mov
   await card(grid(page, "Popular TV shows"), "Harbor Lights").click();
   const detail = page.getByRole("dialog", { name: "Harbor Lights" });
   await detail.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Watching" }).click();
-  await expect(detail.getByRole("status")).toHaveText("✓ In your library");
+  await expect(detail.getByRole("status")).toHaveText("In your library");
   await page.keyboard.press("Escape");
   await typeSwitch(page, "Movies").click();
   await card(grid(page, "Top Rated movies"), "Paper Moons").click();
   const movie = page.getByRole("dialog", { name: "Paper Moons" });
   await movie.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Planned" }).click();
-  await expect(movie.getByRole("status")).toHaveText("✓ In your library");
+  await expect(movie.getByRole("status")).toHaveText("In your library");
   await page.keyboard.press("Escape");
   expect(await libraryRows(user.username)).toEqual([row("tv", harbor.tmdbId), row("movie", paperMoons.tmdbId, { status: "planned" })]);
 
@@ -243,7 +243,8 @@ test("Home starts with a welcome, fills up from Discover, and the TV Shows | Mov
   await expect(grid(watching, "Watching TV shows").getByRole("listitem")).toHaveCount(1);
   const harborCard = card(watching, "Harbor Lights");
   await expect(harborCard).toHaveAccessibleName("Harbor Lights, 2021, Watching, not started");
-  await expect(wholeCard(harborCard)).toContainText("Watching");
+  // No status badge on the poster: the section's heading says it.
+  await expect(wholeCard(harborCard)).not.toContainText("Watching");
   await expect(wholeCard(harborCard)).toContainText("2021 · Not started");
   await expect(harborCard.locator("img")).toHaveAttribute("src", new RegExp(`/e2e-poster-${harbor.tmdbId}\\.jpg$`));
   await expect(section(page, "Planned")).toHaveText(/No shows planned yet — explore Discover!/);

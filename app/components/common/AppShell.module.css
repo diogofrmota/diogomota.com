@@ -6,6 +6,57 @@
 .shell {
   --top-bar-height: 3.5rem;
 
+  /* The design system's scales, the same in every theme (the colors are the
+     theme's, themes.module.css). Every module takes its sizes from these. */
+
+  /* Corners. Something inside a rounded box, close to its edge, has the box's
+     radius less the room between them: --radius-lg around --radius-md with
+     4px between, --radius-xl around --radius-lg with 4px. */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 999px;
+
+  /* Text. 2xs only where space is tightest (a month's day on a phone). */
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --tracking-tight: -0.025em;
+
+  /* Room between things: 4px steps. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* 44px: the smallest tap target. */
+  --control-height: 2.75rem;
+  --icon-sm: 1rem;
+  --icon-md: 1.25rem;
+
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.2);
+  --shadow-md: 0 12px 40px rgb(0 0 0 / 0.27);
+  --shadow-lg: 0 24px 90px rgb(0 0 0 / 0.4);
+
+  /* Motion: quick, and only for what tells the user something. */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.3, 1.5, 0.6, 1);
+  --duration-fast: 150ms;
+  --duration: 220ms;
+
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--bg);
@@ -36,6 +87,28 @@
 :where(.shell) :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Headings break into lines of even length, not one long line and an orphan;
+   paragraphs avoid a lone last word. */
+:where(.shell) :is(h1, h2, h3) {
+  text-wrap: balance;
+}
+
+:where(.shell) p {
+  text-wrap: pretty;
+}
+
+/* Numbers that sit in columns or change in place keep their width. */
+:where(.shell) time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Placeholders in the theme's secondary text color, which passes AA on every
+   field background, rather than the browser's fainter gray. */
+:where(.shell) ::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 
 /* The top bar (with the app's tabs in it), then the view across the whole
@@ -72,7 +145,7 @@
 }
 
 .views > * {
-  animation: view-from-end 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation: view-from-end 0.28s var(--ease-out) backwards;
 }
 
 .views[data-direction="back"] > * {

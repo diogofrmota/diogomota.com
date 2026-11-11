@@ -34,7 +34,7 @@ export function ResetPasswordForm({ token, username }: { token: string; username
         required
       />
       <FormMessage error={state.error} />
-      <SubmitButton label="Set new password" pending={pending} />
+      <SubmitButton label="Set new password" pending={pending} wide />
     </form>
   );
 }

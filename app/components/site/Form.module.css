@@ -3,12 +3,12 @@
 
 .form {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--space-5);
 }
 
 .field {
   display: grid;
-  gap: 0.35rem;
+  gap: var(--space-1);
 }
 
 .field p {
@@ -16,20 +16,21 @@
 }
 
 .label {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
 }
 
 /* 16px text, so iOS doesn't zoom in on focus. */
 .input {
   width: 100%;
-  min-height: 2.75rem;
-  padding: 0.6rem 0.75rem;
+  min-height: var(--control-height);
+  padding: 0.625rem var(--space-3);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: var(--bg);
   color: var(--text);
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--text-md);
 }
 
 .input:focus-visible {
@@ -49,27 +50,60 @@
 
 .hint {
   color: var(--muted);
-  font-size: 0.8125rem;
+  font-size: var(--text-sm);
 }
 
+/* A field's error, and the form's (role="alert"), which also shakes once:
+   a second failed try looks different from the first. */
 .error {
   margin: 0;
   color: var(--danger);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
+  animation: feedback-in var(--duration) var(--ease-out);
+}
+
+.error[role="alert"] {
+  animation: feedback-in var(--duration) var(--ease-out), nudge 0.3s 0.1s ease-in-out;
 }
 
 .success {
   margin: 0;
   color: var(--accent);
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  animation: feedback-in var(--duration) var(--ease-out);
+}
+
+@keyframes feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes nudge {
+  25% {
+    transform: translateX(-3px);
+  }
+
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .error,
+  .error[role="alert"],
+  .success {
+    animation: none;
+  }
 }
 
 .submit {
   justify-self: start;
 }
 
-/* Two classes, to win over ui.module.css's cursor whatever the order. */
-.submit.submit:disabled {
-  cursor: progress;
+/* Two classes, to win over ui.module.css's justify-self whatever the order. */
+.wide.wide {
+  justify-self: stretch;
 }

@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
 import { CloseIcon } from "@/components/common/icons";
+import { LinkPending } from "@/components/common/LinkPending";
 import ui from "@/components/common/ui.module.css";
 import type { AppInfo } from "@/lib/apps";
 import { authHref } from "@/lib/next-path";
+import { AppPreview } from "./AppPreview";
 import styles from "./LoginPrompt.module.css";
 
-// Shown instead of an app while logged out, in the apps' dialog look. A native
+// Shown instead of an app while logged out, in the apps' dialog look: a picture
+// of the app (as on its card), what it's for, then Log in and Sign up. A native
 // modal <dialog>: it keeps focus inside, closes on Escape and hands focus back
 // to the card on close.
 export function LoginPrompt({
@@ -40,18 +43,19 @@ export function LoginPrompt({
     >
       {app && (
         <div className={styles.content}>
+          <AppPreview href={app.href} className={styles.preview} />
           <h2 id={titleId} className={`${ui.cardHeading} ${styles.title}`}>
             Log in to open {app.name}
           </h2>
-          <p className={`${ui.muted} ${styles.text}`}>
-            You need an account to use {app.name}. Log in, or sign up if you are new.
-          </p>
-          <div className={ui.actions}>
+          <p className={`${ui.muted} ${styles.text}`}>{app.description}</p>
+          <div className={styles.actions}>
             <Link href={authHref("/login", app.href)} className={`${ui.button} ${ui.primary}`}>
-              Login
+              Log in
+              <LinkPending />
             </Link>
             <Link href={authHref("/signup", app.href)} className={ui.button}>
-              Sign Up
+              Sign up
+              <LinkPending />
             </Link>
           </div>
           <button

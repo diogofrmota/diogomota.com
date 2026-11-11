@@ -56,7 +56,7 @@ export function SignUpForm({ next }: { next: string | null }) {
         minLength={PASSWORD_MIN}
       />
       <FormMessage error={state.error} />
-      <SubmitButton label="Sign up" pending={pending} />
+      <SubmitButton label="Sign up" pending={pending} wide />
     </form>
   );
 }

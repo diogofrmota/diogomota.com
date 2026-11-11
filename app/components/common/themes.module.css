@@ -37,7 +37,8 @@
   color-scheme: light;
 }
 
-/* Neutral: shadow black and slate gray on warm gray and light gray-blue. */
+/* Neutral: shadow black and slate gray on warm gray and light gray-blue, with
+   slate blue. */
 .theme[data-theme="minimal-neutrals"],
 .theme[data-theme-preview="minimal-neutrals"],
 :global(html):has(.theme[data-theme="minimal-neutrals"]) {
@@ -47,8 +48,8 @@
   --text: #101014;
   --muted: #4e4e58;
   --border: #c9cad4;
-  --accent: #3d3d47;
-  --accent-soft: #d0d1db;
+  --accent: #30507a;
+  --accent-soft: #d5dce8;
   --danger: #a3262a;
   --star: #8f6200;
   --star-off: #7a7a84;
@@ -73,7 +74,7 @@
   color-scheme: light;
 }
 
-/* Graphite: charcoal, with silver. */
+/* Graphite: charcoal, with steel blue. */
 .theme[data-theme="graphite"],
 .theme[data-theme-preview="graphite"],
 :global(html):has(.theme[data-theme="graphite"]) {
@@ -83,8 +84,8 @@
   --text: #ececee;
   --muted: #a4a6ad;
   --border: #3c3d43;
-  --accent: #c5cad3;
-  --accent-soft: #3a3d44;
+  --accent: #a9c8ee;
+  --accent-soft: #2e3744;
   --danger: #ff8f8f;
   --star: #e9c46a;
   --star-off: #76787f;

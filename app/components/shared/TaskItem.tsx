@@ -82,7 +82,7 @@ export function TaskRow({ task, space, today, onToggle, onOpen, onDelete, sortab
         {(due || member) && <span className={styles.meta}>
           {due && <span className={due.startsWith("Overdue") ? styles.overdue : undefined}>{due}</span>}
           {member && <span className={styles.assignee} style={{ "--member-color": member.color } as CSSProperties}>
-            <i aria-hidden="true" />{member.username}
+            <span className={styles.assigneeDot} aria-hidden="true" />{member.username}
           </span>}
         </span>}
         {task.notes && <span className={styles.notes}>{task.notes}</span>}
