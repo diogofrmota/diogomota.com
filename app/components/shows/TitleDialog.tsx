@@ -130,7 +130,7 @@ export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "typ
             {detail ? length && <p className={styles.titleFacts}>{length}</p>
               : !error && <span className={`${styles.skeletonLine} ${styles.skeleton} ${styles.skeletonShort}`} />}
           </div>
-          {item && <StatusControls item={item} />}
+          {detail && item && <StatusControls item={item} />}
         </div>
         <div className={styles.titleMain}>
           {error ? <LoadError message={error} onRetry={retry} /> : !detail ? <div className={styles.overviewSkeleton} aria-busy="true">

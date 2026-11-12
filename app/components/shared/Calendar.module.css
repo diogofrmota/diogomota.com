@@ -158,12 +158,16 @@
 .confirm p { margin: 0; }
 .confirm .actions { margin-top: .65rem; }
 .dialog button:disabled { opacity: .6; cursor: wait; }
+/* A day of the month shows two events at most; past them, "+1 more" (and so
+   on), small and quiet, which opens the day. */
+.calendar .more { display: block; width: 100%; min-height: 0; height: 14px; padding: 0 .35rem; border: 0; border-radius: var(--radius-xs); background: none; color: var(--muted); font-size: .625rem; font-weight: var(--weight-semibold); line-height: 14px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (hover: hover) { .calendar .more:hover { background: none; color: var(--text); text-decoration: underline; } }
 /* With a mouse, a month's events are slim, so a day has room for two of them
-   under its number (2px, its number 24px and 2px, two events 22px and 2px:
-   78px). Where the six weeks don't have that much room each, the month scrolls
-   as a whole, not each day. */
+   and "+1 more" under its number (2px, its number 24px and 2px, two events
+   22px and 2px, 14px: 92px). Where the six weeks don't have that much room
+   each, the month scrolls as a whole, not each day. */
 @media (min-width: 48rem) {
-  .month { grid-template-rows: auto repeat(6, minmax(4.875rem, 1fr)); }
+  .month { grid-template-rows: auto repeat(6, minmax(5.75rem, 1fr)); }
   .month .cell { padding: 2px; }
   .calendar .dayNumber { min-height: 24px; height: 24px; width: 24px; margin-bottom: 2px; padding: 0; }
   .calendar .month .event { min-height: 0; height: 1.375rem; margin-bottom: 2px; padding: 0 .35rem; }
@@ -189,11 +193,19 @@
   .eventAvatar { width: .875rem; height: .875rem; font-size: .5rem; }
   .eventAvatar svg { width: .625rem; height: .625rem; }
   .eventTitle { font-size: var(--text-2xs); line-height: .875rem; }
-  .calendar .dayNumber { width: 100%; max-width: 44px; }
+  /* A day of the month: its number (a 22px circle), then two events of 22px
+     and "+1 more", tight, so they fit the day (1px and 1px, 22px and 2px, two
+     events 22px and 2px, 14px: 88px); the month scrolls as a whole where they
+     don't. The whole day is there to tap, too. */
+  .month { grid-template-rows: auto repeat(6, minmax(5.5rem, 1fr)); }
+  .calendar .dayNumber { width: 1.375rem; height: 1.375rem; min-height: 0; margin: 0 auto 2px; padding: 0; font-size: var(--text-xs); }
+  .calendar .month .event { min-height: 0; height: 1.375rem; margin-bottom: 2px; padding: 0 .15rem; }
+  .calendar .more { padding-inline: .15rem; font-size: .5625rem; }
   .weekday { font-size: var(--text-xs); }
-  .dialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-bottom: 0; border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+  /* The whole screen (as Shows' search): all of the form in view, with room for the keyboard. */
+  .dialog { margin: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
   .dialog[open] { animation-name: sheet-in; animation-duration: .28s; }
-  .dialogBody { padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
+  .dialogBody { padding: calc(1rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) calc(1.25rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
 }
 @media (max-width: 25rem) {
   .addLabel { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

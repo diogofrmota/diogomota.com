@@ -212,10 +212,11 @@ test.describe("on a phone", () => {
     await expect(detail).toContainText("Overview of Harbor Lights.");
     await expect(detail.getByRole("region", { name: "Seasons" }).getByRole("listitem"))
       .toHaveText([/^Season 1\s*10 episodes$/, /^Season 2\s*8 episodes$/]);
-    // A bottom sheet.
+    // The whole screen.
     const box = (await detail.boundingBox())!;
     expect(box.width).toBe(390);
-    expect(box.y + box.height).toBeCloseTo(844, 0);
+    expect(box.y).toBe(0);
+    expect(box.height).toBeCloseTo(844, 0);
     await expectNoHorizontalScroll(page);
 
     // Opening it cached the title, with its seasons (no specials, no empty

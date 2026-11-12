@@ -4,11 +4,12 @@ import { Dialog } from "@/components/common/Dialog";
 import { CloseIcon, GripIcon, TrashIcon } from "@/components/common/icons";
 import type { Space } from "@/lib/space-types";
 import type { Task, TaskFields, TaskList } from "@/lib/task-types";
+import { MaskedField } from "./MaskedField";
 import { MemberPicker } from "./MemberPicker";
 import { SortableList, useSortableItem } from "./Sortable";
 import styles from "./Tasks.module.css";
 
-// A modal dialog with a title and a close button, a sheet from the bottom on phones.
+// A modal dialog with a title and a close button, the whole screen on phones.
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   const heading = useId();
   return <Dialog className={styles.dialog} aria-labelledby={heading} onClose={onClose}><div className={styles.dialogBody}>
@@ -43,8 +44,10 @@ export function TaskDialog({ task, list, space, onClose, onSave, onDelete }: {
       <div className={styles.fields}>
         <MemberPicker legend="Assignee" name="assignee" members={space.members} value={assignee} allValue="" allName="Anyone"
           onChange={setAssignee} />
+        {/* dd/mm/yyyy, typed (not the browser's date field, which can be mm/dd/yyyy). */}
         <label>Due date (optional)
-          <span className={styles.inputRow}><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <span className={styles.inputRow}>
+            <MaskedField kind="date" label="Due date (optional)" value={dueDate} onChange={setDueDate} required={false} className={styles.dueDate} />
             {dueDate && <button type="button" onClick={() => setDueDate("")}>Clear</button>}</span>
         </label>
       </div>

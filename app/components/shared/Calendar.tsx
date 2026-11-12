@@ -11,6 +11,8 @@ import { memberName } from "./MemberPicker";
 import styles from "./Calendar.module.css";
 
 type View = "month" | "week" | "day";
+/** The events a day of the month shows; past them, "+1 more" (and so on). */
+const monthEvents = 2;
 function monday(date: string) { return datePlus(date, -((new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7)); }
 const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
 
@@ -129,14 +131,23 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
     {error && <div role="alert" className={styles.alert}><p>{error}</p><button onClick={() => { setError(""); setLoading(true); setRevision((r) => r + 1); }}>Retry</button></div>}
     {!loading && !error && events.length === 0 && <p className={styles.empty}>Nothing planned yet — tap a day to add your first event!</p>}
     <div ref={scroller} className={styles.scroller} tabIndex={0} role="region" aria-label={`${view} calendar`}>
-      {view === "month" ? <div key={`month:${first}`} className={styles.month} data-slide={slide}>
+      {/* data-compact-targets: on a phone, a day's number, events and "+N more" are smaller than a finger (e2e/checks.ts). */}
+      {view === "month" ? <div key={`month:${first}`} className={styles.month} data-slide={slide} data-compact-targets>
         {days.slice(0, 7).map((day) => <div className={styles.weekday} key={day}>{dateLabel(day, { weekday: "short" })}</div>)}
-        {/* A tap anywhere on a day, but on an event, adds an event that day; its number is the button for keyboards and screen readers. */}
-        {days.map((day) => <div key={day} className={`${styles.cell} ${day.slice(0, 7) !== date.slice(0, 7) ? styles.outside : ""}`} onClick={() => addOn(day)}>
-          <button className={`${styles.dayNumber} ${day === today ? styles.today : ""}`} aria-label={`${dateLabel(day, { weekday: "long", day: "numeric", month: "long" })}, add event`}
-            onClick={(e) => { e.stopPropagation(); addOn(day); }}>{Number(day.slice(-2))}</button>
-          {eventsOn(day).map((event) => eventButton(event))}
-        </div>)}
+        {/* A tap anywhere on a day, but on an event, adds an event that day; its number is the button for keyboards and screen readers.
+            Its first two events, then "+1 more" (and so on), which opens the day with all of them. */}
+        {days.map((day) => {
+          const onDay = eventsOn(day);
+          const label = dateLabel(day, { weekday: "long", day: "numeric", month: "long" });
+          return <div key={day} className={`${styles.cell} ${day.slice(0, 7) !== date.slice(0, 7) ? styles.outside : ""}`} onClick={() => addOn(day)}>
+            <button className={`${styles.dayNumber} ${day === today ? styles.today : ""}`} aria-label={`${label}, add event`}
+              onClick={(e) => { e.stopPropagation(); addOn(day); }}>{Number(day.slice(-2))}</button>
+            {onDay.slice(0, monthEvents).map((event) => eventButton(event))}
+            {onDay.length > monthEvents && <button className={styles.more} onClick={(e) => { e.stopPropagation(); move(day, "day"); }}>
+              +{onDay.length - monthEvents} more<span className={styles.srOnly}> on {label}</span>
+            </button>}
+          </div>;
+        })}
       </div> : <div key={`${view}:${first}`} className={`${styles.timeGrid} ${view === "week" ? styles.week : ""}`} data-slide={slide} style={{ "--days": days.length } as CSSProperties}>
         <div className={styles.timeHead} />{days.map((day) => <button key={day} className={`${styles.timeHead} ${day === today ? styles.today : ""}`} onClick={() => move(day, "day")}>{dateLabel(day, { weekday: "short", day: "numeric" })}</button>)}
         {/* All-day events in a row of their own, over the hours, which stays in view as they scroll. */}

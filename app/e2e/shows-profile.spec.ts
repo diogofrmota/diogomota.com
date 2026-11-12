@@ -541,6 +541,19 @@ test.describe("on a phone", () => {
     await tab(page, "Profile").tap();
     await expect(statValues(page)).toHaveText(["2.1", "0", "1"]);
     await expect(friendButton(page, friend.user.username)).toBeVisible();
+    // A friend's row: their picture, their name and @username on one line (cut off when as long as a test user's), and under it Check profile and the bin.
+    const friendRow = friendsList(page).getByRole("listitem");
+    const name = friendRow.getByText(shown(friend.user), { exact: true });
+    const check = friendRow.getByText("Check profile", { exact: true });
+    const bin = friendRow.getByRole("button", { name: `Remove ${friend.user.username}` });
+    const [nameBox, checkBox, binBox, pictureBox] = await Promise.all([name, check, bin, friendRow.locator("img, [aria-hidden=true]").first()]
+      .map(async (locator) => (await locator.boundingBox())!));
+    expect(nameBox.height).toBeLessThan(30);
+    expect(checkBox.y).toBeGreaterThanOrEqual(nameBox.y + nameBox.height);
+    expect(Math.abs(checkBox.x - nameBox.x)).toBeLessThanOrEqual(1);
+    expect(binBox.y + binBox.height).toBeGreaterThan(checkBox.y);
+    expect(binBox.x).toBeGreaterThan(checkBox.x + checkBox.width);
+    expect(pictureBox.x + pictureBox.width).toBeLessThanOrEqual(nameBox.x);
     // At least 16px, so iOS doesn't zoom in on it.
     await expect(page.getByLabel("Add a friend")).toHaveCSS("font-size", "16px");
     await expectNoHorizontalScroll(page);

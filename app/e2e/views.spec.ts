@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import sharp from "sharp";
 import { checkView, emulateHomeIndicator } from "./checks";
 import { accountButton, accountSetting, expect, newUser, signUp, test } from "./fixtures";
@@ -22,6 +22,12 @@ const sharedTab = (page: Page, view: string) =>
 async function goBackTo(page: Page, view: string) {
   await page.goBack();
   await expect(viewHeading(page)).toHaveText(view);
+}
+
+/** A popup's text field starts focused with a mouse; on a touch screen it doesn't (the keyboard would cover the popup). */
+async function expectFocusedWithMouse(page: Page, field: Locator) {
+  if (await page.evaluate(() => matchMedia("(pointer: fine)").matches)) await expect(field).toBeFocused();
+  else await expect(field).not.toBeFocused();
 }
 
 test("the site's pages", async ({ page }) => {
@@ -58,7 +64,8 @@ test("the site's pages", async ({ page }) => {
   // A setting's popup, and the profile picture's, then a photo chosen for it: Adjust your picture.
   await accountSetting(page, "Email").click();
   const email = page.getByRole("dialog", { name: "Email", exact: true });
-  await expect(email.getByLabel("Email", { exact: true })).toBeFocused();
+  // A field focused with a mouse; on a touch screen, the keyboard waits for a tap on it.
+  await expectFocusedWithMouse(page, email.getByLabel("Email", { exact: true }));
   await checkView(page, "account, a setting's popup");
   await page.keyboard.press("Escape");
   await expect(email).toBeHidden();
@@ -87,13 +94,13 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
 
   await page.getByRole("button", { name: "Add event", exact: true }).click();
   const newEvent = page.getByRole("dialog", { name: "Create a new event" });
-  await expect(newEvent.getByLabel("Event title")).toBeFocused();
+  await expectFocusedWithMouse(page, newEvent.getByLabel("Event title"));
   await checkView(page, "new event");
   await page.goBack();
   await expect(newEvent).toBeHidden();
   await page.getByRole("button", { name: "Add event", exact: true }).click();
   await newEvent.getByLabel("Event title").fill("Dinner");
-  await newEvent.getByRole("button", { name: "Save event" }).click();
+  await newEvent.getByRole("button", { name: "Save", exact: true }).click();
   await expect(newEvent).toBeHidden();
 
   await page.getByRole("button", { name: /^Dinner, 09:00/ }).click();

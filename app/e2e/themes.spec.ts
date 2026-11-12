@@ -77,7 +77,7 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await page.getByRole("button", { name: "Add event", exact: true }).click();
     const newEvent = page.getByRole("dialog", { name: "Create a new event" });
     await newEvent.getByLabel("Event title").fill("Dinner");
-    await newEvent.getByRole("button", { name: "Save event" }).click();
+    await newEvent.getByRole("button", { name: "Save", exact: true }).click();
     await expect(newEvent).toBeHidden();
     await checkThemes(page, "Calendar, with an event");
 

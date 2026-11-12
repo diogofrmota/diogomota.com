@@ -243,7 +243,8 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await expect(assigneePicker.getByRole("radio")).toHaveCount(members.length + 1);
   await expect(assigneePicker.getByRole("radio", { name: "All", exact: true })).toBeChecked();
   await assigneePicker.getByRole("radio", { name: friend.name, exact: true }).check();
-  await dialog.getByLabel("Due date (optional)").fill(tomorrow);
+  // Typed day first: dd/mm/yyyy.
+  await dialog.getByLabel("Due date (optional)").fill(`${tomorrow.slice(8, 10)}/${tomorrow.slice(5, 7)}/${tomorrow.slice(0, 4)}`);
   await dialog.getByLabel("Notes (optional)").fill("Two litres, semi-skimmed");
   changed = saved(page, /\/tasks\/[^/]+$/, "PATCH");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
@@ -259,6 +260,7 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   expect(milk).toMatchObject({ assigneeId: member.id, dueDate: tomorrow, notes: "Two litres, semi-skimmed" });
   await row(page, "Buy milk").getByRole("button", { name: /^Buy milk/ }).click();
   await expect(assigneePicker.getByRole("radio", { name: friend.name, exact: true })).toBeChecked();
+  await expect(dialog.getByLabel("Due date (optional)")).toHaveValue(`${tomorrow.slice(8, 10)}/${tomorrow.slice(5, 7)}/${tomorrow.slice(0, 4)}`);
   await assigneePicker.getByRole("radio", { name: "All", exact: true }).check();
   await dialog.getByRole("button", { name: "Clear" }).click();
   changed = saved(page, /\/tasks\/[^/]+$/, "PATCH");

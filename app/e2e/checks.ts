@@ -54,6 +54,10 @@ function layoutProblems({ phone, bottomInset }: { phone: boolean; bottomInset: n
     "a[href], button, input:not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex='-1'])",
   )].filter((el) => shown(el) && getComputedStyle(el).visibility !== "hidden" && (dialog || !el.closest("dialog")));
   for (const el of targets) {
+    // A day of the month (Calendar, data-compact-targets): its number, events and
+    // "+1 more" are small, so a day shows two events on a phone; the whole day
+    // is also there to tap, and the week and day views show the events full size.
+    if (el.closest("[data-compact-targets]")) continue;
     // A link or button within a sentence is as tall as the line (WCAG 2.5.8's inline exception).
     const inSentence = [...el.parentElement!.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent!.trim());
     if (el.matches("a, button") && inSentence) continue;

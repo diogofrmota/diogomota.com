@@ -16,13 +16,13 @@ export const apps: readonly AppInfo[] = [
   {
     name: "Shared",
     href: "/shared",
-    description: "Create a shared calendar and task list with someone else.",
+    description: "Shared calendar for couples",
     logo: "/logos/shared.svg",
   },
   {
     name: "Shows",
     href: "/shows",
-    description: "Track the TV shows and movies you watch.",
+    description: "Track TV Shows and Movies",
     logo: "/logos/shows.svg",
   },
 ];

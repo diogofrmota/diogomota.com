@@ -520,6 +520,18 @@ test.describe("at 320px wide", () => {
 
     await page.goto("/account");
     await expectNoHorizontalScroll(page);
+    // On a touch screen, a popup opens without its field focused: the keyboard
+    // would come up over it. A tap on the field types.
+    expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
+    for (const name of ["Name", "Username", "Email"]) {
+      const popup = await openSetting(page, name);
+      await expect(popup.getByRole("textbox").first()).not.toBeFocused();
+      await expect(popup.getByRole("button", { name: "Close" })).toBeFocused();
+      await popup.getByRole("textbox").first().tap();
+      await expect(popup.getByRole("textbox").first()).toBeFocused();
+      await popup.getByRole("button", { name: "Close" }).tap();
+      await expect(popup).toBeHidden();
+    }
     const theme = await openSetting(page, "Theme");
     await expect(theme).toBeInViewport({ ratio: 1 });
     await expectNoHorizontalScroll(page);

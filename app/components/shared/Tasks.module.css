@@ -129,6 +129,9 @@
 @media (hover: hover) { .dialog .close:hover { background: var(--border); color: var(--text); } }
 .fields { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
 .inputRow button { flex-shrink: 0; }
+/* The due date, typed (MaskedField): its digits line up as they're typed; wrong once left, a red edge. */
+.tasks .dueDate { font-variant-numeric: tabular-nums; }
+.tasks .dueDate[aria-invalid="true"] { border-color: var(--danger); }
 @media (prefers-reduced-motion: reduce) {
   .tasks input[type="checkbox"]:checked, .alert, .toast, .ticking { animation: none; }
   .tasks .primary:active { transform: none; }
@@ -144,9 +147,10 @@
 .addList label { flex: 1; }
 .addList button { flex-shrink: 0; }
 @media (max-width: 47.99rem) {
-  .dialog { margin: auto 0 0; width: 100%; max-width: none; max-height: 92dvh; border-bottom: 0; border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+  /* The whole screen (as Shows' search): all of the form in view, with room for the keyboard. */
+  .dialog { margin: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
   .dialog[open] { animation-name: sheet-in; animation-duration: .28s; }
-  .dialogBody { padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom)); }
+  .dialogBody { padding: calc(1rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) calc(1.25rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
   .fields { grid-template-columns: 1fr; }
 }
 
