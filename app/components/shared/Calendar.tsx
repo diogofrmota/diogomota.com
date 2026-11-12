@@ -7,6 +7,7 @@ import { useAppView } from "@/hooks/useAppView";
 import { dateLabel, datePlus, eventDates, localParts, type CalendarEvent } from "@/lib/calendar";
 import type { Space } from "@/lib/space-types";
 import { EventDialog, eventRequest } from "./EventDialog";
+import { memberName } from "./MemberPicker";
 import styles from "./Calendar.module.css";
 
 type View = "month" | "week" | "day";
@@ -93,12 +94,12 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
   // An event: who it's for (their picture or initial, or two people for the
   // group) and its title. When it is, and who exactly, are in its dialog, in
   // the week and day views its place among the hours, and in its name, for
-  // screen readers: "Dinner, 19:30, diogo", which starts with the title shown.
+  // screen readers: "Dinner, 19:30, Diogo", which starts with the title shown.
   // Named by text rather than aria-label, so the initial on screen doesn't
   // have to be in it (axe's label-content-name-mismatch).
   function eventButton(event: CalendarEvent, style?: CSSProperties) {
     const member = space.members.find((m) => m.id === event.assigneeId);
-    const who = event.isGroup ? "Group" : member?.username ?? "Former member";
+    const who = event.isGroup ? "Group" : member ? memberName(member) : "Former member";
     const when = event.allDay ? "All day" : localParts(event.startsAt).time;
     return <button key={event.id} className={`${styles.event} ${event.allDay ? styles.allDayEvent : ""} ${style ? styles.timedEvent : ""}`} style={{ ...style, "--event-color": event.isGroup ? "var(--muted)" : member?.color ?? "var(--muted)" } as CSSProperties}
       onClick={(e) => { e.stopPropagation(); openPanel(`event:${event.id}`); }}>
@@ -119,7 +120,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
         <button className={`${styles.arrow} ${styles.next}`} aria-label="Next period" onClick={() => navigate(1)}><ChevronRightIcon /></button>
       </div>
       <h2 aria-live="polite">{view === "day" ? dateLabel(date, { day: "numeric", month: "long", year: "numeric" }) : view === "week" ? `${dateLabel(first, { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short", year: "numeric" })}` : dateLabel(date, { month: "long", year: "numeric" })}</h2>
-      <ul className={styles.legend} aria-label="Event colors">{space.members.map((m) => <li key={m.id}><span className={styles.dot} style={{ background: m.color }} />{m.username}</li>)}<li><span className={`${styles.dot} ${styles.groupDot}`} />Group</li></ul>
+      <ul className={styles.legend} aria-label="Event colors">{space.members.map((m) => <li key={m.id}><span className={styles.dot} style={{ background: m.color }} />{memberName(m)}</li>)}<li><span className={`${styles.dot} ${styles.groupDot}`} />Group</li></ul>
       <div className={styles.switcher} role="group" aria-label="Calendar view">{(["month", "week", "day"] as const).map((item) => <button key={item} aria-pressed={view === item} onClick={() => move(date, item)}>{item[0].toUpperCase() + item.slice(1)}</button>)}</div>
       {/* Just the plus on phones up to 400px wide; the name stays "Add event". */}
       <button className={`${styles.primary} ${styles.add}`} onClick={() => addOn(date)}><PlusIcon /><span className={styles.addLabel}>Add event</span></button>

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import sharp from "sharp";
 import { checkView, emulateHomeIndicator } from "./checks";
-import { accountButton, expect, newUser, signUp, test } from "./fixtures";
+import { accountButton, accountSetting, expect, newUser, signUp, test } from "./fixtures";
 import { card, grid, mockBase, openShows, otherPerson, section, tab, userId, viewHeading } from "./shows";
 
 // Every view of the site and of both apps, with their dialogs open and in their
@@ -55,9 +55,17 @@ test("the site's pages", async ({ page }) => {
   await expect(page).toHaveURL("/account");
   await checkView(page, "account");
 
-  // A photo chosen for the profile picture: Adjust your picture.
-  const picture = page.getByRole("region", { name: "Profile picture", exact: true });
-  await picture.getByRole("heading", { name: "Profile picture" }).click();
+  // A setting's popup, and the profile picture's, then a photo chosen for it: Adjust your picture.
+  await accountSetting(page, "Email").click();
+  const email = page.getByRole("dialog", { name: "Email", exact: true });
+  await expect(email.getByLabel("Email", { exact: true })).toBeFocused();
+  await checkView(page, "account, a setting's popup");
+  await page.keyboard.press("Escape");
+  await expect(email).toBeHidden();
+  await page.getByRole("main").getByRole("button", { name: "Profile picture", exact: true }).click();
+  const picture = page.getByRole("dialog", { name: "Profile picture", exact: true });
+  await expect(picture).toBeVisible();
+  await checkView(page, "account, the profile picture's popup");
   await picture.locator('input[type="file"]').setInputFiles({ name: "me.png", mimeType: "image/png",
     buffer: await sharp({ create: { width: 800, height: 600, channels: 3, background: "#3366cc" } }).png().toBuffer() });
   const crop = page.getByRole("dialog", { name: "Adjust your picture" });
@@ -78,13 +86,13 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await checkView(page, "Calendar, empty");
 
   await page.getByRole("button", { name: "Add event", exact: true }).click();
-  const newEvent = page.getByRole("dialog", { name: "New event" });
-  await expect(newEvent.getByLabel("Title")).toBeFocused();
+  const newEvent = page.getByRole("dialog", { name: "Create a new event" });
+  await expect(newEvent.getByLabel("Event title")).toBeFocused();
   await checkView(page, "new event");
   await page.goBack();
   await expect(newEvent).toBeHidden();
   await page.getByRole("button", { name: "Add event", exact: true }).click();
-  await newEvent.getByLabel("Title").fill("Dinner");
+  await newEvent.getByLabel("Event title").fill("Dinner");
   await newEvent.getByRole("button", { name: "Save event" }).click();
   await expect(newEvent).toBeHidden();
 
@@ -138,7 +146,7 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await page.getByRole("button", { name: "Generate invite" }).click();
   await expect(page.getByLabel("Invite code")).toHaveValue(/.{8}/);
   await checkView(page, "Settings");
-  await page.getByRole("button", { name: "Leave space", exact: true }).click();
+  await page.getByRole("button", { name: "Leave this group", exact: true }).click();
   await expect(page.getByRole("button", { name: "Confirm leave" })).toBeVisible();
   await checkView(page, "Settings, confirm leave");
 

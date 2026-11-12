@@ -144,7 +144,7 @@ test("two people become friends: a request, accepting it, each other's libraries
   await expect(friends).toContainText("No friends yet.");
   // A search field, named for screen readers only (its label is 1px, clipped), and nothing else about it.
   expect((await friends.getByText("Add a friend").boundingBox())!.width).toBeLessThanOrEqual(1);
-  await expect(page.getByLabel("Add a friend")).toHaveAttribute("placeholder", "Search…");
+  await expect(page.getByLabel("Add a friend")).toHaveAttribute("placeholder", "Search friends…");
   await expect(friends).not.toContainText("Friends add you by your username");
   // In any case, with or without an @.
   await addFriend(page, `@${bobName.toUpperCase()}`);

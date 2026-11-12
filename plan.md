@@ -76,10 +76,11 @@ Single shared account across all apps. Auth lives at the `/apps` level.
 - **Password changes end sessions:** a reset or a change sets `users.password_changed_at`, and `auth.ts` checks it on every session read, so every device is logged out, this one included, and sent to `/login?password=changed` (a change in Account settings returns to `/account` after logging in). Decided: a change in Account settings keeps logging out the current device too.
 
 ### Account Settings (`/account`)
-From the account menu on `/apps` and in both apps' top bars. In the apps' frame and the user's theme, like `/apps`:
-- Change username (unique)
-- Change password (current + new + confirm)
-- Reset by email (→ `/forgot-password`)
+From the account menu on `/apps` and in both apps' top bars. In the apps' frame and the user's theme, like `/apps`. The profile picture in the middle, then a row each for Name, Username, Email and Theme with what they are now, then Update password and Log out; each opens a popup with its form, which closes once saved:
+- Change name and username (unique)
+- Change email (unique; takes the current password, as the email logs in and gets resets)
+- Change password (current + new + confirm), from Update password
+- Reset by email (→ `/forgot-password`), in Update password
 - Profile picture: drop a photo or choose one, then Adjust your picture (drag and zoom it until the circle shows the part wanted; the browser cuts that square out); the server makes it a 512 px WebP square (`lib/avatars.ts`, with sharp) and keeps it as a file on the VPS (the `appdata` volume); `users.avatar_updated_at` is in its URL. Shown in the account menu, Shared's members and Shows' Profile and friends; Remove picture goes back to the initial
 - Theme preference (light/dark), saved in `users.theme_preference`
 - Logout
@@ -168,10 +169,11 @@ A private space for a small group (e.g. couple, roommates) to share a calendar a
 **1. Calendar**
 - Custom month, week and day views (no FullCalendar), in the app's light and dark themes; week view scrolls sideways on narrow screens; a week day's heading opens its day
 - Add event: the Add event button, a tap on a day of the month (anywhere but on an event) or on an hour of the week or day view (the event then starts at that hour)
-  - Title; All day (a switch), or start and end times; start and end dates (an event can span dates). A date is a chip showing it in words ("12 Nov (Thu)") over the browser's own field, which opens its picker; a time is on the 24-hour clock ("09:30"), an hour and a minutes select (every 5 minutes) in a chip, not the browser's time field, which follows the device's language and can be AM/PM; optional notes
+  - Create a new event: Event title; All day (a switch), or start and end times; start and end dates (an event can span dates). Dates and times are typed, not the browser's fields (which follow the device's language, and can be AM/PM): a date is `dd/mm/yyyy` while empty, its blanks (`__/__/____`) once focused, filled in as it's typed, and starts as the day tapped; a time is `__:__`, on the 24-hour clock. No notes in the form (an event's notes from before are kept and shown)
   - **All day:** from the start of the first day to the start of the day after the last (Lisbon), `events.all_day`; shown as All day, in its own row over the hours in the week and day views (it stays in view as the hours scroll, and scrolls within itself past about two events), and exported as whole days
-  - **Assignee:** one member, or the **group** (applies to all members)
-  - Member-colored events; group events neutral, with a **Group** badge; a color legend
+  - **Who?:** each member's small profile picture (or initial), or **All**, a circle the same size: the group (applies to all members)
+  - Member-colored events; group events neutral, with a **Group** badge; a color legend, by each member's name
+  - With a mouse, a month's events are slim, so two fit in a day under its number; where the weeks have less room, the month scrolls as a whole
 - Click an event to view, edit or delete it (a modal on desktop, a bottom sheet on a phone); every member can manage every event
 - Times are entered and shown in `Europe/Lisbon` whatever the device's zone, stored as UTC `timestamptz`; nonexistent spring-forward times are rejected, and repeated autumn times offer the first or second occurrence
 - One toolbar over the grid (‹ Today ›, the period, the color legend, Month | Week | Day, Add event), so the grid gets the rest of the screen; no time zone line (in the event form neither); ‹ › are drawn chevrons, and the grid slides towards the period chosen
@@ -183,7 +185,7 @@ A private space for a small group (e.g. couple, roommates) to share a calendar a
 - Each list has ordered tasks:
   - Task title
   - Optional: due date (a plain date, shown as Today, Tomorrow or Overdue against today in Lisbon) and notes
-  - **Assignee:** a member, shown with their color and name, or unassigned
+  - **Assignee:** a member, shown with their color and name, or unassigned; in its dialog, each member's small profile picture and All (nobody in particular), as an event's Who?
   - Checkbox to mark complete: the task stays a moment, ticked and crossed out, then slides away into a collapsed **Done** section (unticked in that moment, it stays); unticking one in Done puts it back at the end of the list
 - The view is titled Tasks; the open list's name has how many are left to do, `Groceries (3)`; new tasks go in Write a task
   - **Drag & drop** by a handle to reorder tasks (and, in Edit lists, lists): with a mouse, a finger (the rest of the row still scrolls the page) or the keyboard (Space or Enter to pick up, the arrows, Space or Enter to drop, Escape to cancel)
@@ -194,7 +196,7 @@ A private space for a small group (e.g. couple, roommates) to share a calendar a
 **3. Settings** (the third tab)
 - Members list, with role (owner / member), each member's picture (or initial) in a ring of their color
 - **Invite people** — a single-use code (24 h expiry), with copy
-- **Leave space**: Shared then shows Create a Space or Join with Code again, without tabs
+- **Leave this group**: a button after the cards, which asks first; Shared then shows Create a Space or Join with Code again, without tabs
 - The space loads again each time the tab is shown, so what other members changed meanwhile shows
 - After a change to the space, a server action (`app/shared/actions.ts`) makes the pages the browser kept for Back render again, so Back to `/shared` shows the space as it is now; `/shared` also checks its space once shown
 
@@ -229,9 +231,10 @@ Minimalistic personal tracker for TV shows and movies.
   - **Completed** — finished
   - Each lists the titles changed most recently first, whole rows until Show all (three on a phone, two wider), with a count
 - Each card: poster, title, year, a heart for a favourite, and Watching or Completed on the poster (as on every poster of a title in the library: Discover, search, the guide, Profile); Planned only where statuses are mixed (Favourites), not in its own section
-- Click card → detail panel, laid out as the title's page: on a wide screen, the poster with the title, type, year, TMDB's rating, and seasons and episodes (or a movie's runtime) under it, in a column that stays in view; beside it the overview first, then:
+- Click card → detail panel, laid out as the title's page: on a wide screen, the poster with the title, type, year, TMDB's rating, and seasons and episodes (or a movie's runtime) under it, in a column that stays in view (where the panel is tall enough), and under them, for a title in the library:
+  - Status: Planned | Watching | Completed, one over the other
   - Favourite
-  - Status: Planned | Watching | Completed
+- Beside it, Synopsis (the overview) first, then:
   - Progress of a TV show being watched: a season and an episode picker, and Next episode (on to the next season after a season's last episode); reaching the last episode offers Mark as completed (or Not yet). Progress is the last episode watched and is kept when the status changes
   - Remove from library: asks first, then offers to add it again
 - **Quick actions** (the status, and the season and episode of a TV show being watched): the ⋯ button on a card where there is a mouse (shown on hover or focus), a right click, or a half-second long press on a touch screen; a small menu beside the card on desktop, a sheet from the bottom on a phone
@@ -589,6 +592,7 @@ Everything done, in the order it happened (moved here from the former `roadmap.m
 
 - Names, name search, poster progress, simpler events (2026-11-12): **names**: accounts have a first name and an optional last name (`013_names.sql`: `users.first_name`, `last_name`, 1-50 characters, and `unaccent`), asked at sign-up and set in `/account` (Name, the first dropdown); older accounts have none until they set them and show as their @username alone. `components/common/PersonName` shows `Diogo Mota (@diogofrmota)`, or with `first` `Diogo (@diogofrmota)`. **Shows**: Profile's top is the picture, the name, then the @username, centered; the TMDB notice is gone, the logo stays; Friends has no Add a friend heading or "Friends add you by your username" line, just a Search… field (named Add a friend for screen readers) that finds people by username or by first, last or whole name (any case, no accents; after an `@`, usernames only), each shown as picture, name and @username; Send request with a name asks the one person found, or says to choose from the list. Friend rows (and requests) show picture, name and @username, Check profile in place of the chevron, and a bin in place of Remove. The friends API's people have `firstName` and `lastName`; a friend's items have `episodesPerSeason`. The Watchlist's sections are Watching, Planned, Completed. Every poster of a title Watching or Completed has a line along its bottom edge from the left, as long as the share of episodes watched (`shareWatched`), in the Watching badge's blue, all the way across in the Completed badge's green once completed. **Shared**: an event in the calendar is who it's for (their picture or initial, two people for Group) and its title, no time or name; the week and day views open at the time it is now, an hour before at the top, as does Today; the task dialog has the assignee on the left and the due date on the right, and Save and Delete (no Cancel: the × closes it); Settings' members are picture, first name and @username.
 - One name (2026-11-12): a name is one field, `Diogo` or `Diogo Mota` as the user wants it, at sign-up and in `/account` (`014_one_name.sql`: `users.name`, 1-50 characters, in place of 013's first and last names, which became it). Shared's members and the friends API show and answer with `name`; the friend search finds a name from its start or from any word's; `PersonName` has no `first` any more. No TMDB footer in Shows either: the logo (`public/logos/tmdb.svg`, `TmdbAttribution`) and the line over it are gone too.
+- Account popups, typed dates, a slimmer month (2026-11-12): **`/account`**: the profile picture in the middle (a pencil on it), then a row each for Name, Username, Email and Theme with what they are now, then Update password and Log out, side by side; each opens a popup with its form (the profile picture's has the drop zone, and Adjust your picture over it), which closes once saved and says so under the rows. No dropdowns. **Email** can be changed (`changeEmail`, `updateEmail`), with the current password, to one no other account has. **Calendar**: the legend names each member by their name; with a mouse, a month's events are 22px, so two fit in a day under its number, and the month scrolls as a whole when its weeks have less room than that. The form is Create a new event, with Event title, no notes (an event's notes are kept), dates typed as `dd/mm/yyyy` and times as `__:__` (`MaskedField` in `EventDialog`), and Who?: each member's profile picture and All (`components/shared/MemberPicker`), which a task's dialog also has for its assignee. **Settings**: Leave this group, a button that asks first, in place of the Leave space card. **Shows**: a title's panel has no "In your library" on screen; its status (one over the other) and Favourite are under the poster and the facts, Synopsis heads the overview, and a watched season is on the faded green of a completed title. Profile's friend search says Search friends…, and the Watchlist's TV Shows | Movies switch is in the middle, as Discover's.
 
 ## To-do
 

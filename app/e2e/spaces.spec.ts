@@ -35,7 +35,7 @@ async function join(page: Page, code: string) {
 }
 /** Leaves the space from its settings; Shared then offers to create or join one. */
 async function leave(page: Page) {
-  await page.getByRole("button", { name: "Leave space", exact: true }).click();
+  await page.getByRole("button", { name: "Leave this group", exact: true }).click();
   await page.getByRole("button", { name: "Confirm leave" }).click();
   await expect(page.getByRole("heading", { name: "Your shared space" })).toBeVisible();
 }
@@ -166,7 +166,7 @@ test("on mobile the welcome and Settings fit both themes", async ({ page }) => {
     if (theme === "graphite") await page.locator("[data-theme]").evaluate((shell) => shell.setAttribute("data-theme", "graphite"));
     await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", theme);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await expect(page.getByRole("button", { name: "Leave space", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Leave this group", exact: true })).toBeVisible();
   }
 });
 

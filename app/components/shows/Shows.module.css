@@ -25,7 +25,8 @@
 
 /* Discover's search field look-alike: its first and biggest thing, as wide as
    a field gets and taller than a button. */
-/* Discover's top: the search field and the TV Shows | Movies switch, centered. */
+/* Discover's top: the search field and the TV Shows | Movies switch, centered;
+   the Watchlist's switch too. */
 .discoverTop { display: grid; justify-items: center; }
 .view .launcher { display: flex; align-items: center; gap: var(--space-3); width: 100%; max-width: 40rem; min-height: 3.25rem; margin-bottom: var(--space-5); padding: 0 var(--space-5); border-radius: var(--radius-full); background: var(--surface); border-color: var(--border); box-shadow: var(--shadow-sm); color: var(--muted); font-size: var(--text-md); text-align: left; }
 @media (hover: hover) { .view .launcher:hover { background: var(--surface); border-color: var(--muted); } }
@@ -255,23 +256,33 @@
 .titleHead h2 { margin: 0 0 .2rem; font-size: var(--text-xl); line-height: 1.2; letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
 .titleFacts { margin: 0; color: var(--muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
 .titleMain { display: grid; gap: 1.5rem; min-width: 0; }
+/* A title in the library: its status, then Favourite, under the poster and the
+   facts (across both on a phone). */
+.libraryStatus { grid-column: 1 / -1; display: grid; gap: .75rem; min-width: 0; }
+.libraryStatus .statusPicker { margin: 0; }
+.dialog .libraryStatus .favourite { justify-content: center; width: 100%; }
 @media (min-width: 48rem) {
   .titlePage { grid-template-columns: 13rem minmax(0, 1fr); gap: 1.75rem; }
-  .titleAside { position: sticky; top: 0; grid-template-columns: minmax(0, 1fr); }
+  .titleAside { grid-template-columns: minmax(0, 1fr); }
   .titleHead { padding-right: 0; }
-  /* The overview (or what stands for it) is at the top, beside the ×: clear of it. */
+  /* The synopsis (or what stands for it) is at the top, beside the ×: clear of it. */
   .titleMain > :first-child { padding-right: 3rem; }
+  /* The status, one over the other in the column. */
+  .libraryStatus { margin-top: .25rem; }
+  .libraryStatus .statusPicker { flex-direction: column; }
+  .dialog .libraryStatus .statusPicker button { flex: none; justify-content: flex-start; padding-inline: .85rem; }
 }
+/* The poster's column stays in view as the rest scrolls, where the panel is
+   tall enough to show all of it (with the status, it's some 40rem). */
+@media (min-width: 48rem) and (min-height: 52rem) { .titleAside { position: sticky; top: 0; } }
+.synopsis { display: grid; min-width: 0; }
 .overviewBlock { display: grid; justify-items: start; }
 .overview { margin: 0; line-height: 1.6; white-space: pre-line; }
 /* Four lines, until More. */
 .overviewCut { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .dialog .overviewBlock .textButton { padding-inline: 0; }
 .overviewSkeleton { margin: 0; }
-/* What adding it did: a line in the accent, with the tick the card shows too. */
-.inLibrary { display: inline-flex; align-items: center; gap: .375rem; width: fit-content; margin: 0; color: var(--accent); font-weight: var(--weight-semibold); animation: feedback-in var(--duration) var(--ease-out); }
-.inLibrary svg { width: var(--icon-md); height: var(--icon-md); }
-.addGroup h3, .seasons h3 { margin: 0 0 .5rem; font-size: var(--text-md); }
+.synopsis h3, .addGroup h3, .seasons h3 { margin: 0 0 .5rem; font-size: var(--text-md); }
 .addGroup > .muted { margin-bottom: .75rem; }
 /* Add to Library: Watching, Planned and Completed as three tiles, each with
    its icon (as on a poster's chooser), in the accent's tint until hovered. */
@@ -286,6 +297,11 @@
 .seasons li + li { border-top: 1px solid var(--border); }
 .seasonEpisodes { display: inline-flex; align-items: center; gap: .375rem; color: var(--muted); }
 .seasonEpisodes svg { flex: none; width: 1rem; height: 1rem; color: var(--accent); stroke-width: 2.5; }
+/* A season watched: faded into the green of a completed title (its badge on a
+   poster), its tick in that green. */
+.seasons li[data-state="watched"] { background: color-mix(in srgb, #15803d 16%, var(--surface)); }
+.seasons li[data-state="watched"] .seasonEpisodes { color: var(--text); }
+.seasons li[data-state="watched"] .seasonEpisodes svg { color: #15803d; }
 /* The season being watched: in the accent, as far as it's got. Its corners
    follow the list's, less its border. */
 .seasons li[data-state="current"] { background: var(--accent-soft); }
@@ -294,12 +310,8 @@
 .seasons li:last-child { border-radius: 0 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px); }
 .seasons li:only-child { border-radius: calc(var(--radius-lg) - 1px); }
 
-/* A title in the library: one panel with whether it's in the library and
-   Favourite, the status and the progress, a line between them. */
+/* A TV show being watched: its progress, in a panel. */
 .library { display: grid; gap: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--bg); }
-.library .statusPicker { margin: 0; }
-.library > .progress, .library > p.muted { padding-top: 1rem; border-top: 1px solid var(--border); }
-.libraryHeader { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
 .dialog .favourite { display: inline-flex; align-items: center; gap: .4rem; }
 .favourite svg { width: 1.125rem; height: 1.125rem; }
 .dialog .favourite[aria-pressed="true"] { border-color: var(--danger); color: var(--danger); font-weight: var(--weight-semibold); }
@@ -474,7 +486,7 @@ div.people { padding: .25rem 1rem .75rem; }
 @keyframes collage-in { from { opacity: 0; transform: translateY(18px) scale(.85); } }
 .view .allSetButton { min-width: 12rem; margin-top: .5rem; }
 @media (prefers-reduced-motion: reduce) {
-  .allSetMark, .allSetMark svg, .collage li, .inLibrary, .favourite[aria-pressed="true"] svg { animation: none; }
+  .allSetMark, .allSetMark svg, .collage li, .favourite[aria-pressed="true"] svg { animation: none; }
   .view .switcher button, .dialog .statusPicker button, .progressTrack span, .dialog .addOption { transition: none; }
   .dialog .addOption:active:not(:disabled) { transform: none; }
   .stepper li + li::before, .stepNumber { transition: none; }

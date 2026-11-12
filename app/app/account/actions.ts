@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth, signOut, unstable_update } from "@/auth";
 import {
+  emailError,
   formPassword,
   nameError,
+  normalizeEmail,
   normalizeName,
   normalizeUsername,
   passwordError,
@@ -18,6 +20,7 @@ import { passwordCheckLimit } from "@/lib/rate-limit";
 import { isTheme, type Theme } from "@/lib/themes";
 import {
   getPasswordHash,
+  updateEmail,
   updateName,
   updatePasswordHash,
   updateThemePreference,
@@ -60,6 +63,35 @@ export async function changeName(_previous: FormState, formData: FormData): Prom
   // Shown on this page (the dropdown's value) and in both apps.
   revalidatePath("/", "layout");
   return { success: "Name saved.", values };
+}
+
+// The email logs in and gets password resets, so changing it takes the
+// current password: a session left open isn't enough to take the account.
+export async function changeEmail(_previous: FormState, formData: FormData): Promise<FormState> {
+  const { id: userId } = await currentUser();
+  const email = normalizeEmail(formData.get("email"));
+  const currentPassword = formPassword(formData.get("currentPassword"));
+  const values = { email };
+
+  const fieldErrors = {
+    email: emailError(email) ?? undefined,
+    currentPassword: currentPassword ? undefined : "Enter your current password.",
+  };
+  if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors, values };
+
+  if (!passwordCheckLimit(userId)) {
+    return { error: "Too many attempts. Wait 15 minutes and try again.", values };
+  }
+  if (!(await verifyPassword(currentPassword, await getPasswordHash(userId)))) {
+    return { fieldErrors: { currentPassword: "That isn't your current password." }, values };
+  }
+  if (!(await updateEmail(userId, email))) {
+    return { fieldErrors: { email: "Another account uses that email." }, values };
+  }
+
+  // Shown on this page.
+  revalidatePath("/account");
+  return { success: "Email saved.", values };
 }
 
 export async function changePassword(_previous: FormState, formData: FormData): Promise<FormState> {

@@ -293,8 +293,9 @@ test("the Watchlist starts with a welcome, fills up from Discover, and the TV Sh
   await expect(main.getByRole("heading", { name: "Start by discovering shows!" })).toHaveCount(0);
   // Watching, Planned, then Completed.
   await expect(main.getByRole("heading", { level: 2 })).toHaveText(["Watching", "Planned", "Completed"]);
-  // TV shows first; the switch on Discover is its own.
+  // TV shows first; the switch on Discover is its own. In the middle, as there.
   await pressed(typeSwitch(page, "TV Shows"));
+  expect(Math.abs(await middle(page.getByRole("group", { name: "Show" })) - center)).toBeLessThanOrEqual(1);
   const watching = section(page, "Watching");
   await expect(grid(watching, "Watching TV shows").getByRole("listitem")).toHaveCount(1);
   const harborCard = card(watching, "Harbor Lights");
@@ -351,11 +352,28 @@ test("the detail panel changes status, progress and favourite, and removes the t
   expect(Math.abs(headingBox.x - posterBox.x)).toBeLessThanOrEqual(1);
   expect(overviewBox.x).toBeGreaterThan(posterBox.x + posterBox.width);
   expect(overviewBox.y).toBeLessThan(posterBox.y + posterBox.height / 2);
-  // No rating of your own.
+  // The overview under Synopsis, at the top.
+  const synopsisBox = (await detail.getByRole("heading", { level: 3, name: "Synopsis" }).boundingBox())!;
+  expect(synopsisBox.y).toBeLessThan(overviewBox.y);
+  expect(Math.abs(synopsisBox.x - overviewBox.x)).toBeLessThanOrEqual(1);
+  // No rating of your own, and no "In your library" on screen (it's said to screen readers).
   await expect(detail.getByRole("group", { name: "Your rating" })).toHaveCount(0);
+  await expect(detail.getByRole("status")).toHaveText("In your library");
+  await expect(detail.getByRole("status")).toHaveCSS("clip-path", "inset(50%)");
+  // The status, then Favourite, under the poster and the facts, one over the other.
   const status = detail.getByRole("group", { name: "Status" });
   await expect(status.getByRole("button")).toHaveText(["Planned", "Watching", "Completed"]);
   await pressed(status.getByRole("button", { name: "Watching" }));
+  const statusBox = (await status.boundingBox())!;
+  const [plannedBox, completedBox] = [(await status.getByRole("button", { name: "Planned" }).boundingBox())!,
+    (await status.getByRole("button", { name: "Completed" }).boundingBox())!];
+  const favouriteBox = (await detail.getByRole("button", { name: "Favourite" }).boundingBox())!;
+  expect(statusBox.y).toBeGreaterThan(headingBox.y + headingBox.height);
+  expect(Math.abs(statusBox.x - posterBox.x)).toBeLessThanOrEqual(1);
+  expect(statusBox.x + statusBox.width).toBeLessThanOrEqual(posterBox.x + posterBox.width + 1);
+  expect(completedBox.y).toBeGreaterThan(plannedBox.y + plannedBox.height - 1);
+  expect(favouriteBox.y).toBeGreaterThan(statusBox.y + statusBox.height - 1);
+  expect(favouriteBox.x + favouriteBox.width).toBeLessThanOrEqual(posterBox.x + posterBox.width + 1);
   const expectRow = (fields: Parameters<typeof row>[2]) =>
     expect.poll(() => libraryRows(user.username)).toEqual([row("tv", harbor.tmdbId, fields)]);
 
@@ -383,6 +401,13 @@ test("the detail panel changes status, progress and favourite, and removes the t
   await episode.selectOption("7");
   await expect(progress).toContainText("S2 E7");
   await expectRow({ current_season: 2, current_episode: 7 });
+  // Season 1 watched: a tick, on the faded green of a completed title; season 2 as far as it's got.
+  const seasons = detail.getByRole("region", { name: "Seasons" }).getByRole("listitem");
+  await expect(seasons).toHaveText([/^Season 1\s*10 episodes, watched$/, /^Season 2\s*7 of 8 episodes$/]);
+  const [red, green, blue] = (await seasons.first().evaluate((el) => getComputedStyle(el).backgroundColor)).match(/[\d.]+/g)!.map(Number);
+  expect(green).toBeGreaterThan(red);
+  expect(green).toBeGreaterThan(blue);
+  await expect(seasons.first().locator("svg")).toHaveCSS("color", "rgb(21, 128, 61)");
 
   // The last episode offers to mark the show completed.
   const offer = detail.getByRole("group", { name: /the last episode\. Mark Harbor Lights as completed\?/ });

@@ -128,20 +128,17 @@
 .form .switch:checked { background: var(--accent); }
 .switch:checked::after { transform: translateX(1.25rem); }
 .form .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* A date or time: its value in words, over the browser's field (invisible, the size of the chip). */
-.chip { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 0 .85rem; border-radius: calc(var(--radius-lg) - .375rem); background: var(--hover); color: var(--text); font-size: var(--text-md); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; white-space: nowrap; transition: background-color .15s; }
-.form .chip input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; opacity: 0; font-size: var(--text-md); cursor: pointer; }
-.form .chip input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: auto; height: auto; cursor: pointer; }
-.chip:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
-@media (hover: hover) { .chip:hover { background: var(--border); } }
-/* A time (EventDialog's TimeChip): "09 : 30", the hour and the minutes each a
-   select of its own, which shows its own focus and hover. */
-.timeChip { padding: 0 .25rem; }
-.form .timeChip select { width: auto; min-width: 44px; min-height: 44px; padding: 0 .35rem; border: 0; border-radius: calc(var(--radius-lg) - .625rem); background: none; color: inherit; font-weight: inherit; font-variant-numeric: tabular-nums; text-align-last: center; appearance: none; -webkit-appearance: none; cursor: pointer; }
-.form .timeChip select:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.timeChip:focus-within { outline: none; }
-@media (hover: hover) { .timeChip:hover { background: var(--hover); } .form .timeChip select:hover { background: var(--border); } }
-@media (prefers-reduced-motion: reduce) { .form .switch, .switch::after, .chip { transition: none; } }
+/* A date or a time, typed (EventDialog's MaskedField): its digits in the middle
+   of a tinted box, the blanks and separators in place. Its corners: the card's
+   less the .375rem around it. Wrong once left: a red ring. */
+.form .masked { width: auto; min-height: 44px; padding: 0 .75rem; border: 0; border-radius: calc(var(--radius-lg) - .375rem); background: var(--hover); color: var(--text); font-size: var(--text-md); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; text-align: center; transition: background-color .15s; }
+.form .date { width: calc(10ch + 1.5rem); }
+.form .time { width: calc(5ch + 1.5rem); }
+.form .masked::placeholder { color: var(--muted); opacity: 1; }
+.form .masked:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.form .masked[aria-invalid="true"] { box-shadow: inset 0 0 0 2px var(--danger); }
+@media (hover: hover) { .form .masked:hover { background: var(--border); } }
+@media (prefers-reduced-motion: reduce) { .form .switch, .switch::after, .form .masked { transition: none; } }
 .whenDetails { display: grid; gap: .5rem; }
 .details .whenDetails p { display: flex; align-items: center; gap: .6rem; }
 .whenDetails svg { flex: none; width: 1.25rem; height: 1.25rem; color: var(--muted); }
@@ -161,9 +158,15 @@
 .confirm p { margin: 0; }
 .confirm .actions { margin-top: .65rem; }
 .dialog button:disabled { opacity: .6; cursor: wait; }
+/* With a mouse, a month's events are slim, so a day has room for two of them
+   under its number (2px, its number 24px and 2px, two events 22px and 2px:
+   78px). Where the six weeks don't have that much room each, the month scrolls
+   as a whole, not each day. */
 @media (min-width: 48rem) {
-  .calendar .dayNumber { min-height: 28px; width: 28px; margin-bottom: .1rem; padding: .1rem; }
-  .calendar .month .event { min-height: 32px; padding: .1rem .35rem; }
+  .month { grid-template-rows: auto repeat(6, minmax(4.875rem, 1fr)); }
+  .month .cell { padding: 2px; }
+  .calendar .dayNumber { min-height: 24px; height: 24px; width: 24px; margin-bottom: 2px; padding: 0; }
+  .calendar .month .event { min-height: 0; height: 1.375rem; margin-bottom: 2px; padding: 0 .35rem; }
 }
 /* Phones: ‹ the period ›, then Today, the switcher and Add event, then the colors. */
 @media (max-width: 47.99rem) {

@@ -80,21 +80,29 @@ export async function openSpaceSettings(page: Page) {
 }
 
 /**
- * On /account: picks a theme in its Theme dropdown (opened if it isn't) and
- * saves it, waiting for the response of the server action that does, which
- * starts once the action has run (its headers say whether it revalidated).
+ * A setting's row on /account (Name, Username, Email or Theme): a button, named
+ * by the setting and what it is now ("Theme: Light mode"), that opens its popup.
+ */
+export function accountSetting(page: Page, name: string) {
+  return page.getByRole("main").getByRole("button", { name: new RegExp(`^${name}\\s*:`) });
+}
+
+/**
+ * On /account: picks a theme in Theme's popup (opened if it isn't) and saves
+ * it, waiting for the response of the server action that does, which starts
+ * once the action has run (its headers say whether it revalidated), and for
+ * the popup to close.
  */
 export async function saveTheme(page: Page, name: string) {
-  const form = page.getByRole("region", { name: "Theme", exact: true });
-  const details = form.locator("details");
-  if ((await details.getAttribute("open")) === null) await form.getByRole("heading", { name: "Theme", exact: true }).click();
-  await expect(details).toHaveAttribute("open", "");
-  await form.getByRole("radio", { name, exact: true }).check();
+  const dialog = page.getByRole("dialog", { name: "Theme", exact: true });
+  if (!(await dialog.isVisible())) await accountSetting(page, "Theme").click();
+  await dialog.getByRole("radio", { name, exact: true }).check();
   const saved = page.waitForResponse(
     (response) => response.request().method() === "POST" && "next-action" in response.request().headers(),
   );
-  await form.getByRole("button", { name: "Save theme" }).click();
+  await dialog.getByRole("button", { name: "Save theme" }).click();
   expect((await saved).headers()["x-action-revalidated"]).toBeTruthy();
+  await expect(dialog).toBeHidden();
 }
 
 /** The account menu button in the top bar, labelled with the username. */

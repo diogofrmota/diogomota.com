@@ -4,6 +4,7 @@ import { Dialog } from "@/components/common/Dialog";
 import { CloseIcon, GripIcon, TrashIcon } from "@/components/common/icons";
 import type { Space } from "@/lib/space-types";
 import type { Task, TaskFields, TaskList } from "@/lib/task-types";
+import { MemberPicker } from "./MemberPicker";
 import { SortableList, useSortableItem } from "./Sortable";
 import styles from "./Tasks.module.css";
 
@@ -20,9 +21,9 @@ export function TaskDialog({ task, list, space, onClose, onSave, onDelete }: {
   task: Task; list: TaskList; space: Space; onClose: () => void; onSave: (fields: TaskFields) => void; onDelete: () => void;
 }) {
   const [dueDate, setDueDate] = useState(task.dueDate ?? "");
+  // A member's id, or "" for nobody in particular (All).
   const [assignee, setAssignee] = useState(task.assigneeId ?? "");
   const [error, setError] = useState("");
-  const color = space.members.find((m) => m.id === assignee)?.color;
   function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -40,13 +41,8 @@ export function TaskDialog({ task, list, space, onClose, onSave, onDelete }: {
       <label>Title<input name="title" required maxLength={200} defaultValue={task.title} autoComplete="off" /></label>
       {/* Who it's for on the left, when it's due on the right. */}
       <div className={styles.fields}>
-        <label>Assignee
-          <span className={styles.inputRow}><span className={styles.swatch} style={{ background: color ?? "transparent" }} aria-hidden="true" />
-            <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-              <option value="">Unassigned</option>
-              {space.members.map((m) => <option key={m.id} value={m.id}>{m.username}</option>)}
-            </select></span>
-        </label>
+        <MemberPicker legend="Assignee" name="assignee" members={space.members} value={assignee} allValue="" allName="Anyone"
+          onChange={setAssignee} />
         <label>Due date (optional)
           <span className={styles.inputRow}><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             {dueDate && <button type="button" onClick={() => setDueDate("")}>Clear</button>}</span>

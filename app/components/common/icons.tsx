@@ -220,6 +220,16 @@ export function ExternalIcon() {
   );
 }
 
+/** A pencil, for something that can be changed (the profile picture in Account). */
+export function PencilIcon() {
+  return (
+    <Icon>
+      <path d="M16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1 1-4Z" />
+      <path d="m14.5 6.5 3 3" />
+    </Icon>
+  );
+}
+
 /** A photo: a frame with a hill and the sun, for choosing a profile picture. */
 export function PhotoIcon() {
   return (

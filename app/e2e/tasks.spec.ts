@@ -233,11 +233,16 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await row(page, "Buy milk").getByRole("button", { name: /^Buy milk/ }).click();
   const dialog = page.getByRole("dialog", { name: "Edit task" });
   // Who it's for on the left, when it's due on the right; Save and Delete (its × closes it).
-  const assigneeBox = (await dialog.getByLabel("Assignee").boundingBox())!;
+  const assigneePicker = dialog.getByRole("group", { name: "Assignee" });
+  const assigneeBox = (await assigneePicker.boundingBox())!;
   const dueBox = (await dialog.getByLabel("Due date (optional)").boundingBox())!;
   expect(assigneeBox.x).toBeLessThan(dueBox.x);
   await expect(dialog.getByRole("button", { name: /^(Save|Cancel|Delete)/ })).toHaveText(["Save", "Delete"]);
-  await dialog.getByLabel("Assignee").selectOption({ label: friend.username });
+  // Each member's picture (or initial), by their name, then All, for nobody in particular: no select.
+  await expect(dialog.getByRole("combobox")).toHaveCount(0);
+  await expect(assigneePicker.getByRole("radio")).toHaveCount(members.length + 1);
+  await expect(assigneePicker.getByRole("radio", { name: "All", exact: true })).toBeChecked();
+  await assigneePicker.getByRole("radio", { name: friend.name, exact: true }).check();
   await dialog.getByLabel("Due date (optional)").fill(tomorrow);
   await dialog.getByLabel("Notes (optional)").fill("Two litres, semi-skimmed");
   changed = saved(page, /\/tasks\/[^/]+$/, "PATCH");
@@ -253,8 +258,8 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   const milk = (await readLists(page))[0].tasks.find((t) => t.title === "Buy milk")!;
   expect(milk).toMatchObject({ assigneeId: member.id, dueDate: tomorrow, notes: "Two litres, semi-skimmed" });
   await row(page, "Buy milk").getByRole("button", { name: /^Buy milk/ }).click();
-  await expect(dialog.getByLabel("Assignee")).toHaveValue(member.id);
-  await dialog.getByLabel("Assignee").selectOption("");
+  await expect(assigneePicker.getByRole("radio", { name: friend.name, exact: true })).toBeChecked();
+  await assigneePicker.getByRole("radio", { name: "All", exact: true }).check();
   await dialog.getByRole("button", { name: "Clear" }).click();
   changed = saved(page, /\/tasks\/[^/]+$/, "PATCH");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();

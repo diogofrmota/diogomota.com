@@ -70,22 +70,21 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
       </div>}
       {status("invite")}
     </section>}
-    <section className={ui.card} aria-labelledby="leave-heading">
-      <h2 id="leave-heading" className={ui.cardHeading}>Leave space</h2>
-      <p className={ui.muted}>{space.members.length === 1 ? "You are the last member. Leaving deletes this space and its data." : owner ? "Ownership will pass to the member who joined earliest." : "You can create or join another space after leaving."}</p>
-      {confirmLeave ? <div className={ui.confirm}><p>Leave this space?</p>
-        <div className={ui.actions}>
-          <button className={`${ui.button} ${ui.danger}`} disabled={busy}
-            onClick={() => run("leave", async () => {
-              await spaceRequest(`/${space.id}/leave`, "POST");
-              onChange(null);
-              void spaceChanged();
-            })}>Confirm leave</button>
-          <button className={ui.button} disabled={busy} onClick={() => setConfirmLeave(false)}>Cancel</button>
-        </div>
-      </div> : <button className={`${ui.button} ${ui.remove}`} disabled={busy} onClick={() => setConfirmLeave(true)}>Leave space</button>}
-      {status("leave")}
-    </section>
+    {/* Leaving: a button after the cards, which asks first (the last member's
+        leaving also deletes the space). */}
+    {confirmLeave ? <div className={ui.confirm}>
+      <p>{space.members.length === 1 ? "You're the last member: leaving deletes this group, its calendar and its tasks. Leave it?" : "Leave this group?"}</p>
+      <div className={ui.actions}>
+        <button className={`${ui.button} ${ui.danger}`} disabled={busy}
+          onClick={() => run("leave", async () => {
+            await spaceRequest(`/${space.id}/leave`, "POST");
+            onChange(null);
+            void spaceChanged();
+          })}>Confirm leave</button>
+        <button className={ui.button} disabled={busy} onClick={() => setConfirmLeave(false)}>Cancel</button>
+      </div>
+    </div> : <button className={`${ui.button} ${ui.remove}`} disabled={busy} onClick={() => setConfirmLeave(true)}>Leave this group</button>}
+    {status("leave")}
   </>;
 }
 

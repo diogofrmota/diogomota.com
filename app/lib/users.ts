@@ -126,6 +126,17 @@ export async function updateUsername(id: string, username: string): Promise<bool
   }
 }
 
+// Returns false when another account has that email (citext: in any case).
+export async function updateEmail(id: string, email: string): Promise<boolean> {
+  try {
+    await query(`UPDATE users SET email = $2 WHERE id = $1`, [id, email]);
+    return true;
+  } catch (error) {
+    if (error instanceof DatabaseError && error.code === "23505") return false; // unique_violation
+    throw error;
+  }
+}
+
 // Also ends the user's sessions (see findSessionUser).
 export async function updatePasswordHash(id: string, passwordHash: string): Promise<void> {
   await query(`UPDATE users SET password_hash = $2, password_changed_at = now() WHERE id = $1`, [

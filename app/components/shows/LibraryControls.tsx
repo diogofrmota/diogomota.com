@@ -1,6 +1,6 @@
 "use client";
 import { useId, useRef, useState } from "react";
-import { CheckIcon, HeartIcon } from "@/components/common/icons";
+import { HeartIcon } from "@/components/common/icons";
 import {
   formatEpisode, isLastEpisode, libraryStatuses, nextEpisode, progressOf, statusNames,
   type Episode, type LibraryItem, type LibraryStatus, type TitleDetail,
@@ -68,26 +68,29 @@ function Progress({ item, seasons }: { item: LibraryItem; seasons: readonly numb
 }
 
 /**
- * The detail panel's controls for a title in the library, together in one
- * panel: that it's in the library and Favourite, the status, and the progress
- * of a TV show being watched. Remove from library is apart, at the end of the
- * panel (RemoveFromLibrary).
+ * The detail panel's controls for a title in the library, under its poster and
+ * facts: the status (Planned | Watching | Completed, one over the other beside
+ * the overview, in a row on a phone), then Favourite. That adding it worked is
+ * said to screen readers; on screen, the status shows it.
  */
-export function LibraryControls({ item, detail }: { item: LibraryItem; detail: TitleDetail }) {
+export function StatusControls({ item }: { item: LibraryItem }) {
   const { change } = useLibrary();
   const entry = item.library;
-  return <section className={styles.library} aria-label="Your library">
-    <div className={styles.libraryHeader}>
-      <p role="status" className={styles.inLibrary}><CheckIcon />In your library</p>
-      <button type="button" className={styles.favourite} aria-pressed={entry.isFavourite}
-        onClick={() => change(item, { isFavourite: !entry.isFavourite })}>
-        <HeartIcon filled={entry.isFavourite} />Favourite
-      </button>
-    </div>
+  return <section className={styles.libraryStatus} aria-label="Your library">
+    <p role="status" className={styles.srOnly}>In your library</p>
     <ChangeError className={styles.error} />
     <StatusPicker icons status={entry.status} onChange={(status) => change(item, { status })} />
-    {detail.type === "tv" && entry.status === "watching" && <Progress item={item} seasons={detail.episodesPerSeason ?? []} />}
+    <button type="button" className={styles.favourite} aria-pressed={entry.isFavourite}
+      onClick={() => change(item, { isFavourite: !entry.isFavourite })}>
+      <HeartIcon filled={entry.isFavourite} />Favourite
+    </button>
   </section>;
+}
+
+/** A TV show being watched: its progress, in a panel of its own beside the status. */
+export function LibraryProgress({ item, detail }: { item: LibraryItem; detail: TitleDetail }) {
+  if (detail.type !== "tv" || item.library.status !== "watching") return null;
+  return <div className={styles.library}><Progress item={item} seasons={detail.episodesPerSeason ?? []} /></div>;
 }
 
 /** Remove from library, which asks first; `onRemoved` once it's gone. */

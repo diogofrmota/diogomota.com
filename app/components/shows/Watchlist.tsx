@@ -78,7 +78,10 @@ export function Watchlist() {
       : items && guide ? <Onboarding onDone={() => setGuide(false)} />
       : items?.length === 0 ? <Welcome onSetUp={() => setGuide(true)} />
       : <>
-        <TypeSwitch type={type} onChange={setType} />
+        {/* Centered, as in Discover. */}
+        <div className={styles.discoverTop}>
+          <TypeSwitch type={type} onChange={setType} />
+        </div>
         {/* Keyed by type, so each section starts collapsed. */}
         {sectionOrder.map((status) => <Section key={`${type}/${status}`} status={status} type={type}
           items={ofType && ofType.filter((item) => item.library.status === status)} />)}

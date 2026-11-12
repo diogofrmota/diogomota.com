@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useId, useState, type DragEvent } from "react";
-import { avatarChanged, changeName, changePassword, changeUsername, saveTheme } from "@/app/account/actions";
+import { avatarChanged, changeEmail, changeName, changePassword, changeUsername, logOut, saveTheme } from "@/app/account/actions";
 import { AvatarCrop } from "@/components/account/AvatarCrop";
+import { LogoutButton } from "@/components/account/LogoutButton";
 import { Avatar } from "@/components/common/Avatar";
-import { PhotoIcon } from "@/components/common/icons";
+import { Dialog } from "@/components/common/Dialog";
+import { ChevronRightIcon, CloseIcon, PencilIcon, PhotoIcon } from "@/components/common/icons";
 import { InlineSpinner, PendingOverlay } from "@/components/common/Spinner";
 import { ThemeOptions } from "@/components/common/ThemePicker";
 import ui from "@/components/common/ui.module.css";
@@ -12,6 +15,7 @@ import { Field, FormMessage, SubmitButton } from "@/components/site/Form";
 import formStyles from "@/components/site/Form.module.css";
 import {
   AVATAR_MAX_BYTES,
+  EMAIL_MAX,
   NAME_MAX,
   PASSWORD_MIN,
   normalizeUsername,
@@ -23,11 +27,23 @@ import {
 } from "@/lib/account-rules";
 import { ApiError, apiRequest } from "@/lib/api-request";
 import type { FormState } from "@/lib/form-state";
-import { isTheme, type Theme } from "@/lib/themes";
+import { isTheme, themes, type Theme } from "@/lib/themes";
 import styles from "./AccountSettings.module.css";
 
-export function UsernameForm({ username }: { username: string }) {
-  const [state, action, pending] = useActionState(changeUsername, {});
+/** Called with what a form saved ("Name saved."), once it has: its popup then closes. */
+type OnSaved = (message: string) => void;
+
+/** useActionState for a form in a popup: the server action, then `onSaved` once it says it saved. */
+function useSavingAction(action: (previous: FormState, formData: FormData) => Promise<FormState>, onSaved: OnSaved) {
+  return useActionState(async (previous: FormState, formData: FormData) => {
+    const result = await action(previous, formData);
+    if (result.success) onSaved(result.success);
+    return result;
+  }, {});
+}
+
+function UsernameForm({ username, onSaved }: { username: string; onSaved: OnSaved }) {
+  const [state, action, pending] = useSavingAction(changeUsername, onSaved);
   const [draft, setDraft] = useState<{ value: string; previous: FormState } | null>(null);
   const [check, setCheck] = useState<{ username: string; available?: boolean; error?: string } | null>(null);
   const statusId = useId();
@@ -78,6 +94,7 @@ export function UsernameForm({ username }: { username: string }) {
           autoCapitalize="none"
           spellCheck={false}
           required
+          data-autofocus
           minLength={USERNAME_MIN}
           maxLength={USERNAME_MAX}
           value={value}
@@ -96,18 +113,20 @@ export function UsernameForm({ username }: { username: string }) {
 }
 
 /** Their name, as they want it ("Diogo" or "Diogo Mota"), shown with the username in both apps. */
-export function NameForm({ name }: { name: string | null }) {
-  const [state, action, pending] = useActionState(changeName, {});
+function NameForm({ name, onSaved }: { name: string | null; onSaved: OnSaved }) {
+  const [state, action, pending] = useSavingAction(changeName, onSaved);
   const errors = state.fieldErrors ?? {};
 
   return (
     <form action={action} noValidate className={formStyles.form}>
       <Field
         label="Name"
+        hideLabel
         name="name"
         error={errors.name}
         autoComplete="name"
         required
+        data-autofocus
         maxLength={NAME_MAX}
         defaultValue={state.values?.name ?? name ?? ""}
       />
@@ -118,7 +137,41 @@ export function NameForm({ name }: { name: string | null }) {
   );
 }
 
-export function PasswordForm() {
+/** The email they log in with and get password resets at. Changing it takes the current password. */
+function EmailForm({ email, onSaved }: { email: string; onSaved: OnSaved }) {
+  const [state, action, pending] = useSavingAction(changeEmail, onSaved);
+  const errors = state.fieldErrors ?? {};
+
+  return (
+    <form action={action} noValidate className={formStyles.form}>
+      <Field
+        label="Email"
+        name="email"
+        type="email"
+        error={errors.email}
+        autoComplete="email"
+        required
+        maxLength={EMAIL_MAX}
+        data-autofocus
+        defaultValue={state.values?.email ?? email}
+      />
+      <Field
+        label="Current password"
+        name="currentPassword"
+        type="password"
+        hint="To check it's you: you log in with your email, and password resets go to it."
+        error={errors.currentPassword}
+        autoComplete="current-password"
+        required
+      />
+      <FormMessage error={state.error} success={state.success} />
+      <SubmitButton label="Save email" pending={pending} />
+    </form>
+  );
+}
+
+// On success it logs out everywhere, this device too, so it has no onSaved.
+function PasswordForm() {
   const [state, action, pending] = useActionState(changePassword, {});
   const errors = state.fieldErrors ?? {};
 
@@ -131,6 +184,7 @@ export function PasswordForm() {
         error={errors.currentPassword}
         autoComplete="current-password"
         required
+        data-autofocus
       />
       <Field
         label="New password"
@@ -153,6 +207,9 @@ export function PasswordForm() {
       <p className={formStyles.hint}>Changing password logs you out on every device.</p>
       <FormMessage error={state.error} success={state.success} />
       <SubmitButton label="Change password" pending={pending} />
+      <p className={`${formStyles.hint} ${styles.forgot}`}>
+        Don&apos;t know your current password? <Link href="/forgot-password">Reset it by email</Link>
+      </p>
     </form>
   );
 }
@@ -165,10 +222,10 @@ const avatarMaxMb = AVATAR_MAX_BYTES / 1024 / 1024;
  * picture (AvatarCrop), to move and zoom it until the circle shows the part
  * wanted; Save picture sends that square, which the server makes small
  * (lib/avatars.ts). While it goes, it shows in the circle, under a spinner;
- * then the saved one, and the account menu has it too (avatarChanged). Remove
- * picture goes back to the initial.
+ * then, once the page and the account menu have the saved one (avatarChanged),
+ * `onSaved`. Remove picture goes back to the initial.
  */
-export function AvatarForm({ username, avatarUrl }: { username: string; avatarUrl: string | null }) {
+function AvatarForm({ username, avatarUrl, onSaved }: { username: string; avatarUrl: string | null; onSaved: OnSaved }) {
   const hintId = useId();
   // The photo being sent (an object URL), and the URL saved since the page loaded.
   const [preview, setPreview] = useState<string | null>(null);
@@ -199,8 +256,9 @@ export function AvatarForm({ username, avatarUrl }: { username: string; avatarUr
         fallback: file ? "Couldn't save the picture. Try again." : "Couldn't remove the picture. Try again.",
       });
       setSaved(data.avatarUrl);
-      setResult({ success: file ? "Profile picture saved." : "Profile picture removed." });
-      void avatarChanged();
+      // So the page has the new one when the popup closes. It is saved either way.
+      await avatarChanged().catch(() => {});
+      onSaved(file ? "Profile picture saved." : "Profile picture removed.");
     } catch (error) {
       setResult({ error: error instanceof Error ? error.message : "Couldn't save the picture. Try again." });
     } finally {
@@ -290,9 +348,9 @@ export function AvatarForm({ username, avatarUrl }: { username: string; avatarUr
   );
 }
 
-// `labelledBy` is the id of the section heading, which names the radio group.
-export function ThemeForm({ theme, labelledBy }: { theme: Theme; labelledBy: string }) {
-  const [state, action, pending] = useActionState(saveTheme, {});
+// `labelledBy` is the id of the popup's heading, which names the radio group.
+function ThemeForm({ theme, labelledBy, onSaved }: { theme: Theme; labelledBy: string; onSaved: OnSaved }) {
+  const [state, action, pending] = useSavingAction(saveTheme, onSaved);
   const hintId = useId();
   const saved = state.values?.theme;
   const selected = isTheme(saved) ? saved : theme;
@@ -308,5 +366,87 @@ export function ThemeForm({ theme, labelledBy }: { theme: Theme; labelledBy: str
       <FormMessage error={state.error} success={state.success} />
       <SubmitButton label="Save theme" pending={pending} />
     </form>
+  );
+}
+
+type Setting = "avatar" | "name" | "username" | "email" | "theme" | "password";
+
+const titles: Record<Setting, string> = {
+  avatar: "Profile picture", name: "Name", username: "Username", email: "Email", theme: "Theme", password: "Update password",
+};
+
+/**
+ * Account's settings: the profile picture, in the middle; then a row each for
+ * the name, username, email and theme, with what they are now; then Update
+ * password and Log out. Each opens a popup with its form (Escape, a click
+ * outside or its × close it), which closes once saved, saying so under the
+ * rows; the page then shows the new value.
+ */
+export function AccountSettings({ user }: {
+  user: { username: string; email: string; name: string | null; avatarUrl: string | null; themePreference: Theme };
+}) {
+  const [open, setOpen] = useState<Setting | null>(null);
+  const [notice, setNotice] = useState("");
+  const headingId = useId();
+  const show = (setting: Setting) => { setNotice(""); setOpen(setting); };
+  const close = () => setOpen(null);
+  const saved = (message: string) => { setOpen(null); setNotice(message); };
+  const rows: { id: Setting; value: string | null }[] = [
+    { id: "name", value: user.name },
+    { id: "username", value: user.username },
+    { id: "email", value: user.email },
+    { id: "theme", value: themes.find((theme) => theme.id === user.themePreference)?.name ?? null },
+  ];
+
+  return (
+    <>
+      <div className={styles.profile}>
+        <button type="button" className={styles.avatarButton} aria-haspopup="dialog" onClick={() => show("avatar")}>
+          <Avatar username={user.username} url={user.avatarUrl} className={styles.profileAvatar} />
+          <span className={styles.avatarEdit} aria-hidden="true"><PencilIcon /></span>
+          <span className={ui.srOnly}>Profile picture</span>
+        </button>
+      </div>
+
+      <ul className={styles.list}>
+        {rows.map(({ id, value }) => (
+          <li key={id}>
+            <button type="button" className={styles.row} aria-haspopup="dialog" onClick={() => show(id)}>
+              <span className={styles.rowTitle}>{titles[id]}</span>
+              <span className={ui.srOnly}>: </span>
+              <span className={value ? styles.rowValue : `${styles.rowValue} ${styles.rowEmpty}`}>{value ?? "Not set"}</span>
+              <span className={styles.rowChevron} aria-hidden="true"><ChevronRightIcon /></span>
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {/* What the last popup saved; always there, so it is read out when it changes. */}
+      <p role="status" className={notice ? `${ui.success} ${styles.notice}` : ui.srOnly}>{notice}</p>
+
+      <div className={styles.buttons}>
+        <button type="button" className={ui.button} aria-haspopup="dialog" onClick={() => show("password")}>Update password</button>
+        <form action={logOut}>
+          <LogoutButton className={ui.button} />
+        </form>
+      </div>
+
+      {open && (
+        <Dialog key={open} className={`${styles.dialog} ${open === "theme" ? styles.wideDialog : ""}`} aria-labelledby={headingId} onClose={close}>
+          <div className={styles.dialogBody}>
+            <div className={styles.dialogHeader}>
+              <h2 id={headingId}>{titles[open]}</h2>
+              <button type="button" className={styles.close} aria-label="Close" onClick={close}><CloseIcon /></button>
+            </div>
+            {open === "avatar" ? <AvatarForm username={user.username} avatarUrl={user.avatarUrl} onSaved={saved} />
+              : open === "name" ? <NameForm name={user.name} onSaved={saved} />
+              : open === "username" ? <UsernameForm username={user.username} onSaved={saved} />
+              : open === "email" ? <EmailForm email={user.email} onSaved={saved} />
+              : open === "theme" ? <ThemeForm theme={user.themePreference} labelledBy={headingId} onSaved={saved} />
+              : <PasswordForm />}
+          </div>
+        </Dialog>
+      )}
+    </>
   );
 }

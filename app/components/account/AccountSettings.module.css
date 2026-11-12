@@ -1,3 +1,186 @@
+/* Account (AccountSettings): the profile picture in the middle, the settings
+   in one card under it, then Update password and Log out. */
+
+/* The picture is a button that opens its popup: a pencil at its bottom right
+   says it can be changed. */
+.profile {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-6);
+}
+
+.avatarButton {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.avatarButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.avatarButton:active {
+  transform: scale(0.97);
+}
+
+/* The username's initial (as in the account menu), or the picture filling it. */
+.profileAvatar {
+  display: grid;
+  place-items: center;
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  text-box: trim-both cap alphabetic;
+}
+
+.avatarEdit {
+  position: absolute;
+  right: 0.125rem;
+  bottom: 0.125rem;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 3px solid var(--bg);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.avatarEdit svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+@media (hover: hover) {
+  .avatarButton:hover .profileAvatar {
+    filter: brightness(0.92);
+  }
+}
+
+/* The settings: one card, a row each, a line between. A row is a button: the
+   setting, what it is now (cut off when long), and a chevron. */
+.list {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  list-style: none;
+}
+
+.list li + li {
+  border-top: 1px solid var(--border);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0 var(--space-4) 0 var(--space-5);
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) ease;
+}
+
+/* Inside the card, so the ring isn't clipped by or drawn over the next row. */
+.row:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (hover: hover) {
+  .row:hover {
+    background: var(--hover);
+  }
+}
+
+.rowTitle {
+  flex: none;
+  font-weight: var(--weight-semibold);
+}
+
+.rowValue {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowEmpty {
+  font-style: italic;
+}
+
+.rowChevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--muted);
+}
+
+.rowChevron svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+.notice {
+  margin-top: var(--space-4);
+}
+
+/* Update password and Log out, side by side under the card. */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.buttons > form {
+  display: contents;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatarButton,
+  .row {
+    transition: none;
+  }
+
+  .avatarButton:active {
+    transform: none;
+  }
+}
+
+/* Under the password form: the way to reset it instead. */
+.forgot {
+  margin: 0;
+}
+
+.forgot a {
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+  text-underline-offset: 0.2em;
+}
+
 .fieldset {
   display: grid;
   gap: 0.25rem;
@@ -138,12 +321,12 @@
   }
 }
 
-/* Adjust your picture (AvatarCrop): the photo in a square, the circle that is
-   kept marked on it (the rest dimmed), a zoom slider under it, then Save. A
-   modal at every width; its content fills it, so a click on the dialog itself
-   is on the backdrop (components/common/Dialog). */
-.cropDialog {
-  width: min(26rem, calc(100% - 2rem));
+/* The popups: a setting's (AccountSettings), and Adjust your picture
+   (AvatarCrop) over the profile picture's. A modal at every width, its name
+   and × at the top; its content fills it, so a click on the dialog itself is on
+   the backdrop (components/common/Dialog). The themes get more room. */
+.dialog {
+  width: min(28rem, calc(100% - 2rem));
   max-height: calc(100dvh - 2rem);
   margin: auto;
   padding: 0;
@@ -156,42 +339,46 @@
   box-shadow: var(--shadow-lg);
 }
 
-.cropDialog[open] {
-  animation: crop-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+.dialog[open] {
+  animation: dialog-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
 
-.cropDialog::backdrop {
+.dialog::backdrop {
   background: rgb(0 0 0 / 0.55);
 }
 
-@keyframes crop-in {
+.wideDialog {
+  width: min(36rem, calc(100% - 2rem));
+}
+
+@keyframes dialog-in {
   from {
     opacity: 0;
     transform: translateY(8px) scale(0.97);
   }
 }
 
-.cropBody {
+.dialogBody {
   display: grid;
   gap: var(--space-4);
   padding: var(--space-5);
 }
 
-.cropHeader {
+.dialogHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
 }
 
-.cropHeader h2 {
+.dialogHeader h2 {
   margin: 0;
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
 }
 
 /* The ×: round, a drawn cross (as in the apps' dialogs). */
-.cropClose,
+.close,
 .zoomButton {
   display: inline-grid;
   flex: none;
@@ -206,7 +393,7 @@
   cursor: pointer;
 }
 
-.cropClose svg,
+.close svg,
 .zoomButton svg {
   width: var(--icon-md);
   height: var(--icon-md);
@@ -218,7 +405,7 @@
 }
 
 @media (hover: hover) {
-  .cropClose:hover,
+  .close:hover,
   .zoomButton:hover:not(:disabled) {
     background: var(--border);
     color: var(--text);
@@ -290,7 +477,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cropDialog[open] {
+  .dialog[open] {
     animation: none;
   }
 }

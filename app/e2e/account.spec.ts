@@ -1,17 +1,18 @@
-import { type Page } from "@playwright/test";
+import { type Locator, type Page } from "@playwright/test";
 import sharp from "sharp";
-import { accountButton, expect, formAlert, logIn, logOut, newUser, signUp, test } from "./fixtures";
+import { accountButton, accountSetting, expect, formAlert, logIn, logOut, newUser, signUp, test } from "./fixtures";
 
-const section = (page: Page, name: string) => page.getByRole("region", { name, exact: true });
-
-/** The settings are dropdowns, closed on load: opens one and returns it. */
-async function openSection(page: Page, name: string) {
-  const region = section(page, name);
-  const heading = region.getByRole("heading", { name, exact: true });
-  await heading.click();
-  await expect(region.locator("details")).toHaveAttribute("open", "");
-  return region;
+/** Clicks what opens a popup on /account (a setting's row, the profile picture, Update password) and returns the popup. */
+async function openPopup(page: Page, opener: Locator, name: string) {
+  await opener.click();
+  const dialog = page.getByRole("dialog", { name, exact: true });
+  await expect(dialog).toBeVisible();
+  return dialog;
 }
+const openSetting = (page: Page, name: string) => openPopup(page, accountSetting(page, name), name);
+const profilePicture = (page: Page) => page.getByRole("main").getByRole("button", { name: "Profile picture", exact: true });
+/** What the last popup saved, said under the settings once it closes. */
+const notice = (page: Page, text: string) => page.getByRole("main").getByRole("status").filter({ hasText: text });
 
 async function expectNoHorizontalScroll(page: Page) {
   const { scrollWidth, clientWidth } = await page.evaluate(() => ({
@@ -49,10 +50,55 @@ test("the account menu opens settings, and closes with Escape or a click outside
   await expect(page).toHaveURL("/account");
   await expect(page.getByRole("heading", { level: 1, name: "account" })).toBeVisible();
 
-  // Who is logged in, under the title.
+  // Who is logged in: their settings, each with what it is now.
   await expect(page.getByRole("main")).toContainText(user.email);
   await page.getByRole("link", { name: "Back to apps" }).click();
   await expect(page).toHaveURL("/apps");
+});
+
+test("Account: the profile picture in the middle, a row per setting with its value, then Update password and Log out", async ({ page }) => {
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/apps");
+  await page.goto("/account");
+  const main = page.getByRole("main");
+
+  // The picture (the initial, without one), in the middle of the column, over the rows.
+  const picture = profilePicture(page);
+  await expect(picture).toContainText(user.username.charAt(0).toUpperCase());
+  const list = main.getByRole("list");
+  const [pictureBox, listBox] = [(await picture.boundingBox())!, (await list.boundingBox())!];
+  expect(Math.abs(pictureBox.x + pictureBox.width / 2 - (listBox.x + listBox.width / 2))).toBeLessThanOrEqual(1);
+  expect(pictureBox.y + pictureBox.height).toBeLessThan(listBox.y);
+
+  await expect(list.getByRole("button")).toHaveText([
+    new RegExp(`^Name.*${user.name}`), new RegExp(`^Username.*${user.username}`),
+    new RegExp(`^Email.*${user.email}`), /^Theme.*Light mode/,
+  ]);
+  // Nothing else to open on the page: no dropdowns.
+  await expect(main.locator("details")).toHaveCount(0);
+  const update = main.getByRole("button", { name: "Update password", exact: true });
+  const logOutButton = main.getByRole("button", { name: "Log out", exact: true });
+  expect((await update.boundingBox())!.y).toBeGreaterThan(listBox.y + listBox.height);
+  expect((await logOutButton.boundingBox())!.x).toBeGreaterThan((await update.boundingBox())!.x);
+
+  // Each opens a popup, which Escape, a click outside or its × closes, back on the button that opened it.
+  for (const name of ["Name", "Username", "Email", "Theme"]) {
+    const dialog = await openSetting(page, name);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(accountSetting(page, name)).toBeFocused();
+  }
+  const dialog = await openPopup(page, picture, "Profile picture");
+  await page.mouse.click(5, 5);
+  await expect(dialog).toBeHidden();
+  const password = await openPopup(page, update, "Update password");
+  await password.getByRole("button", { name: "Close" }).click();
+  await expect(password).toBeHidden();
+
+  await logOutButton.click();
+  await expect(page).toHaveURL("/apps");
+  await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" })).toBeVisible();
 });
 
 test("change username", async ({ page }) => {
@@ -66,10 +112,11 @@ test("change username", async ({ page }) => {
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
 
-  const form = await openSection(page, "Username");
+  const form = await openSetting(page, "Username");
   const field = form.getByLabel("Username");
   const save = form.getByRole("button", { name: "Save username" });
   await expect(field).toHaveValue(user.username);
+  await expect(field).toBeFocused();
 
   await field.fill("not valid!");
   await expect(form.getByText("Use 3-20 characters: a-z, 0-9 and _.")).toBeVisible();
@@ -90,7 +137,10 @@ test("change username", async ({ page }) => {
   await expect(form.getByRole("status")).toHaveText("That username is available.");
   await expect(accountButton(page, user.username)).toBeVisible();
   await save.click();
-  await expect(form.getByRole("status")).toHaveText("Username changed.");
+  // Saved, the popup closes, and the row has the new one.
+  await expect(form).toBeHidden();
+  await expect(notice(page, "Username changed.")).toBeVisible();
+  await expect(accountSetting(page, "Username")).toContainText(renamed);
   // The session has the new name too.
   await expect(accountButton(page, renamed)).toBeVisible();
   await page.goto("/shows");
@@ -109,7 +159,7 @@ test("username checks ignore old responses and recover after a network failure",
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
-  const form = await openSection(page, "Username");
+  const form = await openSetting(page, "Username");
   const field = form.getByLabel("Username");
   const status = form.getByRole("status");
   const endpoint = "**/api/account/username?*";
@@ -170,13 +220,15 @@ test("Name sets the name, one word or more, which Shows' Profile shows over the 
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
-  // The one given at sign-up, by the dropdown's name.
-  await expect(section(page, "Name").locator("summary")).toContainText(user.name);
-  const name = await openSection(page, "Name");
+  // The one given at sign-up, on its row.
+  const nameRow = accountSetting(page, "Name");
+  await expect(nameRow).toContainText(user.name);
+  let name = await openSetting(page, "Name");
   // One field, for the whole name.
   await expect(name.getByRole("textbox")).toHaveCount(1);
   const field = name.getByLabel("Name", { exact: true });
   await expect(field).toHaveValue(user.name);
+  await expect(field).toBeFocused();
 
   // A name is needed, one word is enough. Spaces around and between words are tidied.
   await field.fill("   ");
@@ -184,11 +236,16 @@ test("Name sets the name, one word or more, which Shows' Profile shows over the 
   await expect(name.getByText("Enter your name.")).toBeVisible();
   await field.fill("  Ana  ");
   await name.getByRole("button", { name: "Save name" }).click();
-  await expect(name.getByRole("status")).toHaveText("Name saved.");
-  await expect(name.locator("summary")).toContainText("Ana");
+  await expect(name).toBeHidden();
+  await expect(notice(page, "Name saved.")).toBeVisible();
+  await expect(nameRow).toContainText("Ana");
+  name = await openSetting(page, "Name");
+  // The message goes when another popup opens.
+  await expect(notice(page, "Name saved.")).toHaveCount(0);
   await field.fill("  Ana   Sofia  Reis ");
   await name.getByRole("button", { name: "Save name" }).click();
-  await expect(name.locator("summary")).toContainText("Ana Sofia Reis");
+  await expect(nameRow).toContainText("Ana Sofia Reis");
+  await openSetting(page, "Name");
   await expect(field).toHaveValue("Ana Sofia Reis");
 
   await page.goto("/shows");
@@ -196,6 +253,58 @@ test("Name sets the name, one word or more, which Shows' Profile shows over the 
   const main = page.getByRole("main");
   await expect(main.getByText("Ana Sofia Reis", { exact: true })).toBeVisible();
   await expect(main.getByText(`@${user.username}`, { exact: true })).toBeVisible();
+});
+
+test("Email changes with the current password, to one no other account has, and logs in after", async ({ page }) => {
+  const taken = newUser();
+  await signUp(page, taken);
+  await expect(page).toHaveURL("/apps");
+  await logOut(page, taken.username);
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/apps");
+  await page.goto("/account");
+
+  const emailRow = accountSetting(page, "Email");
+  await expect(emailRow).toContainText(user.email);
+  const form = await openSetting(page, "Email");
+  const field = form.getByLabel("Email", { exact: true });
+  const password = form.getByLabel("Current password");
+  const save = form.getByRole("button", { name: "Save email" });
+  await expect(field).toHaveValue(user.email);
+  await expect(field).toBeFocused();
+
+  await field.fill("not an email");
+  await save.click();
+  await expect(form.getByText("Enter a valid email, like name@example.com.")).toBeVisible();
+  await expect(form.getByText("Enter your current password.")).toBeVisible();
+
+  const email = `${newUser().username}@example.test`;
+  await field.fill(email);
+  await password.fill("not the password");
+  await save.click();
+  await expect(form.getByText("That isn't your current password.")).toBeVisible();
+
+  // In any case: emails are citext.
+  await field.fill(taken.email.toUpperCase());
+  await password.fill(user.password);
+  await save.click();
+  await expect(form.getByText("Another account uses that email.")).toBeVisible();
+  await expect(field).toHaveValue(taken.email.toUpperCase());
+
+  await field.fill(email);
+  await password.fill(user.password);
+  await save.click();
+  await expect(form).toBeHidden();
+  await expect(notice(page, "Email saved.")).toBeVisible();
+  await expect(emailRow).toContainText(email);
+
+  // Logs in with the new one, not the old one.
+  await logOut(page, user.username);
+  await logIn(page, user.email, user.password);
+  await expect(formAlert(page)).toHaveText("Wrong username/email or password.");
+  await logIn(page, email, user.password);
+  await expect(page).toHaveURL("/apps");
 });
 
 test("change password, which logs out every device", async ({ page, browser }) => {
@@ -208,7 +317,8 @@ test("change password, which logs out every device", async ({ page, browser }) =
   await expect(other).toHaveURL("/apps");
   await page.goto("/account");
 
-  const form = await openSection(page, "Password");
+  const form = await openPopup(page, page.getByRole("button", { name: "Update password" }), "Update password");
+  await expect(form.getByLabel("Current password")).toBeFocused();
   const newPassword = "a whole new password";
   async function submit(current: string, password: string, confirm: string) {
     await form.getByLabel("Current password").fill(current);
@@ -250,21 +360,24 @@ test("theme preference persists after logging in again", async ({ page }) => {
   await expect(app).toHaveAttribute("data-theme", "light-2");
 
   await page.goto("/account");
-  const form = await openSection(page, "Theme");
-  // The theme in use, on the row, before it's opened.
-  await expect(form.locator("summary")).toContainText("Light mode");
+  // The theme in use, on its row.
+  const themeRow = accountSetting(page, "Theme");
+  await expect(themeRow).toContainText("Light mode");
+  const form = await openSetting(page, "Theme");
   await expect(form.getByRole("radio", { name: "Light mode", exact: true })).toBeChecked();
   await form.getByRole("radio", { name: "Graphite", exact: true }).check();
   await form.getByRole("button", { name: "Save theme" }).click();
-  await expect(form.getByRole("status")).toHaveText("Theme saved.");
+  await expect(form).toBeHidden();
+  await expect(notice(page, "Theme saved.")).toBeVisible();
+  await expect(app).toHaveAttribute("data-theme", "graphite");
 
   await logOut(page, user.username);
   await logIn(page, user.username, user.password);
   await expect(page).toHaveURL("/apps");
 
   await page.goto("/account");
-  await expect(form.locator("summary")).toContainText("Graphite");
-  await openSection(page, "Theme");
+  await expect(themeRow).toContainText("Graphite");
+  await openSetting(page, "Theme");
   await expect(form.getByRole("radio", { name: "Graphite", exact: true })).toBeChecked();
   await page.goto("/shared");
   await expect(app).toHaveAttribute("data-theme", "graphite");
@@ -276,10 +389,7 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
-  // After Password.
-  await expect(page.getByRole("main").getByRole("heading", { level: 2 }))
-    .toHaveText(["Name", "Username", "Password", "Profile picture", "Theme"]);
-  const picture = await openSection(page, "Profile picture");
+  const picture = await openPopup(page, profilePicture(page), "Profile picture");
   // The account menu's button (the menu repeats it, for phones, once open).
   const menuPicture = accountButton(page, user.username).locator("img");
   await expect(menuPicture).toHaveCount(0);
@@ -291,11 +401,12 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
     .withExif({ IFD0: { Copyright: "Where it was taken" } }).jpeg().toBuffer();
   await picture.locator('input[type="file"]').setInputFiles({ name: "me.jpg", mimeType: "image/jpeg", buffer: photo });
 
-  // Nothing is sent yet: first, which part of it to show. Cancel keeps what there was.
+  // Nothing is sent yet: first, which part of it to show, over the popup. Cancel keeps what there was.
   const crop = page.getByRole("dialog", { name: "Adjust your picture" });
   await expect(crop.getByRole("button", { name: "Save picture" })).toBeEnabled();
   await crop.getByRole("button", { name: "Cancel" }).click();
   await expect(crop).toBeHidden();
+  await expect(picture).toBeVisible();
   await expect(menuPicture).toHaveCount(0);
   await picture.locator('input[type="file"]').setInputFiles({ name: "me.jpg", mimeType: "image/jpeg", buffer: photo });
 
@@ -315,10 +426,12 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   }
   await crop.getByRole("button", { name: "Save picture" }).click();
   await expect(crop).toBeHidden();
-  await expect(picture.getByRole("status").filter({ hasText: "Profile picture" })).toHaveText("Profile picture saved.");
+  // Saved: the popup closes, and the page has it, in the middle, as does the account menu.
+  await expect(picture).toBeHidden();
+  await expect(notice(page, "Profile picture saved.")).toBeVisible();
   await expect(menuPicture).toHaveAttribute("src", /^\/api\/avatars\/[0-9a-f-]{36}\?v=\d+$/);
   const url = (await menuPicture.getAttribute("src"))!;
-  await expect(page.getByRole("main").locator(`img[src="${url}"]`)).toHaveCount(2);
+  await expect(profilePicture(page).locator("img")).toHaveAttribute("src", url);
 
   // Saved square, 512 px, as WebP without the photo's metadata, and only for those logged in.
   const saved = await page.request.get(url);
@@ -337,7 +450,8 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   await page.goto("/apps");
   await expect(menuPicture).toHaveAttribute("src", url);
   await page.goto("/account");
-  await openSection(page, "Profile picture");
+  await openPopup(page, profilePicture(page), "Profile picture");
+  await expect(picture.locator(`img[src="${url}"]`)).toHaveCount(1);
 
   // Dropped on the drop zone: a new picture, at a new URL.
   const dropped = await page.evaluateHandle(async (base64) => {
@@ -348,10 +462,11 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   }, (await sharp({ create: { width: 300, height: 500, channels: 4, background: "#ff8800" } }).png().toBuffer()).toString("base64"));
   await picture.locator("label").dispatchEvent("drop", { dataTransfer: dropped });
   await crop.getByRole("button", { name: "Save picture" }).click();
-  await expect(picture.getByRole("status").filter({ hasText: "Profile picture" })).toHaveText("Profile picture saved.");
+  await expect(notice(page, "Profile picture saved.")).toBeVisible();
   await expect(menuPicture).not.toHaveAttribute("src", url);
 
   // What isn't a picture says so, here or (pretending to be one, which the browser can't show, so it goes as it is) from the server.
+  await openPopup(page, profilePicture(page), "Profile picture");
   await picture.locator('input[type="file"]').setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
   await expect(picture.getByRole("alert")).toHaveText("That isn't a picture. Choose a JPEG, PNG or WebP.");
   await picture.locator('input[type="file"]').setInputFiles({ name: "fake.png", mimeType: "image/png", buffer: Buffer.from("not really a png") });
@@ -361,19 +476,21 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   // Removed: the initial again, and the picture is gone.
   const current = (await menuPicture.getAttribute("src"))!;
   await picture.getByRole("button", { name: "Remove picture" }).click();
-  await expect(picture.getByRole("status").filter({ hasText: "Profile picture" })).toHaveText("Profile picture removed.");
+  await expect(picture).toBeHidden();
+  await expect(notice(page, "Profile picture removed.")).toBeVisible();
   await expect(menuPicture).toHaveCount(0);
   await expect(accountButton(page, user.username)).toContainText(user.username.charAt(0).toUpperCase());
+  await expect(profilePicture(page)).toContainText(user.username.charAt(0).toUpperCase());
   expect((await page.request.get(current)).status()).toBe(404);
 });
 
-test("forgot password, under Password in account settings, opens the reset by email", async ({ page }) => {
+test("forgot password, in Update password, opens the reset by email", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
 
-  const password = await openSection(page, "Password");
+  const password = await openPopup(page, page.getByRole("button", { name: "Update password" }), "Update password");
   await expect(password).toContainText("Don't know your current password?");
   await password.getByRole("link", { name: "Reset it by email" }).click();
   await expect(page).toHaveURL("/forgot-password");
@@ -391,7 +508,7 @@ test("logged out, /account redirects to /apps and Log in comes back to it", asyn
 test.describe("at 320px wide", () => {
   test.use({ viewport: { width: 320, height: 740 }, isMobile: true, hasTouch: true });
 
-  test("logged-in /apps, its open menu and /account have no horizontal scroll", async ({ page }) => {
+  test("logged-in /apps, its open menu and /account, with a popup open, have no horizontal scroll", async ({ page }) => {
     const user = newUser();
     await signUp(page, user);
     await expect(page).toHaveURL("/apps");
@@ -402,6 +519,9 @@ test.describe("at 320px wide", () => {
     await expectNoHorizontalScroll(page);
 
     await page.goto("/account");
+    await expectNoHorizontalScroll(page);
+    const theme = await openSetting(page, "Theme");
+    await expect(theme).toBeInViewport({ ratio: 1 });
     await expectNoHorizontalScroll(page);
   });
 });

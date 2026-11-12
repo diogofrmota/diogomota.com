@@ -150,7 +150,7 @@ export function AddFriend({ busy, onAdd }: { busy: boolean; onAdd: (username: st
     <label htmlFor={inputId} className={styles.srOnly}>Add a friend</label>
     <div className={styles.addFriendRow}>
       <div className={styles.combo}>
-        <input id={inputId} value={value} placeholder="Search…" maxLength={searchMax + 1}
+        <input id={inputId} value={value} placeholder="Search friends…" maxLength={searchMax + 1}
           role="combobox" aria-expanded={expanded} aria-controls={listId} aria-autocomplete="list"
           aria-activedescendant={expanded && active >= 0 && active < suggestions.length ? optionId(active) : undefined}
           autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="send"

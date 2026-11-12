@@ -128,11 +128,11 @@ export function AvatarCrop({ src, onCancel, onSave, onUnreadable }: {
   const moveKeys: Record<string, Point> = { ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 }, ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 } };
 
   return (
-    <Dialog className={styles.cropDialog} aria-labelledby={headingId} onClose={onCancel}>
-      <div className={styles.cropBody}>
-        <div className={styles.cropHeader}>
+    <Dialog className={styles.dialog} aria-labelledby={headingId} onClose={onCancel}>
+      <div className={styles.dialogBody}>
+        <div className={styles.dialogHeader}>
           <h2 id={headingId}>Adjust your picture</h2>
-          <button type="button" className={styles.cropClose} aria-label="Close" onClick={onCancel}><CloseIcon /></button>
+          <button type="button" className={styles.close} aria-label="Close" onClick={onCancel}><CloseIcon /></button>
         </div>
         <div
           ref={stage}

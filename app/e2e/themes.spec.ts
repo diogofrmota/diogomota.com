@@ -1,6 +1,6 @@
 import { themes } from "../lib/themes";
 import { checkThemes, rgb } from "./checks";
-import { expect, newUser, saveTheme, signUp, test } from "./fixtures";
+import { accountSetting, expect, newUser, saveTheme, signUp, test } from "./fixtures";
 import { card, grid, openShows, section, tab, viewHeading } from "./shows";
 
 // The themes (lib/themes.ts, with their colors in components/common/themes.module.css):
@@ -14,8 +14,9 @@ test("every theme saves from Account, and colors the page, the page behind it an
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
   const shell = page.locator("[data-theme]");
-  const form = page.getByRole("region", { name: "Theme", exact: true });
-  await form.getByRole("heading", { name: "Theme", exact: true }).click();
+  const row = accountSetting(page, "Theme");
+  await row.click();
+  const form = page.getByRole("dialog", { name: "Theme", exact: true });
   // New accounts start in the default theme.
   await expect(form.getByRole("radio", { name: "Light mode", exact: true })).toBeChecked();
   // All in one list, in lib/themes.ts's order, with no headings between them.
@@ -28,10 +29,11 @@ test("every theme saves from Account, and colors the page, the page behind it an
 
   // Each one differs from the one before, so the page changes with every save.
   for (const { id, name, background } of themes) {
+    // Opens the popup, which closes once it's saved.
     await saveTheme(page, name);
     await expect(shell).toHaveAttribute("data-theme", id);
-    await expect(form.getByRole("status")).toHaveText("Theme saved.");
-    await expect(form.getByRole("radio", { name, exact: true })).toBeChecked();
+    await expect(page.getByRole("main").getByRole("status").filter({ hasText: "Theme saved." })).toBeVisible();
+    await expect(row).toContainText(name);
     // Its own colors, not the default's: themes.module.css has the theme, with
     // the background lib/themes.ts gives the browser.
     await expect(shell).toHaveCSS("background-color", rgb(background));
@@ -62,10 +64,9 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await signUp(page, newUser());
     await expect(page).toHaveURL("/apps");
     await page.goto("/account");
-    const form = page.getByRole("region", { name: "Theme", exact: true });
     // With the keyboard: the mouse would leave the row hovered, which fades between themes.
-    await form.locator("summary").press("Enter");
-    await expect(form.locator("details")).toHaveAttribute("open", "");
+    await accountSetting(page, "Theme").press("Enter");
+    await expect(page.getByRole("dialog", { name: "Theme", exact: true })).toBeVisible();
     await checkThemes(page, "Account, the theme picker");
   });
 
@@ -74,8 +75,8 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await page.getByRole("button", { name: "Create space" }).click();
     await expect(viewHeading(page)).toHaveText("Calendar");
     await page.getByRole("button", { name: "Add event", exact: true }).click();
-    const newEvent = page.getByRole("dialog", { name: "New event" });
-    await newEvent.getByLabel("Title").fill("Dinner");
+    const newEvent = page.getByRole("dialog", { name: "Create a new event" });
+    await newEvent.getByLabel("Event title").fill("Dinner");
     await newEvent.getByRole("button", { name: "Save event" }).click();
     await expect(newEvent).toBeHidden();
     await checkThemes(page, "Calendar, with an event");

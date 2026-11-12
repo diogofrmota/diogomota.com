@@ -8,7 +8,7 @@ import {
 } from "@/lib/show-types";
 import { statusIcons } from "./AddToLibrary";
 import { useLibrary } from "./library";
-import { LibraryControls, RemoveFromLibrary } from "./LibraryControls";
+import { LibraryProgress, RemoveFromLibrary, StatusControls } from "./LibraryControls";
 import { seenTitle, useShowsData } from "./shows-data";
 import { LoadError, Poster, titleFacts } from "./TitleGrid";
 import styles from "./Shows.module.css";
@@ -52,7 +52,8 @@ function Overview({ text }: { text: string }) {
 }
 
 // A TV show's seasons with their episodes; for one in the library, which are
-// watched (a tick) and how far into the current one.
+// watched (a tick, on the faded green of a completed title) and how far into
+// the current one.
 function Seasons({ seasons, item }: { seasons: readonly number[]; item: LibraryItem | undefined }) {
   const status = item?.library.status;
   const progress = item && status === "watching" ? progressOf(item.library) : null;
@@ -76,14 +77,16 @@ function Seasons({ seasons, item }: { seasons: readonly number[]; item: LibraryI
 /**
  * A title's detail panel (panel id "title:tv:123"), laid out as the title's
  * page, over a blurred copy of the poster. On one side, the poster with the
- * title and its facts under it (beside it on a phone); on the other, the
- * overview first, then what can be done with it (Add to Library, or the
- * library controls once it is there), the seasons, and Remove from library
- * last. On a wide screen the poster's side stays in view.
+ * title and its facts under it (beside it on a phone), then, for a title in
+ * the library, its status and Favourite; on the other, the synopsis first,
+ * then Add to Library (or a TV show's progress once it's being watched), the
+ * seasons, and Remove from library last. On a wide screen the poster's side
+ * stays in view.
  */
 export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "type" | "tmdbId">; onClose: () => void }) {
   const headingId = useId();
   const addId = useId();
+  const synopsisId = useId();
   const key = titleKey(title);
   const library = useLibrary();
   const { data: detail, error, retry } = useShowsData<TitleDetail>(`/titles/${title.type}/${title.tmdbId}`, false);
@@ -127,16 +130,20 @@ export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "typ
             {detail ? length && <p className={styles.titleFacts}>{length}</p>
               : !error && <span className={`${styles.skeletonLine} ${styles.skeleton} ${styles.skeletonShort}`} />}
           </div>
+          {item && <StatusControls item={item} />}
         </div>
         <div className={styles.titleMain}>
           {error ? <LoadError message={error} onRetry={retry} /> : !detail ? <div className={styles.overviewSkeleton} aria-busy="true">
             <p role="status" className={styles.srOnly}>Loading details…</p>
             {[1, 2, 3].map((line) => <span key={line} className={`${styles.skeletonLine} ${styles.skeleton}`} />)}
           </div> : <>
-            <Overview key={detail.overview} text={detail.overview || "No overview on TMDB yet."} />
+            <section className={styles.synopsis} aria-labelledby={synopsisId}>
+              <h3 id={synopsisId}>Synopsis</h3>
+              <Overview key={detail.overview} text={detail.overview || "No overview on TMDB yet."} />
+            </section>
             {!library.items ? (library.loadError ? <LoadError message={library.loadError} onRetry={library.reload} />
               : <span className={`${styles.skeletonLine} ${styles.skeleton}`} />)
-              : item ? <LibraryControls item={item} detail={detail} />
+              : item ? <LibraryProgress item={item} detail={detail} />
               : <div className={styles.addGroup} role="group" aria-labelledby={addId}>
                 {removed && <p role="status" className={styles.muted}>Removed from your library.</p>}
                 <h3 id={addId}>Add to Library</h3>

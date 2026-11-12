@@ -278,7 +278,7 @@ test("Shared's Settings tab: only once there is a space, and leaving there goes 
   await expect(viewHeading(page)).toHaveText("Tasks");
 
   await tab(page, "Shared", "Settings").click();
-  await page.getByRole("button", { name: "Leave space", exact: true }).click();
+  await page.getByRole("button", { name: "Leave this group", exact: true }).click();
   done = refreshed();
   await page.getByRole("button", { name: "Confirm leave" }).click();
   await expect(viewHeading(page)).toHaveText("Start your shared space");
