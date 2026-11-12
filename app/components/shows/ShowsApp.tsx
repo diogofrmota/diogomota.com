@@ -1,6 +1,7 @@
 "use client";
 import { AppShell } from "@/components/common/AppShell";
 import { useAppView } from "@/hooks/useAppView";
+import type { Named } from "@/lib/names";
 import { parseTitleKey } from "@/lib/show-types";
 import type { Theme } from "@/lib/themes";
 import { Discover } from "./Discover";
@@ -28,12 +29,12 @@ function Panels() {
   </>;
 }
 
-export function ShowsApp({ username, avatarUrl, theme }: { username: string; avatarUrl: string | null; theme: Theme }) {
+export function ShowsApp({ user, theme }: { user: Named & { avatarUrl: string | null }; theme: Theme }) {
   return <LibraryProvider>
-    <AppShell name="Shows" username={username} avatarUrl={avatarUrl} theme={theme} tabs={[
-      { id: "watchlist", label: "Watchlist", view: <Watchlist username={username} /> },
+    <AppShell name="Shows" username={user.username} avatarUrl={user.avatarUrl} theme={theme} tabs={[
+      { id: "watchlist", label: "Watchlist", view: <Watchlist /> },
       { id: "discover", label: "Discover", view: <Discover /> },
-      { id: "profile", label: "Profile", view: <Profile username={username} avatarUrl={avatarUrl} /> },
+      { id: "profile", label: "Profile", view: <Profile user={user} /> },
     ]}>
       <Panels />
     </AppShell>

@@ -6,6 +6,7 @@ import { Field, FormMessage, SubmitButton } from "@/components/site/Form";
 import formStyles from "@/components/site/Form.module.css";
 import {
   EMAIL_MAX,
+  NAME_MAX,
   PASSWORD_MIN,
   passwordHint,
   USERNAME_MAX,
@@ -22,6 +23,25 @@ export function SignUpForm({ next }: { next: string | null }) {
   return (
     <form action={action} noValidate className={formStyles.form}>
       {next && <input type="hidden" name="next" value={next} />}
+      <div className={formStyles.row}>
+        <Field
+          label="First name"
+          name="firstName"
+          error={errors.firstName}
+          autoComplete="given-name"
+          required
+          maxLength={NAME_MAX}
+          defaultValue={state.values?.firstName}
+        />
+        <Field
+          label="Last name (optional)"
+          name="lastName"
+          error={errors.lastName}
+          autoComplete="family-name"
+          maxLength={NAME_MAX}
+          defaultValue={state.values?.lastName}
+        />
+      </div>
       <Field
         label="Username"
         name="username"

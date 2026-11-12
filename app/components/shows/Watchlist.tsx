@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useAppView } from "@/hooks/useAppView";
-import { libraryStatuses, statusNames, type LibraryItem, type LibraryStatus, type MediaType } from "@/lib/show-types";
+import { statusNames, type LibraryItem, type LibraryStatus, type MediaType } from "@/lib/show-types";
 import { TypeSwitch } from "./Discover";
 import { ChangeError, useLibrary } from "./library";
 import { LibrarySection } from "./LibraryGrid";
@@ -31,6 +31,9 @@ function Section({ status, type, items }: { status: LibraryStatus; type: MediaTy
     items={items} empty={<Empty status={status} type={type} />} plannedBadge={false} />;
 }
 
+// The Watchlist's sections, in this order: what is being watched first.
+const sectionOrder: readonly LibraryStatus[] = ["watching", "planned", "completed"];
+
 // An empty library once the guide is skipped or done, or emptied again.
 function Welcome({ onSetUp }: { onSetUp: () => void }) {
   const { setView, openPanel } = useAppView();
@@ -46,11 +49,11 @@ function Welcome({ onSetUp }: { onSetUp: () => void }) {
 }
 
 /**
- * The Watchlist, the user's library: Planned, Watching and Completed, for TV
+ * The Watchlist, the user's library: Watching, Planned and Completed, for TV
  * shows or movies. A library that is empty when the app opens gets the guide
  * (Onboarding) instead.
  */
-export function Watchlist({ username }: { username: string }) {
+export function Watchlist() {
   const { items, loadError, reload } = useLibrary();
   const [type, setType] = useState<MediaType>("tv");
   // Whether the guide shows: decided once the library first loads, then until
@@ -73,12 +76,12 @@ export function Watchlist({ username }: { username: string }) {
     <h1 className={styles.srOnly}>Watchlist</h1>
     <ChangeError className={`${styles.error} ${styles.viewError}`} />
     {!items && loadError ? <LoadError message={loadError} onRetry={reload} />
-      : items && guide ? <Onboarding username={username} onDone={() => setGuide(false)} />
+      : items && guide ? <Onboarding onDone={() => setGuide(false)} />
       : items?.length === 0 ? <Welcome onSetUp={() => setGuide(true)} />
       : <>
         <TypeSwitch type={type} onChange={setType} />
         {/* Keyed by type, so each section starts collapsed. */}
-        {libraryStatuses.map((status) => <Section key={`${type}/${status}`} status={status} type={type}
+        {sectionOrder.map((status) => <Section key={`${type}/${status}`} status={status} type={type}
           items={ofType && ofType.filter((item) => item.library.status === status)} />)}
         <TmdbAttribution />
       </>}

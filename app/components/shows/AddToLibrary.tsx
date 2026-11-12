@@ -2,7 +2,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { BookmarkIcon, CheckIcon, DoneIcon, PlayIcon, PlusIcon } from "@/components/common/icons";
 import {
-  addStatuses, nextEpisode, progressOf, statusNames, type Episode, type LibraryItem, type LibraryStatus, type TitleSummary,
+  addStatuses, nextEpisode, progressOf, shareWatched, statusNames, type Episode, type LibraryItem, type LibraryStatus,
+  type SharedEntry, type TitleLengths, type TitleSummary,
 } from "@/lib/show-types";
 import { EpisodePicker } from "./EpisodePicker";
 import { useLibrary } from "./library";
@@ -58,6 +59,24 @@ export function useTitleStatus(title: TitleSummary, { toggle = false } = {}): Ti
  */
 export function StatusBadge({ status }: { status: LibraryStatus }) {
   return <span className={`${styles.badge} ${styles[status]}`} aria-hidden="true">{statusNames[status]}</span>;
+}
+
+/**
+ * A line along the bottom edge of the poster of a title Watching or Completed,
+ * from its left: as long as the share of a TV show's episodes watched (none at
+ * first, half way at half of them), in Watching's color; all the way across
+ * once Completed, in Completed's. Put it in the poster's frame. Decorative:
+ * the card's label says the status and the progress.
+ */
+export function ProgressLine({ item }: {
+  item: Pick<TitleSummary, "type"> & Pick<TitleLengths, "episodesPerSeason"> & { library: SharedEntry };
+}) {
+  const { status } = item.library;
+  if (status === "planned") return null;
+  return <span className={styles.posterProgress} aria-hidden="true">
+    <span className={`${styles.posterProgressLine} ${styles[status]}`} data-testid="progress-line"
+      style={{ "--share": shareWatched(item) } as React.CSSProperties} />
+  </span>;
 }
 
 /** The mark at a poster's bottom right: + to add, a tick once in the library, a ring while adding. Decorative. */

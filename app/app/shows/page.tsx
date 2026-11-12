@@ -15,5 +15,6 @@ export default async function ShowsPage() {
   const user = await findUserById(id);
   if (!user) notFound();
 
-  return <ShowsApp username={user.username} avatarUrl={user.avatarUrl} theme={user.themePreference} />;
+  const { username, firstName, lastName, avatarUrl } = user;
+  return <ShowsApp user={{ username, firstName, lastName, avatarUrl }} theme={user.themePreference} />;
 }

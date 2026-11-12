@@ -2,6 +2,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { spaceChanged } from "@/app/shared/actions";
 import { Avatar } from "@/components/common/Avatar";
+import { PersonName } from "@/components/common/PersonName";
 import { Spinner } from "@/components/common/Spinner";
 import ui from "@/components/common/ui.module.css";
 import type { Invite, Space } from "@/lib/space-types";
@@ -44,11 +45,11 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
     <section className={ui.card} aria-labelledby="members-heading">
       <h2 id="members-heading" className={ui.cardHeading}>Members</h2>
       {/* Each with their picture (or initial) in a ring of their color, as in
-          the calendar; only the owner is marked. */}
+          the calendar, then their first name and @username; only the owner is marked. */}
       <ul className={styles.members}>{space.members.map((member) => <li key={member.id}>
         <Avatar username={member.username} url={member.avatarUrl} className={styles.memberAvatar}
           style={{ "--member-color": member.color } as CSSProperties} />
-        <span className={styles.memberName}>{member.username}{member.id === userId ? " (you)" : ""}</span>
+        <span className={styles.memberName}><PersonName person={member} first />{member.id === userId ? " (you)" : ""}</span>
         {member.role === "owner" && <span className={styles.role}>Owner</span>}
       </li>)}</ul>
       {!owner && <p className={ui.muted}>Only the owner can invite people.</p>}

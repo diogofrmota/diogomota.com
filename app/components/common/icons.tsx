@@ -56,6 +56,17 @@ export function UserIcon() {
   );
 }
 
+// Two people: something for a whole group (Shared's Group events).
+export function UsersIcon() {
+  return (
+    <Icon>
+      <circle cx="9" cy="8.5" r="3.5" />
+      <path d="M2.5 20c.7-3.2 3.3-5.2 6.5-5.2s5.8 2 6.5 5.2" />
+      <path d="M15.5 5.2a3.5 3.5 0 0 1 0 6.6M17.8 14.9c2 .7 3.3 2.5 3.7 5.1" />
+    </Icon>
+  );
+}
+
 export function AppsIcon() {
   return (
     <Icon>

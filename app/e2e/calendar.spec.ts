@@ -58,7 +58,13 @@ for (const mobile of [false, true]) {
     await add(page, "Dinner together", "group");
     const personal = page.getByRole("button", { name: /^Morning walk,/ });
     const group = page.getByRole("button", { name: /^Dinner together,/ });
-    await expect(personal).toBeVisible(); await expect(group).toContainText("Group");
+    // Who it's for (their initial here, the group's icon) and the title: no time, no name.
+    await expect(personal).toBeVisible(); await expect(group).toContainText("Dinner together");
+    await expect(group).toHaveAccessibleName(/, Group$/);
+    await expect(group.locator("svg")).toBeVisible();
+    // On screen (the rest is its name, for screen readers): the initial and the title.
+    await expect(personal.locator(':scope > [aria-hidden="true"]')).toHaveText([space.members[0].username[0].toUpperCase(), "Morning walk"]);
+    await expect(group.locator(':scope > [aria-hidden="true"]')).toHaveText(["", "Dinner together"]);
     expect(await personal.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe(space.members[0].color);
     expect(await group.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe("var(--muted)");
     for (const view of ["Week", "Day", "Month"]) {
@@ -238,6 +244,8 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
   await expect(grid.getByRole("button", { name: /^Holiday, All day, / })).toBeVisible();
   await expect(grid.getByText("All day", { exact: true })).toBeVisible();
   const hour = grid.getByText("14:00", { exact: true });
+  // The day opens at the time it is now (the test below): from the top, 14:00 is scrolled to.
+  await grid.evaluate((el) => { el.scrollTop = 0; });
   await hour.scrollIntoViewIfNeeded();
   // The all-day row stays at the top as the hours scroll under it.
   expect(await grid.evaluate((el) => el.scrollTop)).toBeGreaterThan(200);
@@ -266,6 +274,26 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
   expect((await page.request.post(base, { data: { ...payload, startsAt: "2026-07-10T08:00:00.000Z", endsAt: "2026-07-11T08:00:00.000Z" } })).status()).toBe(400);
   expect((await page.request.post(base, { data: { ...payload, startsAt: "2026-07-09T23:00:00.000Z", endsAt: "2026-07-10T23:00:00.000Z", allDay: "yes" } })).status()).toBe(400);
   expect((await page.request.post(base, { data: { ...payload, startsAt: "2026-07-09T23:00:00.000Z", endsAt: "2026-07-10T23:00:00.000Z" } })).status()).toBe(201);
+});
+
+test("the week and day views open at the time it is now, as does Today", async ({ page }) => {
+  await setup(page);
+  // An hour before now (in Lisbon) at the top of the hours, 1px a minute; as far as they go late at night.
+  const expectNow = async (grid: Locator) => {
+    const { time } = localParts(new Date());
+    const now = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+    const { top, max } = await grid.evaluate((el) => ({ top: el.scrollTop, max: el.scrollHeight - el.clientHeight }));
+    expect(Math.abs(top - Math.min(max, Math.max(0, now - 60)))).toBeLessThanOrEqual(2);
+  };
+  for (const view of ["Week", "Day"]) {
+    await page.getByRole("group", { name: "Calendar view" }).getByRole("button", { name: view }).click();
+    const grid = page.getByRole("region", { name: `${view.toLowerCase()} calendar` });
+    await expect(grid).toBeVisible();
+    await expectNow(grid);
+    await grid.evaluate((el) => { el.scrollTop = 0; });
+    await page.getByRole("button", { name: "Today", exact: true }).click();
+    await expectNow(grid);
+  }
 });
 
 test("time conversion and iCalendar preserve DST, escaped text, UTF-8 folding and UTC", () => {

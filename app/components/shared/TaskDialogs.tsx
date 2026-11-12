@@ -38,11 +38,8 @@ export function TaskDialog({ task, list, space, onClose, onSave, onDelete }: {
       <p className={styles.muted}>In {list.name}</p>
       {error && <p role="alert" className={styles.error}>{error}</p>}
       <label>Title<input name="title" required maxLength={200} defaultValue={task.title} autoComplete="off" /></label>
+      {/* Who it's for on the left, when it's due on the right. */}
       <div className={styles.fields}>
-        <label>Due date (optional)
-          <span className={styles.inputRow}><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-            {dueDate && <button type="button" onClick={() => setDueDate("")}>Clear</button>}</span>
-        </label>
         <label>Assignee
           <span className={styles.inputRow}><span className={styles.swatch} style={{ background: color ?? "transparent" }} aria-hidden="true" />
             <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
@@ -50,12 +47,16 @@ export function TaskDialog({ task, list, space, onClose, onSave, onDelete }: {
               {space.members.map((m) => <option key={m.id} value={m.id}>{m.username}</option>)}
             </select></span>
         </label>
+        <label>Due date (optional)
+          <span className={styles.inputRow}><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            {dueDate && <button type="button" onClick={() => setDueDate("")}>Clear</button>}</span>
+        </label>
       </div>
       <label>Notes (optional)<textarea name="notes" rows={4} maxLength={10000} defaultValue={task.notes} /></label>
+      {/* No Cancel: the × at the top closes it without saving. */}
       <div className={styles.actions}>
-        <button className={styles.primary} type="submit">Save task</button>
-        <button type="button" onClick={onClose}>Cancel</button>
-        <button type="button" className={styles.remove} onClick={onDelete}>Delete task</button>
+        <button className={styles.primary} type="submit">Save</button>
+        <button type="button" className={styles.remove} onClick={onDelete}>Delete</button>
       </div>
     </form>
   </Sheet>;

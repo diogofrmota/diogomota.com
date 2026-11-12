@@ -291,8 +291,8 @@ test("the Watchlist starts with a welcome, fills up from Discover, and the TV Sh
 
   await tab(page, "Watchlist").click();
   await expect(main.getByRole("heading", { name: "Start by discovering shows!" })).toHaveCount(0);
-  // Planned, Watching, then Completed.
-  await expect(main.getByRole("heading", { level: 2 })).toHaveText(["Planned", "Watching", "Completed"]);
+  // Watching, Planned, then Completed.
+  await expect(main.getByRole("heading", { level: 2 })).toHaveText(["Watching", "Planned", "Completed"]);
   // TV shows first; the switch on Discover is its own.
   await pressed(typeSwitch(page, "TV Shows"));
   const watching = section(page, "Watching");

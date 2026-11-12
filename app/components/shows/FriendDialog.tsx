@@ -3,6 +3,7 @@ import { useId } from "react";
 import { Avatar } from "@/components/common/Avatar";
 import { Dialog } from "@/components/common/Dialog";
 import { CloseIcon } from "@/components/common/icons";
+import { PersonName } from "@/components/common/PersonName";
 import { useAppView } from "@/hooks/useAppView";
 import type { FriendProfile, Person } from "@/lib/show-types";
 import { LibrarySection } from "./LibraryGrid";
@@ -34,7 +35,6 @@ export function FriendDialog({ id }: { id: string }) {
   const headingId = useId();
   const { data: friend, error, errorStatus, retry } = useShowsData<FriendProfile>(`/friends/${id}`, false);
   const person = friend ?? seen.get(id);
-  const username = person?.username;
   const items = friend?.items ?? null;
   // Each poster says its status (LibraryGrid): Favourites mixes them.
   const section = (heading: string, status: "watching" | "completed" | null, empty: string) =>
@@ -47,7 +47,7 @@ export function FriendDialog({ id }: { id: string }) {
       <div className={styles.dialogHeader}>
         <div className={styles.friendHeading}>
           {person && <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />}
-          <h2 id={headingId}>{username ?? "Friend"}</h2>
+          <h2 id={headingId}>{person ? <PersonName person={person} /> : "Friend"}</h2>
         </div>
         <button type="button" className={styles.close} aria-label="Close" onClick={closePanel}><CloseIcon /></button>
       </div>

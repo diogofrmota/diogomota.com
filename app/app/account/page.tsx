@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/auth";
-import { AvatarForm, PasswordForm, ThemeForm, UsernameForm } from "@/components/account/AccountSettings";
+import { AvatarForm, NameForm, PasswordForm, ThemeForm, UsernameForm } from "@/components/account/AccountSettings";
 import { LogoutButton } from "@/components/account/LogoutButton";
 import { AppFrame } from "@/components/common/AppShell";
 import { Avatar } from "@/components/common/Avatar";
@@ -10,6 +10,7 @@ import { ChevronDownIcon, ChevronLeftIcon } from "@/components/common/icons";
 import { LinkPending } from "@/components/common/LinkPending";
 import ui from "@/components/common/ui.module.css";
 import { appViewport } from "@/lib/apps";
+import { fullName } from "@/lib/names";
 import { themes } from "@/lib/themes";
 import { findUserById } from "@/lib/users";
 import { logOut } from "./actions";
@@ -77,6 +78,10 @@ export default async function AccountPage() {
         </div>
 
         <div className={styles.list}>
+          <Dropdown id="name" title="Name" value={fullName(user) ?? undefined}>
+            <NameForm firstName={user.firstName} lastName={user.lastName} />
+          </Dropdown>
+
           <Dropdown id="username" title="Username">
             <UsernameForm username={user.username} />
           </Dropdown>

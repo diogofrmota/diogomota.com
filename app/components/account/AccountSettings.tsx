@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useId, useState, type DragEvent } from "react";
-import { avatarChanged, changePassword, changeUsername, saveTheme } from "@/app/account/actions";
+import { avatarChanged, changeName, changePassword, changeUsername, saveTheme } from "@/app/account/actions";
 import { AvatarCrop } from "@/components/account/AvatarCrop";
 import { Avatar } from "@/components/common/Avatar";
 import { PhotoIcon } from "@/components/common/icons";
@@ -12,6 +12,7 @@ import { Field, FormMessage, SubmitButton } from "@/components/site/Form";
 import formStyles from "@/components/site/Form.module.css";
 import {
   AVATAR_MAX_BYTES,
+  NAME_MAX,
   PASSWORD_MIN,
   normalizeUsername,
   passwordHint,
@@ -90,6 +91,39 @@ export function UsernameForm({ username }: { username: string }) {
         </p>
       </div>
       <SubmitButton label="Save username" pending={pending} />
+    </form>
+  );
+}
+
+/** First and last name (the last is optional), shown with the username in both apps. */
+export function NameForm({ firstName, lastName }: { firstName: string | null; lastName: string | null }) {
+  const [state, action, pending] = useActionState(changeName, {});
+  const errors = state.fieldErrors ?? {};
+
+  return (
+    <form action={action} noValidate className={formStyles.form}>
+      <div className={formStyles.row}>
+        <Field
+          label="First name"
+          name="firstName"
+          error={errors.firstName}
+          autoComplete="given-name"
+          required
+          maxLength={NAME_MAX}
+          defaultValue={state.values?.firstName ?? firstName ?? ""}
+        />
+        <Field
+          label="Last name (optional)"
+          name="lastName"
+          error={errors.lastName}
+          autoComplete="family-name"
+          maxLength={NAME_MAX}
+          defaultValue={state.values?.lastName ?? lastName ?? ""}
+        />
+      </div>
+      <p className={formStyles.hint}>Your friends in Shows and the people in your shared space see it, with your username.</p>
+      <FormMessage error={state.error} success={state.success} />
+      <SubmitButton label="Save name" pending={pending} />
     </form>
   );
 }

@@ -129,7 +129,7 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await page.goBack();
   await expect(lists).toBeHidden();
   await page.getByRole("button", { name: /^Bread/ }).click();
-  await task.getByRole("button", { name: "Delete task" }).click();
+  await task.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Deleted “Bread”" })).toBeVisible();
   await checkView(page, "undo delete");
 
@@ -224,12 +224,12 @@ test("Shows: every view and dialog, each closed with Back", async ({ page, brows
 
   await tab(page, "Profile").click();
   await expect(page.getByRole("button", { name: `Accept ${asker.user.username}` })).toBeVisible();
-  const friendLink = page.getByRole("list", { name: "Your friends" }).getByRole("button", { name: friend.user.username, exact: true });
+  const friendLink = page.getByRole("list", { name: "Your friends" }).getByRole("button", { name: new RegExp(`\\(@${friend.user.username}\\) Check profile$`) });
   await expect(friendLink).toBeVisible();
   await checkView(page, "Profile");
   // Add a friend's suggestions, open under the field.
   await page.getByLabel("Add a friend").fill(asker.user.username.slice(0, 10));
-  await expect(page.getByRole("listbox", { name: "Usernames" }).getByRole("option", { name: new RegExp(asker.user.username) })).toBeVisible();
+  await expect(page.getByRole("listbox", { name: "People" }).getByRole("option", { name: new RegExp(asker.user.username) })).toBeVisible();
   await checkView(page, "Profile, Add a friend's suggestions");
   await page.getByLabel("Add a friend").fill("");
   await friendLink.click();

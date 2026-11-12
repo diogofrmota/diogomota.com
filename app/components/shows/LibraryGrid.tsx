@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useId, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { HeartIcon, MoreIcon } from "@/components/common/icons";
-import { formatEpisode, progressOf, statusNames, titleKey, type SharedEntry, type TitleSummary } from "@/lib/show-types";
-import { StatusBadge } from "./AddToLibrary";
+import {
+  formatEpisode, progressOf, statusNames, titleKey, type SharedEntry, type TitleLengths, type TitleSummary,
+} from "@/lib/show-types";
+import { ProgressLine, StatusBadge } from "./AddToLibrary";
 import { useOpenActions } from "./QuickActions";
 import { useOpenTitle } from "./shows-data";
 import { Poster, SkeletonGrid, useGridColumns } from "./TitleGrid";
@@ -53,8 +55,8 @@ function useLongPress(onLongPress: (x: number, y: number) => void) {
   };
 }
 
-/** A title in the user's library, or in a friend's. */
-type CardItem = TitleSummary & { library: SharedEntry };
+/** A title in the user's library, or in a friend's, with its seasons for the progress line. */
+type CardItem = TitleSummary & Pick<TitleLengths, "episodesPerSeason"> & { library: SharedEntry };
 
 /** "Watching, season 2 episode 5" and "S2 E5" for a TV show being watched. */
 function libraryFacts(item: CardItem) {
@@ -85,6 +87,7 @@ function LibraryCard({ item, readOnly, plannedBadge }: { item: CardItem; readOnl
     <button type="button" className={styles.card} aria-label={facts.label} onClick={() => openTitle(item)} {...(readOnly ? {} : longPress)}>
       <span className={styles.posterFrame}>
         <Poster title={item} sizes={cardSizes} />
+        <ProgressLine item={item} />
         {isFavourite && <span className={styles.favouriteMark} aria-hidden="true"><HeartIcon filled /></span>}
       </span>
       <span className={styles.cardTitle}>{item.title}</span>

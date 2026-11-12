@@ -180,6 +180,15 @@
 .badge.watching { background: #1d4ed8; } /* white text: 6.7:1 */
 .badge.planned { background: #525252; } /* 7.8:1 */
 .badge.completed { background: #15803d; } /* 5:1 */
+/* How much has been watched (AddToLibrary.tsx, ProgressLine): a line along the
+   poster's bottom edge, cut by its rounded corners, that grows from the left
+   (--share, 0 to 1); in the color of the Watching badge, then of Completed. */
+.posterProgress { position: absolute; inset: 0; overflow: hidden; border-radius: var(--radius-md); pointer-events: none; }
+.posterProgressLine { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; transform: scaleX(var(--share)); transform-origin: left; transition: transform .45s var(--ease-out), background-color .3s; animation: poster-progress-in .6s var(--ease-out) backwards; }
+.posterProgressLine.watching { background: #1d4ed8; }
+.posterProgressLine.completed { background: #15803d; }
+@keyframes poster-progress-in { from { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .posterProgressLine { transition: none; animation: none; } }
 .favouriteMark { right: .4rem; bottom: .4rem; display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: #000c; color: #f87171; }
 .favouriteMark svg { width: .875rem; height: .875rem; }
 .view .cardMenu { position: absolute; top: .3rem; right: .3rem; z-index: 1; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; min-height: 0; padding: 0; border: 0; border-radius: 50%; background: #000c; color: #fff; opacity: 0; transition: opacity .15s; }
@@ -200,7 +209,6 @@
 .skeletonShort { width: 55%; }
 
 .attribution { display: flex; align-items: center; gap: .5rem 1rem; flex-wrap: wrap; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: var(--text-xs); }
-.attribution p { margin: 0; flex: 1 1 16rem; }
 .tmdbLink { display: inline-flex; align-items: center; min-height: 44px; }
 .tmdbLink img { display: block; }
 
@@ -351,10 +359,13 @@
    (so they line up on both sides), the favourites' grid too. */
 .view.profile { max-width: 48rem; }
 .profile .stats, .profile .people, .profile .addFriend, .profile .notice { max-width: none; }
-/* Its top: whose it is, the picture over the username, in the middle. */
+/* Its top: whose it is, in the middle: the picture, the name under it, and the
+   @username under that (the @username alone, as big as a name, without one). */
 .profileHeader { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); min-width: 0; text-align: center; }
 .profileHeader .profileAvatar { width: 5rem; height: 5rem; font-size: var(--text-2xl); }
-.profileName { max-width: 100%; margin: 0; overflow: hidden; font-size: var(--text-2xl); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight); line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.profileName, .profileUsername { max-width: 100%; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profileName { font-size: var(--text-2xl); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight); line-height: 1.2; }
+.profileUsername { margin-top: calc(-1 * var(--space-2)); color: var(--muted); font-size: var(--text-md); }
 .profileHeader + .section { margin-top: var(--space-6); }
 
 .people { max-width: 36rem; margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: var(--radius-lg); }
@@ -367,10 +378,15 @@ div.people { padding: .25rem 1rem .75rem; }
 .personActions { display: flex; flex-shrink: 0; gap: .5rem; }
 .avatar { display: grid; place-items: center; flex-shrink: 0; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: var(--weight-bold); line-height: 1; text-transform: uppercase; text-box: trim-both cap alphabetic; }
 .view .personLink { display: flex; flex: 1; align-items: center; gap: .75rem; min-width: 0; padding: .25rem .5rem .25rem 0; border: 0; background: none; color: inherit; text-align: left; }
-@media (hover: hover) { .view .personLink:hover { background: none; } .personLink:hover .personName { text-decoration: underline; } }
-.chevron { display: inline-flex; color: var(--muted); }
-.chevron svg { width: var(--icon-md); height: var(--icon-md); }
-.view .personRow .remove { flex-shrink: 0; padding-inline: .5rem; }
+@media (hover: hover) { .view .personLink:hover { background: none; } }
+/* What a tap on a friend's row does, on its right. */
+.checkProfile { flex-shrink: 0; padding: .3rem .7rem; border: 1px solid var(--border); border-radius: var(--radius-full); color: var(--accent); font-size: var(--text-sm); font-weight: var(--weight-semibold); white-space: nowrap; }
+@media (hover: hover) { .view .personLink:hover .checkProfile { background: var(--hover); } }
+/* Remove a friend: a bin, which asks first. */
+.view .removeIcon { display: grid; flex-shrink: 0; place-items: center; width: 44px; padding: 0; border-color: transparent; background: none; color: var(--muted); }
+.removeIcon svg { width: var(--icon-md); height: var(--icon-md); }
+@media (hover: hover) { .view .removeIcon:hover { background: var(--hover); color: var(--danger); } }
+.view .removeIcon[aria-expanded="true"] { color: var(--danger); }
 .subheading { margin: 1.25rem 0 .5rem; font-size: var(--text-md); }
 .addFriend { display: grid; gap: .4rem; max-width: 36rem; margin-bottom: 1rem; }
 .addFriendRow { display: flex; gap: .5rem; }

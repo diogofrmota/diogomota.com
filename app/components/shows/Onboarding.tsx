@@ -5,7 +5,7 @@ import {
   libraryStatuses, statusNames, titleKey, type FriendsState, type LibraryItem, type MediaType, type TitleSummary,
 } from "@/lib/show-types";
 import { AddFriend, requestSentText } from "./AddFriend";
-import { AddMark, StatusBadge, statusHints, statusIcons, StatusChooser, useTitleStatus } from "./AddToLibrary";
+import { AddMark, ProgressLine, StatusBadge, statusHints, statusIcons, StatusChooser, useTitleStatus } from "./AddToLibrary";
 import { useLibrary } from "./library";
 import { forgetShowsData, showsRequest, useDebounced, useShowsData } from "./shows-data";
 import { cardSizes, LoadError, Poster, SkeletonGrid, titleFacts } from "./TitleGrid";
@@ -58,6 +58,7 @@ function PickCard({ title, index, withType }: { title: TitleSummary; index: numb
     {status.error ? <span role="alert" className={styles.cardError}>{status.error}</span>
       : <span className={item ? styles.pickAdded : styles.cardMeta}>{busy ? "Adding…" : added || facts.text}</span>}
     <span className={styles.posterSpot}>
+      {item && !choosing && <ProgressLine item={item} />}
       {item && item.library.status !== "planned" && !choosing && <StatusBadge status={item.library.status} />}
       {choosing ? <StatusChooser title={title} status={status} onClose={() => setChoosing(false)} returnFocus={() => button.current} />
         : <AddMark added={!!item} busy={busy} />}
@@ -110,7 +111,7 @@ function Titles({ step }: { step: TitlesStep }) {
 }
 
 // The friends step: friend requests, with what each one did.
-function Friends({ username }: { username: string }) {
+function Friends() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
 
@@ -130,7 +131,7 @@ function Friends({ username }: { username: string }) {
   }
 
   return <div className={styles.onboardingFriends}>
-    <AddFriend username={username} busy={busy} onAdd={add} />
+    <AddFriend busy={busy} onAdd={add} />
     {notice && <p role={notice.error ? "alert" : "status"}
       className={notice.error ? `${styles.error} ${styles.notice}` : `${styles.notice} ${styles.success}`}>{notice.text}</p>}
   </div>;
@@ -170,7 +171,7 @@ function AllSet({ items, headingId, heading, onDone }: {
  * step; either way `onDone` shows the Watchlist as it is. Each step slides in from the
  * side it's on (Shows.module.css): the next from the right, the one before from the left.
  */
-export function Onboarding({ username, onDone }: { username: string; onDone: () => void }) {
+export function Onboarding({ onDone }: { onDone: () => void }) {
   const library = useLibrary();
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -208,7 +209,7 @@ export function Onboarding({ username, onDone }: { username: string; onDone: () 
         <h2 id={headingId} ref={heading} tabIndex={-1} className={styles.onboardingHeading}>{step.heading}</h2>
         <p className={styles.onboardingLead}>{step.lead}</p>
         {/* Keyed, so each step starts with an empty search. */}
-        {step.kind === "titles" ? <Titles key={index} step={step} /> : <Friends username={username} />}
+        {step.kind === "titles" ? <Titles key={index} step={step} /> : <Friends />}
       </>}
     </div>
 

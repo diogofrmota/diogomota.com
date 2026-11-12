@@ -3,7 +3,7 @@ import Image, { type ImageLoader } from "next/image";
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/common/icons";
 import { statusNames, titleKey, tmdbImageUrl, type TitleSummary } from "@/lib/show-types";
-import { AddMark, StatusBadge, StatusChooser, useTitleStatus } from "./AddToLibrary";
+import { AddMark, ProgressLine, StatusBadge, StatusChooser, useTitleStatus } from "./AddToLibrary";
 import { useOpenActions } from "./QuickActions";
 import styles from "./Shows.module.css";
 
@@ -64,6 +64,7 @@ function TitleCard({ title, withType, onOpen, index }: {
     {status.error ? <span role="alert" className={styles.cardError}>{status.error}</span>
       : <span className={styles.cardMeta}>{facts.text}</span>}
     <span className={styles.posterSpot}>
+      {item && !choosing && <ProgressLine item={item} />}
       {shownStatus && shownStatus !== "planned" && !choosing && <StatusBadge status={shownStatus} />}
       {choosing ? <StatusChooser title={title} status={status} onClose={() => setChoosing(false)} returnFocus={() => addButton.current} />
         // Not disabled while adding: it keeps focus, which a choice hands back to it.

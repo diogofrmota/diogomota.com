@@ -165,6 +165,35 @@ test("username availability requires login, validates input and limits checks", 
   expect((await page.request.get(`${endpoint}?username=${user.username}`)).status()).toBe(429);
 });
 
+test("Name sets the first and last name, which Shows' Profile shows over the @username", async ({ page }) => {
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/apps");
+  await page.goto("/account");
+  // The one given at sign-up, by the dropdown's name.
+  await expect(section(page, "Name").locator("summary")).toContainText(`${user.firstName} ${user.lastName}`);
+  const name = await openSection(page, "Name");
+  await expect(name.getByLabel("First name")).toHaveValue(user.firstName);
+  await expect(name.getByLabel("Last name (optional)")).toHaveValue(user.lastName);
+
+  // A first name is needed; the last name isn't. Spaces around and between words are tidied.
+  await name.getByLabel("First name").fill("   ");
+  await name.getByRole("button", { name: "Save name" }).click();
+  await expect(name.getByText("Enter your first name.")).toBeVisible();
+  await name.getByLabel("First name").fill("  Ana   Sofia ");
+  await name.getByLabel("Last name (optional)").fill("");
+  await name.getByRole("button", { name: "Save name" }).click();
+  await expect(name.getByRole("status")).toHaveText("Name saved.");
+  await expect(name.locator("summary")).toContainText("Ana Sofia");
+  await expect(name.getByLabel("First name")).toHaveValue("Ana Sofia");
+
+  await page.goto("/shows");
+  await page.getByRole("navigation", { name: "Shows", exact: true }).getByRole("button", { name: "Profile", exact: true }).click();
+  const main = page.getByRole("main");
+  await expect(main.getByText("Ana Sofia", { exact: true })).toBeVisible();
+  await expect(main.getByText(`@${user.username}`, { exact: true })).toBeVisible();
+});
+
 test("change password, which logs out every device", async ({ page, browser }) => {
   const user = newUser();
   await signUp(page, user);
@@ -245,7 +274,7 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   await page.goto("/account");
   // After Password.
   await expect(page.getByRole("main").getByRole("heading", { level: 2 }))
-    .toHaveText(["Username", "Password", "Profile picture", "Theme"]);
+    .toHaveText(["Name", "Username", "Password", "Profile picture", "Theme"]);
   const picture = await openSection(page, "Profile picture");
   // The account menu's button (the menu repeats it, for phones, once open).
   const menuPicture = accountButton(page, user.username).locator("img");

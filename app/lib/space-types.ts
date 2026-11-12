@@ -1,3 +1,5 @@
+import type { Named } from "./names";
+
 // Distinct swatches, always paired with a name: color is never the only label.
 // Mid-tone colors remain visible against both the light and dark surfaces.
 export const memberColors = [
@@ -11,7 +13,7 @@ export const memberColors = [
 // No name: a space is its members, calendar and task lists.
 export type Space = {
   id: string; ownerId: string;
-  /** With their profile picture (lib/users.ts), or null for their initial. */
-  members: { id: string; username: string; avatarUrl: string | null; color: string; role: "owner" | "member" }[];
+  /** With their profile picture (lib/users.ts), or null for their initial, and their names (lib/names.ts). */
+  members: (Named & { id: string; avatarUrl: string | null; color: string; role: "owner" | "member" })[];
 };
 export type Invite = { code: string; expiresAt: string };

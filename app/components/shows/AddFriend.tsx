@@ -2,15 +2,18 @@
 import { useEffect, useId, useState } from "react";
 import { Avatar } from "@/components/common/Avatar";
 import { CheckIcon } from "@/components/common/icons";
-import { usernameHint, USERNAME_MAX } from "@/lib/account-rules";
+import { PersonName } from "@/components/common/PersonName";
+import { NAME_MAX, usernameHint, USERNAME_MAX } from "@/lib/account-rules";
+import { fullName } from "@/lib/names";
 import type { FriendsState, PeopleSearch, PersonMatch } from "@/lib/show-types";
 import { showsRequest, useDebounced } from "./shows-data";
 import styles from "./Shows.module.css";
 
 // Suggestions are asked for once typing pauses this long, from 2 characters
-// (lib/friends.ts, searchPeople).
+// to a first and a last name's length (lib/friends.ts, searchPeople).
 const debounceMs = 200;
 const searchMin = 2;
+const searchMax = NAME_MAX * 2 + 1;
 
 const relationNames: Record<PersonMatch["relation"], string> = {
   none: "", friend: "Friends", incoming: "Sent you a request", outgoing: "Request sent",
@@ -18,6 +21,17 @@ const relationNames: Record<PersonMatch["relation"], string> = {
 
 // "@Bob " is bob: usernames are lowercase, and the @ is optional.
 const normalize = (value: string) => value.trim().replace(/^@/, "").toLowerCase();
+const isUsername = (text: string) => text.length <= USERNAME_MAX && /^[a-z0-9_]+$/.test(text);
+// Lowercase and without accents, as the server compares names.
+const fold = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/** Whether `match` is one the search for `typed` would find (searchPeople's rule). */
+function fits(match: PersonMatch, typed: string): boolean {
+  const handle = typed.startsWith("@");
+  const text = fold(handle ? typed.slice(1) : typed);
+  if (match.username.startsWith(text)) return true;
+  return !handle && [match.firstName, match.lastName, fullName(match)].some((name) => !!name && fold(name).startsWith(text));
+}
 
 /** What a friend request to `value` did, from the friends and requests the server answered with. */
 export function requestSentText(next: FriendsState, value: string): string {
@@ -27,34 +41,34 @@ export function requestSentText(next: FriendsState, value: string): string {
     ? `${name} had already sent you a request: you're now friends.` : `Friend request sent to ${name}.`;
 }
 
-// What the field says about what's typed, under it: whether an account has
-// that username, as soon as the search for it is back.
-function checkText(text: string, search: PeopleSearch | null, searched: boolean): { text: string; found?: boolean } | null {
-  if (!text) return null;
-  if (!/^[a-z0-9_]*$/.test(text) || text.length > USERNAME_MAX) return { text: `Usernames have ${usernameHint}`, found: false };
+// What the field says about what's typed, under it, once the search for it is
+// back: whether an account has exactly that username, or that nobody fits it.
+function checkText(typed: string, search: PeopleSearch | null): { text: string; found?: boolean } | null {
+  const text = normalize(typed);
+  if (typed.startsWith("@") && text && !isUsername(text)) return { text: `Usernames have ${usernameHint}`, found: false };
   if (text.length < searchMin) return null;
-  if (!searched || !search) return { text: "Checking…" };
+  if (!search) return { text: "Searching…" };
   if (search.self) return { text: "That's your own username.", found: false };
-  const exact = search.matches.find((match) => match.username === text);
   if (search.exact) {
+    const exact = search.matches.find((match) => match.username === text);
     const relation = exact && exact.relation !== "none" ? ` · ${relationNames[exact.relation]}` : "";
     return { text: `${text} has an account${relation}`, found: true };
   }
-  // The start of usernames that have accounts: the suggestions say it. And 2
-  // characters can't be a whole username.
-  if (search.matches.length || text.length < 3) return null;
-  return { text: `No account has the username ${text}.`, found: false };
+  if (search.matches.length) return null;
+  return { text: `No one found for “${typed.replace(/^@/, "")}”.`, found: false };
 }
 
 /**
- * Add a friend: a username field that suggests the accounts whose username
- * starts with what's typed, in a list under it (a combobox: arrows and Enter,
- * or a tap, pick one), and says whether an account has exactly that username.
- * `onAdd` sends the request, and says whether it went (the field empties).
+ * Add a friend: a search field (named for screen readers only) that suggests
+ * the people whose username or name starts with what's typed, in a list under
+ * it (a combobox: arrows and Enter, or a tap, pick one, which puts their
+ * username in the field), and says whether an account has exactly that
+ * username. Send request asks the one typed or picked; with a name typed, the
+ * one person it found. `onAdd` sends the request, and says whether it went
+ * (the field empties).
  */
-export function AddFriend({ username, busy, onAdd }: { username: string; busy: boolean; onAdd: (username: string) => Promise<boolean> }) {
+export function AddFriend({ busy, onAdd }: { busy: boolean; onAdd: (username: string) => Promise<boolean> }) {
   const inputId = useId();
-  const hintId = useId();
   const checkId = useId();
   const listId = useId();
   const [value, setValue] = useState("");
@@ -62,10 +76,13 @@ export function AddFriend({ username, busy, onAdd }: { username: string; busy: b
   const [active, setActive] = useState(-1);
   const [result, setResult] = useState<{ query: string; data: PeopleSearch } | null>(null);
   const [searchError, setSearchError] = useState("");
+  // Send request with a name that fits several people.
+  const [pickOne, setPickOne] = useState(false);
 
-  const text = normalize(value);
-  const searchable = text.length >= searchMin && text.length <= USERNAME_MAX && /^[a-z0-9_]+$/.test(text);
-  const query = useDebounced(searchable ? text : "", debounceMs);
+  const typed = value.trim().replace(/\s+/g, " ");
+  const bare = typed.replace(/^@/, "");
+  const searchable = bare.length >= searchMin && bare.length <= searchMax && (!typed.startsWith("@") || isUsername(bare.toLowerCase()));
+  const query = useDebounced(searchable ? typed : "", debounceMs);
 
   useEffect(() => {
     if (!query) return;
@@ -76,11 +93,12 @@ export function AddFriend({ username, busy, onAdd }: { username: string; busy: b
     return () => controller.abort();
   }, [query]);
 
-  // The last answer's usernames that still fit what's typed, while the next one loads.
-  const suggestions = searchable && result && text.startsWith(result.query)
-    ? result.data.matches.filter((match) => match.username.startsWith(text)) : [];
-  const current = result?.query === text ? result.data : null;
-  const check = searchError && searchable ? { text: searchError, found: false } : checkText(text, current, !!current);
+  // The last answer's people who still fit what's typed, while the next one loads.
+  const suggestions = searchable && result && fold(typed).startsWith(fold(result.query))
+    ? result.data.matches.filter((match) => fits(match, typed)) : [];
+  const current = result?.query === typed ? result.data : null;
+  const check = pickOne ? { text: "Choose someone from the list.", found: false }
+    : searchError && searchable ? { text: searchError, found: false } : checkText(typed, current);
   const expanded = open && suggestions.length > 0;
   const optionId = (index: number) => `${listId}-${index}`;
 
@@ -88,6 +106,17 @@ export function AddFriend({ username, busy, onAdd }: { username: string; busy: b
     setValue(match.username);
     setOpen(false);
     setActive(-1);
+    setPickOne(false);
+  }
+
+  // Who Send request asks: the username typed, if it is one someone has (or
+  // the search isn't back to say); else the only person the search found.
+  function recipient(): string | null {
+    const username = normalize(value);
+    if (current?.exact || suggestions.some((match) => match.username === username)) return username;
+    if (suggestions.length === 1) return suggestions[0].username;
+    if (suggestions.length > 1) return null;
+    return value;
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -111,27 +140,29 @@ export function AddFriend({ username, busy, onAdd }: { username: string; busy: b
 
   return <form className={styles.addFriend} onSubmit={async (event) => {
     event.preventDefault();
+    const to = recipient();
+    if (to === null) { setPickOne(true); setOpen(true); return; }
     setOpen(false);
     setActive(-1);
-    if (await onAdd(value)) setValue("");
+    if (await onAdd(to)) setValue("");
   }}>
-    <label htmlFor={inputId} className={styles.label}>Add a friend</label>
+    <label htmlFor={inputId} className={styles.srOnly}>Add a friend</label>
     <div className={styles.addFriendRow}>
       <div className={styles.combo}>
-        <input id={inputId} value={value} placeholder="Their username" maxLength={21}
+        <input id={inputId} value={value} placeholder="Search…" maxLength={searchMax + 1}
           role="combobox" aria-expanded={expanded} aria-controls={listId} aria-autocomplete="list"
           aria-activedescendant={expanded && active >= 0 && active < suggestions.length ? optionId(active) : undefined}
           autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="send"
-          aria-describedby={`${checkId} ${hintId}`}
-          onChange={(event) => { setValue(event.target.value); setOpen(true); setActive(-1); }}
+          aria-describedby={checkId}
+          onChange={(event) => { setValue(event.target.value); setOpen(true); setActive(-1); setPickOne(false); }}
           onFocus={() => setOpen(true)} onBlur={() => { setOpen(false); setActive(-1); }} onKeyDown={onKeyDown} />
-        <ul id={listId} role="listbox" aria-label="Usernames" className={styles.suggestions} hidden={!expanded}>
+        <ul id={listId} role="listbox" aria-label="People" className={styles.suggestions} hidden={!expanded}>
           {suggestions.map((match, index) => <li key={match.id} id={optionId(index)} role="option" aria-selected={index === active}
             className={styles.suggestion}
             // Not blurring the field: the list would close before the click lands.
             onMouseDown={(event) => event.preventDefault()} onClick={() => choose(match)}>
             <Avatar username={match.username} url={match.avatarUrl} className={styles.avatar} />
-            <span className={styles.personName}>{match.username}</span>
+            <PersonName person={match} className={styles.personName} />
             {match.relation !== "none" && <span className={styles.relation}>{relationNames[match.relation]}</span>}
           </li>)}
         </ul>
@@ -141,6 +172,5 @@ export function AddFriend({ username, busy, onAdd }: { username: string; busy: b
     <p id={checkId} aria-live="polite" className={check?.found === true ? styles.checkFound : check?.found === false ? styles.checkMissing : styles.check}>
       {check?.found && <CheckIcon />}{check?.text}
     </p>
-    <p id={hintId} className={styles.hint}>Friends add you by your username, <strong>{username}</strong>.</p>
   </form>;
 }

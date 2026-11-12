@@ -3,13 +3,27 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth, signOut, unstable_update } from "@/auth";
-import { formPassword, normalizeUsername, passwordError, usernameError } from "@/lib/account-rules";
+import {
+  firstNameError,
+  formPassword,
+  lastNameError,
+  normalizeName,
+  normalizeUsername,
+  passwordError,
+  usernameError,
+} from "@/lib/account-rules";
 import type { FormState } from "@/lib/form-state";
 import { appsWithNext } from "@/lib/next-path";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { passwordCheckLimit } from "@/lib/rate-limit";
 import { isTheme, type Theme } from "@/lib/themes";
-import { getPasswordHash, updatePasswordHash, updateThemePreference, updateUsername } from "@/lib/users";
+import {
+  getPasswordHash,
+  updateName,
+  updatePasswordHash,
+  updateThemePreference,
+  updateUsername,
+} from "@/lib/users";
 
 // Actions are reachable by anyone who can send a POST, so each one checks the session.
 async function currentUser(): Promise<{ id: string; username: string }> {
@@ -33,6 +47,24 @@ export async function changeUsername(_previous: FormState, formData: FormData): 
   // in the jwt callback). Setting the cookie also re-renders the page.
   await unstable_update({});
   return { success: "Username changed.", values };
+}
+
+export async function changeName(_previous: FormState, formData: FormData): Promise<FormState> {
+  const { id: userId } = await currentUser();
+  const firstName = normalizeName(formData.get("firstName"));
+  const lastName = normalizeName(formData.get("lastName"));
+  const values = { firstName, lastName };
+
+  const fieldErrors = {
+    firstName: firstNameError(firstName) ?? undefined,
+    lastName: lastNameError(lastName) ?? undefined,
+  };
+  if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors, values };
+
+  await updateName(userId, firstName, lastName);
+  // Shown on this page (the dropdown's value) and in both apps.
+  revalidatePath("/", "layout");
+  return { success: "Name saved.", values };
 }
 
 export async function changePassword(_previous: FormState, formData: FormData): Promise<FormState> {

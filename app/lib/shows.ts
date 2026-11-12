@@ -210,7 +210,7 @@ export async function sharedLibrary(userId: string): Promise<{ stats: LibrarySta
     items: items.map((item) => {
       const { status, currentSeason, currentEpisode, isFavourite } = item.library;
       return { type: item.type, tmdbId: item.tmdbId, title: item.title, year: item.year, posterPath: item.posterPath,
-        rating: item.rating, library: { status, currentSeason, currentEpisode, isFavourite } };
+        rating: item.rating, episodesPerSeason: item.episodesPerSeason, library: { status, currentSeason, currentEpisode, isFavourite } };
     }),
   };
 }

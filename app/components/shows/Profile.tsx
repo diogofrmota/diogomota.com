@@ -1,8 +1,10 @@
 "use client";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Avatar } from "@/components/common/Avatar";
-import { ChevronRightIcon } from "@/components/common/icons";
+import { TrashIcon } from "@/components/common/icons";
+import { PersonName } from "@/components/common/PersonName";
 import { ApiError } from "@/lib/api-request";
+import { fullName, type Named } from "@/lib/names";
 import { libraryStats, type FriendsState, type Person } from "@/lib/show-types";
 import { AddFriend, requestSentText } from "./AddFriend";
 import { useOpenFriend } from "./FriendDialog";
@@ -81,13 +83,14 @@ function FriendRow({ person, busy, onRemove }: { person: Person; busy: boolean; 
   const [confirming, setConfirming] = useState(false);
   return <li>
     <div className={styles.personRow}>
+      {/* The whole row opens their profile; "Check profile" on its right says so. */}
       <button type="button" className={styles.personLink} onClick={() => openFriend(person)}>
         <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />
-        <span className={styles.personName}>{person.username}</span>
-        <span className={styles.chevron} aria-hidden="true"><ChevronRightIcon /></span>
+        <PersonName person={person} className={styles.personName} />{" "}
+        <span className={styles.checkProfile}>Check profile</span>
       </button>
-      <button ref={removeButton} type="button" className={styles.remove} aria-label={`Remove ${person.username}`}
-        aria-expanded={confirming} onClick={() => setConfirming(!confirming)}>Remove</button>
+      <button ref={removeButton} type="button" className={styles.removeIcon} aria-label={`Remove ${person.username}`}
+        aria-expanded={confirming} onClick={() => setConfirming(!confirming)}><TrashIcon /></button>
     </div>
     {confirming && <div className={styles.confirm} role="group" aria-labelledby={confirmId}>
       <p id={confirmId}>Remove {person.username} from your friends? You&rsquo;ll stop seeing each other&rsquo;s libraries.</p>
@@ -101,9 +104,11 @@ function FriendRow({ person, busy, onRemove }: { person: Person; busy: boolean; 
 
 /**
  * The Profile view, one column in the middle of the page: whose it is (their
- * picture and username), friend requests, stats, favourites and friends.
+ * picture, name and @username), friend requests, stats, favourites and friends.
  */
-export function Profile({ username, avatarUrl }: { username: string; avatarUrl: string | null }) {
+export function Profile({ user }: { user: Named & { avatarUrl: string | null } }) {
+  const { username, avatarUrl } = user;
+  const name = fullName(user);
   const library = useLibrary();
   const { state, loadError, load, send } = useFriends();
   const requestsId = useId();
@@ -137,7 +142,8 @@ export function Profile({ username, avatarUrl }: { username: string; avatarUrl: 
     <h1 className={styles.srOnly}>Profile</h1>
     <div className={styles.profileHeader}>
       <Avatar username={username} url={avatarUrl} className={`${styles.avatar} ${styles.profileAvatar}`} />
-      <p className={styles.profileName}>{username}</p>
+      {name && <p className={styles.profileName}>{name}</p>}
+      <p className={name ? styles.profileUsername : styles.profileName}>@{username}</p>
     </div>
     <ChangeError className={`${styles.error} ${styles.viewError}`} />
 
@@ -147,7 +153,7 @@ export function Profile({ username, avatarUrl }: { username: string; avatarUrl: 
       {incoming.length > 0 && <ul className={styles.people} aria-labelledby={requestsId}>
         {incoming.map((person) => <li key={person.id} className={styles.personRow}>
           <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />
-          <span className={styles.personName}>{person.username}</span>
+          <PersonName person={person} className={styles.personName} />
           <span className={styles.personActions}>
             <button type="button" className={styles.primary} disabled={busy} aria-label={`Accept ${person.username}`}
               onClick={() => act("requests", `/friends/${person.id}/accept`, "POST", `You and ${person.username} are now friends.`)}>Accept</button>
@@ -170,7 +176,7 @@ export function Profile({ username, avatarUrl }: { username: string; avatarUrl: 
         <h2 id={friendsId}>Friends</h2>
         {!!state?.friends.length && <span className={styles.count} aria-hidden="true">{state.friends.length}</span>}
       </div>
-      <AddFriend username={username} busy={busy} onAdd={addFriend} />
+      <AddFriend busy={busy} onAdd={addFriend} />
       {notice?.where === "friends" && <NoticeLine notice={notice} />}
       {!state ? (loadError ? <LoadError message={loadError} onRetry={load} /> : <div className={styles.people}>
         <p role="status" className={styles.srOnly}>Loading your friends…</p>
@@ -179,13 +185,13 @@ export function Profile({ username, avatarUrl }: { username: string; avatarUrl: 
         {state.friends.length ? <ul className={styles.people} aria-label="Your friends">
           {state.friends.map((person) => <FriendRow key={person.id} person={person} busy={busy}
             onRemove={() => act("friends", `/friends/${person.id}`, "DELETE", `Removed ${person.username} from your friends.`)} />)}
-        </ul> : <p className={styles.empty}>No friends yet. Add one by their username to see each other&rsquo;s libraries.</p>}
+        </ul> : <p className={styles.empty}>No friends yet. Search for one by their name or username to see each other&rsquo;s libraries.</p>}
         {state.outgoing.length > 0 && <>
           <h3 id={sentId} className={styles.subheading}>Sent requests</h3>
           <ul className={styles.people} aria-labelledby={sentId}>
             {state.outgoing.map((person) => <li key={person.id} className={styles.personRow}>
               <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />
-              <span className={styles.personName}>{person.username}</span>
+              <PersonName person={person} className={styles.personName} />
               <button type="button" disabled={busy} aria-label={`Cancel request to ${person.username}`}
                 onClick={() => act("friends", `/friends/${person.id}/cancel`, "POST", `Cancelled your friend request to ${person.username}.`)}>Cancel</button>
             </li>)}

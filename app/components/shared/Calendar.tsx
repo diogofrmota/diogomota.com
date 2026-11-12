@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState, type CSSProperties } from "react";
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "@/components/common/icons";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { Avatar } from "@/components/common/Avatar";
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, UserIcon, UsersIcon } from "@/components/common/icons";
 import { Spinner } from "@/components/common/Spinner";
 import { useAppView } from "@/hooks/useAppView";
 import { dateLabel, datePlus, eventDates, localParts, type CalendarEvent } from "@/lib/calendar";
@@ -50,6 +51,15 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
   const { panels, openPanel, closePanel } = useAppView();
+  const scroller = useRef<HTMLDivElement>(null);
+  // Asked for by Today, to scroll to the time it is now again.
+  const [nowRequest, setNowRequest] = useState(0);
+  // The week and the day views open at the time it is now: an hour before it at
+  // the top of the hours (1px a minute), under the days' names and the all-day row.
+  useLayoutEffect(() => {
+    if (view === "month" || !scroller.current) return;
+    scroller.current.scrollTop = Math.max(0, minutes(localParts(new Date()).time) - 60);
+  }, [view, nowRequest]);
   useEffect(() => {
     const controller = new AbortController();
     eventRequest<CalendarEvent[]>("", "GET", undefined, controller.signal).then((result) => {
@@ -80,13 +90,22 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
     }
   }
   const addOn = (day: string, time?: string) => openPanel(`new-event:${day}${time ? `T${time}` : ""}`);
+  // An event: who it's for (their picture or initial, or two people for the
+  // group) and its title. When it is, and who exactly, are in its dialog, in
+  // the week and day views its place among the hours, and in its name, for
+  // screen readers: "Dinner, 19:30, diogo", which starts with the title shown.
+  // Named by text rather than aria-label, so the initial on screen doesn't
+  // have to be in it (axe's label-content-name-mismatch).
   function eventButton(event: CalendarEvent, style?: CSSProperties) {
     const member = space.members.find((m) => m.id === event.assigneeId);
     const who = event.isGroup ? "Group" : member?.username ?? "Former member";
     const when = event.allDay ? "All day" : localParts(event.startsAt).time;
-    return <button key={event.id} className={`${styles.event} ${event.allDay ? styles.allDayEvent : ""}`} style={{ ...style, "--event-color": event.isGroup ? "var(--muted)" : member?.color ?? "var(--muted)" } as CSSProperties}
-      aria-label={`${event.title}, ${when}, ${who}`} onClick={(e) => { e.stopPropagation(); openPanel(`event:${event.id}`); }}>
-      <span className={styles.eventTitle}>{event.title}</span>{" "}<span className={styles.eventMeta}>{when} · {who}</span>
+    return <button key={event.id} className={`${styles.event} ${event.allDay ? styles.allDayEvent : ""} ${style ? styles.timedEvent : ""}`} style={{ ...style, "--event-color": event.isGroup ? "var(--muted)" : member?.color ?? "var(--muted)" } as CSSProperties}
+      onClick={(e) => { e.stopPropagation(); openPanel(`event:${event.id}`); }}>
+      {!event.isGroup && member ? <Avatar username={member.username} url={member.avatarUrl} className={styles.eventAvatar} />
+        : <span className={styles.eventAvatar} aria-hidden="true">{event.isGroup ? <UsersIcon /> : <UserIcon />}</span>}
+      <span className={styles.eventTitle} aria-hidden="true">{event.title}</span>
+      <span className={styles.srOnly}>{`${event.title}, ${when}, ${who}`}</span>
     </button>;
   }
   // One toolbar over the grid, so the grid gets the rest of the screen. The
@@ -96,7 +115,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
     <div className={styles.toolbar}>
       <div className={styles.actions}>
         <button className={`${styles.arrow} ${styles.prev}`} aria-label="Previous period" onClick={() => navigate(-1)}><ChevronLeftIcon /></button>
-        <button className={styles.goToday} onClick={() => move(today)}>Today</button>
+        <button className={styles.goToday} onClick={() => { move(today); setNowRequest((n) => n + 1); }}>Today</button>
         <button className={`${styles.arrow} ${styles.next}`} aria-label="Next period" onClick={() => navigate(1)}><ChevronRightIcon /></button>
       </div>
       <h2 aria-live="polite">{view === "day" ? dateLabel(date, { day: "numeric", month: "long", year: "numeric" }) : view === "week" ? `${dateLabel(first, { day: "numeric", month: "short" })} – ${dateLabel(days[6], { day: "numeric", month: "short", year: "numeric" })}` : dateLabel(date, { month: "long", year: "numeric" })}</h2>
@@ -108,7 +127,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
     {loading && <Spinner label="Loading calendar…" />}
     {error && <div role="alert" className={styles.alert}><p>{error}</p><button onClick={() => { setError(""); setLoading(true); setRevision((r) => r + 1); }}>Retry</button></div>}
     {!loading && !error && events.length === 0 && <p className={styles.empty}>Nothing planned yet — tap a day to add your first event!</p>}
-    <div className={styles.scroller} tabIndex={0} role="region" aria-label={`${view} calendar`}>
+    <div ref={scroller} className={styles.scroller} tabIndex={0} role="region" aria-label={`${view} calendar`}>
       {view === "month" ? <div key={`month:${first}`} className={styles.month} data-slide={slide}>
         {days.slice(0, 7).map((day) => <div className={styles.weekday} key={day}>{dateLabel(day, { weekday: "short" })}</div>)}
         {/* A tap anywhere on a day, but on an event, adds an event that day; its number is the button for keyboards and screen readers. */}

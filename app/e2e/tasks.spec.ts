@@ -232,11 +232,16 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   const tomorrow = datePlus(localParts(new Date()).date, 1);
   await row(page, "Buy milk").getByRole("button", { name: /^Buy milk/ }).click();
   const dialog = page.getByRole("dialog", { name: "Edit task" });
+  // Who it's for on the left, when it's due on the right; Save and Delete (its × closes it).
+  const assigneeBox = (await dialog.getByLabel("Assignee").boundingBox())!;
+  const dueBox = (await dialog.getByLabel("Due date (optional)").boundingBox())!;
+  expect(assigneeBox.x).toBeLessThan(dueBox.x);
+  await expect(dialog.getByRole("button", { name: /^(Save|Cancel|Delete)/ })).toHaveText(["Save", "Delete"]);
   await dialog.getByLabel("Assignee").selectOption({ label: friend.username });
   await dialog.getByLabel("Due date (optional)").fill(tomorrow);
   await dialog.getByLabel("Notes (optional)").fill("Two litres, semi-skimmed");
   changed = saved(page, /\/tasks\/[^/]+$/, "PATCH");
-  await dialog.getByRole("button", { name: "Save task" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await changed;
   const assignee = row(page, "Buy milk").getByText(friend.username);
@@ -252,7 +257,7 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await dialog.getByLabel("Assignee").selectOption("");
   await dialog.getByRole("button", { name: "Clear" }).click();
   changed = saved(page, /\/tasks\/[^/]+$/, "PATCH");
-  await dialog.getByRole("button", { name: "Save task" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await changed;
   await expect(row(page, "Buy milk").getByText(friend.username)).toHaveCount(0);
   await expect(row(page, "Buy milk")).not.toContainText("Due");
@@ -263,7 +268,7 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   const deleteTask = async (title: string) => {
     if (!isMobile) return row(page, title).getByRole("button", { name: `Delete ${title}` }).click();
     await row(page, title).getByRole("button", { name: new RegExp(`^${title}`) }).click();
-    await dialog.getByRole("button", { name: "Delete task" }).click();
+    await dialog.getByRole("button", { name: "Delete", exact: true }).click();
     // A finger lifts after the tap; the emulated mouse stays where it clicked, at
     // the foot of the sheet, where the undo message then shows (and pauses while
     // a pointer is on it).
@@ -286,7 +291,7 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   expect(deletes).toHaveLength(1);
   // From the task's dialog too.
   await row(page, "Fix the door").getByRole("button", { name: /^Fix the door/ }).click();
-  await dialog.getByRole("button", { name: "Delete task" }).click();
+  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("status").filter({ hasText: "Deleted “Fix the door”" })).toBeVisible();
   await page.getByRole("navigation", { name: "Shared", exact: true }).getByRole("button", { name: "Calendar" }).click();

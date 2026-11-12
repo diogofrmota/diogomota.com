@@ -1,0 +1,5 @@
+/* The username after a name: the name is what is read first. */
+.handle {
+  color: var(--muted);
+  font-weight: 400;
+}

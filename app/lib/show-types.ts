@@ -1,5 +1,7 @@
 // Types and helpers of the Shows app, for both the server and the browser.
 
+import type { Named } from "./names";
+
 export type MediaType = "tv" | "movie";
 export const mediaTypes: readonly MediaType[] = ["tv", "movie"];
 
@@ -51,8 +53,8 @@ export type TitleLengths = {
 /** A title in the user's library, as on a Watchlist card, with its lengths for the stats. */
 export type LibraryItem = TitleSummary & TitleLengths & { library: LibraryEntry };
 
-/** A title in a friend's library, as on a card in their profile. */
-export type FriendItem = TitleSummary & { library: SharedEntry };
+/** A title in a friend's library, as on a card in their profile, with its seasons for the progress line. */
+export type FriendItem = TitleSummary & Pick<TitleLengths, "episodesPerSeason"> & { library: SharedEntry };
 
 /** A title as shown in the detail panel, from the shows table (the TMDB cache). */
 export type TitleDetail = TitleSummary & TitleLengths & {
@@ -92,12 +94,13 @@ export const discoverSections: Record<MediaType, readonly { id: DiscoverSection;
   ],
 };
 
-/** A username suggested in Add a friend, and how they and the user are connected. */
+/** Someone suggested in the friend search, and how they and the user are connected. */
 export type PersonMatch = Person & { relation: "none" | "friend" | "incoming" | "outgoing" };
 
 /**
- * Usernames that start with what was typed (`matches`), whether another account
- * has exactly it (`exact`), and whether it is the user's own (`self`).
+ * People whose username or name starts with what was typed (`matches`),
+ * whether another account has exactly it as its username (`exact`), and
+ * whether it is the user's own (`self`).
  */
 export type PeopleSearch = { matches: PersonMatch[]; exact: boolean; self: boolean };
 
@@ -168,11 +171,22 @@ type StatsItem = Pick<TitleSummary, "type"> & TitleLengths & { library: Pick<Lib
  * episode of a completed show, up to the progress of one being watched (the
  * last episode watched included), none of a planned one.
  */
-export function episodesWatched(item: StatsItem): number {
+export function episodesWatched(item: Pick<StatsItem, "episodesPerSeason" | "library">): number {
   const seasons = item.episodesPerSeason ?? [];
   if (item.library.status === "completed") return sum(seasons);
   const progress = item.library.status === "watching" ? progressOf(item.library) : null;
   return progress ? sum(seasons.slice(0, progress.season - 1)) + progress.episode : 0;
+}
+
+/**
+ * How much of a title in the library has been watched, 0 to 1: all of a
+ * completed one, the share of a TV show's episodes watched while watching it
+ * (0 without its seasons), none of a movie being watched or a planned title.
+ */
+export function shareWatched(item: Pick<StatsItem, "type" | "episodesPerSeason" | "library">): number {
+  if (item.library.status === "completed") return 1;
+  const total = sum(item.episodesPerSeason ?? []);
+  return item.type === "tv" && total ? Math.min(1, episodesWatched(item) / total) : 0;
 }
 
 export type LibraryStats = {
@@ -205,8 +219,11 @@ export function libraryStats(items: readonly StatsItem[]): LibraryStats {
 export const formatHours = (minutes: number) =>
   (Math.round(minutes / 6) / 10).toLocaleString("en-GB", { maximumFractionDigits: 1 });
 
-/** A friend, a request someone sent the user, or one the user sent: with their profile picture, if they have one. */
-export type Person = { id: string; username: string; avatarUrl: string | null };
+/**
+ * A friend, a request someone sent the user, or one the user sent: with their
+ * profile picture and names, if they have them (lib/names.ts).
+ */
+export type Person = Named & { id: string; avatarUrl: string | null };
 
 /** The user's friends and pending friend requests, each by username. */
 export type FriendsState = { friends: Person[]; incoming: Person[]; outgoing: Person[] };
