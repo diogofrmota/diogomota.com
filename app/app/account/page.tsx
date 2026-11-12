@@ -10,7 +10,6 @@ import { ChevronDownIcon, ChevronLeftIcon } from "@/components/common/icons";
 import { LinkPending } from "@/components/common/LinkPending";
 import ui from "@/components/common/ui.module.css";
 import { appViewport } from "@/lib/apps";
-import { fullName } from "@/lib/names";
 import { themes } from "@/lib/themes";
 import { findUserById } from "@/lib/users";
 import { logOut } from "./actions";
@@ -78,8 +77,8 @@ export default async function AccountPage() {
         </div>
 
         <div className={styles.list}>
-          <Dropdown id="name" title="Name" value={fullName(user) ?? undefined}>
-            <NameForm firstName={user.firstName} lastName={user.lastName} />
+          <Dropdown id="name" title="Name" value={user.name ?? undefined}>
+            <NameForm name={user.name} />
           </Dropdown>
 
           <Dropdown id="username" title="Username">

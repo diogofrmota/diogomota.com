@@ -324,7 +324,7 @@ test("the Watchlist starts with a welcome, fills up from Discover, and the TV Sh
   await expect(grid(section(page, "Planned"), "Planned TV shows").getByRole("listitem"))
     .toHaveText([/Top Rated Series 2/, /The Quiet Orchard/]);
   await expect(section(page, "Planned").getByText("2", { exact: true })).toBeVisible();
-  await expect(page.getByRole("main").getByRole("link", { name: "TMDB" })).toBeVisible();
+  await expect(page.getByRole("main").locator("footer")).toHaveCount(0);
 
   // An empty section's link goes to Discover.
   await typeSwitch(page, "Movies").click();

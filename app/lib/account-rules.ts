@@ -11,7 +11,7 @@ export const EMAIL_MAX = 254;
 /** The largest profile picture file accepted (lib/avatars.ts makes it small). nginx lets 21 MB through to its upload. */
 export const AVATAR_MAX_BYTES = 20 * 1024 * 1024;
 
-/** A first or a last name (013_names.sql). */
+/** A name, "Diogo" or "Diogo Mota" (014_one_name.sql). */
 export const NAME_MAX = 50;
 
 export const usernameHint = `${USERNAME_MIN}-${USERNAME_MAX} characters: a-z, 0-9 and _.`;
@@ -22,15 +22,10 @@ export function normalizeName(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
 }
 
-export function firstNameError(firstName: string): string | null {
-  if (!firstName) return "Enter your first name.";
-  if (firstName.length > NAME_MAX) return `Use at most ${NAME_MAX} characters.`;
+export function nameError(name: string): string | null {
+  if (!name) return "Enter your name.";
+  if (name.length > NAME_MAX) return `Use at most ${NAME_MAX} characters.`;
   return null;
-}
-
-// The last name is optional.
-export function lastNameError(lastName: string): string | null {
-  return lastName.length > NAME_MAX ? `Use at most ${NAME_MAX} characters.` : null;
 }
 
 // Usernames are stored in lowercase, so "Diogo" signs up as "diogo".

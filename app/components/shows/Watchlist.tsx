@@ -7,7 +7,6 @@ import { ChangeError, useLibrary } from "./library";
 import { LibrarySection } from "./LibraryGrid";
 import { Onboarding } from "./Onboarding";
 import { LoadError } from "./TitleGrid";
-import { TmdbAttribution } from "./TmdbAttribution";
 import styles from "./Shows.module.css";
 
 function DiscoverLink({ children }: { children: React.ReactNode }) {
@@ -83,7 +82,6 @@ export function Watchlist() {
         {/* Keyed by type, so each section starts collapsed. */}
         {sectionOrder.map((status) => <Section key={`${type}/${status}`} status={status} type={type}
           items={ofType && ofType.filter((item) => item.library.status === status)} />)}
-        <TmdbAttribution />
       </>}
   </div>;
 }

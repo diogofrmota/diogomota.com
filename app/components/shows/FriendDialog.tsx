@@ -10,7 +10,6 @@ import { LibrarySection } from "./LibraryGrid";
 import { useShowsData } from "./shows-data";
 import { StatsSection } from "./Stats";
 import { LoadError } from "./TitleGrid";
-import { TmdbAttribution } from "./TmdbAttribution";
 import styles from "./Shows.module.css";
 
 // People by id, so the panel can name (and show) the friend while their profile loads.
@@ -56,7 +55,6 @@ export function FriendDialog({ id }: { id: string }) {
         {section("Watching", "watching", "Not watching anything right now.")}
         {section("Completed", "completed", "Nothing completed yet.")}
         {section("Favourites", null, "No favourites yet.")}
-        <TmdbAttribution />
       </>}
     </div>
   </Dialog>;

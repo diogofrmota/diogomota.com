@@ -9,9 +9,8 @@ export type User = {
   themePreference: Theme;
   /** Their profile picture (avatarUrlSql), or null without one. */
   avatarUrl: string | null;
-  /** Null until they set one (013_names.sql); the last name is optional. */
-  firstName: string | null;
-  lastName: string | null;
+  /** "Diogo" or "Diogo Mota", as they want it; null until they set one (014_one_name.sql). */
+  name: string | null;
 };
 
 /**
@@ -26,13 +25,7 @@ export function avatarUrlSql(alias?: string): string {
     || (extract(epoch FROM ${column("avatar_updated_at")}) * 1000)::bigint END`;
 }
 
-/** SQL for a user's names, from the users row `alias` (or the only one), as firstName and lastName. */
-export function nameSql(alias?: string): string {
-  const column = (name: string) => (alias ? `${alias}.${name}` : name);
-  return `${column("first_name")} AS "firstName", ${column("last_name")} AS "lastName"`;
-}
-
-const userColumns = `id, username, email, theme_preference AS "themePreference", ${avatarUrlSql()} AS "avatarUrl", ${nameSql()}`;
+const userColumns = `id, username, email, theme_preference AS "themePreference", ${avatarUrlSql()} AS "avatarUrl", name`;
 
 type LoginUser = {
   id: string;
@@ -97,23 +90,21 @@ export async function createUser(account: {
   username: string;
   email: string;
   passwordHash: string;
-  firstName: string;
-  /** "" without one. */
-  lastName: string;
+  name: string;
 }): Promise<User | null> {
   const { rows } = await query<User>(
-    `INSERT INTO users (username, email, password_hash, theme_preference, first_name, last_name)
-     VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''))
+    `INSERT INTO users (username, email, password_hash, theme_preference, name)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT DO NOTHING
      RETURNING ${userColumns}`,
-    [account.username, account.email, account.passwordHash, defaultTheme, account.firstName, account.lastName],
+    [account.username, account.email, account.passwordHash, defaultTheme, account.name],
   );
   return rows[0] ?? null;
 }
 
-/** Sets the user's names; an empty last name is none. */
-export async function updateName(id: string, firstName: string, lastName: string): Promise<void> {
-  await query(`UPDATE users SET first_name = $2, last_name = NULLIF($3, '') WHERE id = $1`, [id, firstName, lastName]);
+/** Sets the user's name. */
+export async function updateName(id: string, name: string): Promise<void> {
+  await query(`UPDATE users SET name = $2 WHERE id = $1`, [id, name]);
 }
 
 export async function usernameAvailable(id: string, username: string): Promise<boolean> {

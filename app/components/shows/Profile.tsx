@@ -4,7 +4,7 @@ import { Avatar } from "@/components/common/Avatar";
 import { TrashIcon } from "@/components/common/icons";
 import { PersonName } from "@/components/common/PersonName";
 import { ApiError } from "@/lib/api-request";
-import { fullName, type Named } from "@/lib/names";
+import type { Named } from "@/lib/names";
 import { libraryStats, type FriendsState, type Person } from "@/lib/show-types";
 import { AddFriend, requestSentText } from "./AddFriend";
 import { useOpenFriend } from "./FriendDialog";
@@ -13,7 +13,6 @@ import { LibrarySection } from "./LibraryGrid";
 import { forgetShowsData, showsRequest } from "./shows-data";
 import { StatsSection } from "./Stats";
 import { LoadError } from "./TitleGrid";
-import { TmdbAttribution } from "./TmdbAttribution";
 import styles from "./Shows.module.css";
 
 // The user's friends and friend requests: loaded whenever Profile is shown
@@ -107,8 +106,7 @@ function FriendRow({ person, busy, onRemove }: { person: Person; busy: boolean; 
  * picture, name and @username), friend requests, stats, favourites and friends.
  */
 export function Profile({ user }: { user: Named & { avatarUrl: string | null } }) {
-  const { username, avatarUrl } = user;
-  const name = fullName(user);
+  const { username, name, avatarUrl } = user;
   const library = useLibrary();
   const { state, loadError, load, send } = useFriends();
   const requestsId = useId();
@@ -199,7 +197,5 @@ export function Profile({ user }: { user: Named & { avatarUrl: string | null } }
         </>}
       </>}
     </section>
-    {/* Like the Watchlist: once there are TMDB posters and runtimes to credit. */}
-    {!!items?.length && <TmdbAttribution />}
   </div>;
 }

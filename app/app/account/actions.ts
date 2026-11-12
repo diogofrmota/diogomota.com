@@ -4,9 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth, signOut, unstable_update } from "@/auth";
 import {
-  firstNameError,
   formPassword,
-  lastNameError,
+  nameError,
   normalizeName,
   normalizeUsername,
   passwordError,
@@ -51,17 +50,13 @@ export async function changeUsername(_previous: FormState, formData: FormData): 
 
 export async function changeName(_previous: FormState, formData: FormData): Promise<FormState> {
   const { id: userId } = await currentUser();
-  const firstName = normalizeName(formData.get("firstName"));
-  const lastName = normalizeName(formData.get("lastName"));
-  const values = { firstName, lastName };
+  const name = normalizeName(formData.get("name"));
+  const values = { name };
 
-  const fieldErrors = {
-    firstName: firstNameError(firstName) ?? undefined,
-    lastName: lastNameError(lastName) ?? undefined,
-  };
-  if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors, values };
+  const fieldErrors = { name: nameError(name) ?? undefined };
+  if (fieldErrors.name) return { fieldErrors, values };
 
-  await updateName(userId, firstName, lastName);
+  await updateName(userId, name);
   // Shown on this page (the dropdown's value) and in both apps.
   revalidatePath("/", "layout");
   return { success: "Name saved.", values };

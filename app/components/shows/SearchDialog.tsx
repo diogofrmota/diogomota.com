@@ -6,7 +6,6 @@ import { useAppView } from "@/hooks/useAppView";
 import type { TitleSummary } from "@/lib/show-types";
 import { useDebounced, useOpenTitle, useShowsData } from "./shows-data";
 import { LoadError, SkeletonGrid, TitleGrid } from "./TitleGrid";
-import { TmdbAttribution } from "./TmdbAttribution";
 import styles from "./Shows.module.css";
 
 // Searching starts once typing pauses for this long.
@@ -45,7 +44,6 @@ export function SearchDialog() {
             {data.length > 0 && <TitleGrid titles={data} label="Search results" withType onOpen={openTitle} />}
           </>}
       </div>
-      <TmdbAttribution />
     </div>
   </Dialog>;
 }

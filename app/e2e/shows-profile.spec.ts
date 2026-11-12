@@ -33,9 +33,11 @@ const friendsList = (page: Page) => page.getByRole("list", { name: "Your friends
 const friendButton = (page: Page, username: string) =>
   friendsList(page).getByRole("button", { name: new RegExp(`\\(@${username}\\) Check profile$`) });
 /** How a person is shown: their name and @username. */
-const shown = (user: TestUser) => `${user.firstName} ${user.lastName} (@${user.username})`;
+const shown = (user: TestUser) => `${user.name} (@${user.username})`;
+/** The second word of a test user's name ("Ln…"), as unique as their username. */
+const secondWord = (user: TestUser) => user.name.split(" ")[1];
 /** A person as the friends API answers with them. */
-const named = (id: string, user: TestUser) => ({ id, username: user.username, avatarUrl: null, firstName: user.firstName, lastName: user.lastName });
+const named = (id: string, user: TestUser) => ({ id, username: user.username, avatarUrl: null, name: user.name });
 const statValues = (scope: Page | Locator) => section(scope, "Stats").getByRole("definition");
 const friendsState = async (page: Page) => (await (await page.request.get("/api/shows/friends")).json()).data;
 
@@ -51,7 +53,7 @@ test("Profile shows the user's favourites and stats, and the stats add up", asyn
   const main = page.getByRole("main");
   const middle = async (locator: Locator) => { const box = (await locator.boundingBox())!; return box.x + box.width / 2; };
   const center = await middle(main);
-  const name = main.getByText(`${user.firstName} ${user.lastName}`, { exact: true });
+  const name = main.getByText(user.name, { exact: true });
   const handle = main.getByText(`@${user.username}`, { exact: true });
   expect(Math.abs(await middle(name) - center)).toBeLessThanOrEqual(1);
   expect(Math.abs(await middle(handle) - center)).toBeLessThanOrEqual(1);
@@ -468,13 +470,13 @@ test("the friend search suggests people by username or name while typing, and sa
   // How each is connected, picked with a tap; Escape closes the list.
   await field.fill(ann.user.username.slice(0, 12));
   await expect(list.getByRole("option")).toHaveCount(1);
-  await expect(list.getByRole("option")).toHaveAccessibleName(new RegExp(`^Tester ${ann.user.lastName} \\(@${ann.user.username}\\)\\s*Sent you a request$`));
+  await expect(list.getByRole("option")).toHaveAccessibleName(new RegExp(`^${ann.user.name} \\(@${ann.user.username}\\)\\s*Sent you a request$`));
   await field.press("Escape");
   await expect(list).toBeHidden();
   await field.fill(bob.user.username);
   await expect(friends.getByText(`${bob.user.username} has an account · Request sent`)).toBeVisible();
   await field.fill(bob.user.username.slice(0, 12));
-  await list.getByRole("option", { name: new RegExp(`^Tester ${bob.user.lastName}`) }).click();
+  await list.getByRole("option", { name: new RegExp(`^${bob.user.name}`) }).click();
   await expect(field).toHaveValue(bob.user.username);
 
   // Nobody's, their own, and after an @, what no username could be.
@@ -487,18 +489,21 @@ test("the friend search suggests people by username or name while typing, and sa
   await field.fill("@no spaces");
   await expect(friends.getByText("Usernames have 3-20 characters: a-z, 0-9 and _.")).toBeVisible();
 
-  // By name too: the first, the last or both, in any case and without its accents.
-  await withDatabase((client) => client.query("UPDATE users SET first_name = 'João' WHERE id = $1", [ann.id]));
-  await field.fill(`joao ${ann.user.lastName.toUpperCase()}`);
+  // By name too: from its start or any word's, in any case and without its accents.
+  await withDatabase((client) => client.query("UPDATE users SET name = $2 WHERE id = $1", [ann.id, `João ${secondWord(ann.user)}`]));
+  await field.fill(`joao ${secondWord(ann.user).toUpperCase()}`);
   await expect(list.getByRole("option")).toHaveCount(1);
-  await expect(list.getByRole("option")).toHaveAccessibleName(new RegExp(`^João ${ann.user.lastName} \\(@${ann.user.username}\\)`));
+  await expect(list.getByRole("option")).toHaveAccessibleName(new RegExp(`^João ${secondWord(ann.user)} \\(@${ann.user.username}\\)`));
+  // Not from the middle of a word.
+  await field.fill(secondWord(ann.user).slice(2));
+  await expect(friends.getByText(`No one found for “${secondWord(ann.user).slice(2)}”.`)).toBeVisible();
   // A name that fits several people: which one?
   await field.fill("Tester");
   await expect.poll(() => list.getByRole("option").count()).toBeGreaterThan(1);
   await friends.getByRole("button", { name: "Send request" }).click();
   await expect(friends.getByText("Choose someone from the list.")).toBeVisible();
-  // Their last name alone: the one person, whose request that accepts.
-  await field.fill(ann.user.lastName);
+  // A later word of their name alone: the one person, whose request that accepts.
+  await field.fill(secondWord(ann.user));
   await expect(list.getByRole("option")).toHaveCount(1);
   await friends.getByRole("button", { name: "Send request" }).click();
   await expect(friends.getByRole("status")).toHaveText(`${ann.user.username} had already sent you a request: you're now friends.`);
@@ -510,10 +515,10 @@ test("the friend search suggests people by username or name while typing, and sa
     matches: [{ ...named(bob.id, bob.user), relation: "outgoing" }], exact: true, self: false,
   });
   // Names: not a username, so never exact; after an @, only usernames.
-  expect(await search(` ${bob.user.lastName.toLowerCase()} `)).toEqual({
+  expect(await search(` ${secondWord(bob.user).toLowerCase()} `)).toEqual({
     matches: [{ ...named(bob.id, bob.user), relation: "outgoing" }], exact: false, self: false,
   });
-  expect(await search(`@${bob.user.lastName}`)).toEqual({ matches: [], exact: false, self: false });
+  expect(await search(`@${secondWord(bob.user)}`)).toEqual({ matches: [], exact: false, self: false });
   expect(await search(me.username)).toEqual({ matches: [], exact: false, self: true });
   expect((await search("e2e_")).matches.length).toBeLessThanOrEqual(6);
   expect((await search("e2e_")).matches.map((match: { id: string }) => match.id)).not.toContain(await userId(me.username));

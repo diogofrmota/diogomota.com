@@ -64,11 +64,11 @@ test("two users create, copy invite, join, transfer ownership and delete the las
     await settings(other);
     await expect(other.getByRole("button", { name: "Generate invite" })).toHaveCount(0);
     await expect(other.getByRole("region", { name: "Members" })).toContainText("Only the owner can invite people.");
-    // Each with their picture (or initial), first name and @username.
+    // Each with their picture (or initial), name and @username.
     const members = other.getByRole("region", { name: "Members" });
     await expect(members.getByRole("listitem")).toHaveText([
-      new RegExp(`^.${owner.firstName} \\(@${owner.username}\\)Owner$`),
-      new RegExp(`^.${member.firstName} \\(@${member.username}\\) \\(you\\)$`),
+      new RegExp(`^.${owner.name} \\(@${owner.username}\\)Owner$`),
+      new RegExp(`^.${member.name} \\(@${member.username}\\) \\(you\\)$`),
     ]);
     const data: Space = (await (await other.request.get(base)).json()).data;
     expect(new Set(data.members.map((member) => member.color)).size).toBe(2);

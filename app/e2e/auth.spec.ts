@@ -25,7 +25,7 @@ test("sign up explains what is wrong with each field", async ({ page }) => {
   await signUp(page, { username: "ab", email: "not-an-email", password: "short" });
 
   await expect(page).toHaveURL("/signup");
-  await expect(page.getByText("Enter your first name.")).toBeVisible();
+  await expect(page.getByText("Enter your name.")).toBeVisible();
   await expect(page.getByText("Use 3-20 characters: a-z, 0-9 and _.")).toBeVisible();
   await expect(page.getByText("Enter a valid email, like name@example.com.")).toBeVisible();
   await expect(page.getByText("Use at least 10 characters.")).toBeVisible();

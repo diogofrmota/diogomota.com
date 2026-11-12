@@ -15,14 +15,6 @@
   margin: 0;
 }
 
-/* Two fields side by side (first and last name), one over the other on a phone. */
-.row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
-  gap: var(--space-5) var(--space-3);
-  align-items: start;
-}
-
 .label {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);

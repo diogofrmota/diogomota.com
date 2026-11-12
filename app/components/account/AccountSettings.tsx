@@ -95,32 +95,22 @@ export function UsernameForm({ username }: { username: string }) {
   );
 }
 
-/** First and last name (the last is optional), shown with the username in both apps. */
-export function NameForm({ firstName, lastName }: { firstName: string | null; lastName: string | null }) {
+/** Their name, as they want it ("Diogo" or "Diogo Mota"), shown with the username in both apps. */
+export function NameForm({ name }: { name: string | null }) {
   const [state, action, pending] = useActionState(changeName, {});
   const errors = state.fieldErrors ?? {};
 
   return (
     <form action={action} noValidate className={formStyles.form}>
-      <div className={formStyles.row}>
-        <Field
-          label="First name"
-          name="firstName"
-          error={errors.firstName}
-          autoComplete="given-name"
-          required
-          maxLength={NAME_MAX}
-          defaultValue={state.values?.firstName ?? firstName ?? ""}
-        />
-        <Field
-          label="Last name (optional)"
-          name="lastName"
-          error={errors.lastName}
-          autoComplete="family-name"
-          maxLength={NAME_MAX}
-          defaultValue={state.values?.lastName ?? lastName ?? ""}
-        />
-      </div>
+      <Field
+        label="Name"
+        name="name"
+        error={errors.name}
+        autoComplete="name"
+        required
+        maxLength={NAME_MAX}
+        defaultValue={state.values?.name ?? name ?? ""}
+      />
       <p className={formStyles.hint}>Your friends in Shows and the people in your shared space see it, with your username.</p>
       <FormMessage error={state.error} success={state.success} />
       <SubmitButton label="Save name" pending={pending} />

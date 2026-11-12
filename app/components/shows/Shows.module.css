@@ -208,9 +208,6 @@
 .skeletonLine { display: block; height: .8rem; margin-top: .5rem; border-radius: var(--radius-xs); }
 .skeletonShort { width: 55%; }
 
-.attribution { display: flex; align-items: center; gap: .5rem 1rem; flex-wrap: wrap; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: var(--text-xs); }
-.tmdbLink { display: inline-flex; align-items: center; min-height: 44px; }
-.tmdbLink img { display: block; }
 
 /* Dialogs: a modal on desktop, a bottom sheet (detail) or the whole screen
    (search) on a phone. Their content fills them, so a click on the dialog itself
@@ -236,7 +233,6 @@
 .dialog .textButton { flex-shrink: 0; border-color: transparent; background: none; color: var(--accent); font-weight: var(--weight-semibold); }
 .hint { margin: 0; color: var(--muted); }
 .results { min-height: 12rem; }
-.searchDialog .attribution, .friendDialog .attribution { margin-top: 2rem; }
 
 /* The detail panel (TitleDialog.tsx), as the title's page. On a phone: the
    poster beside the title and its facts, then everything else under both. On
@@ -487,7 +483,6 @@ div.people { padding: .25rem 1rem .75rem; }
 .onboardingNav { position: sticky; bottom: 0; z-index: 2; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .75rem; margin-top: 1.5rem; padding: .75rem 0 calc(.75rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--bg); }
 .onboardingNav .primary { min-width: 7rem; }
 .onboardingCount { margin: 0; color: var(--muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; text-align: center; }
-.onboarding .attribution { margin-top: 1.5rem; }
 
 /* A friend's profile: a large modal on desktop, the whole screen on a phone. */
 .friendDialog { width: min(60rem, calc(100% - 2rem)); height: min(52rem, 90dvh); }

@@ -29,23 +29,19 @@ export const test = base.extend({
   },
 });
 
-export type TestUser = { username: string; email: string; password: string; firstName: string; lastName: string };
+export type TestUser = { username: string; email: string; password: string; name: string };
 
 // Details for a new account. The "e2e_" prefix marks what global-teardown.ts
-// deletes. The last name is as unique as the username, to find them by.
+// deletes. The name's second word is as unique as the username, to find them by.
 export function newUser(): TestUser {
   const id = randomBytes(6).toString("hex");
-  return {
-    username: `e2e_${id}`, email: `e2e_${id}@example.test`, password: `correct horse ${id}`,
-    firstName: "Tester", lastName: `Ln${id}`,
-  };
+  return { username: `e2e_${id}`, email: `e2e_${id}@example.test`, password: `correct horse ${id}`, name: `Tester Ln${id}` };
 }
 
-/** Signs up with the sign-up form; without names, leaves the name fields empty. */
-export async function signUp(page: Page, user: Omit<TestUser, "firstName" | "lastName"> & Partial<TestUser>, path = "/signup") {
+/** Signs up with the sign-up form; without a name, leaves the Name field empty. */
+export async function signUp(page: Page, user: Omit<TestUser, "name"> & Partial<TestUser>, path = "/signup") {
   await page.goto(path);
-  await page.getByLabel("First name").fill(user.firstName ?? "");
-  await page.getByLabel("Last name (optional)").fill(user.lastName ?? "");
+  await page.getByLabel("Name", { exact: true }).fill(user.name ?? "");
   await page.getByLabel("Username").fill(user.username);
   await page.getByLabel("Email").fill(user.email);
   await page.getByLabel("Password").fill(user.password);

@@ -6,9 +6,8 @@ import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
 import {
   emailError,
-  firstNameError,
   formPassword,
-  lastNameError,
+  nameError,
   normalizeEmail,
   normalizeName,
   normalizeUsername,
@@ -22,16 +21,14 @@ import { clientIp, signUpLimit } from "@/lib/rate-limit";
 import { createUser } from "@/lib/users";
 
 export async function signUp(_previous: FormState, formData: FormData): Promise<FormState> {
-  const firstName = normalizeName(formData.get("firstName"));
-  const lastName = normalizeName(formData.get("lastName"));
+  const name = normalizeName(formData.get("name"));
   const username = normalizeUsername(formData.get("username"));
   const email = normalizeEmail(formData.get("email"));
   const password = formPassword(formData.get("password"));
-  const values = { firstName, lastName, username, email };
+  const values = { name, username, email };
 
   const fieldErrors = {
-    firstName: firstNameError(firstName) ?? undefined,
-    lastName: lastNameError(lastName) ?? undefined,
+    name: nameError(name) ?? undefined,
     username: usernameError(username) ?? undefined,
     email: emailError(email) ?? undefined,
     password: passwordError(password) ?? undefined,
@@ -43,7 +40,7 @@ export async function signUp(_previous: FormState, formData: FormData): Promise<
     return { error: "Too many sign-ups from your network. Try again in an hour.", values };
   }
 
-  const user = await createUser({ username, email, passwordHash: await hashPassword(password), firstName, lastName });
+  const user = await createUser({ username, email, passwordHash: await hashPassword(password), name });
   if (!user) {
     // Doesn't say whether the username or the email is taken.
     return {

@@ -6,7 +6,6 @@ import { discoverSections, type DiscoverSection, type MediaType, type TitleSumma
 import { useLibrary } from "./library";
 import { useOpenTitle, useShowsData } from "./shows-data";
 import { LoadError, SkeletonGrid, TitleRow } from "./TitleGrid";
-import { TmdbAttribution } from "./TmdbAttribution";
 import styles from "./Shows.module.css";
 
 // A line under the heading, for the sections whose heading doesn't say it all.
@@ -74,6 +73,5 @@ export function Discover() {
     </div>
     {/* Keyed by type, so each list starts collapsed. */}
     {sections.map((section) => <Section key={`${type}/${section.id}`} type={type} section={section.id} heading={section.heading} />)}
-    <TmdbAttribution />
   </div>;
 }

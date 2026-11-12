@@ -5,7 +5,7 @@ import { query } from "./db";
 import { friendRequestLimit, userSearchLimit } from "./rate-limit";
 import type { FriendProfile, FriendsState, PeopleSearch, Person, PersonMatch } from "./show-types";
 import { sharedLibrary, ShowsError } from "./shows";
-import { avatarUrlSql, nameSql } from "./users";
+import { avatarUrlSql } from "./users";
 
 // Friendships of the Shows app: one row per pair of users (001_initial.sql),
 // user_id sent the request and friend_id received it. Pending until the
@@ -26,7 +26,7 @@ function personId(value: string, notFound: string): string {
 /** The user's friends, the requests they received and the ones they sent, each by username. */
 export async function readFriends(userId: string): Promise<FriendsState> {
   const { rows } = await query<Person & { status: "pending" | "accepted"; sent: boolean }>(
-    `SELECT u.id, u.username, ${avatarUrlSql("u")} AS "avatarUrl", ${nameSql("u")}, f.status, f.user_id = $1 AS sent
+    `SELECT u.id, u.username, ${avatarUrlSql("u")} AS "avatarUrl", u.name, f.status, f.user_id = $1 AS sent
      FROM friendships f JOIN users u ON u.id = CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END
      WHERE $1 IN (f.user_id, f.friend_id) ORDER BY u.username`,
     [userId],
@@ -81,15 +81,15 @@ export async function sendFriendRequest(userId: string, body: Record<string, unk
 // Suggestions start at this many characters: enough to narrow them down, so
 // listing every account takes many searches (and userSearchLimit caps those).
 const searchMin = 2;
-// A first and a last name, with the space between them.
-const searchMax = NAME_MAX * 2 + 1;
+// As long as a name.
+const searchMax = NAME_MAX;
 const suggestionCount = 6;
 
 // A LIKE pattern for what starts with `text`: "_" and "%" are themselves.
 const startsWith = (text: string) => `${text.replace(/[\\%_]/g, "\\$&")}%`;
 
 /**
- * The people whose username, first name, last name or whole name starts with
+ * The people whose username, name or a word in their name starts with
  * `value` (typed in the friend search: case, accents and an "@" before a
  * username don't matter; after an "@", only usernames), the exact username
  * first, then the other usernames, then names, shortest username first; each
@@ -110,17 +110,17 @@ export async function searchPeople(userId: string, value: unknown): Promise<Peop
 
   // Usernames are stored in lowercase: a plain prefix LIKE, which
   // users_username_prefix_idx can serve. Names are compared in lowercase and
-  // without accents (unaccent, 013_names.sql). A NULL pattern matches nothing.
+  // without accents (unaccent, 013_names.sql), from their start or from a
+  // word's: "mota" finds "Diogo Mota". A NULL pattern matches nothing.
   const { rows } = await query<PersonMatch>(
-    `SELECT u.id, u.username::text AS username, ${avatarUrlSql("u")} AS "avatarUrl", ${nameSql("u")},
+    `SELECT u.id, u.username::text AS username, ${avatarUrlSql("u")} AS "avatarUrl", u.name,
        CASE WHEN f.status = 'accepted' THEN 'friend' WHEN f.user_id = $1 THEN 'outgoing'
          WHEN f.friend_id = $1 THEN 'incoming' ELSE 'none' END AS relation
      FROM users u
      LEFT JOIN friendships f ON (f.user_id = $1 AND f.friend_id = u.id) OR (f.user_id = u.id AND f.friend_id = $1)
      WHERE u.username::text LIKE $2
-       OR unaccent(lower(u.first_name)) LIKE unaccent($4::text)
-       OR unaccent(lower(u.last_name)) LIKE unaccent($4::text)
-       OR unaccent(lower(concat_ws(' ', u.first_name, u.last_name))) LIKE unaccent($4::text)
+       OR unaccent(lower(u.name)) LIKE unaccent($4::text)
+       OR unaccent(lower(u.name)) LIKE unaccent('% ' || $4::text)
      ORDER BY u.username::text = $3 DESC, coalesce(u.username::text LIKE $2, false) DESC,
        length(u.username::text), u.username::text
      LIMIT ${suggestionCount + 1}`,
@@ -186,7 +186,7 @@ const onlyFriends = "Only friends can see each other's libraries.";
  */
 export async function readFriend(userId: string, friendId: string): Promise<FriendProfile> {
   const { rows: [friend] } = await query<Person>(
-    `SELECT u.id, u.username, ${avatarUrlSql("u")} AS "avatarUrl", ${nameSql("u")}
+    `SELECT u.id, u.username, ${avatarUrlSql("u")} AS "avatarUrl", u.name
      FROM friendships f JOIN users u ON u.id = $2 WHERE f.status = 'accepted' AND ${pair}`,
     [userId, personId(friendId, onlyFriends)],
   );

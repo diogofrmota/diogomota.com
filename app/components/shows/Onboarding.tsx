@@ -9,7 +9,6 @@ import { AddMark, ProgressLine, StatusBadge, statusHints, statusIcons, StatusCho
 import { useLibrary } from "./library";
 import { forgetShowsData, showsRequest, useDebounced, useShowsData } from "./shows-data";
 import { cardSizes, LoadError, Poster, SkeletonGrid, titleFacts } from "./TitleGrid";
-import { TmdbAttribution } from "./TmdbAttribution";
 import styles from "./Shows.module.css";
 
 // The guide's steps: TV shows, then movies (the titles to pick from are what's
@@ -221,6 +220,5 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       </p>
       <button type="button" className={styles.primary} onClick={() => go(1)}>{index === steps.length - 1 ? "Finish" : "Next"}</button>
     </div>}
-    {step.kind === "titles" && !finished && <TmdbAttribution />}
   </section>;
 }

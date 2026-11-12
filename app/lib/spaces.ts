@@ -3,7 +3,7 @@ import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import { getPool } from "./db";
 import { memberColors, type Space } from "./space-types";
-import { avatarUrlSql, nameSql } from "./users";
+import { avatarUrlSql } from "./users";
 
 export class SpaceError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -35,7 +35,7 @@ export async function readSpace(db: PoolClient, userId: string, id?: string): Pr
   if (id && current !== id) throw new SpaceError("Space not found.", 404);
   if (!current) return null;
   const { rows } = await db.query('SELECT id, created_by AS "ownerId" FROM spaces WHERE id = $1', [current]);
-  const members = await db.query(`SELECT id, username, ${avatarUrlSql()} AS "avatarUrl", ${nameSql()}, space_color AS color,
+  const members = await db.query(`SELECT id, username, ${avatarUrlSql()} AS "avatarUrl", name, space_color AS color,
     CASE WHEN id = $2 THEN 'owner' ELSE 'member' END AS role
     FROM users WHERE space_id = $1 ORDER BY space_joined_at, id`, [current, rows[0].ownerId]);
   return { ...rows[0], members: members.rows };

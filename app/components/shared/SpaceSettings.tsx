@@ -49,7 +49,7 @@ function SpaceCards({ space, userId, onChange }: { space: Space; userId: string;
       <ul className={styles.members}>{space.members.map((member) => <li key={member.id}>
         <Avatar username={member.username} url={member.avatarUrl} className={styles.memberAvatar}
           style={{ "--member-color": member.color } as CSSProperties} />
-        <span className={styles.memberName}><PersonName person={member} first />{member.id === userId ? " (you)" : ""}</span>
+        <span className={styles.memberName}><PersonName person={member} />{member.id === userId ? " (you)" : ""}</span>
         {member.role === "owner" && <span className={styles.role}>Owner</span>}
       </li>)}</ul>
       {!owner && <p className={ui.muted}>Only the owner can invite people.</p>}

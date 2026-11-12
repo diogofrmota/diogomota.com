@@ -4,16 +4,15 @@ import { Avatar } from "@/components/common/Avatar";
 import { CheckIcon } from "@/components/common/icons";
 import { PersonName } from "@/components/common/PersonName";
 import { NAME_MAX, usernameHint, USERNAME_MAX } from "@/lib/account-rules";
-import { fullName } from "@/lib/names";
 import type { FriendsState, PeopleSearch, PersonMatch } from "@/lib/show-types";
 import { showsRequest, useDebounced } from "./shows-data";
 import styles from "./Shows.module.css";
 
 // Suggestions are asked for once typing pauses this long, from 2 characters
-// to a first and a last name's length (lib/friends.ts, searchPeople).
+// to a name's length (lib/friends.ts, searchPeople).
 const debounceMs = 200;
 const searchMin = 2;
-const searchMax = NAME_MAX * 2 + 1;
+const searchMax = NAME_MAX;
 
 const relationNames: Record<PersonMatch["relation"], string> = {
   none: "", friend: "Friends", incoming: "Sent you a request", outgoing: "Request sent",
@@ -30,7 +29,9 @@ function fits(match: PersonMatch, typed: string): boolean {
   const handle = typed.startsWith("@");
   const text = fold(handle ? typed.slice(1) : typed);
   if (match.username.startsWith(text)) return true;
-  return !handle && [match.firstName, match.lastName, fullName(match)].some((name) => !!name && fold(name).startsWith(text));
+  // The name, or a word in it ("mota" fits "Diogo Mota").
+  const name = match.name ? fold(match.name) : null;
+  return !handle && !!name && (name.startsWith(text) || name.includes(` ${text}`));
 }
 
 /** What a friend request to `value` did, from the friends and requests the server answered with. */

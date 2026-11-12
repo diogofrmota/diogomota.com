@@ -106,11 +106,10 @@ test("Discover shows TMDB's lists, three genres and Added by Friends, for TV sho
   await expect(cardButtons(grid(page, "Popular TV shows"))).toHaveCount(20);
   expect(requests).toEqual([]);
 
-  // TMDB's logo, linking to TMDB; no notice under it.
-  const logo = page.getByRole("main").getByRole("link", { name: "TMDB" }).filter({ visible: true });
-  await expect(logo).toHaveAttribute("href", "https://www.themoviedb.org/");
-  await expect(logo.getByRole("img", { name: "TMDB" })).toBeVisible();
+  // No TMDB footer: no logo, no notice, no line over them.
+  await expect(page.getByRole("link", { name: "TMDB" })).toHaveCount(0);
   await expect(page.getByText("is not endorsed, certified, or otherwise approved by TMDB")).toHaveCount(0);
+  await expect(page.getByRole("main").locator("footer")).toHaveCount(0);
 
   // The server asked TMDB with its token (Top Rated and the genres are its /discover);
   // the browser only ever loaded images from TMDB.

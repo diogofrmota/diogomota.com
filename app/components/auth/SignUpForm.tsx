@@ -23,25 +23,15 @@ export function SignUpForm({ next }: { next: string | null }) {
   return (
     <form action={action} noValidate className={formStyles.form}>
       {next && <input type="hidden" name="next" value={next} />}
-      <div className={formStyles.row}>
-        <Field
-          label="First name"
-          name="firstName"
-          error={errors.firstName}
-          autoComplete="given-name"
-          required
-          maxLength={NAME_MAX}
-          defaultValue={state.values?.firstName}
-        />
-        <Field
-          label="Last name (optional)"
-          name="lastName"
-          error={errors.lastName}
-          autoComplete="family-name"
-          maxLength={NAME_MAX}
-          defaultValue={state.values?.lastName}
-        />
-      </div>
+      <Field
+        label="Name"
+        name="name"
+        error={errors.name}
+        autoComplete="name"
+        required
+        maxLength={NAME_MAX}
+        defaultValue={state.values?.name}
+      />
       <Field
         label="Username"
         name="username"

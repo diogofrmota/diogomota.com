@@ -165,32 +165,36 @@ test("username availability requires login, validates input and limits checks", 
   expect((await page.request.get(`${endpoint}?username=${user.username}`)).status()).toBe(429);
 });
 
-test("Name sets the first and last name, which Shows' Profile shows over the @username", async ({ page }) => {
+test("Name sets the name, one word or more, which Shows' Profile shows over the @username", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
   await page.goto("/account");
   // The one given at sign-up, by the dropdown's name.
-  await expect(section(page, "Name").locator("summary")).toContainText(`${user.firstName} ${user.lastName}`);
+  await expect(section(page, "Name").locator("summary")).toContainText(user.name);
   const name = await openSection(page, "Name");
-  await expect(name.getByLabel("First name")).toHaveValue(user.firstName);
-  await expect(name.getByLabel("Last name (optional)")).toHaveValue(user.lastName);
+  // One field, for the whole name.
+  await expect(name.getByRole("textbox")).toHaveCount(1);
+  const field = name.getByLabel("Name", { exact: true });
+  await expect(field).toHaveValue(user.name);
 
-  // A first name is needed; the last name isn't. Spaces around and between words are tidied.
-  await name.getByLabel("First name").fill("   ");
+  // A name is needed, one word is enough. Spaces around and between words are tidied.
+  await field.fill("   ");
   await name.getByRole("button", { name: "Save name" }).click();
-  await expect(name.getByText("Enter your first name.")).toBeVisible();
-  await name.getByLabel("First name").fill("  Ana   Sofia ");
-  await name.getByLabel("Last name (optional)").fill("");
+  await expect(name.getByText("Enter your name.")).toBeVisible();
+  await field.fill("  Ana  ");
   await name.getByRole("button", { name: "Save name" }).click();
   await expect(name.getByRole("status")).toHaveText("Name saved.");
-  await expect(name.locator("summary")).toContainText("Ana Sofia");
-  await expect(name.getByLabel("First name")).toHaveValue("Ana Sofia");
+  await expect(name.locator("summary")).toContainText("Ana");
+  await field.fill("  Ana   Sofia  Reis ");
+  await name.getByRole("button", { name: "Save name" }).click();
+  await expect(name.locator("summary")).toContainText("Ana Sofia Reis");
+  await expect(field).toHaveValue("Ana Sofia Reis");
 
   await page.goto("/shows");
   await page.getByRole("navigation", { name: "Shows", exact: true }).getByRole("button", { name: "Profile", exact: true }).click();
   const main = page.getByRole("main");
-  await expect(main.getByText("Ana Sofia", { exact: true })).toBeVisible();
+  await expect(main.getByText("Ana Sofia Reis", { exact: true })).toBeVisible();
   await expect(main.getByText(`@${user.username}`, { exact: true })).toBeVisible();
 });
 
