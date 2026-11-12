@@ -36,9 +36,9 @@ export function FriendDialog({ id }: { id: string }) {
   const person = friend ?? seen.get(id);
   const username = person?.username;
   const items = friend?.items ?? null;
-  // Watching and Completed say the status in their heading; Favourites mixes them, so its posters say it.
+  // Each poster says its status (LibraryGrid): Favourites mixes them.
   const section = (heading: string, status: "watching" | "completed" | null, empty: string) =>
-    <LibrarySection heading={heading} label={heading} readOnly showStatus={!status}
+    <LibrarySection heading={heading} label={heading} readOnly
       loadingLabel={`Loading ${heading.toLowerCase()}…`} empty={empty}
       items={items && items.filter((item) => status ? item.library.status === status : item.library.isFavourite)} />;
 

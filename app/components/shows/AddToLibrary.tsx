@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { BookmarkIcon, CheckIcon, DoneIcon, PlayIcon, PlusIcon } from "@/components/common/icons";
-import { addStatuses, statusNames, type LibraryItem, type LibraryStatus, type TitleSummary } from "@/lib/show-types";
+import {
+  addStatuses, nextEpisode, progressOf, statusNames, type Episode, type LibraryItem, type LibraryStatus, type TitleSummary,
+} from "@/lib/show-types";
+import { EpisodePicker } from "./EpisodePicker";
 import { useLibrary } from "./library";
 import styles from "./Shows.module.css";
 
@@ -47,6 +50,16 @@ export function useTitleStatus(title: TitleSummary, { toggle = false } = {}): Ti
   return { item, busy, error, choose };
 }
 
+/**
+ * A title's status on its poster, at the top left: Watching and Completed on
+ * every poster of a title in the library (Discover, search, the Watchlist, the
+ * guide); Planned only where statuses are mixed (LibraryGrid). Decorative: the
+ * card's label says the status.
+ */
+export function StatusBadge({ status }: { status: LibraryStatus }) {
+  return <span className={`${styles.badge} ${styles[status]}`} aria-hidden="true">{statusNames[status]}</span>;
+}
+
 /** The mark at a poster's bottom right: + to add, a tick once in the library, a ring while adding. Decorative. */
 export function AddMark({ added, busy }: { added: boolean; busy: boolean }) {
   return <span className={styles.addMark} data-added={added} aria-hidden="true">
@@ -54,10 +67,35 @@ export function AddMark({ added, busy }: { added: boolean; busy: boolean }) {
   </span>;
 }
 
+// Over the poster, once a TV show is Watching: the last episode watched (its
+// progress, or the first episode), saved with Save. Leaving it (a tap outside,
+// Escape) keeps the progress it had: Not started, for a title just added.
+function ProgressStep({ item, headingId, onDone }: { item: LibraryItem; headingId: string; onDone: () => void }) {
+  const { change } = useLibrary();
+  const seasons = item.episodesPerSeason ?? [];
+  const saved = progressOf(item.library);
+  const [progress, setProgress] = useState<Episode | null>(() => saved ?? nextEpisode(seasons, null));
+  const first = useRef<HTMLSelectElement>(null);
+  useEffect(() => first.current?.focus({ preventScroll: true }), []);
+  function save() {
+    if (progress?.season !== saved?.season || progress?.episode !== saved?.episode) {
+      change(item, { currentSeason: progress?.season ?? null, currentEpisode: progress?.episode ?? null });
+    }
+    onDone();
+  }
+  return <>
+    <p id={headingId} className={styles.chooserLabel}>Last watched</p>
+    <EpisodePicker labelled={false} seasons={seasons} progress={progress} onChange={setProgress} firstRef={first} />
+    <button type="button" className={styles.chooserSave} onClick={save}>Save</button>
+  </>;
+}
+
 /**
- * Over a card's poster: Watching, Planned or Completed, each with its icon (the
- * one the title has pressed). A choice closes it, and so do Escape, Cancel (for
- * screen readers) and a tap outside the card; focus goes back to `returnFocus`.
+ * Over a card's poster: Planned, Watching or Completed, each with its icon (the
+ * one the title has pressed). A choice closes it, but Watching a TV show, which
+ * goes on to the season and the episode watched (ProgressStep). Escape, Cancel
+ * (for screen readers) and a tap outside the card close it too; focus goes back
+ * to `returnFocus`.
  */
 export function StatusChooser({ title, status, onClose, returnFocus }: {
   title: TitleSummary; status: TitleStatus; onClose: () => void; returnFocus: () => HTMLElement | null;
@@ -65,6 +103,10 @@ export function StatusChooser({ title, status, onClose, returnFocus }: {
   const group = useRef<HTMLDivElement>(null);
   const headingId = useId();
   const current = status.item?.library.status;
+  const [askProgress, setAskProgress] = useState(false);
+  const progressItem = askProgress && status.item?.library.status === "watching" ? status.item : undefined;
+  // Nothing to ask once adding it failed, or of a show TMDB lists no episodes of.
+  const nothingToAsk = askProgress && !status.busy && (!!status.error || !progressItem?.episodesPerSeason?.length);
 
   function close() {
     onClose();
@@ -73,6 +115,7 @@ export function StatusChooser({ title, status, onClose, returnFocus }: {
   }
   const latest = useRef({ close, onClose });
   useEffect(() => { latest.current = { close, onClose }; });
+  useEffect(() => { if (nothingToAsk) latest.current.close(); }, [nothingToAsk]);
 
   // On opening: focus on the title's status, or the first; then listen for a
   // tap outside the card, and for Escape before a dialog around it (search)
@@ -98,15 +141,22 @@ export function StatusChooser({ title, status, onClose, returnFocus }: {
     };
   }, []);
 
-  return <div ref={group} className={styles.chooser} role="group" aria-labelledby={headingId}>
-    <p id={headingId} className={styles.chooserHeading}>{current ? title.title : `Add ${title.title} as`}</p>
-    {addStatuses.map((value, i) => {
-      const Icon = statusIcons[value];
-      return <button key={value} type="button" className={styles.chooserOption} data-status={value} aria-pressed={current === value}
-        style={{ "--i": i } as React.CSSProperties} onClick={() => { status.choose(value); close(); }}>
-        <Icon /><span>{statusNames[value]}</span>
-      </button>;
-    })}
+  return <div ref={group} className={styles.chooser} role="group" aria-labelledby={headingId} aria-busy={askProgress && status.busy}>
+    {!askProgress ? <>
+      <p id={headingId} className={styles.chooserHeading}>{current ? title.title : `Add ${title.title} as`}</p>
+      {addStatuses.map((value, i) => {
+        const Icon = statusIcons[value];
+        return <button key={value} type="button" className={styles.chooserOption} data-status={value} aria-pressed={current === value}
+          style={{ "--i": i } as React.CSSProperties} onClick={() => {
+            const ask = value === "watching" && title.type === "tv" && current !== "watching";
+            status.choose(value);
+            if (ask) setAskProgress(true); else close();
+          }}>
+          <Icon /><span>{statusNames[value]}</span>
+        </button>;
+      })}
+    </> : progressItem && !nothingToAsk ? <ProgressStep item={progressItem} headingId={headingId} onDone={close} />
+      : <><p id={headingId} role="status" className={styles.chooserHeading}>Adding {title.title}…</p><span className={styles.addRing} /></>}
     <button type="button" className={styles.srOnly} onClick={close}>Cancel</button>
   </div>;
 }

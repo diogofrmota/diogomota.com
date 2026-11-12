@@ -4,9 +4,10 @@ import { Dialog } from "@/components/common/Dialog";
 import { CloseIcon } from "@/components/common/icons";
 import { Spinner } from "@/components/common/Spinner";
 import { useAppView } from "@/hooks/useAppView";
-import { titleKey, type MediaType, type TitleSummary } from "@/lib/show-types";
+import { progressOf, titleKey, type MediaType, type TitleSummary } from "@/lib/show-types";
+import { EpisodePicker } from "./EpisodePicker";
 import { ChangeError, useLibrary } from "./library";
-import { StarRating, StatusPicker } from "./LibraryControls";
+import { StatusPicker } from "./LibraryControls";
 import { LoadError } from "./TitleGrid";
 import styles from "./Shows.module.css";
 
@@ -38,7 +39,11 @@ function placement(anchor: Anchor | undefined): React.CSSProperties | undefined 
   };
 }
 
-/** Quick status change and rating of a title in the library, from its card on Home. */
+/**
+ * Quick status change of a title in the library, from its card (the Watchlist,
+ * Profile, a tick on a Discover poster): with the season and the episode of a
+ * TV show being watched.
+ */
 export function QuickActions({ title }: { title: { type: MediaType; tmdbId: number } }) {
   const { closePanel } = useAppView();
   const library = useLibrary();
@@ -55,7 +60,9 @@ export function QuickActions({ title }: { title: { type: MediaType; tmdbId: numb
       <ChangeError className={styles.error} />
       {item ? <>
         <StatusPicker status={item.library.status} onChange={(status) => library.change(item, { status })} />
-        <StarRating rating={item.library.rating} onChange={(rating) => library.change(item, { rating })} />
+        {item.type === "tv" && item.library.status === "watching" && !!item.episodesPerSeason?.length &&
+          <EpisodePicker seasons={item.episodesPerSeason} progress={progressOf(item.library)}
+            onChange={(progress) => library.change(item, { currentSeason: progress?.season ?? null, currentEpisode: progress?.episode ?? null })} />}
       </> : library.items ? <p className={styles.muted}>This title isn&rsquo;t in your library anymore.</p>
         : library.loadError ? <LoadError message={library.loadError} onRetry={library.reload} />
         : <Spinner label="Loading your library…" />}

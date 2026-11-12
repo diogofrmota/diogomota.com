@@ -52,7 +52,7 @@ test("every theme saves from Account, and colors the page, the page behind it an
 
 // axe in all the themes, on the views that between them have every pair of
 // their colors: text, secondary text and the accent on the page, cards, hover
-// and selected backgrounds; buttons; the spaces' colors (Calendar); stars.
+// and selected backgrounds; buttons; the spaces' colors (Calendar).
 test.describe("in every theme, axe finds nothing serious", () => {
   // The colors are the same at any size; views.spec.ts checks the phone's layout.
   test.skip(({ isMobile }) => isMobile, "colors don't change with the screen size");
@@ -106,7 +106,7 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await checkThemes(page, "task");
   });
 
-  test("Shows: a rated title in the library, and Home", async ({ page }) => {
+  test("Shows: a title in the library, and the Watchlist", async ({ page }) => {
     await openShows(page);
     await tab(page, "Discover").click();
     const popular = grid(page, "Popular TV shows");
@@ -119,19 +119,16 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await page.goBack();
     await expect(title).toBeHidden();
 
-    await tab(page, "Home").click();
+    await tab(page, "Watchlist").click();
     const harbor = card(grid(section(page, "Watching"), "Watching TV shows"), "Harbor Lights");
     await harbor.click();
     const detail = page.getByRole("dialog", { name: "Harbor Lights" });
-    const rating = detail.getByRole("group", { name: "Your rating" });
-    await rating.getByRole("button", { name: "3 stars" }).click();
-    await expect(rating.getByRole("button", { name: "3 stars" })).toHaveAttribute("aria-pressed", "true");
-    // Off the stars: hovered, they all light up.
+    await expect(detail.getByRole("group", { name: "Progress" })).toBeVisible();
     await page.mouse.move(0, 0);
-    await checkThemes(page, "a rated title in the library");
+    await checkThemes(page, "a title in the library");
     await page.goBack();
     await expect(detail).toBeHidden();
     await expect(harbor).toBeVisible();
-    await checkThemes(page, "Home, with a rated title");
+    await checkThemes(page, "Watchlist, with a title Watching");
   });
 });

@@ -1,15 +1,16 @@
 "use client";
 import { useId, useRef, useState } from "react";
-import { CheckIcon, HeartIcon, StarIcon } from "@/components/common/icons";
+import { CheckIcon, HeartIcon } from "@/components/common/icons";
 import {
   formatEpisode, isLastEpisode, libraryStatuses, nextEpisode, progressOf, statusNames,
   type Episode, type LibraryItem, type LibraryStatus, type TitleDetail,
 } from "@/lib/show-types";
 import { statusIcons } from "./AddToLibrary";
+import { EpisodePicker } from "./EpisodePicker";
 import { ChangeError, useLibrary } from "./library";
 import styles from "./Shows.module.css";
 
-/** Watching | Planned | Completed, the current one pressed; with each one's icon in the detail panel. */
+/** Planned | Watching | Completed, the current one pressed; with each one's icon in the detail panel. */
 export function StatusPicker({ status, onChange, icons = false }: {
   status: LibraryStatus; onChange: (status: LibraryStatus) => void; icons?: boolean;
 }) {
@@ -22,20 +23,6 @@ export function StatusPicker({ status, onChange, icons = false }: {
   </div>;
 }
 
-/** 1-5 stars. Pressing the current rating again, or Clear, removes it. */
-export function StarRating({ rating, onChange }: { rating: number | null; onChange: (rating: number | null) => void }) {
-  const id = useId();
-  return <div className={styles.rating} role="group" aria-labelledby={id}>
-    <span id={id} className={styles.label}>Your rating</span>
-    <span className={styles.stars}>
-      {[1, 2, 3, 4, 5].map((n) => <button key={n} type="button" className={styles.star} data-filled={rating !== null && n <= rating}
-        aria-pressed={n === rating} aria-label={`${n} star${n === 1 ? "" : "s"}`} onClick={() => onChange(n === rating ? null : n)}>
-        <StarIcon filled /></button>)}
-    </span>
-    {rating !== null && <button type="button" className={styles.textButton} aria-label="Clear rating" onClick={() => onChange(null)}>Clear</button>}
-  </div>;
-}
-
 const sum = (counts: readonly number[]) => counts.reduce((total, count) => total + count, 0);
 
 // A TV show's progress: the last episode watched, how far through the show
@@ -45,8 +32,6 @@ const sum = (counts: readonly number[]) => counts.reduce((total, count) => total
 function Progress({ item, seasons }: { item: LibraryItem; seasons: readonly number[] }) {
   const { change } = useLibrary();
   const id = useId();
-  const seasonId = useId();
-  const episodeId = useId();
   const offerId = useId();
   const [notYet, setNotYet] = useState(false);
   const progress = progressOf(item.library);
@@ -57,9 +42,6 @@ function Progress({ item, seasons }: { item: LibraryItem; seasons: readonly numb
   };
   if (!seasons.length) return <p className={styles.muted}>TMDB lists no episodes of this show yet.</p>;
 
-  // Kept selectable if TMDB has since listed fewer seasons or episodes.
-  const seasonCount = Math.max(seasons.length, progress?.season ?? 0);
-  const episodeCount = progress ? Math.max(seasons[progress.season - 1] ?? 0, progress.episode) : 0;
   const total = sum(seasons);
   const watched = progress ? Math.min(total, sum(seasons.slice(0, progress.season - 1)) + progress.episode) : 0;
   return <div className={styles.progress} role="group" aria-labelledby={id}>
@@ -74,24 +56,7 @@ function Progress({ item, seasons }: { item: LibraryItem; seasons: readonly numb
     {next && <button type="button" className={`${styles.primary} ${styles.nextEpisode}`} onClick={() => set(next)}>
       Next episode <span>{formatEpisode(next)}</span>
     </button>}
-    <div className={styles.pickers}>
-      <span>
-        <label htmlFor={seasonId}>Season</label>
-        <select id={seasonId} value={progress?.season ?? ""}
-          onChange={(e) => set(e.target.value ? { season: Number(e.target.value), episode: 1 } : null)}>
-          <option value="">Not started</option>
-          {Array.from({ length: seasonCount }, (_, i) => <option key={i} value={i + 1} disabled={!seasons[i]}>Season {i + 1}</option>)}
-        </select>
-      </span>
-      <span>
-        <label htmlFor={episodeId}>Episode</label>
-        <select id={episodeId} value={progress?.episode ?? ""} disabled={!progress}
-          onChange={(e) => set({ season: progress!.season, episode: Number(e.target.value) })}>
-          {!progress && <option value="">–</option>}
-          {Array.from({ length: episodeCount }, (_, i) => <option key={i} value={i + 1}>Episode {i + 1}</option>)}
-        </select>
-      </span>
-    </div>
+    <EpisodePicker seasons={seasons} progress={progress} onChange={set} />
     {progress && isLastEpisode(seasons, progress) && !notYet && <div className={styles.offer} role="group" aria-labelledby={offerId}>
       <p id={offerId} role="status">That&rsquo;s the last episode. Mark {item.title} as completed?</p>
       <div className={styles.offerButtons}>
@@ -104,9 +69,9 @@ function Progress({ item, seasons }: { item: LibraryItem; seasons: readonly numb
 
 /**
  * The detail panel's controls for a title in the library, together in one
- * panel: that it's in the library and Favourite, the status, the progress of
- * a TV show being watched, and the rating. Remove from library is apart, at
- * the end of the panel (RemoveFromLibrary).
+ * panel: that it's in the library and Favourite, the status, and the progress
+ * of a TV show being watched. Remove from library is apart, at the end of the
+ * panel (RemoveFromLibrary).
  */
 export function LibraryControls({ item, detail }: { item: LibraryItem; detail: TitleDetail }) {
   const { change } = useLibrary();
@@ -122,7 +87,6 @@ export function LibraryControls({ item, detail }: { item: LibraryItem; detail: T
     <ChangeError className={styles.error} />
     <StatusPicker icons status={entry.status} onChange={(status) => change(item, { status })} />
     {detail.type === "tv" && entry.status === "watching" && <Progress item={item} seasons={detail.episodesPerSeason ?? []} />}
-    <StarRating rating={entry.rating} onChange={(rating) => change(item, { rating })} />
   </section>;
 }
 
@@ -136,7 +100,7 @@ export function RemoveFromLibrary({ item, onRemoved }: { item: LibraryItem; onRe
     <button ref={removeButton} type="button" className={styles.remove} aria-expanded={confirming}
       onClick={() => setConfirming(!confirming)}>Remove from library</button>
     {confirming && <div className={styles.confirm} role="group" aria-labelledby={confirmId}>
-      <p id={confirmId}>Remove {item.title} from your library? Its progress and rating go with it.</p>
+      <p id={confirmId}>Remove {item.title} from your library? Its progress goes with it.</p>
       <div className={styles.offerButtons}>
         <button type="button" className={styles.danger} onClick={() => { remove(item); onRemoved(); }}>Remove</button>
         <button type="button" onClick={() => { setConfirming(false); removeButton.current?.focus(); }}>Cancel</button>

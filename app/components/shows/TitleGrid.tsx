@@ -2,8 +2,8 @@
 import Image, { type ImageLoader } from "next/image";
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/common/icons";
-import { titleKey, tmdbImageUrl, type TitleSummary } from "@/lib/show-types";
-import { AddMark, StatusChooser, useTitleStatus } from "./AddToLibrary";
+import { statusNames, titleKey, tmdbImageUrl, type TitleSummary } from "@/lib/show-types";
+import { AddMark, StatusBadge, StatusChooser, useTitleStatus } from "./AddToLibrary";
 import { useOpenActions } from "./QuickActions";
 import styles from "./Shows.module.css";
 
@@ -41,9 +41,10 @@ export const cardSizes = "(min-width: 48rem) 160px, 34vw";
 // label, in order, for speech input (WCAG 2.5.3).
 //
 // At the poster's bottom right, + adds the title: it opens the status chooser
-// over the poster (Watching, Planned, Completed). Once the title is in the
-// library it is a tick, which opens its quick actions (status and rating).
-// Cards fade in one after another (--i, their place in the list).
+// over the poster (Planned, Watching, Completed). Once the title is in the
+// library it is a tick, which opens its quick actions, and a title Watching or
+// Completed says so at the top left. Cards fade in one after another (--i,
+// their place in the list).
 function TitleCard({ title, withType, onOpen, index }: {
   title: TitleSummary; withType: boolean; onOpen: (title: TitleSummary) => void; index: number;
 }) {
@@ -53,14 +54,17 @@ function TitleCard({ title, withType, onOpen, index }: {
   const [choosing, setChoosing] = useState(false);
   const addButton = useRef<HTMLButtonElement>(null);
   const { item } = status;
+  const shownStatus = item?.library.status;
   return <li className={styles.cardItem} style={{ "--i": index } as React.CSSProperties}>
-    <button type="button" className={styles.card} aria-label={facts.label} onClick={() => { if (choosing) setChoosing(false); else onOpen(title); }}>
+    <button type="button" className={styles.card} aria-label={shownStatus ? `${facts.label}, ${statusNames[shownStatus]}` : facts.label}
+      onClick={() => { if (choosing) setChoosing(false); else onOpen(title); }}>
       <Poster title={title} sizes={cardSizes} />
       <span className={styles.cardTitle}>{title.title}</span>
     </button>
     {status.error ? <span role="alert" className={styles.cardError}>{status.error}</span>
       : <span className={styles.cardMeta}>{facts.text}</span>}
     <span className={styles.posterSpot}>
+      {shownStatus && shownStatus !== "planned" && !choosing && <StatusBadge status={shownStatus} />}
       {choosing ? <StatusChooser title={title} status={status} onClose={() => setChoosing(false)} returnFocus={() => addButton.current} />
         // Not disabled while adding: it keeps focus, which a choice hands back to it.
         : <button ref={addButton} type="button" className={styles.addButton} aria-busy={status.busy || undefined}

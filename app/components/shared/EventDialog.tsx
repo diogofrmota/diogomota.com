@@ -22,16 +22,35 @@ export function shortDate(date: string) {
 const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
 const clock = (total: number) => `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 
-// A date or a time as a chip that shows it in words ("12 Nov (Wed)", "09:30"),
-// over the browser's own field, which is invisible and fills the chip: a tap or
-// a click opens the browser's picker (a calendar, or the time wheels on a phone).
-function PickerChip({ type, label, value, onChange }: {
-  type: "date" | "time"; label: string; value: string; onChange: (value: string) => void;
-}) {
-  return <span className={`${styles.chip} ${type === "time" ? styles.timeChip : ""}`}>
-    <span aria-hidden="true">{value ? type === "date" ? shortDate(value) : value : "—"}</span>
-    <input type={type} aria-label={label} required value={value} onChange={(e) => onChange(e.target.value)}
+// A date as a chip that shows it in words ("12 Nov (Wed)"), over the browser's
+// own date field, which is invisible and fills the chip: a tap or a click opens
+// the browser's calendar.
+function DateChip({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <span className={styles.chip}>
+    <span aria-hidden="true">{value ? shortDate(value) : "—"}</span>
+    <input type="date" aria-label={label} required value={value} onChange={(e) => onChange(e.target.value)}
       onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* not supported: the field still edits */ } }} />
+  </span>;
+}
+
+const hours = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0"));
+const fiveMinutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+
+// A time on the 24-hour clock, "09:30", as a chip of two selects, the hour and
+// the minutes (every 5, and the time's own if it is between them). Not the
+// browser's time field: that follows the device's language, which can make it
+// AM and PM.
+function TimeChip({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const [hour, minute] = value.split(":");
+  const minutes = fiveMinutes.includes(minute) ? fiveMinutes : [...fiveMinutes, minute].sort();
+  return <span className={`${styles.chip} ${styles.timeChip}`} role="group" aria-label={label}>
+    <select aria-label="Hour" value={hour} onChange={(e) => onChange(`${e.target.value}:${minute}`)}>
+      {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+    </select>
+    <span aria-hidden="true">:</span>
+    <select aria-label="Minutes" value={minute} onChange={(e) => onChange(`${hour}:${e.target.value}`)}>
+      {minutes.map((m) => <option key={m} value={m}>{m}</option>)}
+    </select>
   </span>;
 }
 
@@ -68,7 +87,8 @@ export function EventDialog({ event, date, time, space, userId, onClose, onSaved
   const endOptions = allDay ? [] : localInstants(endDate, endTime);
 
   // Moving the start keeps the event's length where it can: the end date follows
-  // the start date, and an end time no longer after the start moves an hour past it.
+  // the start date, and on one day the end time follows the start time (an end
+  // that wasn't after the start moves an hour past it), up to 23:59.
   function changeStartDate(value: string) {
     if (value && startDate && endDate) {
       const shift = Math.round((Date.parse(value) - Date.parse(startDate)) / 86_400_000);
@@ -78,8 +98,9 @@ export function EventDialog({ event, date, time, space, userId, onClose, onSaved
   }
   function changeStartTime(value: string) {
     setStartTime(value);
-    if (value && startDate === endDate && endTime && minutes(endTime) <= minutes(value)) {
-      setEndTime(clock(Math.min(minutes(value) + 60, 23 * 60 + 59)));
+    if (startDate === endDate) {
+      const length = minutes(endTime) - minutes(startTime);
+      setEndTime(clock(Math.min(minutes(value) + (length > 0 ? length : 60), 23 * 60 + 59)));
     }
   }
 
@@ -140,15 +161,15 @@ export function EventDialog({ event, date, time, space, userId, onClose, onSaved
           <div className={styles.whenRow} role="group" aria-label="Starts">
             <span className={styles.whenLabel} aria-hidden="true">Starts</span>
             <span className={styles.chips}>
-              <PickerChip type="date" label="Start date" value={startDate} onChange={changeStartDate} />
-              {!allDay && <PickerChip type="time" label="Start time" value={startTime} onChange={changeStartTime} />}
+              <DateChip label="Start date" value={startDate} onChange={changeStartDate} />
+              {!allDay && <TimeChip label="Start time" value={startTime} onChange={changeStartTime} />}
             </span>
           </div>
           <div className={styles.whenRow} role="group" aria-label="Ends">
             <span className={styles.whenLabel} aria-hidden="true">Ends</span>
             <span className={styles.chips}>
-              <PickerChip type="date" label="End date" value={endDate} onChange={setEndDate} />
-              {!allDay && <PickerChip type="time" label="End time" value={endTime} onChange={setEndTime} />}
+              <DateChip label="End date" value={endDate} onChange={setEndDate} />
+              {!allDay && <TimeChip label="End time" value={endTime} onChange={setEndTime} />}
             </span>
           </div>
         </div>

@@ -238,7 +238,7 @@ test("theme preference persists after logging in again", async ({ page }) => {
   await expect(app).toHaveCSS("background-color", "rgb(31, 32, 35)");
 });
 
-test("a profile picture, chosen or dropped, is made small and shows in the account menu; Remove picture takes it away", async ({ page, request }) => {
+test("a profile picture, chosen or dropped, is adjusted, made small and shows in the account menu; Remove picture takes it away", async ({ page, request }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
@@ -251,10 +251,37 @@ test("a profile picture, chosen or dropped, is made small and shows in the accou
   const menuPicture = accountButton(page, user.username).locator("img");
   await expect(menuPicture).toHaveCount(0);
 
-  // A landscape phone photo, with metadata that mustn't be kept.
-  const photo = await sharp({ create: { width: 1600, height: 1200, channels: 3, background: "#3366cc" } })
+  // A landscape phone photo, with metadata that mustn't be kept: blue on the left, orange on the right.
+  const half = { width: 800, height: 1200, channels: 3 } as const;
+  const photo = await sharp({ create: { ...half, width: 1600, background: "#3366cc" } })
+    .composite([{ input: await sharp({ create: { ...half, background: "#ff8800" } }).png().toBuffer(), left: 800, top: 0 }])
     .withExif({ IFD0: { Copyright: "Where it was taken" } }).jpeg().toBuffer();
   await picture.locator('input[type="file"]').setInputFiles({ name: "me.jpg", mimeType: "image/jpeg", buffer: photo });
+
+  // Nothing is sent yet: first, which part of it to show. Cancel keeps what there was.
+  const crop = page.getByRole("dialog", { name: "Adjust your picture" });
+  await expect(crop.getByRole("button", { name: "Save picture" })).toBeEnabled();
+  await crop.getByRole("button", { name: "Cancel" }).click();
+  await expect(crop).toBeHidden();
+  await expect(menuPicture).toHaveCount(0);
+  await picture.locator('input[type="file"]').setInputFiles({ name: "me.jpg", mimeType: "image/jpeg", buffer: photo });
+
+  // Zoomed all the way in (the slider, from the keyboard), then dragged to the photo's right edge: all orange.
+  const zoom = crop.getByRole("slider", { name: "Zoom" });
+  await zoom.focus();
+  await page.keyboard.press("End");
+  await expect(zoom).toHaveValue("4");
+  await expect(crop.getByRole("button", { name: "Zoom in" })).toBeDisabled();
+  const stage = crop.getByRole("application", { name: "Picture position" });
+  const box = (await stage.boundingBox())!;
+  for (let i = 0; i < 3; i++) {
+    await page.mouse.move(box.x + box.width * 0.9, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.1, box.y + box.height / 2, { steps: 5 });
+    await page.mouse.up();
+  }
+  await crop.getByRole("button", { name: "Save picture" }).click();
+  await expect(crop).toBeHidden();
   await expect(picture.getByRole("status").filter({ hasText: "Profile picture" })).toHaveText("Profile picture saved.");
   await expect(menuPicture).toHaveAttribute("src", /^\/api\/avatars\/[0-9a-f-]{36}\?v=\d+$/);
   const url = (await menuPicture.getAttribute("src"))!;
@@ -265,6 +292,12 @@ test("a profile picture, chosen or dropped, is made small and shows in the accou
   expect(saved.headers()["content-type"]).toBe("image/webp");
   const info = await sharp(await saved.body()).metadata();
   expect({ format: info.format, width: info.width, height: info.height, exif: info.exif }).toEqual({ format: "webp", width: 512, height: 512, exif: undefined });
+  // The part chosen: the orange right.
+  const [red, green, blue] = (await sharp(await saved.body()).stats()).channels.map((channel) => channel.mean);
+  expect(red).toBeGreaterThan(230);
+  expect(green).toBeGreaterThan(110);
+  expect(green).toBeLessThan(160);
+  expect(blue).toBeLessThan(30);
   expect((await request.get(url)).status()).toBe(401);
 
   // Shown on the other pages too.
@@ -281,10 +314,11 @@ test("a profile picture, chosen or dropped, is made small and shows in the accou
     return transfer;
   }, (await sharp({ create: { width: 300, height: 500, channels: 4, background: "#ff8800" } }).png().toBuffer()).toString("base64"));
   await picture.locator("label").dispatchEvent("drop", { dataTransfer: dropped });
+  await crop.getByRole("button", { name: "Save picture" }).click();
   await expect(picture.getByRole("status").filter({ hasText: "Profile picture" })).toHaveText("Profile picture saved.");
   await expect(menuPicture).not.toHaveAttribute("src", url);
 
-  // What isn't a picture says so, here or (pretending to be one) from the server.
+  // What isn't a picture says so, here or (pretending to be one, which the browser can't show, so it goes as it is) from the server.
   await picture.locator('input[type="file"]').setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
   await expect(picture.getByRole("alert")).toHaveText("That isn't a picture. Choose a JPEG, PNG or WebP.");
   await picture.locator('input[type="file"]').setInputFiles({ name: "fake.png", mimeType: "image/png", buffer: Buffer.from("not really a png") });

@@ -5,7 +5,7 @@ import {
   libraryStatuses, statusNames, titleKey, type FriendsState, type LibraryItem, type MediaType, type TitleSummary,
 } from "@/lib/show-types";
 import { AddFriend, requestSentText } from "./AddFriend";
-import { AddMark, statusHints, statusIcons, StatusChooser, useTitleStatus } from "./AddToLibrary";
+import { AddMark, StatusBadge, statusHints, statusIcons, StatusChooser, useTitleStatus } from "./AddToLibrary";
 import { useLibrary } from "./library";
 import { forgetShowsData, showsRequest, useDebounced, useShowsData } from "./shows-data";
 import { cardSizes, LoadError, Poster, SkeletonGrid, titleFacts } from "./TitleGrid";
@@ -28,7 +28,7 @@ const steps: Step[] = [
   },
   {
     kind: "friends", label: "Friends", heading: "Watch together",
-    lead: "Add your friends to see what they’re watching and what they rate, and their titles show up in Discover.",
+    lead: "Add your friends to see what they’re watching and what they’ve finished, and their titles show up in Discover.",
   },
 ];
 
@@ -58,6 +58,7 @@ function PickCard({ title, index, withType }: { title: TitleSummary; index: numb
     {status.error ? <span role="alert" className={styles.cardError}>{status.error}</span>
       : <span className={item ? styles.pickAdded : styles.cardMeta}>{busy ? "Adding…" : added || facts.text}</span>}
     <span className={styles.posterSpot}>
+      {item && item.library.status !== "planned" && !choosing && <StatusBadge status={item.library.status} />}
       {choosing ? <StatusChooser title={title} status={status} onClose={() => setChoosing(false)} returnFocus={() => button.current} />
         : <AddMark added={!!item} busy={busy} />}
     </span>
@@ -143,7 +144,7 @@ function AllSet({ items, headingId, heading, onDone }: {
     <span className={styles.allSetMark} aria-hidden="true"><CheckIcon /></span>
     <h2 id={headingId} ref={heading} tabIndex={-1} className={styles.onboardingHeading}>You’re all set!</h2>
     <p className={styles.onboardingLead}>
-      {items.length ? "Your library is ready. Keep track of each episode from Home." : "Your library is empty for now: add titles from Discover whenever you like."}
+      {items.length ? "Your library is ready. Keep track of each episode from your Watchlist." : "Your library is empty for now: add titles from Discover whenever you like."}
     </p>
     {items.length > 0 && <>
       <ul className={styles.allSetCounts} aria-label="In your library">
@@ -164,9 +165,9 @@ function AllSet({ items, headingId, heading, onDone }: {
 }
 
 /**
- * The guide a new account (an empty library) gets on Home: their TV shows,
+ * The guide a new account (an empty library) gets on the Watchlist: their TV shows,
  * their movies, then their friends, and what they added. Skip ends it at any
- * step; either way `onDone` shows Home as it is. Each step slides in from the
+ * step; either way `onDone` shows the Watchlist as it is. Each step slides in from the
  * side it's on (Shows.module.css): the next from the right, the one before from the left.
  */
 export function Onboarding({ username, onDone }: { username: string; onDone: () => void }) {

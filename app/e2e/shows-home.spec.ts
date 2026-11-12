@@ -30,16 +30,16 @@ async function longPress(page: Page, locator: Locator) {
   await cdp.detach();
 }
 
-test("a new account's Home is a guide: their TV shows, then their movies (each Watching, Planned or Completed), friends, and what they added", async ({ page, browser }) => {
+test("a new account's Watchlist is a guide: their TV shows, then their movies (each Planned, Watching or Completed), friends, and what they added", async ({ page, browser }) => {
   const user = await openShows(page);
   const friend = await otherPerson(browser);
   const main = page.getByRole("main");
-  await expect(viewHeading(page)).toHaveText("Home");
+  await expect(viewHeading(page)).toHaveText("Watchlist");
   const shows = main.getByRole("region", { name: "Which TV shows do you watch?" });
   await expect(shows).toContainText("Set up your library · Step 1 of 3");
   // What each status means, over the posters.
   await expect(shows.getByRole("list", { name: "Where a title can go" }).getByRole("listitem"))
-    .toHaveText([/^Watching/, /^Planned/, /^Completed/]);
+    .toHaveText([/^Planned/, /^Watching/, /^Completed/]);
 
   // What's trending and popular: a tap on a poster opens the chooser over it.
   const glass = card(grid(shows, "TV shows to choose from"), "Glass Meridian");
@@ -47,20 +47,31 @@ test("a new account's Home is a guide: their TV shows, then their movies (each W
   await glass.click();
   await expect(glass).toHaveAttribute("aria-expanded", "true");
   const chooser = shows.getByRole("group", { name: "Add Glass Meridian as" });
-  await expect(chooser.getByRole("button", { name: "Watching" })).toBeFocused();
+  await expect(chooser.getByRole("button", { name: "Planned" })).toBeFocused();
+  // Watching a TV show goes on to the last episode watched, over the poster: the first one to start with.
   await chooser.getByRole("button", { name: "Watching" }).click();
-  await expect(chooser).toBeHidden();
+  const lastWatched = shows.getByRole("group", { name: "Last watched" });
+  await expect(lastWatched.getByLabel("Season", { exact: true })).toBeFocused();
+  await expect(lastWatched.getByLabel("Season", { exact: true })).toHaveValue("1");
+  await expect(lastWatched.getByLabel("Episode", { exact: true })).toHaveValue("1");
+  await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401)]);
+  await lastWatched.getByLabel("Season", { exact: true }).selectOption("2");
+  await expect(lastWatched.getByLabel("Episode", { exact: true }).locator("option")).toHaveCount(8);
+  await lastWatched.getByLabel("Episode", { exact: true }).selectOption("3");
+  await lastWatched.getByRole("button", { name: "Save" }).click();
+  await expect(lastWatched).toBeHidden();
   await expect(glass).toBeFocused();
   await expect(glass).toHaveAccessibleName("Glass Meridian, 2026, rated 8.2 out of 10, in your library as Watching");
+  // Its status on the poster, and under it.
   await expect(wholeCard(glass)).toContainText("Watching");
   await expect(main.getByText("1 TV show added")).toBeVisible();
-  await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401)]);
+  await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401, { current_season: 2, current_episode: 3 })]);
   // Another status moves it there; its own status again takes it out.
   await glass.click();
   const glassChooser = shows.getByRole("group", { name: "Glass Meridian", exact: true });
   await pressed(glassChooser.getByRole("button", { name: "Watching" }));
   await glassChooser.getByRole("button", { name: "Completed" }).click();
-  await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401, { status: "completed" })]);
+  await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401, { status: "completed", current_season: 2, current_episode: 3 })]);
   await glass.click();
   await glassChooser.getByRole("button", { name: "Completed" }).click();
   await expect.poll(() => libraryRows(user.username)).toEqual([]);
@@ -73,8 +84,13 @@ test("a new account's Home is a guide: their TV shows, then their movies (each W
   await glass.click();
   await shows.getByRole("heading", { level: 2 }).click();
   await expect(chooser).toBeHidden();
+  // Leaving the last episode watched (Escape) keeps it Not started.
   await glass.click();
   await chooser.getByRole("button", { name: "Watching" }).click();
+  await expect(lastWatched).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(lastWatched).toBeHidden();
+  await expect(glass).toBeFocused();
 
   // Or one found by a search, of the step's kind only.
   await shows.getByRole("searchbox", { name: "Search for a TV show" }).fill("Harbor");
@@ -84,6 +100,7 @@ test("a new account's Home is a guide: their TV shows, then their movies (each W
   await card(results, "Harbor Lights").click();
   await shows.getByRole("group", { name: "Add Harbor Lights as" }).getByRole("button", { name: "Completed" }).click();
   await expect(main.getByText("2 TV shows added")).toBeVisible();
+  await expect(wholeCard(card(results, "Harbor Lights"))).toContainText("Completed");
 
   // Then movies, the same way. Focus moves to the step.
   await main.getByRole("button", { name: "Next" }).click();
@@ -116,12 +133,12 @@ test("a new account's Home is a guide: their TV shows, then their movies (each W
   await expect(card(grid(movies, "Movies to choose from"), "Northern Line")).toHaveAccessibleName(/, in your library as Planned$/);
   await main.getByRole("button", { name: "Next" }).click();
 
-  // Finish: what they added, by status; then Home is the library, and the request is in Profile.
+  // Finish: what they added, by status; then the Watchlist is the library, and the request is in Profile.
   await main.getByRole("button", { name: "Finish" }).click();
   const allSet = main.getByRole("region", { name: "You’re all set!" });
   await expect(allSet.getByRole("heading", { level: 2 })).toBeFocused();
   await expect(allSet.getByRole("list", { name: "In your library" }).getByRole("listitem"))
-    .toHaveText(["1 Watching", "1 Planned", "1 Completed"]);
+    .toHaveText(["1 Planned", "1 Watching", "1 Completed"]);
   await expect(main.getByRole("button", { name: "Skip" })).toHaveCount(0);
   await allSet.getByRole("button", { name: "Go to my library" }).click();
   await expect(card(grid(section(page, "Watching"), "Watching TV shows"), "Glass Meridian")).toBeVisible();
@@ -131,7 +148,7 @@ test("a new account's Home is a guide: their TV shows, then their movies (each W
   await friend.context.close();
 });
 
-test("the guide gives way to the library when Home is shown again with titles in it, and comes back from an empty Home", async ({ page }) => {
+test("the guide gives way to the library when the Watchlist is shown again with titles in it, and comes back from an empty Watchlist", async ({ page }) => {
   await openShows(page);
   const main = page.getByRole("main");
   const guide = main.getByRole("region", { name: "Which TV shows do you watch?" });
@@ -139,20 +156,21 @@ test("the guide gives way to the library when Home is shown again with titles in
   await expect(guide).toBeVisible();
   await tab(page, "Discover").click();
   await expect(viewHeading(page)).toHaveText("Discover");
-  await tab(page, "Home").click();
+  await tab(page, "Watchlist").click();
   await expect(guide).toBeVisible();
 
   await card(grid(guide, "TV shows to choose from"), "Glass Meridian").click();
   await guide.getByRole("group", { name: "Add Glass Meridian as" }).getByRole("button", { name: "Watching" }).click();
+  await guide.getByRole("group", { name: "Last watched" }).getByRole("button", { name: "Save" }).click();
   await expect(main.getByText("1 TV show added")).toBeVisible();
   await tab(page, "Discover").click();
   await expect(viewHeading(page)).toHaveText("Discover");
-  await tab(page, "Home").click();
+  await tab(page, "Watchlist").click();
   await expect(guide).toHaveCount(0);
   await expect(card(grid(section(page, "Watching"), "Watching TV shows"), "Glass Meridian")).toBeVisible();
 });
 
-test("a poster's + adds the title as Watching, Planned or Completed; once it's in the library, its tick opens the quick actions", async ({ page }) => {
+test("a poster's + adds the title as Planned, Watching or Completed; once it's in the library, its tick opens the quick actions", async ({ page }) => {
   const user = await openShows(page);
   await page.getByRole("main").getByRole("button", { name: "Skip" }).click();
   await tab(page, "Discover").click();
@@ -171,16 +189,33 @@ test("a poster's + adds the title as Watching, Planned or Completed; once it's i
 
   await add.click();
   const chooser = trending.getByRole("group", { name: "Add Glass Meridian as" });
-  await expect(chooser.getByRole("button")).toHaveText(["Watching", "Planned", "Completed", "Cancel"]);
+  await expect(chooser.getByRole("button")).toHaveText(["Planned", "Watching", "Completed", "Cancel"]);
+  // Each option's icon and name are in the middle of its pill.
+  for (const option of await chooser.getByRole("button", { name: /^(Planned|Watching|Completed)$/ }).all()) {
+    const pill = (await option.boundingBox())!;
+    const icon = (await option.locator("svg").boundingBox())!;
+    const name = (await option.locator("span").boundingBox())!;
+    expect(Math.abs((icon.x + name.x + name.width) / 2 - (pill.x + pill.width / 2))).toBeLessThanOrEqual(1);
+  }
   await chooser.getByRole("button", { name: "Completed" }).click();
   await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401, { status: "completed" })]);
   const tick = trending.getByRole("button", { name: "Quick actions for Glass Meridian" });
   await expect(tick).toBeFocused();
+  // Completed, on the poster and in the card's name.
+  await expect(glass).toHaveAccessibleName("Glass Meridian, 2026, rated 8.2 out of 10, Completed");
+  await expect(wholeCard(glass)).toContainText("Completed");
   await tick.click();
   const actions = page.getByRole("dialog", { name: "Glass Meridian" });
   await pressed(actions.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" }));
+  // Watching a TV show there: its season and episode too.
+  await expect(actions.getByLabel("Season", { exact: true })).toHaveCount(0);
+  await actions.getByRole("group", { name: "Status" }).getByRole("button", { name: "Watching" }).click();
+  await actions.getByLabel("Season", { exact: true }).selectOption("1");
+  await actions.getByLabel("Episode", { exact: true }).selectOption("4");
+  await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", mockBase + 401, { current_season: 1, current_episode: 4 })]);
   await page.keyboard.press("Escape");
   await expect(actions).toBeHidden();
+  await expect(wholeCard(glass)).toContainText("Watching");
 
   // The poster itself still opens the title; so does a tap on it while the chooser is open, which only closes it.
   await trending.getByRole("button", { name: /^Add Trending Series 2 to your library$/ }).click();
@@ -202,14 +237,28 @@ test("a poster's + adds the title as Watching, Planned or Completed; once it's i
   await search.getByRole("group", { name: "Add Northern Line as" }).getByRole("button", { name: "Planned" }).click();
   await expect(search.getByRole("button", { name: "Quick actions for Northern Line" })).toBeVisible();
   await expect.poll(() => libraryRows(user.username)).toEqual([
-    row("tv", mockBase + 401, { status: "completed" }), row("movie", mockBase + 301, { status: "planned" }),
+    row("tv", mockBase + 401, { current_season: 1, current_episode: 4 }), row("movie", mockBase + 301, { status: "planned" }),
   ]);
+
+  // A TV show added as Watching from its +: then the last episode watched, over the poster.
+  await page.keyboard.press("Escape");
+  await expect(search).toBeHidden();
+  await trending.getByRole("button", { name: /^Add Trending Series 2 to your library$/ }).click();
+  await trending.getByRole("group", { name: "Add Trending Series 2 as" }).getByRole("button", { name: "Watching" }).click();
+  const lastWatched = trending.getByRole("group", { name: "Last watched" });
+  await lastWatched.getByLabel("Episode", { exact: true }).selectOption("6");
+  await lastWatched.getByRole("button", { name: "Save" }).click();
+  await expect(lastWatched).toBeHidden();
+  await expect(trending.getByRole("button", { name: "Quick actions for Trending Series 2" })).toBeFocused();
+  await expect(card(trending, "Trending Series 2")).toHaveAccessibleName(/, Watching$/);
+  await expect.poll(() => libraryRows(user.username))
+    .toContainEqual(expect.objectContaining({ type: "tv", status: "watching", current_season: 1, current_episode: 6 }));
 });
 
-test("Home starts with a welcome, fills up from Discover, and the TV Shows | Movies switch filters every section", async ({ page }) => {
+test("the Watchlist starts with a welcome, fills up from Discover, and the TV Shows | Movies switch filters every section", async ({ page }) => {
   const user = await openShows(page);
   const main = page.getByRole("main");
-  await expect(viewHeading(page)).toHaveText("Home");
+  await expect(viewHeading(page)).toHaveText("Watchlist");
   // Without the guide: the welcome, which can start the guide again.
   await main.getByRole("button", { name: "Skip" }).click();
   await expect(main.getByRole("heading", { name: "Start by discovering shows!" })).toBeVisible();
@@ -220,8 +269,13 @@ test("Home starts with a welcome, fills up from Discover, and the TV Shows | Mov
   await expect(typeSwitch(page, "TV Shows")).toHaveCount(0);
   await main.getByRole("button", { name: "Go to Discover" }).click();
   await expect(viewHeading(page)).toHaveText("Discover");
+  // Discover's search field and its TV Shows | Movies switch are in the middle.
+  const middle = async (locator: Locator) => { const box = (await locator.boundingBox())!; return box.x + box.width / 2; };
+  const center = await middle(main);
+  expect(Math.abs(await middle(main.getByRole("button", { name: "Search TV shows and movies" })) - center)).toBeLessThanOrEqual(1);
+  expect(Math.abs(await middle(page.getByRole("group", { name: "Show" })) - center)).toBeLessThanOrEqual(1);
 
-  // Added in Discover: on Home at once.
+  // Added in Discover: on the Watchlist at once.
   await card(grid(page, "Popular TV shows"), "Harbor Lights").click();
   const detail = page.getByRole("dialog", { name: "Harbor Lights" });
   await detail.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Watching" }).click();
@@ -235,16 +289,18 @@ test("Home starts with a welcome, fills up from Discover, and the TV Shows | Mov
   await page.keyboard.press("Escape");
   expect(await libraryRows(user.username)).toEqual([row("tv", harbor.tmdbId), row("movie", paperMoons.tmdbId, { status: "planned" })]);
 
-  await tab(page, "Home").click();
+  await tab(page, "Watchlist").click();
   await expect(main.getByRole("heading", { name: "Start by discovering shows!" })).toHaveCount(0);
+  // Planned, Watching, then Completed.
+  await expect(main.getByRole("heading", { level: 2 })).toHaveText(["Planned", "Watching", "Completed"]);
   // TV shows first; the switch on Discover is its own.
   await pressed(typeSwitch(page, "TV Shows"));
   const watching = section(page, "Watching");
   await expect(grid(watching, "Watching TV shows").getByRole("listitem")).toHaveCount(1);
   const harborCard = card(watching, "Harbor Lights");
   await expect(harborCard).toHaveAccessibleName("Harbor Lights, 2021, Watching, not started");
-  // No status badge on the poster: the section's heading says it.
-  await expect(wholeCard(harborCard)).not.toContainText("Watching");
+  // Watching on the poster, as everywhere.
+  await expect(wholeCard(harborCard)).toContainText("Watching");
   await expect(wholeCard(harborCard)).toContainText("2021 · Not started");
   await expect(harborCard.locator("img")).toHaveAttribute("src", new RegExp(`/e2e-poster-${harbor.tmdbId}\\.jpg$`));
   await expect(section(page, "Planned")).toHaveText(/No shows planned yet — explore Discover!/);
@@ -256,6 +312,8 @@ test("Home starts with a welcome, fills up from Discover, and the TV Shows | Mov
   await expect(section(page, "Watching")).toHaveText(/not watching any movies yet — explore Discover!/);
   await expect(grid(section(page, "Planned"), "Planned movies").getByRole("listitem")).toHaveCount(1);
   await expect(card(section(page, "Planned"), "Paper Moons")).toHaveAccessibleName("Paper Moons, 1994, Planned");
+  // Planned isn't on the poster: the section's heading says it.
+  await expect(wholeCard(card(section(page, "Planned"), "Paper Moons"))).not.toContainText("Planned");
   await expect(section(page, "Completed")).toHaveText(/No movies completed yet\./);
   await expect(main.getByRole("button", { name: /^Harbor Lights,/ })).toHaveCount(0);
 
@@ -274,16 +332,29 @@ test("Home starts with a welcome, fills up from Discover, and the TV Shows | Mov
   await expect(viewHeading(page)).toHaveText("Discover");
 });
 
-test("the detail panel changes status, progress, rating and favourite, and removes the title", async ({ page }) => {
+test("the detail panel changes status, progress and favourite, and removes the title", async ({ page }) => {
   const user = await openShows(page);
   await add(page, harbor, "watching");
   await page.reload();
   await card(section(page, "Watching"), "Harbor Lights").click();
   const detail = page.getByRole("dialog", { name: "Harbor Lights" });
   await expect(detail).toContainText("TV show · 2021 · ★ 7.8");
-  await expect(detail).toContainText("2 seasons · 18 episodes · 52 min episodes");
+  await expect(detail).toContainText("2 seasons · 18 episodes");
+  await expect(detail).not.toContainText("min episodes");
+  await expect(detail).not.toContainText("Rating and details from TMDB");
   await expect(detail).toContainText("Overview of Harbor Lights.");
+  // On a wide screen: the title and its facts under the poster, and the overview at the top beside them.
+  const posterBox = (await detail.locator("img").nth(1).boundingBox())!;
+  const headingBox = (await detail.getByRole("heading", { level: 2 }).boundingBox())!;
+  const overviewBox = (await detail.getByText("Overview of Harbor Lights.").boundingBox())!;
+  expect(headingBox.y).toBeGreaterThanOrEqual(posterBox.y + posterBox.height);
+  expect(Math.abs(headingBox.x - posterBox.x)).toBeLessThanOrEqual(1);
+  expect(overviewBox.x).toBeGreaterThan(posterBox.x + posterBox.width);
+  expect(overviewBox.y).toBeLessThan(posterBox.y + posterBox.height / 2);
+  // No rating of your own.
+  await expect(detail.getByRole("group", { name: "Your rating" })).toHaveCount(0);
   const status = detail.getByRole("group", { name: "Status" });
+  await expect(status.getByRole("button")).toHaveText(["Planned", "Watching", "Completed"]);
   await pressed(status.getByRole("button", { name: "Watching" }));
   const expectRow = (fields: Parameters<typeof row>[2]) =>
     expect.poll(() => libraryRows(user.username)).toEqual([row("tv", harbor.tmdbId, fields)]);
@@ -329,34 +400,21 @@ test("the detail panel changes status, progress, rating and favourite, and remov
   await expect(progress).toHaveCount(0);
   await expectRow({ status: "completed", current_season: 2, current_episode: 8 });
 
-  // Rating: a star, the same star again clears it, and so does Clear.
-  const rating = detail.getByRole("group", { name: "Your rating" });
-  await rating.getByRole("button", { name: "4 stars" }).click();
-  await pressed(rating.getByRole("button", { name: "4 stars" }));
-  await expectRow({ status: "completed", current_season: 2, current_episode: 8, rating: 4 });
-  await rating.getByRole("button", { name: "4 stars" }).click();
-  await expect(rating.getByRole("button", { pressed: true })).toHaveCount(0);
-  await rating.getByRole("button", { name: "5 stars" }).click();
-  await rating.getByRole("button", { name: "Clear rating" }).click();
-  await expect(rating.getByRole("button", { name: "Clear rating" })).toHaveCount(0);
-  await expectRow({ status: "completed", current_season: 2, current_episode: 8 });
-  await rating.getByRole("button", { name: "4 stars" }).click();
-
   const favourite = detail.getByRole("button", { name: "Favourite" });
   await expect(favourite).toHaveAttribute("aria-pressed", "false");
   await favourite.click();
   await pressed(favourite);
-  await expectRow({ status: "completed", current_season: 2, current_episode: 8, rating: 4, is_favourite: true });
+  await expectRow({ status: "completed", current_season: 2, current_episode: 8, is_favourite: true });
 
-  // On Home, and still there after a reload.
+  // On the Watchlist, Completed on its poster, and still there after a reload.
   await page.keyboard.press("Escape");
   await expect(detail).toBeHidden();
   await expect(section(page, "Watching")).toHaveText(/not watching any shows yet/);
   const completed = card(section(page, "Completed"), "Harbor Lights");
-  await expect(completed).toHaveAccessibleName("Harbor Lights, 2021, Completed, rated 4 out of 5, favourite");
-  await expect(wholeCard(completed)).toContainText("2021 · ★★★★★");
+  await expect(completed).toHaveAccessibleName("Harbor Lights, 2021, Completed, favourite");
+  await expect(wholeCard(completed)).toHaveText(/^Harbor LightsCompleted2021$/);
   await page.reload();
-  await expect(completed).toHaveAccessibleName("Harbor Lights, 2021, Completed, rated 4 out of 5, favourite");
+  await expect(completed).toHaveAccessibleName("Harbor Lights, 2021, Completed, favourite");
 
   // Back to Watching: the progress is still there.
   await completed.click();
@@ -376,15 +434,15 @@ test("the detail panel changes status, progress, rating and favourite, and remov
   await confirm.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(detail.getByRole("status")).toHaveText("Removed from your library.");
   const addGroup = detail.getByRole("group", { name: "Add to Library" });
-  await expect(addGroup.getByRole("button", { name: "Watching" })).toBeFocused();
+  await expect(addGroup.getByRole("button", { name: "Planned" })).toBeFocused();
   await expect.poll(() => libraryRows(user.username)).toEqual([]);
 
-  // Home is empty again; adding it back starts afresh.
+  // The Watchlist is empty again; adding it back starts afresh.
   await page.keyboard.press("Escape");
   await expect(page.getByRole("main").getByRole("heading", { name: "Start by discovering shows!" })).toBeVisible();
 });
 
-test("the quick actions menu changes status and rating from a card, and undoes a refused change", async ({ page, isMobile }) => {
+test("the quick actions menu changes the status from a card, and undoes a refused change", async ({ page, isMobile }) => {
   test.skip(isMobile, "The ⋯ button and the menu beside the card are for a mouse; phones long-press (\"on a phone\" below).");
   const user = await openShows(page);
   await add(page, harbor, "watching");
@@ -409,14 +467,13 @@ test("the quick actions menu changes status and rating from a card, and undoes a
 
   await menu.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" }).click();
   await pressed(menu.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" }));
-  await menu.getByRole("group", { name: "Your rating" }).getByRole("button", { name: "3 stars" }).click();
-  await pressed(menu.getByRole("group", { name: "Your rating" }).getByRole("button", { name: "3 stars" }));
+  await expect(menu.getByRole("group", { name: "Your rating" })).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
   await expect(planned).toHaveText(/No shows planned yet/);
-  await expect(card(section(page, "Completed"), "The Quiet Orchard")).toHaveAccessibleName("The Quiet Orchard, 2016, Completed, rated 3 out of 5");
+  await expect(card(section(page, "Completed"), "The Quiet Orchard")).toHaveAccessibleName("The Quiet Orchard, 2016, Completed");
   await expect.poll(() => libraryRows(user.username)).toEqual([
-    row("tv", orchard.tmdbId, { status: "completed", rating: 3 }), row("tv", harbor.tmdbId),
+    row("tv", orchard.tmdbId, { status: "completed" }), row("tv", harbor.tmdbId),
   ]);
 
   // A right click opens it too, and Back closes it.
@@ -426,7 +483,7 @@ test("the quick actions menu changes status and rating from a card, and undoes a
   await expect(harborMenu.getByRole("group", { name: "Status" })).toBeVisible();
   await page.goBack();
   await expect(harborMenu).toBeHidden();
-  await expect(viewHeading(page)).toHaveText("Home");
+  await expect(viewHeading(page)).toHaveText("Watchlist");
 
   // When the server refuses a change, it is undone, with a message.
   await page.route(`**${entryUrl(harbor)}`, (route) => route.request().method() === "PATCH"
@@ -470,12 +527,11 @@ test.describe("on a phone", () => {
     await expectNoHorizontalScroll(page);
 
     await menu.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" }).tap();
-    await menu.getByRole("group", { name: "Your rating" }).getByRole("button", { name: "5 stars" }).tap();
     await page.goBack();
     await expect(menu).toBeHidden();
     const completed = card(section(page, "Completed"), "Harbor Lights");
-    await expect(completed).toHaveAccessibleName("Harbor Lights, 2021, Completed, rated 5 out of 5");
-    await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", harbor.tmdbId, { status: "completed", rating: 5 })]);
+    await expect(completed).toHaveAccessibleName("Harbor Lights, 2021, Completed");
+    await expect.poll(() => libraryRows(user.username)).toEqual([row("tv", harbor.tmdbId, { status: "completed" })]);
 
     // A tap opens the details, a bottom sheet with the same controls.
     await completed.tap();
@@ -512,29 +568,28 @@ test("the library API lists, changes and removes titles, and checks every change
   expect((await library())[1]).toEqual({
     type: "tv", tmdbId: harbor.tmdbId, title: "Harbor Lights", year: 2021, posterPath: `/e2e-poster-${harbor.tmdbId}.jpg`, rating: 7.8,
     runtime: null, episodeRuntime: 52, episodesPerSeason: [10, 8],
-    library: { id: expect.any(String), status: "watching", rating: null, currentSeason: null, currentEpisode: null, isFavourite: false },
+    library: { id: expect.any(String), status: "watching", currentSeason: null, currentEpisode: null, isFavourite: false },
   });
 
-  const changed = await patch(orchard, { status: "watching", currentSeason: 2, currentEpisode: 8, rating: 5, isFavourite: true });
+  const changed = await patch(orchard, { status: "watching", currentSeason: 2, currentEpisode: 8, isFavourite: true });
   expect(changed.status()).toBe(200);
   expect((await changed.json()).data).toEqual({
-    id: expect.any(String), status: "watching", rating: 5, currentSeason: 2, currentEpisode: 8, isFavourite: true,
+    id: expect.any(String), status: "watching", currentSeason: 2, currentEpisode: 8, isFavourite: true,
   });
   expect(await titles()).toEqual(["The Quiet Orchard", "Paper Moons", "Harbor Lights"]);
-  expect((await patch(orchard, { currentSeason: null, currentEpisode: null, rating: null })).status()).toBe(200);
-  expect((await patch(paperMoons, { status: "completed", rating: 2 })).status()).toBe(200);
+  expect((await patch(orchard, { currentSeason: null, currentEpisode: null })).status()).toBe(200);
+  expect((await patch(paperMoons, { status: "completed" })).status()).toBe(200);
 
-  // Refused changes, which change nothing.
+  // Refused changes, which change nothing. A rating of your own is no more: nothing to change.
   const refused: [Title, object, number, string][] = [
     [harbor, { status: "dropped" }, 400, "Choose Watching, Planned or Completed."],
-    ...[0, 6, 2.5, "4"].map((value): [Title, object, number, string] => [harbor, { rating: value }, 400, "Rate it from 1 to 5 stars."]),
     [harbor, { isFavourite: "yes" }, 400, "Mark it as a favourite or not."],
     ...[{ currentSeason: 3, currentEpisode: 1 }, { currentSeason: 2, currentEpisode: 9 }, { currentSeason: 0, currentEpisode: 1 },
       { currentSeason: 1 }, { currentSeason: null, currentEpisode: 2 }, { currentSeason: 1.5, currentEpisode: 1 }]
       .map((value): [Title, object, number, string] => [harbor, value, 400, "This show has no such episode."]),
-    [harbor, { status: "planned", rating: 9 }, 400, "Rate it from 1 to 5 stars."],
     [harbor, {}, 400, "Nothing to change."],
     [harbor, { title: "Renamed" }, 400, "Nothing to change."],
+    [harbor, { rating: 4 }, 400, "Nothing to change."],
     [paperMoons, { currentSeason: 1, currentEpisode: 1 }, 400, "Movies have no episodes."],
     [series2, { status: "planned" }, 404, "This title isn't in your library."],
   ];
@@ -550,7 +605,7 @@ test("the library API lists, changes and removes titles, and checks every change
   expect((await page.request.patch(entryUrl(harbor), { data: "status=planned", headers: { "Content-Type": "text/plain" } })).status()).toBe(415);
   expect((await page.request.delete(entryUrl(harbor), { headers: { Origin: "https://evil.example" } })).status()).toBe(403);
   const expected = [row("tv", orchard.tmdbId, { is_favourite: true }), row("tv", harbor.tmdbId),
-    row("movie", paperMoons.tmdbId, { status: "completed", rating: 2 })];
+    row("movie", paperMoons.tmdbId, { status: "completed" })];
   expect(await libraryRows(user.username)).toEqual(expected);
 
   // Someone else can't change or remove titles in this library: only in their own.

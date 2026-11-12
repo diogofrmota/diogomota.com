@@ -1,7 +1,7 @@
 // Line icons for the apps, 24x24, drawn in the text color with one stroke
 // weight, so every icon reads as part of one set (the text glyphs ‹ › ⋯ ♥ ★ ↗
 // they replaced each had their own). `filled` fills the shape too, for the
-// pressed state of a toggle (a favourite's heart) and for rating stars.
+// pressed state of a toggle (a favourite's heart).
 // Decorative: the button or link around one carries the label.
 function Icon({ children, filled = false }: { children: React.ReactNode; filled?: boolean }) {
   return (
@@ -116,6 +116,14 @@ export function PlusIcon() {
   );
 }
 
+export function MinusIcon() {
+  return (
+    <Icon>
+      <path d="M5 12h14" />
+    </Icon>
+  );
+}
+
 export function CheckIcon() {
   return (
     <Icon>
@@ -179,15 +187,6 @@ export function HeartIcon({ filled = false }: { filled?: boolean }) {
   return (
     <Icon filled={filled}>
       <path d="M12 20s-7.5-4.6-7.5-10.1A4.4 4.4 0 0 1 12 7.1a4.4 4.4 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z" />
-    </Icon>
-  );
-}
-
-/** A rating star: filled when it counts. */
-export function StarIcon({ filled = false }: { filled?: boolean }) {
-  return (
-    <Icon filled={filled}>
-      <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
     </Icon>
   );
 }

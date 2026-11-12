@@ -42,10 +42,10 @@ const showColumns = `id, type, tmdb_id AS "tmdbId", title, year, poster_url AS "
   vote_average::float8 AS rating, coalesce(overview, '') AS overview, runtime,
   episode_runtime AS "episodeRuntime", episodes_per_season AS "episodesPerSeason",
   last_updated < now() - interval '${refreshAfter}' AS stale`;
-const entryColumns = `id, status, rating, current_season AS "currentSeason",
+const entryColumns = `id, status, current_season AS "currentSeason",
   current_episode AS "currentEpisode", is_favourite AS "isFavourite"`;
 // The same, of user_shows as "us", in a statement that has shows too.
-const usEntryColumns = `us.id, us.status, us.rating, us.current_season AS "currentSeason",
+const usEntryColumns = `us.id, us.status, us.current_season AS "currentSeason",
   us.current_episode AS "currentEpisode", us.is_favourite AS "isFavourite"`;
 
 type ShowRow = TmdbTitle & { id: string; stale: boolean };
@@ -177,7 +177,7 @@ async function libraryItems(userId: string, where = "true"): Promise<LibraryItem
     `SELECT s.type, s.tmdb_id AS "tmdbId", s.title, s.year, s.poster_url AS "posterPath",
        s.vote_average::float8 AS rating, s.runtime, s.episode_runtime AS "episodeRuntime",
        s.episodes_per_season AS "episodesPerSeason",
-       json_build_object('id', us.id, 'status', us.status, 'rating', us.rating, 'currentSeason', us.current_season,
+       json_build_object('id', us.id, 'status', us.status, 'currentSeason', us.current_season,
          'currentEpisode', us.current_episode, 'isFavourite', us.is_favourite) AS library,
        s.last_updated < now() - interval '${refreshAfter}' AS stale
      FROM user_shows us JOIN shows s ON s.id = us.show_id
@@ -208,9 +208,9 @@ export async function sharedLibrary(userId: string): Promise<{ stats: LibrarySta
     stats: libraryStats(items),
     // Only these fields: the entry's id stays private.
     items: items.map((item) => {
-      const { status, rating, currentSeason, currentEpisode, isFavourite } = item.library;
+      const { status, currentSeason, currentEpisode, isFavourite } = item.library;
       return { type: item.type, tmdbId: item.tmdbId, title: item.title, year: item.year, posterPath: item.posterPath,
-        rating: item.rating, library: { status, rating, currentSeason, currentEpisode, isFavourite } };
+        rating: item.rating, library: { status, currentSeason, currentEpisode, isFavourite } };
     }),
   };
 }
@@ -228,8 +228,7 @@ async function libraryRow(userId: string, type: MediaType, id: number) {
 }
 
 /**
- * Changes the user's entry for a title: any of status, rating (1-5 or null),
- * isFavourite, and the progress of a TV show (currentSeason and currentEpisode
+ * Changes the user's entry for a title: any of status, isFavourite, and the progress of a TV show (currentSeason and currentEpisode
  * together: an episode it has, or both null). One statement, except for a
  * change of progress, which is checked against the show's episodes first.
  */
@@ -244,13 +243,6 @@ export async function updateLibraryEntry(userId: string, type: MediaType, id: nu
   if ("status" in body) {
     if (!libraryStatuses.includes(body.status as LibraryStatus)) throw new ShowsError("Choose Watching, Planned or Completed.");
     set("status", body.status);
-  }
-  if ("rating" in body) {
-    const { rating } = body;
-    if (rating !== null && !(Number.isInteger(rating) && (rating as number) >= 1 && (rating as number) <= 5)) {
-      throw new ShowsError("Rate it from 1 to 5 stars.");
-    }
-    set("rating", rating);
   }
   if ("isFavourite" in body) {
     if (typeof body.isFavourite !== "boolean") throw new ShowsError("Mark it as a favourite or not.");
@@ -279,7 +271,7 @@ export async function updateLibraryEntry(userId: string, type: MediaType, id: nu
   return rows[0];
 }
 
-/** Removes a title from the user's library, with its progress and rating. */
+/** Removes a title from the user's library, with its progress. */
 export async function removeFromLibrary(userId: string, type: MediaType, id: number): Promise<null> {
   const { rowCount } = await query(
     `DELETE FROM user_shows us USING shows s
@@ -361,7 +353,7 @@ const forYouSeeds = 5;
 
 /**
  * For You: TMDB's recommendations for the titles of this type the user likes
- * best (favourites, then the best rated, then completed and watching ones, the
+ * best (favourites, then completed and watching ones, the
  * latest first), merged: a title recommended for several of them, or near the
  * top of a list, comes first. Left out: titles already in the library, with
  * too few votes, or in Trending and Popular, which are just under it.
@@ -370,7 +362,7 @@ const forYouSeeds = 5;
 async function forYou(userId: string, type: MediaType): Promise<TitleSummary[]> {
   const { rows } = await query<{ tmdbId: number; seed: boolean }>(
     `SELECT s.tmdb_id AS "tmdbId", row_number() OVER (
-         ORDER BY us.is_favourite DESC, us.rating DESC NULLS LAST,
+         ORDER BY us.is_favourite DESC,
            CASE us.status WHEN 'completed' THEN 0 WHEN 'watching' THEN 1 ELSE 2 END, us.updated_at DESC, us.id
        ) <= ${forYouSeeds} AS seed
      FROM user_shows us JOIN shows s ON s.id = us.show_id

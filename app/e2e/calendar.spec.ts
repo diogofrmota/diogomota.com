@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect, newUser, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
 import { localParts, localInstants, calendarIcs, dateLabel, datePlus, type CalendarEvent } from "../lib/calendar";
@@ -15,13 +15,28 @@ async function setup(page: Page) {
   await expect(page.getByText("Nothing planned yet — tap a day to add your first event!")).toBeVisible();
   return { user, space: (await (await page.request.get("/api/shared/spaces")).json()).data as Space };
 }
+/** The event form's 24-hour time picker: the hour and the minutes, each a select. */
+const timePicker = (scope: Page | Locator, name: "Start time" | "End time") => {
+  const group = scope.getByRole("group", { name, exact: true });
+  return { group, hour: group.getByLabel("Hour"), minutes: group.getByLabel("Minutes") };
+};
+async function setTime(scope: Page | Locator, name: "Start time" | "End time", time: string) {
+  const { hour, minutes } = timePicker(scope, name);
+  await hour.selectOption(time.slice(0, 2));
+  await minutes.selectOption(time.slice(3));
+}
+async function expectTime(scope: Page | Locator, name: "Start time" | "End time", time: string) {
+  const { hour, minutes } = timePicker(scope, name);
+  await expect(hour).toHaveValue(time.slice(0, 2));
+  await expect(minutes).toHaveValue(time.slice(3));
+}
 async function add(page: Page, title: string, assignee: string, date = localParts(new Date()).date) {
   await page.getByRole("button", { name: "Add event", exact: true }).click();
   await page.getByLabel("Title", { exact: true }).fill(title);
   await page.getByLabel("Start date", { exact: true }).fill(date);
   await page.getByLabel("End date", { exact: true }).fill(date);
-  await page.getByLabel("Start time", { exact: true }).fill("09:30");
-  await page.getByLabel("End time", { exact: true }).fill("10:30");
+  await setTime(page, "Start time", "09:30");
+  await setTime(page, "End time", "10:30");
   await page.getByLabel("Assignee").selectOption(assignee);
   await page.getByLabel("Notes (optional)").fill("Bring coffee, tea; and a notebook.\nSee you there!");
   await page.getByRole("button", { name: "Save event" }).click();
@@ -67,8 +82,8 @@ for (const mobile of [false, true]) {
     await personal.click(); await page.getByRole("button", { name: "Edit event", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toContainText("Time zone");
     await page.getByLabel("Title", { exact: true }).fill("Evening walk");
-    await page.getByLabel("Start time", { exact: true }).fill("18:00");
-    await page.getByLabel("End time", { exact: true }).fill("19:00");
+    await setTime(page, "Start time", "18:00");
+    await setTime(page, "End time", "19:00");
     await page.getByRole("button", { name: "Save event" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await page.reload();
@@ -137,7 +152,7 @@ test("calendar uses Lisbon in a different browser timezone, stores UTC, rejects 
   await page.getByLabel("Title", { exact: true }).fill("Clock change");
   await page.getByLabel("Start date", { exact: true }).fill("2026-03-29");
   await page.getByLabel("End date").fill("2026-03-29");
-  await page.getByLabel("Start time").fill("01:30"); await page.getByLabel("End time").fill("03:00");
+  await setTime(page, "Start time", "01:30"); await setTime(page, "End time", "03:00");
   await page.getByRole("button", { name: "Save event" }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("does not exist");
   await page.getByLabel("Start date", { exact: true }).fill("2026-10-25");
@@ -170,16 +185,26 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
   const dialog = page.getByRole("dialog", { name: "New event" });
   await expect(dialog.getByLabel("Start date")).toHaveValue(first);
   await expect(dialog.getByLabel("End date")).toHaveValue(first);
-  await expect(dialog.getByLabel("Start time")).toHaveValue("09:00");
-  await expect(dialog.getByLabel("End time")).toHaveValue("10:00");
+  await expectTime(dialog, "Start time", "09:00");
+  await expectTime(dialog, "End time", "10:00");
+  // Times on the 24-hour clock, whatever the device's language: the hours 00 to 23, the minutes every 5.
+  await expect(timePicker(dialog, "Start time").hour.locator("option")).toHaveText(Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0")));
+  await expect(timePicker(dialog, "Start time").minutes.locator("option")).toHaveText(Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0")));
+  await expect(dialog.getByRole("group", { name: "Starts" })).not.toContainText(/AM|PM/);
+  // A later start moves the end along, keeping the event's length, as the hour and then the minutes change.
+  await setTime(dialog, "Start time", "16:45");
+  await expectTime(dialog, "End time", "17:45");
+  await setTime(dialog, "End time", "18:15");
+  await setTime(dialog, "Start time", "17:00");
+  await expectTime(dialog, "End time", "18:30");
   // The date in words over the browser's field, which opens its picker.
   await expect(dialog.getByRole("group", { name: "Starts" })).toContainText(`${dateLabel(first, { day: "numeric", month: "short" })} (${dateLabel(first, { weekday: "short" })})`);
 
   // All day: no times.
   await dialog.getByLabel("Title", { exact: true }).fill("Holiday");
   await dialog.getByRole("switch", { name: "All day" }).check();
-  await expect(dialog.getByLabel("Start time")).toHaveCount(0);
-  await expect(dialog.getByLabel("End time")).toHaveCount(0);
+  await expect(timePicker(dialog, "Start time").group).toHaveCount(0);
+  await expect(timePicker(dialog, "End time").group).toHaveCount(0);
   await dialog.getByLabel("End date").fill(last);
   await dialog.getByRole("button", { name: "Save event" }).click();
   await expect(dialog).toHaveCount(0);
@@ -214,12 +239,16 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
   await expect(grid.getByText("All day", { exact: true })).toBeVisible();
   const hour = grid.getByText("14:00", { exact: true });
   await hour.scrollIntoViewIfNeeded();
+  // The all-day row stays at the top as the hours scroll under it.
+  expect(await grid.evaluate((el) => el.scrollTop)).toBeGreaterThan(200);
+  await expect(grid.getByRole("button", { name: /^Holiday, All day, / })).toBeInViewport();
+  await expect(grid.getByText("All day", { exact: true })).toBeInViewport();
   const hourBox = (await hour.boundingBox())!;
   const gridBox = (await grid.boundingBox())!;
   await page.mouse.click(gridBox.x + gridBox.width / 2, hourBox.y + 20);
   await expect(dialog.getByLabel("Start date")).toHaveValue(first);
-  await expect(dialog.getByLabel("Start time")).toHaveValue("14:00");
-  await expect(dialog.getByLabel("End time")).toHaveValue("15:00");
+  await expectTime(dialog, "Start time", "14:00");
+  await expectTime(dialog, "End time", "15:00");
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 

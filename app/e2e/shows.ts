@@ -56,14 +56,14 @@ export async function tmdbRequests(page: Page, path: string): Promise<{ path: st
 }
 
 export type LibraryRow = {
-  type: "tv" | "movie"; tmdb_id: number; status: string; rating: number | null;
+  type: "tv" | "movie"; tmdb_id: number; status: string;
   current_season: number | null; current_episode: number | null; is_favourite: boolean;
 };
 
 /** The user's user_shows rows, TV shows first, by TMDB id. */
 export async function libraryRows(username: string): Promise<LibraryRow[]> {
   const { rows } = await withDatabase((client) => client.query(
-    `SELECT s.type, s.tmdb_id, us.status, us.rating, us.current_season, us.current_episode, us.is_favourite
+    `SELECT s.type, s.tmdb_id, us.status, us.current_season, us.current_episode, us.is_favourite
      FROM user_shows us JOIN users u ON u.id = us.user_id JOIN shows s ON s.id = us.show_id
      WHERE u.username = $1 ORDER BY s.type DESC, s.tmdb_id`, [username]));
   return rows;
@@ -71,7 +71,7 @@ export async function libraryRows(username: string): Promise<LibraryRow[]> {
 
 /** A library row as added from Discover, with `fields` changed. */
 export const row = (type: "tv" | "movie", tmdbId: number, fields: Partial<LibraryRow> = {}): LibraryRow => ({
-  type, tmdb_id: tmdbId, status: "watching", rating: null, current_season: null, current_episode: null, is_favourite: false, ...fields,
+  type, tmdb_id: tmdbId, status: "watching", current_season: null, current_episode: null, is_favourite: false, ...fields,
 });
 
 export async function expectNoHorizontalScroll(page: Page) {

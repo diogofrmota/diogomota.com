@@ -17,13 +17,13 @@ function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
-// "2 seasons · 18 episodes · 52 min episodes", or a movie's runtime.
+// "2 seasons · 18 episodes", or a movie's runtime.
 function lengthFacts(detail: TitleDetail): string {
   if (detail.type === "movie") return detail.runtime ? formatRuntime(detail.runtime) : "";
   const seasons = detail.episodesPerSeason ?? [];
   const episodes = seasons.reduce((sum, count) => sum + count, 0);
-  return [seasons.length > 0 && plural(seasons.length, "season"), episodes > 0 && plural(episodes, "episode"),
-    detail.episodeRuntime && `${detail.episodeRuntime} min episodes`].filter(Boolean).join(" · ");
+  return [seasons.length > 0 && plural(seasons.length, "season"), episodes > 0 && plural(episodes, "episode")]
+    .filter(Boolean).join(" · ");
 }
 
 /** The poster's `sizes`, for the poster and the blurred copy behind the top, so both are the same file. */
@@ -75,10 +75,11 @@ function Seasons({ seasons, item }: { seasons: readonly number[]; item: LibraryI
 
 /**
  * A title's detail panel (panel id "title:tv:123"), laid out as the title's
- * page: the poster with the title and its facts, over a blurred copy of the
- * poster; then what can be done with it (Add to Library, or the library
- * controls once it is there); then the overview and the seasons; Remove from
- * library last. Side by side on a wide screen, the poster staying in view.
+ * page, over a blurred copy of the poster. On one side, the poster with the
+ * title and its facts under it (beside it on a phone); on the other, the
+ * overview first, then what can be done with it (Add to Library, or the
+ * library controls once it is there), the seasons, and Remove from library
+ * last. On a wide screen the poster's side stays in view.
  */
 export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "type" | "tmdbId">; onClose: () => void }) {
   const headingId = useId();
@@ -115,22 +116,24 @@ export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "typ
         <button type="button" className={styles.close} aria-label="Close" onClick={onClose}><CloseIcon /></button>
       </div>
       <div className={styles.titlePage}>
-        <div className={styles.titlePoster}>
-          {shown ? <Poster title={shown} sizes={posterSizes} className={styles.detailPoster} />
-            : <span className={`${styles.poster} ${styles.skeleton} ${styles.detailPoster}`} />}
-        </div>
-        <div className={styles.titleHead}>
-          <h2 id={headingId}>{shown?.title ?? "Loading…"}</h2>
-          {shown && <p className={styles.titleFacts}>{titleFacts(shown, true).text}</p>}
-          {detail ? length && <p className={styles.titleFacts}>{length}</p>
-            : !error && <span className={`${styles.skeletonLine} ${styles.skeleton} ${styles.skeletonShort}`} />}
-          <p className={styles.source}>Rating and details from TMDB</p>
+        <div className={styles.titleAside}>
+          <div className={styles.titlePoster}>
+            {shown ? <Poster title={shown} sizes={posterSizes} className={styles.detailPoster} />
+              : <span className={`${styles.poster} ${styles.skeleton} ${styles.detailPoster}`} />}
+          </div>
+          <div className={styles.titleHead}>
+            <h2 id={headingId}>{shown?.title ?? "Loading…"}</h2>
+            {shown && <p className={styles.titleFacts}>{titleFacts(shown, true).text}</p>}
+            {detail ? length && <p className={styles.titleFacts}>{length}</p>
+              : !error && <span className={`${styles.skeletonLine} ${styles.skeleton} ${styles.skeletonShort}`} />}
+          </div>
         </div>
         <div className={styles.titleMain}>
           {error ? <LoadError message={error} onRetry={retry} /> : !detail ? <div className={styles.overviewSkeleton} aria-busy="true">
             <p role="status" className={styles.srOnly}>Loading details…</p>
             {[1, 2, 3].map((line) => <span key={line} className={`${styles.skeletonLine} ${styles.skeleton}`} />)}
           </div> : <>
+            <Overview key={detail.overview} text={detail.overview || "No overview on TMDB yet."} />
             {!library.items ? (library.loadError ? <LoadError message={library.loadError} onRetry={library.reload} />
               : <span className={`${styles.skeletonLine} ${styles.skeleton}`} />)
               : item ? <LibraryControls item={item} detail={detail} />
@@ -147,7 +150,6 @@ export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "typ
                 </div>
               </div>}
             {addError && <p role="alert" className={styles.error}>{addError}</p>}
-            <Overview key={detail.overview} text={detail.overview || "No overview on TMDB yet."} />
             {detail.type === "tv" && !!detail.episodesPerSeason?.length && <Seasons seasons={detail.episodesPerSeason} item={item} />}
             {item && <RemoveFromLibrary item={item} onRemoved={() => setRemoved(true)} />}
           </>}

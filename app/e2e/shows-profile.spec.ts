@@ -33,11 +33,22 @@ const statValues = (scope: Page | Locator) => section(scope, "Stats").getByRole(
 const friendsState = async (page: Page) => (await (await page.request.get("/api/shows/friends")).json()).data;
 
 test("Profile shows the user's favourites and stats, and the stats add up", async ({ page }) => {
-  await openShows(page);
+  const user = await openShows(page);
   await tab(page, "Profile").click();
   await expect(viewHeading(page)).toHaveText("Profile");
-  // Hours watched (with its episodes and movies), TV shows completed, movies completed.
-  await expect(statValues(page)).toHaveText(["0", "0 episodes · 0 movies", "0", "0"]);
+  // Hours watched, TV shows completed, movies completed: the numbers alone.
+  await expect(statValues(page)).toHaveText(["0", "0", "0"]);
+  await expect(section(page, "Stats")).not.toContainText("Runtimes from TMDB");
+  // At the top, the picture (or initial) over the username, nothing else; everything in one column in the middle.
+  const main = page.getByRole("main");
+  const middle = async (locator: Locator) => { const box = (await locator.boundingBox())!; return box.x + box.width / 2; };
+  const center = await middle(main);
+  const name = main.getByText(user.username, { exact: true }).first();
+  expect(Math.abs(await middle(name) - center)).toBeLessThanOrEqual(1);
+  await expect(main).not.toContainText(/\d+ titles? · \d+ friends?/);
+  for (const heading of ["Stats", "Favourites", "Friends"]) {
+    expect(Math.abs(await middle(section(page, heading)) - center), heading).toBeLessThanOrEqual(1);
+  }
   await expect(section(page, "Favourites")).toContainText("No favourites yet.");
   await expect(section(page, "Friends")).toContainText("No friends yet.");
   await expect(section(page, "Friend requests")).toHaveCount(0);
@@ -45,7 +56,7 @@ test("Profile shows the user's favourites and stats, and the stats add up", asyn
   // A show being watched counts up to its current episode, a completed one in
   // full, a planned one not at all (even with progress); movies once completed.
   await addTitle(page, harbor, "watching", { currentSeason: 2, currentEpisode: 3, isFavourite: true }); // 13 × 52 minutes
-  await addTitle(page, orchard, "planned", { status: "completed", rating: 4 }); // 18 × 45 minutes
+  await addTitle(page, orchard, "planned", { status: "completed" }); // 18 × 45 minutes
   await addTitle(page, series2, "watching", { currentSeason: 1, currentEpisode: 5 }, { status: "planned" }); // nothing
   await addTitle(page, paperMoons, "planned", { status: "completed", isFavourite: true }); // 128 minutes
   await addTitle(page, northernLine, "watching"); // nothing yet
@@ -53,7 +64,7 @@ test("Profile shows the user's favourites and stats, and the stats add up", asyn
   // 676 + 810 + 128 + 92 = 1,706 minutes: 28.4 hours.
   await page.reload();
   await tab(page, "Profile").click();
-  await expect(statValues(page)).toHaveText(["28.4", "31 episodes · 2 movies", "1", "2"]);
+  await expect(statValues(page)).toHaveText(["28.4", "1", "2"]);
 
   // Favourites: TV shows and movies together, the latest changed first.
   const favourites = grid(section(page, "Favourites"), "Your favourites");
@@ -68,7 +79,7 @@ test("Profile shows the user's favourites and stats, and the stats add up", asyn
   await expect(detail.getByText("S2 E4", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(detail).toBeHidden();
-  await expect(statValues(page)).toHaveText(["29.3", "32 episodes · 2 movies", "1", "2"]);
+  await expect(statValues(page)).toHaveText(["29.3", "1", "2"]);
 
   // Completed from its card's quick actions: all 18 episodes (1,966 minutes).
   // With the keyboard: the ⋯ button only shows where there is a mouse (phones long-press, see shows-home.spec.ts).
@@ -76,7 +87,7 @@ test("Profile shows the user's favourites and stats, and the stats add up", asyn
   const menu = page.getByRole("dialog", { name: "Harbor Lights" });
   await menu.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" }).click();
   await page.keyboard.press("Escape");
-  await expect(statValues(page)).toHaveText(["32.8", "36 episodes · 2 movies", "2", "2"]);
+  await expect(statValues(page)).toHaveText(["32.8", "2", "2"]);
   await expect(card(favourites, "Harbor Lights")).toHaveAccessibleName("Harbor Lights, 2021, Completed, favourite");
 
   // No longer a favourite: gone from Favourites.
@@ -92,7 +103,7 @@ test("two people become friends: a request, accepting it, each other's libraries
   const bobName = bob.user.username;
   // What a friend sees: watching, completed and favourites, not a planned title.
   await addTitle(bob.page, harbor, "watching", { currentSeason: 2, currentEpisode: 5, isFavourite: true });
-  await addTitle(bob.page, orchard, "planned", { status: "completed", rating: 4 });
+  await addTitle(bob.page, orchard, "planned", { status: "completed" });
   await addTitle(bob.page, paperMoons, "planned");
   await addTitle(bob.page, series2, "planned", { isFavourite: true });
 
@@ -144,12 +155,12 @@ test("two people become friends: a request, accepting it, each other's libraries
   await tab(page, "Profile").click();
   await friendButton(page, bobName).click();
   const profile = page.getByRole("dialog", { name: bobName });
-  await expect(statValues(profile)).toHaveText(["26.5", "33 episodes · 0 movies", "1", "0"]);
+  await expect(statValues(profile)).toHaveText(["26.5", "1", "0"]);
   const cards = (heading: string) => grid(section(profile, heading), heading).getByRole("button");
   await expect(cards("Watching")).toHaveCount(1);
   await expect(cards("Watching")).toHaveAccessibleName("Harbor Lights, 2021, Watching, season 2 episode 5, favourite");
   await expect(cards("Completed")).toHaveCount(1);
-  await expect(cards("Completed")).toHaveAccessibleName("The Quiet Orchard, 2016, Completed, rated 4 out of 5");
+  await expect(cards("Completed")).toHaveAccessibleName("The Quiet Orchard, 2016, Completed");
   await expect(cards("Favourites")).toHaveCount(2);
   await expect(cards("Favourites").first()).toHaveAccessibleName("Top Rated Series 2, 2001, Planned, favourite");
   await expect(cards("Favourites").last()).toHaveAccessibleName("Harbor Lights, 2021, Watching, season 2 episode 5, favourite");
@@ -170,7 +181,7 @@ test("two people become friends: a request, accepting it, each other's libraries
   await expect(viewHeading(page)).toHaveText("Profile");
   expect(await libraryRows(me.username)).toEqual([row("tv", harbor.tmdbId, { status: "planned" })]);
   expect(await libraryRows(bobName)).toEqual([
-    row("tv", orchard.tmdbId, { status: "completed", rating: 4 }),
+    row("tv", orchard.tmdbId, { status: "completed" }),
     row("tv", series2.tmdbId, { status: "planned", is_favourite: true }),
     row("tv", harbor.tmdbId, { current_season: 2, current_episode: 5, is_favourite: true }),
     row("movie", paperMoons.tmdbId, { status: "planned" }),
@@ -179,7 +190,7 @@ test("two people become friends: a request, accepting it, each other's libraries
   // Through the API: the same, and nothing more (no planned titles, no entry ids).
   const response = await page.request.get(`/api/shows/friends/${bob.id}`);
   expect(response.status()).toBe(200);
-  const entry = (status: string, fields: object = {}) => ({ status, rating: null, currentSeason: null, currentEpisode: null, isFavourite: false, ...fields });
+  const entry = (status: string, fields: object = {}) => ({ status, currentSeason: null, currentEpisode: null, isFavourite: false, ...fields });
   expect((await response.json()).data).toEqual({
     id: bob.id, username: bobName, avatarUrl: null,
     stats: { tvCompleted: 1, moviesCompleted: 0, episodesWatched: 33, minutesWatched: 1590 },
@@ -187,7 +198,7 @@ test("two people become friends: a request, accepting it, each other's libraries
       { type: "tv", tmdbId: series2.tmdbId, title: "Top Rated Series 2", year: 2001, posterPath: `/e2e-poster-${series2.tmdbId}.jpg`,
         rating: 8.4, library: entry("planned", { isFavourite: true }) },
       { type: "tv", tmdbId: orchard.tmdbId, title: "The Quiet Orchard", year: 2016, posterPath: `/e2e-poster-${orchard.tmdbId}.jpg`,
-        rating: 9.1, library: entry("completed", { rating: 4 }) },
+        rating: 9.1, library: entry("completed") },
       { type: "tv", tmdbId: harbor.tmdbId, title: "Harbor Lights", year: 2021, posterPath: `/e2e-poster-${harbor.tmdbId}.jpg`,
         rating: 7.8, library: entry("watching", { currentSeason: 2, currentEpisode: 5, isFavourite: true }) },
     ],
@@ -221,7 +232,7 @@ test("declining and cancelling requests, a request that's gone, and asking each 
   // Ann declines.
   await addFriend(page, annName);
   await expect(friends.getByRole("status")).toHaveText(`Friend request sent to ${annName}.`);
-  await tab(ann.page, "Home").click();
+  await tab(ann.page, "Watchlist").click();
   await tab(ann.page, "Profile").click();
   await requests.getByRole("button", { name: `Decline ${me.username}` }).click();
   await expect(requests.getByRole("status")).toHaveText(`Declined ${me.username}'s friend request.`);
@@ -230,7 +241,7 @@ test("declining and cancelling requests, a request that's gone, and asking each 
   expect(await friendsState(page)).toEqual({ friends: [], incoming: [], outgoing: [] });
 
   // So I can ask again, and withdraw it.
-  await tab(page, "Home").click();
+  await tab(page, "Watchlist").click();
   await tab(page, "Profile").click();
   await expect(sent).toHaveCount(0);
   await addFriend(page, annName);
@@ -243,7 +254,7 @@ test("declining and cancelling requests, a request that's gone, and asking each 
   // A request withdrawn while Ann had it on screen: accepting it says so.
   await addFriend(page, annName);
   await expect(friends.getByRole("status")).toHaveText(`Friend request sent to ${annName}.`);
-  await tab(ann.page, "Home").click();
+  await tab(ann.page, "Watchlist").click();
   await tab(ann.page, "Profile").click();
   await expect(requests.getByRole("button", { name: `Accept ${me.username}` })).toBeVisible();
   await sent.getByRole("button", { name: `Cancel request to ${annName}` }).click();
@@ -465,7 +476,7 @@ test.describe("on a phone", () => {
     await page.reload();
 
     await tab(page, "Profile").tap();
-    await expect(statValues(page)).toHaveText(["2.1", "0 episodes · 1 movie", "0", "1"]);
+    await expect(statValues(page)).toHaveText(["2.1", "0", "1"]);
     await expect(friendButton(page, friend.user.username)).toBeVisible();
     // At least 16px, so iOS doesn't zoom in on it.
     await expect(page.getByLabel("Add a friend")).toHaveCSS("font-size", "16px");
@@ -473,7 +484,7 @@ test.describe("on a phone", () => {
 
     await friendButton(page, friend.user.username).tap();
     const profile = page.getByRole("dialog", { name: friend.user.username });
-    await expect(statValues(profile)).toHaveText(["3.5", "4 episodes · 0 movies", "0", "0"]);
+    await expect(statValues(profile)).toHaveText(["3.5", "0", "0"]);
     await expect(grid(section(profile, "Watching"), "Watching").getByRole("button")).toHaveAccessibleName(
       "Harbor Lights, 2021, Watching, season 1 episode 4, favourite");
     expect(await profile.boundingBox()).toEqual({ x: 0, y: 0, width: 390, height: 844 });

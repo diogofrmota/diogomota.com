@@ -65,7 +65,7 @@ Single shared account across all apps. Auth lives at the `/apps` level.
 
 - **Logged out:** `/apps` shows the app cards with their descriptions, and Login and Sign Up buttons in the top bar. A card opens a login prompt (`components/site/LoginPrompt.tsx`) whose links carry `?next=/shared` or `?next=/shows`, so logging in lands in that app.
 - **Logged in:** the top bar shows the account menu, a button with the username (Account, Logout; elsewhere also Switch app); the cards open the apps.
-- **Top bar** (`components/common/AppHeader`, at every width): on `/apps`, `/account` and the login pages, `diogomota.com` (→ `/`) on the left; in an app, its tabs in the middle instead (Calendar | Tasks | Settings, Home | Discover | Profile; the open one in bold and underlined; a long username is cut off on a phone rather than move them), and nothing else: no `diogomota.com`, no app links, no search. On the right, Login and Sign Up or the account menu (none on the login pages). **Switch app** in the account menu goes to `/apps`, the way from one app to the other; it isn't there on `/apps` itself.
+- **Top bar** (`components/common/AppHeader`, at every width): on `/apps`, `/account` and the login pages, `diogomota.com` (→ `/`) on the left; in an app, its tabs in the middle instead (Calendar | Tasks | Settings, Watchlist | Discover | Profile; the open one in bold and underlined; a long username is cut off on a phone rather than move them), and nothing else: no `diogomota.com`, no app links, no search. On the right, Login and Sign Up or the account menu (none on the login pages). **Switch app** in the account menu goes to `/apps`, the way from one app to the other; it isn't there on `/apps` itself.
 - **Account menu** (`components/account/AccountMenu`): the username drawn as a button, so it reads as one: a pill with a border, the username's initial in a circle (left out in an app on a phone, where the tabs leave little room and the username keeps it), the username (cut off with an ellipsis if need be) and a chevron that turns over while the menu is open. The menu's items each have an icon (Account a person, Switch app a grid of four squares, Logout a door with an arrow), with Logout under a line. A disclosure, not an ARIA menu: Tab moves through it, and Escape, a click outside or tabbing away closes it.
 - **Session:** an Auth.js JWT cookie, encrypted with `AUTH_SECRET`, holding the user id, the username and the `password_changed_at` it logged in under. Shared by every app.
 - **Sign-up:** open to anyone, no sign-up code (decided). Username 3–20 characters of `[a-z0-9_]`, saved lowercase (the database enforces it too); email; password of at least 10 characters and at most 72 bytes. Signing up logs straight in.
@@ -80,7 +80,7 @@ From the account menu on `/apps` and in both apps' top bars. In the apps' frame 
 - Change username (unique)
 - Change password (current + new + confirm)
 - Reset by email (→ `/forgot-password`)
-- Profile picture: drop a photo or choose one; the server makes it a 512 px WebP square (`lib/avatars.ts`, with sharp) and keeps it as a file on the VPS (the `appdata` volume); `users.avatar_updated_at` is in its URL. Shown in the account menu, Shared's members and Shows' Profile and friends; Remove picture goes back to the initial
+- Profile picture: drop a photo or choose one, then Adjust your picture (drag and zoom it until the circle shows the part wanted; the browser cuts that square out); the server makes it a 512 px WebP square (`lib/avatars.ts`, with sharp) and keeps it as a file on the VPS (the `appdata` volume); `users.avatar_updated_at` is in its URL. Shown in the account menu, Shared's members and Shows' Profile and friends; Remove picture goes back to the initial
 - Theme preference (light/dark), saved in `users.theme_preference`
 - Logout
 
@@ -168,8 +168,8 @@ A private space for a small group (e.g. couple, roommates) to share a calendar a
 **1. Calendar**
 - Custom month, week and day views (no FullCalendar), in the app's light and dark themes; week view scrolls sideways on narrow screens; a week day's heading opens its day
 - Add event: the Add event button, a tap on a day of the month (anywhere but on an event) or on an hour of the week or day view (the event then starts at that hour)
-  - Title; All day (a switch), or start and end times; start and end dates (an event can span dates), each a chip showing it in words ("Thu 12 Nov", "09:30") over the browser's own field, which opens its picker; optional notes
-  - **All day:** from the start of the first day to the start of the day after the last (Lisbon), `events.all_day`; shown as All day, in its own row over the hours in the week and day views, and exported as whole days
+  - Title; All day (a switch), or start and end times; start and end dates (an event can span dates). A date is a chip showing it in words ("12 Nov (Thu)") over the browser's own field, which opens its picker; a time is on the 24-hour clock ("09:30"), an hour and a minutes select (every 5 minutes) in a chip, not the browser's time field, which follows the device's language and can be AM/PM; optional notes
+  - **All day:** from the start of the first day to the start of the day after the last (Lisbon), `events.all_day`; shown as All day, in its own row over the hours in the week and day views (it stays in view as the hours scroll, and scrolls within itself past about two events), and exported as whole days
   - **Assignee:** one member, or the **group** (applies to all members)
   - Member-colored events; group events neutral, with a **Group** badge; a color legend
 - Click an event to view, edit or delete it (a modal on desktop, a bottom sheet on a phone); every member can manage every event
@@ -221,44 +221,42 @@ Minimalistic personal tracker for TV shows and movies.
 
 #### SPA Views (tabs in the middle of the top bar)
 
-**1. Home**
+**1. Watchlist** (the first tab; it was called Home)
 - **Toggle at top:** TV Shows | Movies (filters all sections below; the same switch as Discover's)
 - **Sections (vertical scroll):**
-  - **Watching** — currently watching, shows progress (e.g. S2 E5, or Not started)
   - **Planned** — want to watch list
-  - **Completed** — finished, with optional rating (stars)
+  - **Watching** — currently watching, shows progress (e.g. S2 E5, or Not started)
+  - **Completed** — finished
   - Each lists the titles changed most recently first, whole rows until Show all (three on a phone, two wider), with a count
-- Each card: poster, title, year, status badge, a heart for a favourite
-- Click card → detail panel:
-  - Overview, seasons/episodes (TV), runtime (movies)
+- Each card: poster, title, year, a heart for a favourite, and Watching or Completed on the poster (as on every poster of a title in the library: Discover, search, the guide, Profile); Planned only where statuses are mixed (Favourites), not in its own section
+- Click card → detail panel, laid out as the title's page: on a wide screen, the poster with the title, type, year, TMDB's rating, and seasons and episodes (or a movie's runtime) under it, in a column that stays in view; beside it the overview first, then:
   - Favourite
-  - Status: Watching | Planned | Completed
+  - Status: Planned | Watching | Completed
   - Progress of a TV show being watched: a season and an episode picker, and Next episode (on to the next season after a season's last episode); reaching the last episode offers Mark as completed (or Not yet). Progress is the last episode watched and is kept when the status changes
-  - Your rating: 1–5 stars (the same star again, or Clear, removes it)
   - Remove from library: asks first, then offers to add it again
-- **Quick actions** (status and rating): the ⋯ button on a card where there is a mouse (shown on hover or focus), a right click, or a half-second long press on a touch screen; a small menu beside the card on desktop, a sheet from the bottom on a phone
-- One library state (`components/shows/library.tsx`) serves Home, Discover, search and the panels; it loads with the app and again whenever the page becomes visible; a 404 or 409 (e.g. a title removed in another tab) reloads it
+- **Quick actions** (the status, and the season and episode of a TV show being watched): the ⋯ button on a card where there is a mouse (shown on hover or focus), a right click, or a half-second long press on a touch screen; a small menu beside the card on desktop, a sheet from the bottom on a phone
+- One library state (`components/shows/library.tsx`) serves the Watchlist, Discover, search and the panels; it loads with the app and again whenever the page becomes visible; a 404 or 409 (e.g. a title removed in another tab) reloads it
 
 **2. Discover (TV Shows / Movies)**
 - A TV Shows | Movies switch over identical layouts
 - Each section is one row of up to 20 cards that scrolls sideways (a swipe on a phone; a drag or ‹ › with a mouse). Sections from TMDB leave out titles with fewer than 50 (TV) or 100 (movies) votes, show each title only once (Trending, Popular, Coming Soon, the genres; Top Rated and Added by Friends may repeat), and read up to 3 pages to have 20
 - **Sections:**
-  - **For You** — only with titles of that type in the library: TMDB's recommendations for up to 5 of them (favourites, best rated, completed and watching first), merged, without what's already in the library
+  - **For You** — only with titles of that type in the library: TMDB's recommendations for up to 5 of them (favourites, then completed and watching ones first), merged, without what's already in the library
   - **Trending This Week** — TMDB's trending of the week
   - **Popular** — TMDB's popular
   - **Coming Soon** (movies) — TMDB's upcoming
   - **Top Rated** — TMDB's discover by rating, from titles with at least 500 (TV) or 2,000 (movies) votes
   - **Three genres** — TV: Comedy, Crime, Sci-Fi & Fantasy; movies: Action, Comedy, Science Fiction (the most popular of each)
   - **Added by Friends** — titles in accepted friends' libraries (any status), the ones most friends have first
-- Each card: poster, title, year, TMDB's average rating
+- Each card: poster, title, year, TMDB's average rating; Watching or Completed on the poster once it is in the library
 - Grey skeleton posters while loading; a failed section shows a message with Retry
-- Click card → detail panel (a bottom sheet on a phone) with "Add to Library" as Watching or Planned
-- Search field at the top of Discover
+- Click card → detail panel (a bottom sheet on a phone) with "Add to Library" as Planned, Watching or Completed
+- Search field and the TV Shows | Movies switch at the top of Discover, centered
 
-**3. Profile**
+**3. Profile** — one column in the middle of the page; at the top, your profile picture (or initial) over your username, nothing else
 - **Friend requests** received, with Accept and Decline (only when there are any)
-- **Stats** — hours watched (each TV show's episodes watched × its episode runtime, plus each completed movie's runtime, to one decimal), with the episodes and movies counted, and the TV shows and movies completed. A show being watched counts up to its current episode, a completed one all its episodes, a planned one none; a movie counts once completed. The browser and the server use the same function (`libraryStats` in `lib/show-types.ts`), so your own stats follow every change at once
-- **Favourite Shows/Movies** — the titles marked Favourite, TV shows and movies together, latest change first, whole rows until Show all, with Home's quick actions
+- **Stats** — hours watched (each TV show's episodes watched × its episode runtime, plus each completed movie's runtime, to one decimal), and the TV shows and movies completed: the numbers alone, without a breakdown or a note on how they are counted. A show being watched counts up to its current episode, a completed one all its episodes, a planned one none; a movie counts once completed. The browser and the server use the same function (`libraryStats` in `lib/show-types.ts`), so your own stats follow every change at once
+- **Favourite Shows/Movies** — the titles marked Favourite, TV shows and movies together, latest change first, whole rows until Show all, with the Watchlist's quick actions
 - **Friends List:**
   - **Add friend** — by username, in any case, with or without an `@`; from 2 characters it suggests up to 6 usernames that start with what's typed (a combobox, with how you're connected) and says whether an account has exactly that one; limited to 20 requests per 15 minutes and 60 searches a minute per user
   - Your friends, and the requests you sent (Pending, with Cancel); removing a friend asks first
@@ -267,11 +265,11 @@ Minimalistic personal tracker for TV shows and movies.
 - Friendships: one row per pair, pending until accepted; declining, cancelling and removing delete it, so either can ask again; asking someone who already asked you accepts their request (one statement, so two people asking each other at once become friends)
 
 #### UI/UX Details
-- **First-time flow:** Click Shows → Home, a guide in three numbered steps: TV shows, then movies (what's trending and popular, or a search of that kind; a tap on a poster opens Watching, Planned and Completed over it, the title's status again takes it out), then friends (Add a friend), and a last screen with what was added by status and a fan of their posters (Go to my library). Skip ends it at any step; then an empty library shows "Start by discovering shows!", with Go to Discover, Search and Set up step by step
-- **Adding from a poster:** a + at the bottom right of every Discover and search poster opens the same Watching, Planned and Completed over it; once the title is in the library it is a tick, which opens the quick actions
+- **First-time flow:** Click Shows → Watchlist, a guide in three numbered steps: TV shows, then movies (what's trending and popular, or a search of that kind; a tap on a poster opens Planned, Watching and Completed over it, the title's status again takes it out), then friends (Add a friend), and a last screen with what was added by status and a fan of their posters (Go to my library). Skip ends it at any step; then an empty library shows "Start by discovering shows!", with Go to Discover, Search and Set up step by step
+- **Adding from a poster:** a + at the bottom right of every Discover and search poster opens the same Planned, Watching and Completed over it (each its icon and name centered in a pill); Watching a TV show then asks, over the poster, the last episode watched (Season, Episode, Save; leaving it keeps Not started). Once the title is in the library the + is a tick, which opens the quick actions
 - **Poster-heavy design** — visual grid of posters, Netflix/Letterboxd-inspired
-- **Quick actions:** ⋯ button, right click or long press on a card to change status or rate
-- **Search:** the search field at the top of Discover (and Search in an empty Home) opens the search panel (the whole screen on a phone): TV shows and movies together, 300 ms after typing stops. No search button in the top bar
+- **Quick actions:** ⋯ button, right click or long press on a card to change the status (and a TV show's episode). Users don't rate titles: the only rating is TMDB's
+- **Search:** the search field at the top of Discover (and Search in an empty Watchlist) opens the search panel (the whole screen on a phone): TV shows and movies together, 300 ms after typing stops. No search button in the top bar
 - **Loading states:** Skeleton loaders for TMDB API calls
 - **Empty states:** friendly messages per section, with a link to Discover
 
@@ -300,7 +298,7 @@ As in `db/migrations/` (`001_initial.sql` to `006_library_updated_at.sql`). Ids 
 | Table | Key Fields |
 |---|---|
 | `shows` | id, tmdb_id, type (tv/movie; unique together with tmdb_id), title, poster_url (TMDB's path, e.g. `/abc.jpg`), year, overview, runtime (movie), episode_runtime (TV), episodes_per_season (`integer[]`), vote_average (0–10), last_updated |
-| `user_shows` | id, user_id, show_id, status (watching/planned/completed), rating (1–5), current_season, current_episode, is_favourite, updated_at |
+| `user_shows` | id, user_id, show_id, status (watching/planned/completed), rating (1–5; no longer read or written since users stopped rating titles, kept so an older image still works), current_season, current_episode, is_favourite, updated_at |
 | `friendships` | id, user_id (sent the request), friend_id, status (pending/accepted), created_at; one row per pair |
 
 ### Auth tables
@@ -440,8 +438,8 @@ diogomota.com/                            # repo root (this folder)
     │   │                                 # Spinner, icons, ui.module.css (the apps' common parts)
     │   ├── shared/                       # SharedApp, SpaceWelcome, SpaceSettings, Calendar, EventDialog,
     │   │                                 # Tasks, TaskItem, TaskDialogs, Sortable, useTasks
-    │   └── shows/                        # ShowsApp, Home, Discover, Profile, Stats, TitleGrid, LibraryGrid,
-    │                                     # TitleDialog, SearchDialog, QuickActions, FriendDialog, library
+    │   └── shows/                        # ShowsApp, Watchlist, Discover, Profile, Stats, TitleGrid, LibraryGrid,
+    │                                     # TitleDialog, SearchDialog, QuickActions, FriendDialog, EpisodePicker, library
     ├── lib/                              # db, tmdb (and tmdb-mock), email, password, password-reset,
     │                                     # rate-limit, users, spaces, events, calendar, tasks, shows,
     │                                     # friends, show-types, api-request, apps, test-hooks, ...
@@ -583,6 +581,8 @@ Everything done, in the order it happened (moved here from the former `roadmap.m
 - Light mode by default, a cleaner calendar, a new Shows guide (2026-11-11): **themes**: Earth tones, Dark mode, Blueprint and Retro are gone (`011` moves their accounts to Warm, Graphite, Ocean and Graphite); Light mode is the theme logged out and for new accounts (`defaultTheme`, and the column's default). **`/apps`**: the logged-out call to action has no icon: "Create an account to start using the apps", "To use the apps you need to create an account. Log in, or sign up if you are a new user.", then Login and Sign Up side by side; the app logos are app icons (a gradient tile with a white drawing: a calendar with two overlapping circles for Shared, a TV with a play button for Shows), the same in every theme, 56 px. **Top bar on phones**: the account button is only the username's initial, a round avatar (the username stays its accessible name), and the open menu shows the username at the top. **Calendar**: All day (a switch; `011` adds `events.all_day`; midnight to midnight in Lisbon, checked by the API; shown as All day, in a row of its own over the hours in the week and day views; `.ics` with `VALUE=DATE` and Google's link with dates); no "Time zone" line in the form; Starts and Ends rows, each a date chip ("Thu 12 Nov", the year when it isn't this one) and a time chip over the browser's own (invisible) field, which a tap opens with `showPicker()`; moving the start moves the end with it; the selects have their own arrow, clear of the right edge; a tap on a day of the month adds an event that day (its number is the button for keyboards: "Thursday 12 November, add event"), a tap on an hour in the week or day view adds one at that hour; ‹ › are 24 px chevrons; the dialogs' × (both apps and the login prompt) is a drawn cross in a round 44 px button. **Shows**: a + at the bottom right of every Discover and search poster (centered in its circle; a 44 px tap target) opens Watching, Planned and Completed over the poster (`components/shows/AddToLibrary.tsx`); once the title is in the library it is a tick that opens the quick actions. Titles can be added as Completed (`addStatuses`, the API and the detail panel). The guide is now TV shows, then movies (trending and popular, or a search of that kind only; a tap on a poster opens the same chooser, its status again takes it out, a badge and an outline show what's added), then friends, then "You're all set!" with the counts by status and a fan of posters; a numbered stepper with ticks, a legend of what each status means. **Animations**, driven by React's rendering and never in the way of a tap: the view shown on a tab switch slides in from its tab's side (`AppShell`'s direction, for every `setView`; `<Activity>` reveals restart its CSS animation), the calendar's grid is keyed by its period and slides in from the side of its dates (fades for a view change), and the guide's steps are keyed and slide in the same way; dialogs scale in on desktop and slide up as sheets on phones, the account menu drops in, cards fade up one after another, the chooser's options pop in, a tick pops on adding, the all-set tick draws itself, the switch's knob slides. React's `<ViewTransition>` was tried first and dropped: the page takes no taps while one runs (a quick second › in the calendar was lost, and a test caught a panel opened a frame after a tab switch going missing). All stop with reduced motion (the phone sheets' rule moved after their media query, which had overridden it), and the e2e tests run with `reducedMotion: "reduce"` so axe never sees something half faded in. Tests updated for the new themes, callout, labels (Start date) and guide; new ones for a day and an hour adding an event, all-day events (API, `.ics`, Google link), and a poster's + (where it is, the chooser, Escape inside search). Checked locally: screenshots of `/apps` (logged out and in, phone menu), the calendar (month, week, new event, all day, details) and the guide (each step, the chooser, the end) and Discover, at 1280 and 375/390 px, in Light mode, Graphite and Space; lint and typecheck clean
 
 - Spaces without names, profile pictures, a title page in Shows (2026-11-11): **`/apps`**: the call to action is "One account for all apps" (sign-up's intro too), its paragraph as wide as the box, and Log in has a 2px accent outline. **Shared**: a space has no name (`012` drops `spaces.name`; no Space name when creating one or in Settings, no `PATCH /api/shared/spaces/:id`); Tasks is titled Tasks; the open list shows how many are left to do after its name, `Groceries (3)`, instead of "3 to do"; the field is Write a task; a ticked task stays ticked and crossed out, then slides away into Done after 650 ms, and is only sent then (unticking it before cancels); event dates read `7 Nov (Sat)`. **Profile pictures**: Profile picture in `/account`, after Password: drop or choose a photo, made a 512 px WebP square without metadata by sharp (now a direct dependency) and kept in `AVATAR_DIR` (`/app/data/avatars`, the new `appdata` volume, archived by `infra/backup.sh`); `users.avatar_updated_at` (`012`) versions its URL, `/api/avatars/<id>?v=`. nginx takes 21 MB on `/api/account/avatar`. Shown in the account menu, Shared's members and Shows' Profile, friends, requests, suggestions and friend profiles (the friends API has `avatarUrl`). **Shows' detail panel** is laid out as the title's page: the poster beside the title and facts over a blurred copy of it (a sticky column of its own on desktop, wider dialog), Add to Library as three tiles with icons, the library controls in one panel (status with icons, progress with a bar, "4 of 18 episodes watched" and Next episode first, rating), the overview cut to four lines with More, seasons showing which are watched, Remove from library last
+
+- Picture cropping, a 24-hour calendar, a Watchlist without ratings (2026-11-12): **profile picture**: a photo chosen or dropped no longer goes straight to the server: Adjust your picture (`components/account/AvatarCrop`) shows it in a square with the circle that is kept, to drag (a finger or the mouse, or the arrow keys) and zoom (a slider with − and +, the wheel, a pinch, or + and −); Save picture cuts that square out in the browser (a canvas, up to 1,024 px, WebP or PNG) and sends it, and the server makes it 512 px as before. A photo the browser can't show (HEIC; TIFF outside Safari) is sent as it is, and the server's attention crop decides. **Shared calendar**: times are on the 24-hour clock everywhere: the event form's times are an hour and a minutes select (every 5 minutes, and an event's own minute if it is between) instead of the browser's time field, which followed the device's language and could be AM/PM, and a new start time moves the end with it, keeping the event's length (it used to move only an end no longer after the start); the all-day row of the week and day views stays under the days' names while the hours scroll, and scrolls within itself past about two events. **Shows**: Home is now **Watchlist** (`Watchlist.tsx`, tab id `watchlist`); the statuses are in the order Planned, Watching, Completed everywhere (the Watchlist's sections, the status pickers, the chooser over a poster, the guide). Users no longer rate titles: no Your rating in the detail panel or the quick actions, no stars on cards, no `rating` in the library API (a `rating` sent to `PATCH` is ignored, and alone is "Nothing to change."), and For You no longer orders its seeds by it; `user_shows.rating` stays, unused, so a rollback still works, and the theme colors `--star` and `--star-off` are gone. The detail panel: on a wide screen the poster with the title, type, year, TMDB's rating, and seasons and episodes (no "52 min episodes", no "Rating and details from TMDB") under it, in a column that stays in view; beside it the overview first, then the library controls, the seasons and Remove. Watching and Completed are on every poster of a title in the library (`StatusBadge`): the Watchlist, Discover, search, the guide and Profile; Planned only in mixed lists. The chooser over a poster has each option's icon and name centered, and Watching a TV show goes on to the last episode watched over the poster (Season, Episode, Save; `EpisodePicker`, which the detail panel's progress and the quick actions use too: quick actions show it for a TV show being watched). Discover's search field and TV Shows | Movies switch are centered. Profile is one column in the middle of the page, its picture over the username and nothing else (no "14 titles · 0 friends"); Stats are the three numbers, without "54 episodes · 0 movies" or the note on how they're counted.
 
 ## To-do
 

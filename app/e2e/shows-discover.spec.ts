@@ -110,7 +110,7 @@ test("Discover shows TMDB's lists, three genres and Added by Friends, for TV sho
   const logo = page.getByRole("main").getByRole("link", { name: "TMDB" });
   await expect(logo).toHaveAttribute("href", "https://www.themoviedb.org/");
   await expect(logo.getByRole("img", { name: "TMDB" })).toBeVisible();
-  // Discover's own: the hidden Home (the guide, on a new account) has one too.
+  // Discover's own: the hidden Watchlist (the guide, on a new account) has one too.
   await expect(page.getByRole("main").getByText(
     "This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.").filter({ visible: true })).toBeVisible();
 
@@ -122,7 +122,7 @@ test("Discover shows TMDB's lists, three genres and Added by Friends, for TV sho
   expect([...browserHosts].filter((host) => /themoviedb|tmdb/.test(host))).toEqual(["image.tmdb.org"]);
 });
 
-test("search opens from Discover and an empty Home (not the top bar), waits for typing to pause, and finds TV shows and movies", async ({ page }) => {
+test("search opens from Discover and an empty Watchlist (not the top bar), waits for typing to pause, and finds TV shows and movies", async ({ page }) => {
   await openShows(page);
   const searches: string[] = [];
   page.on("request", (request) => {
@@ -133,12 +133,12 @@ test("search opens from Discover and an empty Home (not the top bar), waits for 
   const input = dialog.getByRole("searchbox", { name: "Search TV shows and movies" });
   // The top bar has the tabs and the account menu, no search.
   await expect(page.getByRole("banner").getByRole("button", { name: /search/i })).toHaveCount(0);
-  // An empty Home without its guide (which searches in itself).
+  // An empty Watchlist without its guide (which searches in itself).
   await page.getByRole("main").getByRole("button", { name: "Skip" }).click();
 
   // Discover's search field at the top, and the Search button of an empty library.
   const launchers = {
-    Home: page.getByRole("main").getByRole("button", { name: "Search", exact: true }),
+    Watchlist: page.getByRole("main").getByRole("button", { name: "Search", exact: true }),
     Discover: page.getByRole("main").getByRole("button", { name: "Search TV shows and movies" }),
   };
   for (const [view, launcher] of Object.entries(launchers)) {
@@ -210,7 +210,8 @@ test.describe("on a phone", () => {
     const detail = page.getByRole("dialog", { name: "Harbor Lights" });
     await expect(detail).toBeVisible();
     await expect(detail).toContainText("TV show · 2021 · ★ 7.8");
-    await expect(detail).toContainText("2 seasons · 18 episodes · 52 min episodes");
+    await expect(detail).toContainText("2 seasons · 18 episodes");
+    await expect(detail).not.toContainText("min episodes");
     await expect(detail).toContainText("Overview of Harbor Lights.");
     await expect(detail.getByRole("region", { name: "Seasons" }).getByRole("listitem"))
       .toHaveText([/^Season 1\s*10 episodes$/, /^Season 2\s*8 episodes$/]);
@@ -284,7 +285,7 @@ test("the library API checks what it adds, and who asks", async ({ page, baseURL
   expect(added.status()).toBe(201);
   expect((await added.json()).data).toMatchObject({
     type: "tv", tmdbId: mockBase + 2, title: "Top Rated Series 2", episodesPerSeason: [10, 8], episodeRuntime: 45,
-    library: { status: "planned", rating: null, isFavourite: false },
+    library: { status: "planned", isFavourite: false },
   });
   const again = await add({ type: "tv", tmdbId: mockBase + 2, status: "watching" });
   expect(again.status()).toBe(409);

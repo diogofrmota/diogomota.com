@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
+import sharp from "sharp";
 import { checkView, emulateHomeIndicator } from "./checks";
 import { accountButton, expect, newUser, signUp, test } from "./fixtures";
 import { card, grid, mockBase, openShows, otherPerson, section, tab, userId, viewHeading } from "./shows";
@@ -53,6 +54,17 @@ test("the site's pages", async ({ page }) => {
   await page.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await checkView(page, "account");
+
+  // A photo chosen for the profile picture: Adjust your picture.
+  const picture = page.getByRole("region", { name: "Profile picture", exact: true });
+  await picture.getByRole("heading", { name: "Profile picture" }).click();
+  await picture.locator('input[type="file"]').setInputFiles({ name: "me.png", mimeType: "image/png",
+    buffer: await sharp({ create: { width: 800, height: 600, channels: 3, background: "#3366cc" } }).png().toBuffer() });
+  const crop = page.getByRole("dialog", { name: "Adjust your picture" });
+  await expect(crop.getByRole("button", { name: "Save picture" })).toBeEnabled();
+  await checkView(page, "adjust your picture");
+  await crop.getByRole("button", { name: "Cancel" }).click();
+  await expect(crop).toBeHidden();
 });
 
 test("Shared: every view and dialog, each closed with Back", async ({ page }) => {
@@ -144,23 +156,27 @@ test("Shows: every view and dialog, each closed with Back", async ({ page, brows
   await expect(guide.getByTestId("skeleton")).toHaveCount(0);
   await glass.click();
   const chooser = guide.getByRole("group", { name: "Add Glass Meridian as" });
-  await expect(chooser.getByRole("button")).toHaveText(["Watching", "Planned", "Completed", "Cancel"]);
-  await checkView(page, "Home, the guide's status chooser");
+  await expect(chooser.getByRole("button")).toHaveText(["Planned", "Watching", "Completed", "Cancel"]);
+  await checkView(page, "Watchlist, the guide's status chooser");
   await chooser.getByRole("button", { name: "Watching" }).click();
+  const lastWatched = guide.getByRole("group", { name: "Last watched" });
+  await expect(lastWatched.getByLabel("Season", { exact: true })).toBeFocused();
+  await checkView(page, "Watchlist, the guide's last episode watched");
+  await lastWatched.getByRole("button", { name: "Save" }).click();
   await expect(glass).toHaveAccessibleName(/, in your library as Watching$/);
-  await checkView(page, "Home, the guide");
+  await checkView(page, "Watchlist, the guide");
   await main.getByRole("button", { name: "Next" }).click();
   await expect(main.getByRole("region", { name: "And which movies?" })).toBeVisible();
   await main.getByRole("button", { name: "Next" }).click();
   await expect(main.getByRole("region", { name: "Watch together" })).toBeVisible();
-  await checkView(page, "Home, the guide's friends step");
+  await checkView(page, "Watchlist, the guide's friends step");
   await main.getByRole("button", { name: "Back" }).click();
   await main.getByRole("button", { name: "Back" }).click();
   await expect(guide).toBeVisible();
   for (let i = 0; i < 3; i++) await main.getByRole("button", { name: /^(Next|Finish)$/ }).click();
   const allSet = main.getByRole("region", { name: "You’re all set!" });
-  await expect(allSet.getByRole("list", { name: "In your library" }).getByRole("listitem")).toHaveText(["1 Watching", "0 Planned", "0 Completed"]);
-  await checkView(page, "Home, the guide's end");
+  await expect(allSet.getByRole("list", { name: "In your library" }).getByRole("listitem")).toHaveText(["0 Planned", "1 Watching", "0 Completed"]);
+  await checkView(page, "Watchlist, the guide's end");
   await allSet.getByRole("button", { name: "Go to my library" }).click();
   await expect(card(grid(section(page, "Watching"), "Watching TV shows"), "Glass Meridian")).toBeVisible();
 
@@ -187,9 +203,9 @@ test("Shows: every view and dialog, each closed with Back", async ({ page, brows
   await page.goBack();
   await expect(search).toBeHidden();
 
-  await tab(page, "Home").click();
+  await tab(page, "Watchlist").click();
   await expect(card(grid(section(page, "Watching"), "Watching TV shows"), "Harbor Lights")).toBeVisible();
-  await checkView(page, "Home");
+  await checkView(page, "Watchlist");
   await page.getByRole("button", { name: "Quick actions for Harbor Lights" }).press("Enter");
   const actions = page.getByRole("dialog", { name: "Harbor Lights" });
   await expect(actions.getByRole("group", { name: "Status" })).toBeVisible();
@@ -223,7 +239,7 @@ test("Shows: every view and dialog, each closed with Back", async ({ page, brows
   await page.goBack();
   await expect(profile).toBeHidden();
 
-  await goBackTo(page, "Home");
+  await goBackTo(page, "Watchlist");
   await goBackTo(page, "Discover");
   await friend.context.close();
   await asker.context.close();
@@ -252,7 +268,7 @@ test("a load that fails says so, and Retry loads it again", async ({ page }) => 
   await failing("**/api/shared/spaces", () => sharedTab(page, "Settings").click(), "Settings");
   await expect(page.getByRole("listitem").filter({ hasText: "(you)" })).toBeVisible();
 
-  await failing("**/api/shows/library", async () => { await page.goto("/shows"); }, "Shows Home");
+  await failing("**/api/shows/library", async () => { await page.goto("/shows"); }, "Shows Watchlist");
   await expect(page.getByRole("heading", { name: "Which TV shows do you watch?" })).toBeVisible();
   await failing("**/api/shows/discover/tv/popular", () => tab(page, "Discover").click(), "Discover");
   await expect(card(grid(page, "Popular TV shows"), "Harbor Lights")).toBeVisible();

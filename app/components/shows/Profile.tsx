@@ -99,9 +99,10 @@ function FriendRow({ person, busy, onRemove }: { person: Person; busy: boolean; 
   </li>;
 }
 
-const counted = (count: number, word: string) => `${count.toLocaleString("en-GB")} ${word}${count === 1 ? "" : "s"}`;
-
-/** The Profile view: whose it is, friend requests, stats, favourites and friends. */
+/**
+ * The Profile view, one column in the middle of the page: whose it is (their
+ * picture and username), friend requests, stats, favourites and friends.
+ */
 export function Profile({ username, avatarUrl }: { username: string; avatarUrl: string | null }) {
   const library = useLibrary();
   const { state, loadError, load, send } = useFriends();
@@ -131,17 +132,12 @@ export function Profile({ username, avatarUrl }: { username: string; avatarUrl: 
   });
 
   const incoming = state?.incoming ?? [];
-  // What's in it, once loaded: "12 titles · 3 friends".
-  const counts = [items && counted(items.length, "title"), state && counted(state.friends.length, "friend")].filter(Boolean).join(" · ");
-  return <div className={styles.view}>
+  return <div className={`${styles.view} ${styles.profile}`}>
     {/* The Profile tab in the top bar shows which view this is; the page shows whose. */}
     <h1 className={styles.srOnly}>Profile</h1>
     <div className={styles.profileHeader}>
       <Avatar username={username} url={avatarUrl} className={`${styles.avatar} ${styles.profileAvatar}`} />
-      <div>
-        <p className={styles.profileName}>{username}</p>
-        <p className={styles.profileCounts}>{counts || "\u00a0"}</p>
-      </div>
+      <p className={styles.profileName}>{username}</p>
     </div>
     <ChangeError className={`${styles.error} ${styles.viewError}`} />
 
@@ -197,7 +193,7 @@ export function Profile({ username, avatarUrl }: { username: string; avatarUrl: 
         </>}
       </>}
     </section>
-    {/* Like Home: once there are TMDB posters and runtimes to credit. */}
+    {/* Like the Watchlist: once there are TMDB posters and runtimes to credit. */}
     {!!items?.length && <TmdbAttribution />}
   </div>;
 }

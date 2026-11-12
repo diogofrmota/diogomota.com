@@ -12,7 +12,6 @@
    --bg, --surface and --hover; --accent on --bg, --surface and --accent-soft;
    --bg on --accent and --danger (buttons); --danger on --bg and --surface;
    --text on the spaces' colors mixed into --surface (Calendar): 4.5:1.
-   --star and --star-off on --bg and --surface: 3:1.
 
    No rule for .theme alone: in a list with the html selector, it can be
    compiled into one :is(), as specific as html:has(...), which would win over
@@ -32,8 +31,6 @@
   --accent: #4f46e5;
   --accent-soft: #eef2ff;
   --danger: #be123c;
-  --star: #c26a05;
-  --star-off: #7d8a9c;
   color-scheme: light;
 }
 
@@ -51,8 +48,6 @@
   --accent: #30507a;
   --accent-soft: #d5dce8;
   --danger: #a3262a;
-  --star: #8f6200;
-  --star-off: #7a7a84;
   color-scheme: light;
 }
 
@@ -69,8 +64,6 @@
   --accent: #7a3110;
   --accent-soft: #f5dfcb;
   --danger: #a3122f;
-  --star: #a8641b;
-  --star-off: #98826a;
   color-scheme: light;
 }
 
@@ -87,8 +80,6 @@
   --accent: #a9c8ee;
   --accent-soft: #2e3744;
   --danger: #ff8f8f;
-  --star: #e9c46a;
-  --star-off: #76787f;
   color-scheme: dark;
 }
 
@@ -105,8 +96,6 @@
   --accent: #38bdf8;
   --accent-soft: #0c2a40;
   --danger: #fb7185;
-  --star: #fbbf24;
-  --star-off: #64748b;
   color-scheme: dark;
 }
 
@@ -123,8 +112,6 @@
   --accent: #f2a7ff;
   --accent-soft: #341a4a;
   --danger: #ff8f9c;
-  --star: #ffd36b;
-  --star-off: #6b70a8;
   color-scheme: dark;
 }
 

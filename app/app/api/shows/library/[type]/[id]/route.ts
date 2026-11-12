@@ -2,7 +2,7 @@ import { mediaType, removeFromLibrary, showsResponse, tmdbId, updateLibraryEntry
 
 type Context = { params: Promise<{ type: string; id: string }> };
 
-// PATCH /api/shows/library/{tv|movie}/{TMDB id} {status?, rating?, isFavourite?,
+// PATCH /api/shows/library/{tv|movie}/{TMDB id} {status?, isFavourite?,
 // currentSeason?, currentEpisode?}: changes your entry for a title and answers
 // with it (404 if the title isn't in your library).
 export function PATCH(request: Request, context: Context) {

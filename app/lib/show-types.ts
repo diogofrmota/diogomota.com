@@ -4,11 +4,11 @@ export type MediaType = "tv" | "movie";
 export const mediaTypes: readonly MediaType[] = ["tv", "movie"];
 
 export type LibraryStatus = "watching" | "planned" | "completed";
-/** In the order of Home's sections. */
-export const libraryStatuses: readonly LibraryStatus[] = ["watching", "planned", "completed"];
+/** In the order of the Watchlist's sections, and of every status picker. */
+export const libraryStatuses: readonly LibraryStatus[] = ["planned", "watching", "completed"];
 export const statusNames: Record<LibraryStatus, string> = { watching: "Watching", planned: "Planned", completed: "Completed" };
 /** What a title can be added to the library as, from Discover, search and the guide. */
-export const addStatuses = ["watching", "planned", "completed"] as const satisfies readonly LibraryStatus[];
+export const addStatuses = ["planned", "watching", "completed"] as const satisfies readonly LibraryStatus[];
 
 /** A title as shown on a card: in a Discover section or search results. */
 export type TitleSummary = {
@@ -26,8 +26,6 @@ export type TitleSummary = {
 export type LibraryEntry = {
   id: string;
   status: LibraryStatus;
-  /** The user's own rating, 1-5 stars. */
-  rating: number | null;
   /** TV: the last episode watched (both null before the first). */
   currentSeason: number | null;
   currentEpisode: number | null;
@@ -50,7 +48,7 @@ export type TitleLengths = {
   episodesPerSeason: number[] | null;
 };
 
-/** A title in the user's library, as on a Home card, with its lengths for the stats. */
+/** A title in the user's library, as on a Watchlist card, with its lengths for the stats. */
 export type LibraryItem = TitleSummary & TitleLengths & { library: LibraryEntry };
 
 /** A title in a friend's library, as on a card in their profile. */

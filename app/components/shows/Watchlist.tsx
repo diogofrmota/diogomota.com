@@ -22,12 +22,13 @@ function Empty({ status, type }: { status: LibraryStatus; type: MediaType }) {
     : `No ${kind} completed yet. Finished one? Mark it as Completed from its card.`;
 }
 
-// The section's heading says the status: no badge on each poster saying it again.
+// The section's heading says the status. Watching and Completed say it on each
+// poster too, as they do everywhere (LibraryGrid); Planned doesn't.
 function Section({ status, type, items }: { status: LibraryStatus; type: MediaType; items: LibraryItem[] | null }) {
   const heading = statusNames[status];
   const kind = type === "tv" ? "TV shows" : "movies";
   return <LibrarySection heading={heading} label={`${heading} ${kind}`} loadingLabel={`Loading your ${heading.toLowerCase()} ${kind}…`}
-    items={items} empty={<Empty status={status} type={type} />} showStatus={false} />;
+    items={items} empty={<Empty status={status} type={type} />} plannedBadge={false} />;
 }
 
 // An empty library once the guide is skipped or done, or emptied again.
@@ -45,17 +46,18 @@ function Welcome({ onSetUp }: { onSetUp: () => void }) {
 }
 
 /**
- * The user's library: Watching, Planned and Completed, for TV shows or movies.
- * A library that is empty when the app opens gets the guide (Onboarding) instead.
+ * The Watchlist, the user's library: Planned, Watching and Completed, for TV
+ * shows or movies. A library that is empty when the app opens gets the guide
+ * (Onboarding) instead.
  */
-export function Home({ username }: { username: string }) {
+export function Watchlist({ username }: { username: string }) {
   const { items, loadError, reload } = useLibrary();
   const [type, setType] = useState<MediaType>("tv");
   // Whether the guide shows: decided once the library first loads, then until
   // it is skipped or done, however many titles it adds; or until the user comes
-  // back to Home from another view with titles in the library (added in the
-  // guide or there), which then shows them. Home's effects end while another
-  // view is shown, and start again when it's back, in this order.
+  // back to the Watchlist from another view with titles in the library (added
+  // in the guide or there), which then shows them. Its effects end while
+  // another view is shown, and start again when it's back, in this order.
   const [guide, setGuide] = useState<boolean | null>(null);
   if (guide === null && items) setGuide(items.length === 0);
   const hasTitles = useRef(false);
@@ -67,8 +69,8 @@ export function Home({ username }: { username: string }) {
   }, []);
   const ofType = items?.filter((item) => item.type === type) ?? null;
   return <div className={styles.view}>
-    {/* The Home tab in the top bar shows which view this is. */}
-    <h1 className={styles.srOnly}>Home</h1>
+    {/* The Watchlist tab in the top bar shows which view this is. */}
+    <h1 className={styles.srOnly}>Watchlist</h1>
     <ChangeError className={`${styles.error} ${styles.viewError}`} />
     {!items && loadError ? <LoadError message={loadError} onRetry={reload} />
       : items && guide ? <Onboarding username={username} onDone={() => setGuide(false)} />

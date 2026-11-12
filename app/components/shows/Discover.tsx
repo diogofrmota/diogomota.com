@@ -47,7 +47,7 @@ export function SearchLauncher() {
   </button>;
 }
 
-/** The TV Shows | Movies switch at the top of Discover and Home. */
+/** The TV Shows | Movies switch at the top of Discover and the Watchlist. */
 export function TypeSwitch({ type, onChange }: { type: MediaType; onChange: (type: MediaType) => void }) {
   return <div className={styles.switcher} role="group" aria-label="Show">
     <button type="button" aria-pressed={type === "tv"} onClick={() => onChange("tv")}>TV Shows</button>
@@ -55,7 +55,10 @@ export function TypeSwitch({ type, onChange }: { type: MediaType; onChange: (typ
   </div>;
 }
 
-/** Discover: the search field, then TMDB's lists, recommendations and friends' titles, for TV shows or movies. */
+/**
+ * Discover: the search field and the TV Shows | Movies switch, centered, then
+ * TMDB's lists, recommendations and friends' titles, for TV shows or movies.
+ */
 export function Discover() {
   const [type, setType] = useState<MediaType>("tv");
   // For You is made from the library's titles of this type: none, no section.
@@ -65,8 +68,10 @@ export function Discover() {
   return <div className={styles.view}>
     {/* The Discover tab in the top bar shows which view this is. */}
     <h1 className={styles.srOnly}>Discover</h1>
-    <SearchLauncher />
-    <TypeSwitch type={type} onChange={setType} />
+    <div className={styles.discoverTop}>
+      <SearchLauncher />
+      <TypeSwitch type={type} onChange={setType} />
+    </div>
     {/* Keyed by type, so each list starts collapsed. */}
     {sections.map((section) => <Section key={`${type}/${section.id}`} type={type} section={section.id} heading={section.heading} />)}
     <TmdbAttribution />

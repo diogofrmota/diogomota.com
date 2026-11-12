@@ -4,7 +4,7 @@ import { accountButton, accountMenuItems, appsMenuItems, expect, followAccountMe
 // The tabs. Shared's settings are one of them; Shows has none.
 const appViews = [
   { path: "/shared", name: "Shared", views: ["Calendar", "Tasks", "Settings"] },
-  { path: "/shows", name: "Shows", views: ["Home", "Discover", "Profile"] },
+  { path: "/shows", name: "Shows", views: ["Watchlist", "Discover", "Profile"] },
 ] as const;
 
 /** The app's tabs, in the middle of the top bar at every width. */
@@ -118,8 +118,8 @@ test("a reload starts on the default view, and back still works after it", async
   await expect(viewHeading(page)).toHaveText("Profile");
 
   await page.reload();
-  await expect(viewHeading(page)).toHaveText("Home");
-  await expect(tab(page, "Shows", "Home")).toHaveAttribute("aria-current", "page");
+  await expect(viewHeading(page)).toHaveText("Watchlist");
+  await expect(tab(page, "Shows", "Watchlist")).toHaveAttribute("aria-current", "page");
   await page.goBack();
   await expect(viewHeading(page)).toHaveText("Discover");
   await expect(page).toHaveURL("/shows");
@@ -141,14 +141,14 @@ test("back pressed while the page is still loading still goes to the previous vi
   });
   await page.reload({ waitUntil: "commit" });
   // As rendered by the server.
-  await expect(viewHeading(page)).toHaveText("Home");
+  await expect(viewHeading(page)).toHaveText("Watchlist");
   await page.goBack({ waitUntil: "commit" });
   releaseScripts();
 
   await expect(viewHeading(page)).toHaveText("Discover");
   await expect(tab(page, "Shows", "Discover")).toHaveAttribute("aria-current", "page");
   await page.goBack();
-  await expect(viewHeading(page)).toHaveText("Home");
+  await expect(viewHeading(page)).toHaveText("Watchlist");
 });
 
 test("Switch app, in the account menu, goes to /apps, the way to the other app and to the site; /apps itself has no Switch app", async ({ page }) => {
@@ -168,7 +168,7 @@ test("Switch app, in the account menu, goes to /apps, the way to the other app a
   await page.keyboard.press("Escape");
   await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
   await expect(page).toHaveURL("/shows");
-  await expect(viewHeading(page)).toHaveText("Home");
+  await expect(viewHeading(page)).toHaveText("Watchlist");
   await followAccountMenu(page, "Switch app");
   await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");

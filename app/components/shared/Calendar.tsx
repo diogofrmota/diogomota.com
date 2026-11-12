@@ -119,7 +119,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
         </div>)}
       </div> : <div key={`${view}:${first}`} className={`${styles.timeGrid} ${view === "week" ? styles.week : ""}`} data-slide={slide} style={{ "--days": days.length } as CSSProperties}>
         <div className={styles.timeHead} />{days.map((day) => <button key={day} className={`${styles.timeHead} ${day === today ? styles.today : ""}`} onClick={() => move(day, "day")}>{dateLabel(day, { weekday: "short", day: "numeric" })}</button>)}
-        {/* All-day events in a row of their own, over the hours. */}
+        {/* All-day events in a row of their own, over the hours, which stays in view as they scroll. */}
         {days.some((day) => eventsOn(day).some((event) => event.allDay)) && <>
           <div className={styles.allDayLabel}>All day</div>
           {days.map((day) => <div key={day} className={styles.allDayCell}>{eventsOn(day).filter((event) => event.allDay).map((event) => eventButton(event))}</div>)}

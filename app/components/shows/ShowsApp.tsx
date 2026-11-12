@@ -5,14 +5,14 @@ import { parseTitleKey } from "@/lib/show-types";
 import type { Theme } from "@/lib/themes";
 import { Discover } from "./Discover";
 import { FriendDialog } from "./FriendDialog";
-import { Home } from "./Home";
 import { LibraryProvider } from "./library";
 import { Profile } from "./Profile";
 import { QuickActions } from "./QuickActions";
 import { SearchDialog } from "./SearchDialog";
 import { TitleDialog } from "./TitleDialog";
+import { Watchlist } from "./Watchlist";
 
-// The search panel (opened from Discover's search field and an empty Home) and
+// The search panel (opened from Discover's search field and an empty Watchlist) and
 // a friend's profile stay open under a title opened from them.
 function Panels() {
   const { panels, closePanel } = useAppView();
@@ -31,7 +31,7 @@ function Panels() {
 export function ShowsApp({ username, avatarUrl, theme }: { username: string; avatarUrl: string | null; theme: Theme }) {
   return <LibraryProvider>
     <AppShell name="Shows" username={username} avatarUrl={avatarUrl} theme={theme} tabs={[
-      { id: "home", label: "Home", view: <Home username={username} /> },
+      { id: "watchlist", label: "Watchlist", view: <Watchlist username={username} /> },
       { id: "discover", label: "Discover", view: <Discover /> },
       { id: "profile", label: "Profile", view: <Profile username={username} avatarUrl={avatarUrl} /> },
     ]}>

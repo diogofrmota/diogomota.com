@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useState, type DragEvent } from "react";
 import { avatarChanged, changePassword, changeUsername, saveTheme } from "@/app/account/actions";
+import { AvatarCrop } from "@/components/account/AvatarCrop";
 import { Avatar } from "@/components/common/Avatar";
 import { PhotoIcon } from "@/components/common/icons";
 import { InlineSpinner, PendingOverlay } from "@/components/common/Spinner";
@@ -136,11 +137,12 @@ const avatarMaxMb = AVATAR_MAX_BYTES / 1024 / 1024;
 
 /**
  * The profile picture: the one there is (or the username's initial), and a
- * place to drop a photo or tap to choose one, which is sent straight away. The
- * server makes it small and square (lib/avatars.ts). While it goes, the photo
- * chosen shows in the circle, under a spinner; then the saved one, and the
- * account menu has it too (avatarChanged). Remove picture goes back to the
- * initial.
+ * place to drop a photo or tap to choose one. A photo opens Adjust your
+ * picture (AvatarCrop), to move and zoom it until the circle shows the part
+ * wanted; Save picture sends that square, which the server makes small
+ * (lib/avatars.ts). While it goes, it shows in the circle, under a spinner;
+ * then the saved one, and the account menu has it too (avatarChanged). Remove
+ * picture goes back to the initial.
  */
 export function AvatarForm({ username, avatarUrl }: { username: string; avatarUrl: string | null }) {
   const hintId = useId();
@@ -150,9 +152,12 @@ export function AvatarForm({ username, avatarUrl }: { username: string; avatarUr
   const [pending, setPending] = useState<"upload" | "remove" | null>(null);
   const [result, setResult] = useState<{ error?: string; success?: string }>({});
   const [dragging, setDragging] = useState(false);
+  // The photo chosen, being adjusted, and its object URL.
+  const [cropping, setCropping] = useState<{ file: File; url: string } | null>(null);
   const shown = preview ?? (saved === undefined ? avatarUrl : saved);
 
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+  useEffect(() => () => { if (cropping) URL.revokeObjectURL(cropping.url); }, [cropping]);
 
   async function send(change: "upload" | "remove", file?: File) {
     setPending(change);
@@ -181,14 +186,16 @@ export function AvatarForm({ username, avatarUrl }: { username: string; avatarUr
   }
 
   function choose(file: File | undefined) {
-    if (!file || pending) return;
-    // Some systems give no type for a photo (HEIC, say): the server decides then.
+    if (!file || pending || cropping) return;
+    // Some systems give no type for a photo (HEIC, say): the browser tries it,
+    // and if it can't show it, the server decides.
     if (file.type && !file.type.startsWith("image/")) {
       setResult({ error: "That isn't a picture. Choose a JPEG, PNG or WebP." });
     } else if (file.size > AVATAR_MAX_BYTES) {
       setResult({ error: `That picture is over ${avatarMaxMb} MB. Try a smaller one.` });
     } else {
-      void send("upload", file);
+      setResult({});
+      setCropping({ file, url: URL.createObjectURL(file) });
     }
   }
 
@@ -240,9 +247,12 @@ export function AvatarForm({ username, avatarUrl }: { username: string; avatarUr
         </label>
       </div>
       <p id={hintId} className={formStyles.hint}>
-        JPEG, PNG or WebP, up to {avatarMaxMb} MB. It&apos;s cut to a square and made smaller. Your friends in Shows
-        and the people in your shared space see it.
+        JPEG, PNG or WebP, up to {avatarMaxMb} MB. You choose the part of it to show, and it&apos;s made smaller. Your
+        friends in Shows and the people in your shared space see it.
       </p>
+      {cropping && <AvatarCrop src={cropping.url} onCancel={() => setCropping(null)}
+        onSave={(picture) => { setCropping(null); void send("upload", picture); }}
+        onUnreadable={() => { setCropping(null); void send("upload", cropping.file); }} />}
       <p role="status" className={ui.srOnly}>{pending === "upload" ? "Saving your picture…" : ""}</p>
       <FormMessage error={result.error} success={result.success} />
       {shown && !preview && (
