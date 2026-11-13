@@ -1,25 +1,99 @@
-/* The space's own parts. Headings, cards, fields and buttons are the apps'
+/* The space’s own parts. Headings, cards, fields and buttons are the apps’
    common ones (components/common/ui.module.css). */
-
 /* The welcome's two cards, side by side on wide screens. */
-.options { display: grid; gap: 1.25rem; margin-top: 1.5rem; }
-@media (min-width: 48rem) { .options { grid-template-columns: 1fr 1fr; align-items: start; } }
-.welcomeError { margin-top: 1.25rem; }
-/* A picture of a space (as on /apps), framed: from 40rem, where there's room
-   for it over the two cards. */
+.options {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+@media (min-width: 48rem) {
+  .options {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+.welcomeError {
+  margin-top: 1.25rem;
+}
 /* Two classes, to win over AppPreview's own whatever the order. */
-.preview.preview { --preview-radius: var(--radius-xl); display: none; margin-top: 1.5rem; border: 1px solid var(--border); }
-@media (min-width: 40rem) { .preview.preview { display: block; aspect-ratio: 7 / 2; } }
+.preview.preview {
+  --preview-radius: var(--radius-xl);
+  display: none;
+  margin-top: 1.5rem;
+  border: 1px solid var(--border);
+}
+@media (min-width: 40rem) {
+  .preview.preview {
+    display: block;
+    aspect-ratio: 7 / 2;
+  }
+}
 
-.members { list-style: none; padding: 0; margin: 0; }
-.members li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; }
-.members li + li { border-top: 1px solid var(--border); }
+.members {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.members li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+.members li + li {
+  border-top: 1px solid var(--border);
+}
 /* A member's picture or initial, ringed in their color (the one their events have). */
-.memberAvatar { display: grid; place-items: center; flex-shrink: 0; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: color-mix(in srgb, var(--member-color) 22%, var(--surface)); color: var(--text); font-weight: var(--weight-semibold); line-height: 1; text-box: trim-both cap alphabetic; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--member-color); margin: 4px; }
-.memberName { min-width: 0; overflow-wrap: anywhere; }
+.memberAvatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--member-color) 22%, var(--surface));
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  text-box: trim-both cap alphabetic;
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--member-color);
+  margin: 4px;
+}
+.memberName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 /* The owner's mark, at the end of their row. */
-.role { margin-left: auto; color: var(--muted); font-size: var(--text-sm); }
+.role {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
 
-.invite { display: grid; gap: 0.75rem; }
+.invite {
+  display: grid;
+  gap: 0.75rem;
+}
 /* The one place for a monospace font: a code to read out or type, character by character. */
-.invite .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--text-lg); letter-spacing: 0.2em; }
+.invite .code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--text-lg);
+  letter-spacing: 0.2em;
+}
+
+/* Inviting someone (InviteLink): the share button, then the link and the code. */
+.inviteLink {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  min-width: 0;
+}
+.inviteLink > * {
+  max-width: 100%;
+}
+.code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.08em;
+}

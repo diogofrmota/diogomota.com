@@ -1,11 +1,11 @@
-import { auth } from "@/auth";
+import { getSession } from "@/auth";
 import { normalizeUsername, usernameError } from "@/lib/account-rules";
 import { usernameCheckLimit } from "@/lib/rate-limit";
 import { usernameAvailable } from "@/lib/users";
 
 export async function GET(request: Request) {
   const headers = { "Cache-Control": "private, no-store" };
-  const session = await auth();
+  const session = await getSession();
   if (!session) return Response.json({ error: "Please log in again." }, { status: 401, headers });
 
   const username = normalizeUsername(new URL(request.url).searchParams.get("username"));

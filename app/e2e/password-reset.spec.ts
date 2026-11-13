@@ -1,14 +1,24 @@
 import { createHash } from "node:crypto";
 import { type APIRequestContext, type Page } from "@playwright/test";
 import { withDatabase } from "./db";
-import { accountButton, expect, formAlert, logIn, logOut, newUser, signUp, test, type TestUser } from "./fixtures";
+import {
+  accountButton,
+  confirmEmail,
+  emailsTo as allEmailsTo,
+  expect,
+  formAlert,
+  logIn,
+  logOut,
+  newUser,
+  signUp,
+  test,
+  type TestUser,
+} from "./fixtures";
 
 const requested =
-  "If an account uses that email, we've sent it a link to reset the password. The link works for 1 hour.";
+  "If an account uses that email and it is confirmed, we've sent it a link to reset the password. The link works for 1 hour.";
 const linkExpired = "This password reset link has expired or was already used. Each link works once, for 1 hour.";
 const wrongCredentials = "Wrong username/email or password.";
-
-type Email = { to: string; subject: string; text: string; html: string };
 
 // Without test hooks, the dev server would really send these emails (through
 // Resend, when .env.local has RESEND_API_KEY), so make sure they're on first.
@@ -20,11 +30,12 @@ test.beforeEach(async ({ request }) => {
   ).toBe(200);
 });
 
-/** Signs up a new account, then logs out. */
+/** Signs up a new account and confirms its email (resets only go to a confirmed one), then logs out. */
 async function existingUser(page: Page): Promise<TestUser> {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
+  await confirmEmail(page, user.email);
   await logOut(page, user.username);
   return user;
 }
@@ -36,11 +47,9 @@ async function requestReset(page: Page, email: string) {
   await expect(page.getByRole("main").getByRole("status")).toHaveText(requested);
 }
 
-/** The emails the app sent to `address`, oldest first. */
-async function emailsTo(request: APIRequestContext, address: string): Promise<Email[]> {
-  const response = await request.get(`/api/test/outbox?${new URLSearchParams({ to: address })}`);
-  return (await response.json()).emails;
-}
+/** The reset emails the app sent to `address`, oldest first (not the one confirming it). */
+const emailsTo = (request: APIRequestContext, address: string) =>
+  allEmailsTo(request, address, "Reset your diogomota.com password");
 
 /**
  * The reset link in the `count`th email to `address`, as a path on this site,
@@ -63,10 +72,7 @@ function heading(page: Page) {
   return page.getByRole("heading", { level: 1 });
 }
 
-test("forgot password gives the same answer whether or not an account has the email", async ({
-  page,
-  request,
-}) => {
+test("forgot password gives the same answer whether or not an account has the email", async ({ page, request }) => {
   const user = await existingUser(page);
   await page.goto("/login");
   await page.getByRole("link", { name: "Forgot password?" }).click();
@@ -85,7 +91,7 @@ test("forgot password gives the same answer whether or not an account has the em
   const [email] = await emailsTo(request, user.email);
   expect(email.to).toBe(user.email);
   expect(email.subject).toBe("Reset your diogomota.com password");
-  expect(email.text).toContain(`Hi ${user.username},`);
+  expect(email.text).toContain(`Hi ${user.name},`);
   expect(email.html).toContain(`">Choose a new password</a>`);
   expect(email.html).toContain(link);
   expect(await emailsTo(request, unknown)).toEqual([]);
@@ -118,11 +124,7 @@ test("reset the password with the emailed link, then log in with the new one", a
   await expect(accountButton(page, user.username)).toBeVisible();
 });
 
-test("a used link doesn't work again, not even from a page opened before", async ({
-  page,
-  context,
-  request,
-}) => {
+test("a used link doesn't work again, not even from a page opened before", async ({ page, context, request }) => {
   const user = await existingUser(page);
   await requestReset(page, user.email);
   const link = await resetLink(request, user.email);
@@ -156,11 +158,11 @@ test("an expired link is rejected and the password stays the same", async ({ pag
   await page.goto(link);
   await expect(heading(page)).toHaveText("Reset password");
 
-  // The hour passes while the page is open.
+  // The hour passes while the page is open. Better Auth keeps the token's hash only (auth.ts).
   const token = new URL(link, "http://n.invalid").searchParams.get("token")!;
   const { rowCount } = await withDatabase((client) =>
-    client.query(`UPDATE password_resets SET expires_at = now() - interval '1 second' WHERE token_hash = $1`, [
-      createHash("sha256").update(token).digest("hex"),
+    client.query(`UPDATE verifications SET expires_at = now() - interval '1 second' WHERE identifier = $1`, [
+      createHash("sha256").update(`reset-password:${token}`).digest("base64url"),
     ]),
   );
   expect(rowCount).toBe(1);
@@ -193,6 +195,7 @@ test("a reset logs out every session of the account", async ({ page, browser, re
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
+  await confirmEmail(page, user.email);
   const otherDevice = await browser.newContext();
   const other = await otherDevice.newPage();
   await logIn(other, user.username, user.password);
@@ -220,10 +223,7 @@ test("reset requests are rate limited per client address", async ({ page }) => {
   await expect(formAlert(page)).toHaveText("Too many reset requests from your network. Try again in an hour.");
 });
 
-test("an address gets at most 3 reset emails an hour, with the same answer after that", async ({
-  page,
-  request,
-}) => {
+test("an address gets at most 3 reset emails an hour, with the same answer after that", async ({ page, request }) => {
   const user = await existingUser(page);
   for (let i = 0; i < 4; i++) await requestReset(page, user.email);
 
@@ -233,4 +233,18 @@ test("an address gets at most 3 reset emails an hour, with the same answer after
   await setNewPassword(page, "a brand new password");
   await expect(page).toHaveURL("/login?password=changed");
   expect(await emailsTo(request, user.email)).toHaveLength(3);
+});
+
+test("an email nobody confirmed gets no reset link (the same answer)", async ({ page, request }) => {
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/apps");
+  // Until it is, /apps says so.
+  await expect(page.getByRole("main")).toContainText(`Confirm your email (${user.email})`);
+  await logOut(page, user.username);
+  await requestReset(page, user.email);
+  // The sign-up's confirmation is the only email it got.
+  await expect.poll(async () => (await allEmailsTo(request, user.email)).length).toBe(1);
+  await page.waitForTimeout(500);
+  expect(await emailsTo(request, user.email)).toEqual([]);
 });

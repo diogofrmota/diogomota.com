@@ -19,6 +19,7 @@ The `.env` there sets `COMPOSE_FILE`, so plain `docker compose ...` uses [docker
 - [Offsite backup (optional)](#offsite-backup-optional)
 - [Rotate secrets](#rotate-secrets)
 - [Certificates](#certificates)
+- [Email (DMARC)](#email-dmarc)
 - [Monthly check](#monthly-check)
 
 ## Health and logs
@@ -274,7 +275,7 @@ To change a value in the VPS `.env` by hand, use `nano .env`: a pasted value doe
 
 ### AUTH_SECRET
 
-It encrypts the session cookies, so a new one logs everyone out, you included. next-auth reads only `AUTH_SECRET` (not `AUTH_SECRET_1` and so on), so there is no overlap period. Password reset links aren't affected; their tokens are random and stored in the database.
+It signs the session cookies (Better Auth, `app/auth.ts`), so a new one logs everyone out, you included: there is no overlap period. Password reset links aren't affected; their tokens are random and stored (hashed) in the database. The links that confirm an email are signed with it, so the ones not opened yet stop working (Account sends a new one).
 
 ```sh
 sed -i "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -base64 32)|" .env
@@ -391,6 +392,18 @@ Let's Encrypt issues at most 5 certificates a week for the same names, so don't 
 
 If renewal fails, the log says why. Renewal answers Let's Encrypt over plain HTTP on port 80, through nginx, so the usual causes are DNS no longer pointing at the VPS, nginx not running, or port 80 blocked. `curl -sI http://diogomota.com/.well-known/acme-challenge/test` should answer 404 from nginx, not time out or redirect. An already-expired certificate can still be renewed the same way. A new server gets its first one from [infra/issue-cert.sh](../infra/issue-cert.sh).
 
+## Email (DMARC)
+
+Emails (password resets, the links that confirm an email) go out through Resend from `no-reply@diogomota.com`, signed with DKIM (`resend._domainkey`). The `_dmarc` TXT record at Porkbun says what receivers should do with mail that claims to be from the domain but fails those checks. It is `v=DMARC1; p=none;` for now: nothing is done with it, so anyone can send mail as `@diogomota.com`.
+
+Once a few weeks of resets and confirmations have landed in inboxes (not spam), tighten it, in Porkbun's DNS for `diogomota.com`:
+
+1. Edit the TXT record `_dmarc` to `v=DMARC1; p=quarantine; adkim=r; aspf=r;` (TTL 600).
+2. Check it: `dig +short TXT _dmarc.diogomota.com` (or nslookup) shows the new value.
+3. Request a password reset for your own account and check that it lands in the inbox.
+
+A week or two later, `p=reject` is the last step. To get the reports of who sends as the domain, add `rua=mailto:<an address you read>;` to the record.
+
 ## Monthly check
 
 Five minutes, once a month:
@@ -399,6 +412,7 @@ Five minutes, once a month:
 ssh deploy@162.19.252.190
 cd /opt/diogomota
 docker compose ps                                          # all Up, app and postgres healthy
+docker compose logs --since 720h app | grep -i 'schema'      # nothing: Better Auth checks the schema when it starts
 ls -lt backups | head -n 3                                 # the newest is at most 3 days old
 tail -n 3 logs/backup.log logs/renew-cert.log              # no ERROR (and logs/offsite-backup.log, once set up)
 docker compose run --rm certbot certificates | grep -E 'Domains|Expiry'

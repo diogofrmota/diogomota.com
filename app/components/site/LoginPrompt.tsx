@@ -14,13 +14,7 @@ import styles from "./LoginPrompt.module.css";
 // of the app (as on its card), what it's for, then Log in and Sign up. A native
 // modal <dialog>: it keeps focus inside, closes on Escape and hands focus back
 // to the card on close.
-export function LoginPrompt({
-  app,
-  onClose,
-}: {
-  app: AppInfo | null;
-  onClose: () => void;
-}) {
+export function LoginPrompt({ app, onClose }: { app: AppInfo | null; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -49,21 +43,17 @@ export function LoginPrompt({
           </h2>
           <p className={`${ui.muted} ${styles.text}`}>{app.description}</p>
           <div className={styles.actions}>
-            <Link href={authHref("/login", app.href)} className={`${ui.button} ${ui.primary}`}>
+            {/* As everywhere: Log in plain and first, Sign up filled after it. */}
+            <Link href={authHref("/login", app.href)} className={ui.button}>
               Log in
               <LinkPending />
             </Link>
-            <Link href={authHref("/signup", app.href)} className={ui.button}>
+            <Link href={authHref("/signup", app.href)} className={`${ui.button} ${ui.primary}`}>
               Sign up
               <LinkPending />
             </Link>
           </div>
-          <button
-            type="button"
-            className={styles.close}
-            aria-label="Close"
-            onClick={() => ref.current?.close()}
-          >
+          <button type="button" className={styles.close} aria-label="Close" onClick={() => ref.current?.close()}>
             <CloseIcon />
           </button>
         </div>

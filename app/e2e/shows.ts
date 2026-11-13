@@ -19,7 +19,10 @@ export async function openShows(page: Page) {
 
 /** Someone else, in a browser context of their own (from their own address), signed up into /shows. */
 export async function otherPerson(browser: Browser, options: Parameters<Browser["newContext"]>[0] = {}) {
-  const context = await browser.newContext({ ...options, extraHTTPHeaders: { "X-Forwarded-For": `10.${[...randomBytes(3)].join(".")}` } });
+  const context = await browser.newContext({
+    ...options,
+    extraHTTPHeaders: { "X-Forwarded-For": `10.${[...randomBytes(3)].join(".")}` },
+  });
   await fakeTmdbImages(context);
   const page = await context.newPage();
   const user = await openShows(page);
@@ -34,8 +37,21 @@ export async function userId(username: string): Promise<string> {
 export const tab = (page: Page, view: string) =>
   page.getByRole("navigation", { name: "Shows", exact: true }).getByRole("button", { name: view, exact: true });
 export const viewHeading = (page: Page) => page.getByRole("main").getByRole("heading", { level: 1 });
-export const section = (scope: Page | Locator, heading: string) => scope.getByRole("region", { name: heading, exact: true });
+export const section = (scope: Page | Locator, heading: string) =>
+  scope.getByRole("region", { name: heading, exact: true });
 export const grid = (scope: Page | Locator, name: string) => scope.getByRole("list", { name, exact: true });
+/**
+ * Discover loads a section once it comes near the screen (components/shows/Discover.tsx):
+ * this scrolls to each one in turn, so they all load (they stay loaded), and
+ * back to the top.
+ */
+export async function loadSections(page: Page) {
+  const sections = page.getByRole("main").getByRole("region");
+  await expect(sections.first()).toBeVisible();
+  for (const each of await sections.all()) await each.scrollIntoViewIfNeeded();
+  await expect(page.getByTestId("skeleton").filter({ visible: true })).toHaveCount(0);
+  await sections.first().scrollIntoViewIfNeeded();
+}
 /** A card by its title: cards are named "<title>, <year>, ...". */
 export const card = (scope: Page | Locator, title: string) =>
   scope.getByRole("button", { name: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")},`) });
@@ -51,27 +67,44 @@ export const typeSwitch = (page: Page, name: "TV Shows" | "Movies") =>
   page.getByRole("group", { name: "Show" }).getByRole("button", { name, exact: true });
 
 /** The requests the fake TMDB answered for this path, e.g. "/tv/top_rated". */
-export async function tmdbRequests(page: Page, path: string): Promise<{ path: string; query: string | null; authorized: boolean }[]> {
+export async function tmdbRequests(
+  page: Page,
+  path: string,
+): Promise<{ path: string; query: string | null; authorized: boolean }[]> {
   return (await (await page.request.get(`/api/test/tmdb?${new URLSearchParams({ path })}`)).json()).requests;
 }
 
 export type LibraryRow = {
-  type: "tv" | "movie"; tmdb_id: number; status: string;
-  current_season: number | null; current_episode: number | null; is_favourite: boolean;
+  type: "tv" | "movie";
+  tmdb_id: number;
+  status: string;
+  current_season: number | null;
+  current_episode: number | null;
+  is_favourite: boolean;
 };
 
 /** The user's user_shows rows, TV shows first, by TMDB id. */
 export async function libraryRows(username: string): Promise<LibraryRow[]> {
-  const { rows } = await withDatabase((client) => client.query(
-    `SELECT s.type, s.tmdb_id, us.status, us.current_season, us.current_episode, us.is_favourite
+  const { rows } = await withDatabase((client) =>
+    client.query(
+      `SELECT s.type, s.tmdb_id, us.status, us.current_season, us.current_episode, us.is_favourite
      FROM user_shows us JOIN users u ON u.id = us.user_id JOIN shows s ON s.id = us.show_id
-     WHERE u.username = $1 ORDER BY s.type DESC, s.tmdb_id`, [username]));
+     WHERE u.username = $1 ORDER BY s.type DESC, s.tmdb_id`,
+      [username],
+    ),
+  );
   return rows;
 }
 
 /** A library row as added from Discover, with `fields` changed. */
 export const row = (type: "tv" | "movie", tmdbId: number, fields: Partial<LibraryRow> = {}): LibraryRow => ({
-  type, tmdb_id: tmdbId, status: "watching", current_season: null, current_episode: null, is_favourite: false, ...fields,
+  type,
+  tmdb_id: tmdbId,
+  status: "watching",
+  current_season: null,
+  current_episode: null,
+  is_favourite: false,
+  ...fields,
 });
 
 export async function expectNoHorizontalScroll(page: Page) {

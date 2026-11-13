@@ -149,8 +149,9 @@
   transform: scale(0.97);
 }
 
-/* The main action of a card or dialog. */
-.primary {
+/* The main action of a card or dialog. On .button (two classes), so the
+   variants win over an app module's rules for every button in its view. */
+.button.primary {
   --spinner-color: var(--bg);
 
   border-color: var(--accent);
@@ -160,7 +161,7 @@
 }
 
 /* Confirms something that can't be undone. */
-.danger {
+.button.danger {
   --spinner-color: var(--bg);
 
   border-color: var(--danger);
@@ -170,7 +171,7 @@
 }
 
 /* Starts something destructive, which a .danger button then confirms. */
-.remove {
+.button.remove {
   padding-inline: 0;
   border-color: transparent;
   background: none;
@@ -179,7 +180,7 @@
 }
 
 /* A link in the look of text: going back, or somewhere secondary. */
-.quiet {
+.button.quiet {
   --spinner-color: var(--muted);
 
   padding-inline: var(--space-1);
@@ -209,22 +210,22 @@
     background: var(--hover);
   }
 
-  .primary:hover {
+  .button.primary:hover {
     background: var(--accent);
     filter: brightness(0.93);
   }
 
-  .danger:hover {
+  .button.danger:hover {
     background: var(--danger);
     filter: brightness(0.93);
   }
 
-  .remove:hover {
+  .button.remove:hover {
     background: none;
     text-decoration: underline;
   }
 
-  .quiet:hover {
+  .button.quiet:hover {
     background: none;
     color: var(--text);
   }
@@ -259,11 +260,33 @@
   border-radius: var(--radius-sm);
   background: var(--hover);
   color: var(--text);
-  animation: feedback-in var(--duration) var(--ease-out), nudge 0.3s 0.1s ease-in-out;
+  animation:
+    feedback-in var(--duration) var(--ease-out),
+    nudge 0.3s 0.1s ease-in-out;
 }
 
 .alertText {
   margin: 0;
+}
+
+/* An alert's ×, which dismisses it (components/common/ui.tsx, Alert). */
+.dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.dismiss svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 /* What an action did. */
@@ -316,6 +339,76 @@
   .alert,
   .success,
   .confirm {
+    animation: none;
+  }
+}
+
+/* The Undo message (components/common/Undo.tsx), at the bottom of the screen:
+   over the tab bar on a phone (--bottom-bar, AppShell.module.css), clear of the
+   home indicator. */
+.toast {
+  position: fixed;
+  z-index: 30;
+  left: 50%;
+  bottom: calc(var(--bottom-bar, 0px) + env(safe-area-inset-bottom) + 1rem);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 2rem);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: var(--shadow-md);
+  animation: toast-in var(--duration) var(--ease-out);
+}
+
+/* Rises into place, so the Undo it offers is noticed. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0.75rem);
+  }
+}
+
+.toast span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A class, not .toast button: the views style their own buttons (.tasks button), and this has to win. */
+.toast .toastUndo {
+  flex-shrink: 0;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .toast .toastUndo:hover {
+    background: transparent;
+    text-decoration: underline;
+  }
+}
+
+@media (min-width: 48rem) {
+  .toast {
+    bottom: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
     animation: none;
   }
 }

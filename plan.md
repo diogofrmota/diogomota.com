@@ -1,8 +1,8 @@
 # diogomota.com — Plan
 
-The spec of the site and its two apps as built, the decisions behind them, and the full build log. Local setup, commands, the features in detail and the JSON APIs are in [README.md](README.md); running the server is in [docs/operations.md](docs/operations.md).
+The spec of the site and its two apps as built, the decisions behind them, and the full build log. Local setup, commands, the features in detail and the JSON APIs are in [README.md](README.md); running the server is in [docs/operations.md](docs/operations.md); the decisions, one short record each, in [docs/decisions/](docs/decisions/); what each version changed in [CHANGELOG.md](CHANGELOG.md) and the GitHub Releases.
 
-**Status:** live at https://diogomota.com since `v1.0.0` (commit `3150734`, 2026-11-02). New work gets an entry at the end of the [Build log](#build-log), in the same detail as the ones there, and a new version (README.md, Versions).
+**Status:** live at https://diogomota.com since `v1.0.0` (commit `3150734`, 2026-11-02); `v1.2.0` brought Better Auth, the apps in the URL, the tab bar on phones, offline use and the features in the [Build log](#build-log)'s last entry. New work gets an entry at the end of the Build log, in the same detail as the ones there, and a new version (README.md, Versions); every deploy publishes a GitHub Release with its commits.
 
 ## Scale & Usage
 - **~10 total users** (friends only)
@@ -12,12 +12,12 @@ The spec of the site and its two apps as built, the decisions behind them, and t
 ## Hosting, Domain and Configuration
 - **VPS:** OVH `vps-51a51d69.vps.ovh.net`, IPv4 `162.19.252.190`, IPv6 `2001:41d0:701:1100::ec4e`, Ubuntu 24.04 LTS. The stack runs in `/opt/diogomota` as `deploy` (SSH key only, in the `docker` group, no `sudo`); `ubuntu` is the admin account (SSH key, passwordless `sudo`). [infra/setup-vps.sh](infra/setup-vps.sh) set it up: SSH keys only and no root login, UFW with only 22, 80 and 443 in, a fail2ban `sshd` jail, unattended security upgrades (reboot at 04:30 when one needs it), a 2 GB swapfile, Docker Engine and the Compose plugin.
 - **Domain:** Porkbun, on Porkbun's nameservers. `A` and `AAAA` records for `@` and `www` → the VPS (TTL 600). `https://www`, `http://` and `http://www` redirect (301) to `https://diogomota.com/`.
-- **Email:** Resend, domain `diogomota.com` (region EU), DNS records at Porkbun: TXT `resend._domainkey`, CNAMEs `send` and `rsend`, TXT `_dmarc` (`v=DMARC1; p=none;`). Sent from `diogomota.com <no-reply@diogomota.com>`; password reset emails land in the inbox, not spam.
+- **Email:** Resend, domain `diogomota.com` (region EU), DNS records at Porkbun: TXT `resend._domainkey`, CNAMEs `send` and `rsend`, TXT `_dmarc` (`v=DMARC1; p=none;`, to become `p=quarantine`: [To-do](#to-do)). Sent from `diogomota.com <no-reply@diogomota.com>`: password resets and the links that confirm an email; they land in the inbox, not spam.
 - **TLS:** Let's Encrypt certificate for `diogomota.com` and `www.diogomota.com`, issued through the certbot container (webroot) by [infra/issue-cert.sh](infra/issue-cert.sh) on 2026-11-01 (expiring 2027-01-30 unless renewed); [infra/renew-cert.sh](infra/renew-cert.sh) runs from host cron twice a day.
-- **Web server:** nginx container (`nginx:1.30-alpine`): reverse proxy to the app, TLS (Mozilla intermediate profile), gzip, and the security headers: HSTS (2 years, `includeSubDomains`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, a `Permissions-Policy`, and a CSP of `frame-ancestors 'none'; base-uri 'self'; object-src 'none'`. An unknown SNI name gets its handshake refused.
+- **Web server:** nginx container (`nginx:1.30-alpine`): reverse proxy to the app, TLS (Mozilla intermediate profile), gzip, and the security headers: HSTS (2 years, `includeSubDomains`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, a `Permissions-Policy`, and a CSP of `frame-ancestors 'none'; base-uri 'self'; object-src 'none'`. An unknown SNI name gets its handshake refused. Rate limits per client address: the form submissions of the login, sign-up, reset and join pages and `/api/auth/*` (20 a minute), and the calendar subscriptions (`/api/calendar/*`, 30 a minute).
 - **Code:** GitHub, private repo `diogofrmota/diogomota.com` (this folder is the repo root).
 - **Image:** Docker Hub, private repo `diogofrmota/diogomota-com` (Docker Hub names can't contain dots). Tokens: `github-actions` (Read & Write, for CI) and `vps-pull` (Read-only, the VPS's `docker login`).
-- **CI/CD:** GitHub Actions → Docker Hub → VPS (see [Deployment Strategy](#deployment-strategy)).
+- **CI/CD:** GitHub Actions → Docker Hub → VPS (see [Deployment Strategy](#deployment-strategy)); Dependabot ([.github/dependabot.yml](.github/dependabot.yml)) opens a pull request every Monday with the npm packages, the actions and the Docker images, each ecosystem grouped, a version only once it's a week old.
 - **Containerized:** Docker Compose; [docker-compose.prod.yml](docker-compose.prod.yml) runs `postgres`, `app`, `nginx` and a one-off `certbot`.
 - **Database backup:** `pg_dump` every 3 days by cron, deleted after 2 weeks; an optional offsite copy (see [Backup Strategy](#backup-strategy)).
 - **Secrets:** production values only in `/opt/diogomota/.env` on the VPS (template [.env.production.example](.env.production.example), `chmod 600`) and in the GitHub Actions secrets; local ones in `.env` and `app/.env.local`, never committed. Where each one lives and how to rotate it: [docs/operations.md, Rotate secrets](docs/operations.md#rotate-secrets).
@@ -36,17 +36,19 @@ Given the small user base (~10 users, max 2 concurrent), minimum specs are more 
 ## Stack
 | Layer | Tech |
 |---|---|
-| **Framework** | Next.js 16 (App Router, `output: "standalone"`), React 19, TypeScript |
+| **Framework** | Next.js 16 (App Router, `output: "standalone"`), React 19, TypeScript, on Node.js 24 |
 | **Database** | PostgreSQL 16 (a container on the VPS, data in the `pgdata` volume) |
 | **DB Client** | pg (node-postgres) — raw, parameterised SQL; a pool of 5 |
-| **Auth** | Auth.js (`next-auth@5.0.0-beta.32`), credentials provider, encrypted JWT session cookie; bcryptjs (cost 12) |
+| **Auth** | Better Auth (`better-auth` 1.7, with its username plugin) on the site's own tables; database sessions in a cookie; bcryptjs (cost 12) |
+| **Data in the browser** | TanStack Query 5: every API call, optimistic changes, and (offline) Shared's and the library's data kept in the browser, changes waiting for the connection |
+| **Validation** | zod 4: every API body has a schema (`lib/schemas.ts`), shared by the routes and the browser |
 | **Email** | Resend (`resend` package) |
-| **Styling** | CSS Modules, CSS variables for the light and dark themes; IBM Plex Mono (self-hosted) on `/` and the 404 and error pages, the system font stack in the apps and the pages around them (`/apps`, login, account) |
+| **Styling** | CSS Modules, CSS variables for the two themes (Light and Dark); the apps' common parts as components (`components/common/ui.tsx`); IBM Plex Mono (self-hosted) on `/` and the 404 and error pages, the system font stack in the apps and the pages around them (`/apps`, login, account) |
 | **Drag & drop** | dnd-kit (`@dnd-kit/core` 6.3.1, `@dnd-kit/sortable` 10) |
-| **Schema** | SQL migrations (`db/migrations/NNN_name.sql`), applied in order on every deploy by `app/scripts/migrate.mjs` |
-| **Tests** | Playwright on a desktop project (and a mobile one for `views.spec.ts`), `@axe-core/playwright`; ESLint and `tsc` |
+| **Schema** | SQL migrations (`db/migrations/NNN_name.sql`), applied in order on every deploy by `app/scripts/migrate.mjs`; expand and contract (`scripts/check-migrations.mjs`) |
+| **Tests** | Playwright on a desktop project (and a mobile one for `views.spec.ts`), `@axe-core/playwright`; Vitest for the pure logic (`test/`); ESLint, Prettier and `tsc`; all of them in CI |
 | **Deployment** | Docker Compose (app, PostgreSQL, Nginx, Certbot) |
-| **CI/CD** | GitHub Actions → Docker Hub → VPS |
+| **CI/CD** | GitHub Actions → Docker Hub → VPS; Dependabot every Monday |
 | **External API** | TMDB API (v4 API Read Access Token) |
 
 ---
@@ -57,33 +59,37 @@ Single shared account across all apps. Auth lives at the `/apps` level.
 
 ```
 / (landing — public, no auth)
-  → /apps (public: app cards + Login and Sign Up)
-    → /login or /signup (username + email + password)
+  → /apps (public: app cards + Log in and Sign up)
+    → /login or /signup (name + username + email + password)
     → /apps (logged in: username + account menu, cards open the apps)
       → /shared or /shows: straight in, no second login
 ```
 
-- **Logged out:** `/apps` shows the app cards with their descriptions, and Login and Sign Up buttons in the top bar. A card opens a login prompt (`components/site/LoginPrompt.tsx`) whose links carry `?next=/shared` or `?next=/shows`, so logging in lands in that app.
-- **Logged in:** the top bar shows the account menu, a button with the username (Account, Logout; elsewhere also Switch app); the cards open the apps.
-- **Top bar** (`components/common/AppHeader`, at every width): on `/apps`, `/account` and the login pages, `diogomota.com` (→ `/`) on the left; in an app, its tabs in the middle instead (Calendar | Tasks | Settings, Watchlist | Discover | Profile; the open one in bold and underlined; a long username is cut off on a phone rather than move them), and nothing else: no `diogomota.com`, no app links, no search. On the right, Login and Sign Up or the account menu (none on the login pages). **Switch app** in the account menu goes to `/apps`, the way from one app to the other; it isn't there on `/apps` itself.
-- **Account menu** (`components/account/AccountMenu`): the username drawn as a button, so it reads as one: a pill with a border, the username's initial in a circle (left out in an app on a phone, where the tabs leave little room and the username keeps it), the username (cut off with an ellipsis if need be) and a chevron that turns over while the menu is open. The menu's items each have an icon (Account a person, Switch app a grid of four squares, Logout a door with an arrow), with Logout under a line. A disclosure, not an ARIA menu: Tab moves through it, and Escape, a click outside or tabbing away closes it.
-- **Session:** an Auth.js JWT cookie, encrypted with `AUTH_SECRET`, holding the user id, the username and the `password_changed_at` it logged in under. Shared by every app.
-- **Sign-up:** open to anyone, no sign-up code (decided). Username 3–20 characters of `[a-z0-9_]`, saved lowercase (the database enforces it too); email; password of at least 10 characters and at most 72 bytes. Signing up logs straight in.
-- **Login:** by username or email, in any case. One message for a wrong password or an unknown account, and one for a taken username or email (sign-up can't hide which one exists without email verification).
-- **Rate limits** (in memory): login 10 per 15 minutes per IP, sign-up 5 per hour per IP, current-password checks 10 per 15 minutes per user, password reset requests 5 per hour per IP (with a message) and reset emails 3 per hour per address (silently: same answer, nothing sent). The IP is the first `X-Forwarded-For` entry, which nginx overwrites with the client address.
-- **Protected routes:** `proxy.ts` (Next 16's name for middleware) guards `/shared`, `/shows` and `/account`, which redirect to `/apps?next=...` (opening that app's login prompt), and `/api/shared/*` and `/api/shows/*`, which answer 401. `next` only accepts same-site paths.
-- **Password reset:** "Forgot password?" on `/login` and "Reset by email" in Account settings open `/forgot-password`. The answer is the same whether or not an account has the email; the lookup and the email run after the response (`after()`), so the timing doesn't tell either. The token is 32 random bytes, only its SHA-256 is stored (`password_resets`), valid for 1 hour and single use; a new request invalidates the account's earlier links. The link is built on `AUTH_URL`, never the Host header. `/reset-password` shows "Choose a new password for <username>" (new + confirm, sign-up rules) or "link expired"; setting the password uses up the token in the same SQL statement.
-- **Password changes end sessions:** a reset or a change sets `users.password_changed_at`, and `auth.ts` checks it on every session read, so every device is logged out, this one included, and sent to `/login?password=changed` (a change in Account settings returns to `/account` after logging in). Decided: a change in Account settings keeps logging out the current device too.
+- **Logged out:** `/apps` shows the app cards with their descriptions, and Log in and Sign up in the top bar. A card opens a login prompt (`components/site/LoginPrompt.tsx`) whose links carry `?next=/shared` or `?next=/shows`, so logging in lands in that app.
+- **Log in and Sign up, one rule:** Log in first and plain, Sign up after it and filled with the accent (the call to action), in the top bar, in `/apps`' call to action, in an app's login prompt and on an invite link's page.
+- **Logged in:** the top bar shows the account menu, a button with the username (Account, Log out; elsewhere also Switch app); the cards open the apps.
+- **Top bar** (`components/common/AppHeader`): on `/apps`, `/account` and the login pages, `diogomota.com` (→ `/`) on the left; in an app, its tabs in the middle on a wide screen (the open one in bold and underlined), and on a phone the app's name there instead, the tabs being along the bottom of the screen. On the right, Log in and Sign up or the account menu (none on the login pages). **Switch app** in the account menu goes to `/apps`, the way from one app to the other; it isn't there on `/apps` itself.
+- **Account menu** (`components/account/AccountMenu`): the username drawn as a button, so it reads as one: a pill with a border, the user's profile picture (or initial), the username (cut off with an ellipsis if need be) and a chevron that turns over while the menu is open. The menu's items each have an icon (Account a person, Switch app a grid of four squares, Log out a door with an arrow), with Log out under a line. A disclosure, not an ARIA menu: Tab moves through it, and Escape, a click outside or tabbing away closes it.
+- **Library:** Better Auth (`app/auth.ts`), on the site's tables (`016_better_auth.sql`): `users` (its user, with the username plugin's `username`), `accounts` (the bcrypt hash of each password, so every password from before still works), `sessions` and `verifications`. The forms are server actions that check their fields and rate limits, then call `auth.api`; the same operations over HTTP (`/api/auth/*`) are switched off (`disabledPaths`), so nothing gets around those checks. Open there: the links in emails (`/api/auth/verify-email`) and reading or ending the session.
+- **Session:** a row in `sessions`, read on every request (no cookie cache), in a cookie signed with `AUTH_SECRET`; 30 days, renewed daily. Logging out, a password change or a reset, and deleting the account end it at once.
+- **Sign-up:** open to anyone, no sign-up code (decided). Name (1–50 characters), username 3–20 characters of `[a-z0-9_]`, saved lowercase (the database enforces it too); email; password of at least 10 characters and at most 72 bytes. Signing up logs straight in, and sends a link to confirm the email (24 hours): until it is opened the account works, `/apps` and `/account` say so (with Send the link again), and password resets don't go to it. Accounts from before email confirmation count as confirmed (`016`).
+- **Login:** by username or email, in any case. One message for a wrong password or an unknown account, and one for a taken username or email (sign-up can't hide which one exists without email confirmation first).
+- **Rate limits** (in memory): login 10 per 15 minutes per IP, sign-up 5 per hour per IP, current-password checks 10 per 15 minutes per user, password reset requests 5 per hour per IP (with a message), reset emails 3 per hour per address (silently: same answer, nothing sent), confirmation emails sent again 3 per hour per user. nginx also limits the form submissions of the login, sign-up, reset and join pages and `/api/auth/*` to 20 a minute per client address (bursts of 20), which holds across restarts. The IP is the first `X-Forwarded-For` entry, which nginx overwrites with the client address.
+- **Protected routes:** `proxy.ts` (Next 16's name for middleware) guards `/shared`, `/shows` and `/account` (and everything under them), which redirect to `/apps?next=...` (opening that app's login prompt), and `/api/shared/*` and `/api/shows/*`, which answer 401. `next` only accepts same-site paths.
+- **Password reset:** "Forgot password?" on `/login` and "Reset by email" in Account settings open `/forgot-password`. The answer is the same whether or not an account has the email; the request runs after the response (`after()`), so the timing doesn't tell either. The link only goes to a confirmed email. Better Auth's token, of which `verifications` keeps only the SHA-256 (`storeIdentifier: "hashed"`), is valid for 1 hour and single use; a new link makes the account's earlier ones stop working. The link is built on `AUTH_URL`, never the Host header. `/reset-password` shows "Choose a new password for <username>" (new + confirm, sign-up rules) or "link expired".
+- **Password changes end sessions:** a reset or a change ends every session of the account, this device's too, and sends it to `/login?password=changed` (a change in Account settings returns to `/account` after logging in). Decided: a change in Account settings keeps logging out the current device too.
 
 ### Account Settings (`/account`)
-From the account menu on `/apps` and in both apps' top bars. In the apps' frame and the user's theme, like `/apps`. The profile picture in the middle, then a row each for Name, Username, Email and Theme with what they are now, then Update password and Log out; each opens a popup with its form, which closes once saved:
+From the account menu on `/apps` and in both apps' top bars. In the apps' frame and the user's theme, like `/apps`. The profile picture in the middle, then a row each for Name, Username, Email and Theme with what they are now, then Update password and Log out, then Your data; each opens a popup with its form, which closes once saved:
 - Change name and username (unique)
-- Change email (unique; takes the current password, as the email logs in and gets resets)
+- Change email: takes the current password, and only changes once the link sent to the new address is opened (`Your email is changed.`); an address another account has gets the same answer, and nothing
 - Change password (current + new + confirm), from Update password
 - Reset by email (→ `/forgot-password`), in Update password
+- Email not confirmed yet: says so, with Send the link again
 - Profile picture: drop a photo or choose one, then Adjust your picture (drag and zoom it until the circle shows the part wanted; the browser cuts that square out); the server makes it a 512 px WebP square (`lib/avatars.ts`, with sharp) and keeps it as a file on the VPS (the `appdata` volume); `users.avatar_updated_at` is in its URL. Shown in the account menu, Shared's members and Shows' Profile and friends; Remove picture goes back to the initial
-- Theme preference (light/dark), saved in `users.theme_preference`
-- Logout
+- Theme: Light or Dark, saved in `users.theme_preference`
+- Your data: **Download my data** (`/api/account/export`, a JSON file of the account, the library, friends, recommendations, activity and the space's calendar and tasks) and **Delete my account** (the password; it leaves the space, which goes with its last member, deletes the picture's file, and everything else goes with the account), and a link to `/privacy`
+- Log out
 
 > The theme is chosen only here. Shared's space has its settings in Shared's own Settings tab; Shows has no settings of its own. There is no `/settings` page (it answers 404).
 
@@ -103,43 +109,48 @@ From the account menu on `/apps` and in both apps' top bars. In the apps' frame 
 - Title, description, Open Graph tags and a generated preview image (`app/opengraph-image.tsx`) in the same layout
 
 ### `/apps` — App Hub
-- In the apps' frame and look (`AppFrame` in `components/common/AppShell`, `components/common/ui.module.css`): the system font, the user's theme (Light mode when logged out, and for new accounts until they pick another), a centered column; the way between the apps (Switch app in the apps' account menu)
-- Title `Apps (v1.0.0)`: the deployed version, small and grey (`Apps (dev)` locally)
+- In the apps' frame and look (`AppFrame` in `components/common/AppShell`, `components/common/ui.module.css`): the system font, the user's theme (Light when logged out, and for new accounts until they pick another), a centered column; the way between the apps (Switch app in the apps' account menu)
+- Title `Apps`, and at the bottom `Version v1.2.0 · Privacy`, small and grey (`Version dev` locally)
 - **Top bar:** `diogomota.com` on the left, and on the right:
-  - Logged out: Login and Sign Up
-  - Logged in: the account menu (Account, Logout: no Switch app here); long usernames are cut off with an ellipsis; on a phone, only the username's initial as a round avatar
-- Logged out, over the cards: "Create an account to start using the apps", a line under it, then Login and Sign Up side by side (`components/site/LoginCallout`)
+  - Logged out: Log in and Sign up
+  - Logged in: the account menu (Account, Log out: no Switch app here); long usernames are cut off with an ellipsis; on a phone, only the picture or initial as a round avatar
+- Logged out, over the cards: "One account for all apps", a line under it ("Plan together as a couple in a shared calendar and task lists, and keep track of what you watch with your friends."), then Log in and Sign up side by side (`components/site/LoginCallout`)
+- Logged in with an email not confirmed yet: a note over the cards, with Send it again (→ `/account`); just after deleting an account (`?account=deleted`), that it's done
 - A vertical list of app cards, one per row, from the typed list in `app/lib/apps.ts`:
   - **Shared**: "Shared calendar for couples"
-  - **Shows**: "Track TV Shows and Movies"
-  - A card in the apps' look, each with its app icon (`public/logos/`, 56×56: a colored tile with a white drawing, like a phone's app icons, the same in every theme), name and description
+  - **Shows**: "Track TV shows and movies with your friends"
+  - A card in the apps' look, each with a picture of the app (`components/site/AppPreview`), its icon (`public/logos/`, 56×56: a colored tile with a white drawing, like a phone's app icons, the same in every theme), name and description
   - Logged out: a card opens the login prompt
   - Logged in: a card goes straight into the app, with a small ring turning beside its name until the app has loaded
 
 ### Other pages
-- `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/account` (see [Authentication Flow](#authentication-flow)), in the apps' frame and look: the login pages (`components/auth/AuthPage`) have the top bar with only `diogomota.com`, then a centered column with the form in a card and Back to Apps; in Light mode, except the reset pages opened logged in, in the user's theme
+- `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/account` (see [Authentication Flow](#authentication-flow)), in the apps' frame and look: the login pages (`components/auth/AuthPage`) have the top bar with only `diogomota.com`, then a centered column with the form in a card and Back to apps; in Light, except the reset pages opened logged in, in the user's theme. Sign-up links to `/privacy`
+- `/privacy`: what the site keeps about a user, why, who else sees it, and Download my data and Delete my account, in plain words
+- `/join/<code>`: an invite link's page (see [App 1 — Shared](#app-1--shared-shared)): who sent it; logged out, Log in and Sign up, which come back to it; logged in, Join (never by opening it); a used, expired or unknown code says so
 - A styled 404 (`app/not-found.tsx`), and `app/error.tsx` (Retry, Back to Apps) for pages that fail on the server, in the site style (black, IBM Plex Mono) like `/`
-- Favicon, touch icon, and a web app manifest (`/manifest.webmanifest`, from `app/manifest.ts`): added to a phone's home screen, the site opens on `/apps` without the browser's bars, with the `>_` icon (192 and 512 px, and a maskable 512 px one, in `public/icons/`)
+- Favicon, touch icon, and a web app manifest (`/manifest.webmanifest`, from `app/manifest.ts`): added to a phone's home screen, the site opens on `/apps` without the browser's bars, with the `>_` icon (192 and 512 px, and a maskable 512 px one, in `public/icons/`); its splash screen in the Light theme's color, as `/apps` opens
 
 ### `/(app_name)` — Individual App Pages
 - **Protected** — redirect to `/apps?next=...` when logged out
-- Each app is a **SPA** — the URL stays at `/shared` or `/shows` at all times
-- Views and panels are React state (`hooks/useAppView.ts`); each change is a `history.pushState` entry and `popstate` restores it, so Back closes the open panel, then goes back through the views and finally out to `/apps`; a reload starts on the default view
-- One shell, `components/common/AppShell`: the sticky top bar (the app's tabs in the middle as `HeaderTabs`, at every width, between two columns of the same width, and the account menu in the right one; nothing along the bottom of the screen), and the current view across the whole width. An app's settings are one of its tabs (Shared's Settings), and Switch app in the account menu goes to `/apps`. Views switched away from stay mounted but hidden (React `<Activity>`)
+- Each app is a **SPA** in which the view and the open panels are in the URL: the view is the path after the app's (`/shows/discover`; the app's own path is its first view), and the panels, bottom to top, its `p` parameters (`/shows/discover?p=search&p=title:tv:1396`). A reload keeps them, and any of them can be linked to or bookmarked; a path that isn't a view is a 404 (`app/shared/[[...view]]`, `app/shows/[[...view]]`, `lib/app-views.ts`)
+- Moving between them never loads a page: every change is a `history.pushState` entry (`hooks/useAppView.ts`), which Next.js's router takes in, and `popstate` restores it, so Back closes the open panel, then goes back through the views and finally out to `/apps`. A panel that came with the URL (a link) closes by replacing its entry instead, so closing it never leaves the app
+- One shell, `components/common/AppShell`: the sticky top bar, the current view across the whole width, and on a phone the tabs along the bottom (`BottomTabs`, each its icon over its name). An app's settings are one of its tabs (Shared's Settings), and Switch app in the account menu goes to `/apps`. Views switched away from stay mounted but hidden (React `<Activity>`)
+- **Offline** (production builds): a service worker (`public/sw.js`, registered by `components/common/OfflineSupport`) keeps the apps' pages (from the network, the last copy without one) and Next.js's built files, and TanStack Query keeps Shared's space, calendar and tasks and the Shows library in the browser, per user, for a week; changes made offline wait there and go out once the connection is back, after a reload too. Logging out forgets it all on that device
 
 ---
 
 ## General UI/UX Rules (All Apps)
 - **Design:** Minimalistic, modern, clean
 - **Typography:** the system font stack inside the apps and the pages around them (`/apps`, login, account). IBM Plex Mono is **only** for `/` (and the 404 and error pages)
-- **Theme:** six themes (`lib/themes.ts`): Light mode ★, Neutral ★, Warm, Graphite ★, Ocean and Space, the starred ones recommended; Light mode out of the box (logged out, and new accounts until they pick another); saved per user (`users.theme_preference`) and rendered by the server, so there is no flash on load; chosen in Account settings; applies in the apps, on `/apps` and `/account`; no toggle in the top bar; `<meta name="theme-color">` follows it
-- **One look in both apps** (and on `/apps`, `/account` and the login pages): every view is built from the same parts, `components/common/ui.module.css` (Shows, Tasks and Calendar keep copies with the same values in their own modules): a 1.75 rem heading, cards (1 px border, 1 rem corners, the surface color), labels over 44 px fields, buttons (plain, `primary` in the accent color for a card's main action, `remove` in red text to start something destructive and a filled red `danger` to confirm it, in a `confirm` box with a red bar), alerts with a red bar and Retry, and what an action did in the accent's soft color, in the card it was done in. The red, `--danger`, is the shell's theme variable, like the other colors
-- **Responsive:** Mobile-first — primarily used on mobile, must work well on desktop too. Nothing scrolls sideways at 1280×800, 390×844 or 375×812; on a phone, controls are at least 44×44 px, text fields have 16 px text (so iOS doesn't zoom), and sheets and the undo message stay clear of the home indicator
-- **Navigation:** the app's tabs in the middle of the top bar, on a phone and on desktop alike; no bottom tab bar
+- **Theme:** two themes (`lib/themes.ts`): **Light** (id `minimal-neutrals`) and **Dark** (id `graphite`); Light out of the box (logged out, and new accounts until they pick another); saved per user (`users.theme_preference`, checked by the app, which shows Light for an id it doesn't know, so themes come and go without a migration) and rendered by the server, so there is no flash on load; chosen in Account settings; applies in the apps, on `/apps` and `/account`; no toggle in the top bar; `<meta name="theme-color">` follows it
+- **One look in both apps** (and on `/apps`, `/account` and the login pages): every view is built from the same parts, the components of `components/common/ui.tsx` (`Button` and its variants, `Alert` with Retry or ×, `Notice`, `Confirm`) on `components/common/ui.module.css`: a 1.75 rem heading, cards (1 px border, 1 rem corners, the surface color), labels over 44 px fields, buttons (plain, `primary` in the accent color for a card's main action, `remove` in red text to start something destructive and a filled red `danger` to confirm it, in a `confirm` box with a red bar), alerts with a red bar and Retry, and what an action did in the accent's soft color, in the card it was done in. The variants are on `.button` (two classes), so they win over an app's own rules for the buttons in its views; the apps keep no copies of them. The red, `--danger`, is the shell's theme variable, like the other colors
+- **Responsive:** Mobile-first — primarily used on mobile, must work well on desktop too. Nothing scrolls sideways at 1280×800, 390×844 or 375×812; on a phone, controls are at least 44×44 px, text fields have 16 px text (so iOS doesn't zoom), and sheets and the undo message stay clear of the home indicator and of the tab bar
+- **Navigation:** the app's tabs in the middle of the top bar on a wide screen, and along the bottom of the screen on a phone (within reach of a thumb), each its icon over its name
 - **Between apps:** Switch app in the account menu, to `/apps`; `diogomota.com` there goes back to `/` (the way out when opened from the home screen)
-- **Account access:** the same account menu (Account, Switch app, Logout) in the apps' top bar as on `/apps` (where there is no Switch app)
+- **Account access:** the same account menu (Account, Switch app, Log out) in the apps' top bar as on `/apps` (where there is no Switch app)
 - **Dialogs:** one `components/common/Dialog`: modal on desktop, a sheet from the bottom or the whole screen on a phone; closed by Escape, Back, a tap outside or its × button, which hands focus back to what opened it; the page behind doesn't scroll
-- **Loading and errors:** grey skeletons in Shows, a spinner in Shared; a load that fails says why ("Could not reach the server. Check your connection." when offline) with Retry. Every browser API call goes through `lib/api-request.ts`
+- **Undo instead of "are you sure?":** deleting a task, an event, a list (in its row, in Edit lists), a friend, a title from the library, and leaving a space are done at once on screen with Undo for 5 seconds (paused while the pointer or focus is on it; `components/common/Undo`), and only sent when it goes, when another takes its place, or when the view or page is left. Only what can't be undone asks first: leaving as a space's last member (it deletes it), deleting the account, a new calendar link
+- **Loading and errors:** grey skeletons in Shows, a spinner in Shared; a load that fails says why ("Could not reach the server. Check your connection." when offline) with Retry. Every browser API call goes through `lib/api-request.ts`, and its data through TanStack Query
 - **Changes:** shown at once (optimistic), sent one at a time in the order they were made, and undone with a message if the server refuses one
 - **Accessibility:** axe finds nothing serious or critical, in the light and the dark theme; color is never the only label; drag-and-drop moves are announced to screen readers
 
@@ -149,101 +160,113 @@ From the account menu on `/apps` and in both apps' top bars. In the apps' frame 
 
 ### App 1 — Shared (`/shared`)
 
-A private space for a small group (e.g. couple, roommates) to share a calendar and task lists.
+A private space for a couple: one calendar and set of task lists for the two of them (up to 10 people can join).
 
 #### Core Concept — Spaces
-- On first visit, user sees: **"Create a Space"** or **"Join with Code"**
+- On first visit, user sees: **"Your shared calendar"**, with **Create space** or **Join space** with an invite code
 - **One space per user** — once in a space, visiting `/shared` always opens its Calendar
 - Up to **10 members**, each with a distinct named color from a 10-color palette (Blue, Rose, Green, Gold, Cyan, Purple, Silver, Orange, Teal, Ochre), always shown with its name
-- **Owner:** whoever created the space; when the owner leaves, ownership passes to the member who joined earliest. Only the owner creates invites. A space has no name: creating one is a button
+- **Owner:** whoever created the space; when the owner leaves, ownership passes to the member who joined earliest. A space has no name: creating one is a button
 - **Invite system:**
-  - The owner clicks "Invite" → a **single-use code**, with a copy button and its expiry
-  - Code expires after **24 hours**, and outstanding codes expire when ownership changes
-  - Invited user enters the code to join; joining is limited to 20 attempts per 15 minutes per user
-- User can **leave a space** (from the Settings tab), which frees them to join/create another; the last member leaving deletes the space and its data
-- A member who leaves loses their task assignments; their events stay, labeled Former member, until reassigned; they can't open the space any more
-- Every API call checks current membership in the database, inside the same transaction as the read or write; another space's data answers 404
+  - **Any member** invites, from Settings (or, in a space of one, the Invite your partner card over the calendar): **Share invite link** makes a **single-use link** (`/join/<code>`, valid **24 hours**) and opens the phone's share sheet, or copies it where there is none; the link and its 8-character code are shown, with Copy link and when it expires (`14 Nov 2026, 15:30`, Lisbon time on the 24-hour clock)
+  - The link's page says who sent it, takes a logged-out friend through Log in or Sign up and back, and joins with a button; the code also works typed in Join space. An owner leaving no longer expires the others' invites
+  - Joining is limited to 20 attempts per 15 minutes per user
+- User can **leave a space** (from the Settings tab), with Undo for 5 seconds, which frees them to join/create another; as the last member it asks first (Leave and delete): the space and its data go with them
+- A member who leaves loses their task assignments and is taken off their events (an event left for nobody is labeled Former member until reassigned); they can't open the space any more
+- Every API call checks current membership in the database, inside the same transaction as the read or write; another space's data answers 404. Requests lock the rows they depend on (the user's, then the space's): the calendar's and tasks' share them, so a space's members work at the same time and other spaces are never in the way; joining, leaving and creating take them alone (`lib/spaces.ts`)
 
-#### SPA Views (tabs in the middle of the top bar)
+#### SPA Views (tabs: in the middle of the top bar, or along the bottom on a phone)
 
-**1. Calendar**
-- Custom month, week and day views (no FullCalendar), in the app's light and dark themes; week view scrolls sideways on narrow screens; a week day's heading opens its day
+**1. Calendar** (`/shared`)
+- Custom agenda, month, week and day views (no FullCalendar), in the app's themes. The **agenda** is the default on a phone: the coming days that have something planned (from the day shown, 4 weeks at a time, Show the next 4 weeks), each named (Today, Tomorrow, `Sat 14 Nov`) with its events and their times; the month is the default on a wide screen. On a phone a "week" is **three days** from the day shown, and a **swipe** left or right moves to the next or previous period
 - Add event: the Add event button, a tap on a day of the month (anywhere but on an event) or on an hour of the week or day view (the event then starts at that hour)
-  - Create a new event: Event title; All day (a switch), or start and end times; start and end dates (an event can span dates). Dates and times are typed, not the browser's fields (which follow the device's language, and can be AM/PM): a date is `dd/mm/yyyy` while empty, its blanks (`__/__/____`) once focused, filled in as it's typed, and starts as the day tapped; a time is `__:__`, on the 24-hour clock. No notes in the form (an event's notes from before are kept and shown)
+  - Create a new event: Event title; All day (a switch), or start and end times; start and end dates (an event can span dates). Dates and times are typed, not the browser's fields (which follow the device's language, and can be AM/PM): a date is `dd/mm/yyyy` while empty, its blanks (`__/__/____`) once focused, filled in as it's typed, and starts as the day tapped; a time is `__:__`, on the 24-hour clock. Events have **no notes** (`events.notes` stays, unread, until a later migration)
   - **All day:** from the start of the first day to the start of the day after the last (Lisbon), `events.all_day`; shown as All day, in its own row over the hours in the week and day views (it stays in view as the hours scroll, and scrolls within itself past about two events), and exported as whole days
-  - **Who?:** each member's small profile picture (or initial), or **All**, a circle the same size: the group (applies to all members)
-  - Member-colored events; group events neutral, with a **Group** badge; a color legend, by each member's name
+  - **Who?:** each member's small profile picture (or initial), **any number of them**, or **All**, a circle the same size: the group (applies to all members); the one adding it chosen to start with
+  - Member-colored events (the first member's color, and two pictures for two or more); group events neutral, with a **Group** badge; a color legend, by each member's name
   - A day of the month shows two events, slim (tight on a phone), then a small "+1 more" (and so on) that opens the day; where the weeks have less room, the month scrolls as a whole. The form's button is Save; on a phone, the event form, the task's dialog, Edit lists and a title's panel in Shows are the whole screen
-- Click an event to view, edit or delete it (a modal on desktop, a bottom sheet on a phone); every member can manage every event
+- The week and day views show **now** as a red line across today, and open at the time it is now; with a **mouse**, an event's body is dragged to another time (or day, in the week), and its bottom edge to change when it ends, both snapping to 15 minutes, saved when let go
+- Click an event to view, edit or delete it (a modal on desktop, the whole screen on a phone); every member can manage every event. **Delete event** closes it with Undo
 - Times are entered and shown in `Europe/Lisbon` whatever the device's zone, stored as UTC `timestamptz`; nonexistent spring-forward times are rejected, and repeated autumn times offer the first or second occurrence
-- One toolbar over the grid (‹ Today ›, the period, the color legend, Month | Week | Day, Add event), so the grid gets the rest of the screen; no time zone line (in the event form neither); ‹ › are drawn chevrons, and the grid slides towards the period chosen
-- **Export:** per event, from its dialog: Export to Google Calendar and a `.ics` download; no whole-calendar export. UTC timestamps, escaped text, CRLF and UTF-8 line folding per RFC 5545
+- Only the days shown are loaded (`GET /api/shared/events?from=&to=`), and each period loaded stays in memory (and in the browser, offline) while the next loads
+- One toolbar over the grid (‹ Today ›, the period, the color legend, Agenda | Month | Week | Day, Add event), so the grid gets the rest of the screen; no time zone line (in the event form neither); ‹ › are drawn chevrons, and the grid slides towards the period chosen
+- **Export:** per event, from its dialog: Export to Google Calendar and a `.ics` download, each saying who it's for; and the whole calendar as a **subscription**, from Settings (see below). UTC timestamps, escaped text, CRLF and UTF-8 line folding per RFC 5545
 
-**2. Tasks**
+**2. Tasks** (`/shared/tasks`)
 - Any number of lists per space, as chips above the open list; the last list opened is remembered on the device
-- Edit lists (or + New list) creates, renames, reorders and deletes lists; deleting asks first and takes the list's tasks with it
+- Edit lists (or + New list) creates, renames, reorders and deletes lists; deleting one shows it as deleted in its row, with Undo, for 5 seconds, and then takes the list's tasks with it
 - Each list has ordered tasks:
   - Task title
-  - Optional: due date (a plain date, shown as Today, Tomorrow or Overdue against today in Lisbon) and notes
-  - **Assignee:** a member, shown with their color and name, or unassigned; in its dialog, each member's small profile picture and All (nobody in particular), as an event's Who?
+  - Optional: due date (a plain date, shown as Today, Tomorrow or Overdue against today in Lisbon), notes, and **Repeat** (Every day, week, month or year): ticked off, a repeating task comes back with its next due date (a period after the last, skipping the ones already past, so bins due on Monday and done on Tuesday are due next Monday; a month from the 31st is the end of a shorter month) instead of moving to Done
+  - **Assignee:** a member, shown with their color and username, or unassigned; in its dialog, each member's small profile picture and All (nobody in particular)
   - Checkbox to mark complete: the task stays a moment, ticked and crossed out, then slides away into a collapsed **Done** section (unticked in that moment, it stays); unticking one in Done puts it back at the end of the list
 - The view is titled Tasks; the open list's name has how many are left to do, `Groceries (3)`; new tasks go in Write a task
   - **Drag & drop** by a handle to reorder tasks (and, in Edit lists, lists): with a mouse, a finger (the rest of the row still scrolls the page) or the keyboard (Space or Enter to pick up, the arrows, Space or Enter to drop, Escape to cancel)
 - Delete: a bin button where there is a mouse, a swipe left on a touch screen, or from the task's dialog; **Undo** for 5 seconds (paused while the pointer or focus is on it), and the delete is only sent once that runs out or when leaving Tasks or the page
-- Clients choose the UUIDs of what they create; when someone else changed the list meanwhile (404 or 409), Tasks reloads. It also reloads when opened and when the tab becomes visible, to show other members' changes
+- **Live:** while Tasks is open it asks the server every 5 seconds (and when the browser tab comes back into view) for what the other member changed, so what they tick off in the shop shows up; not while changes are going out
+- **Offline:** changes made without a connection show at once, wait in the browser (a note says so), and go out in order once it's back
+- Clients choose the UUIDs of what they create; when someone else changed the list meanwhile (403, 404 or 409), Tasks reloads
 - Empty states for no lists, an empty list and a list with everything done
 
-**3. Settings** (the third tab)
+**3. Settings** (`/shared/settings`, the third tab)
 - Members list, with role (owner / member), each member's picture (or initial) in a ring of their color
-- **Invite people** — a single-use code (24 h expiry), with copy
-- **Leave this group**: a button after the cards, which asks first; Shared then shows Create a Space or Join with Code again, without tabs
+- **Invite someone** — Share invite link (see above)
+- **Calendar in your phone** — the calendar as a subscription for Google, Apple or Outlook Calendar: one secret link per user (`/api/calendar/<token>`, an `.ics` of the space's events from 3 months ago on, which calendar apps check every few hours; `webcal:` for Add to my calendar), Copy link, and Make a new link (which asks first: the old one stops working)
+- **Recent activity** — what the members did lately (joined, added or changed an event, made a list, added or ticked off a task), newest first, kept 60 days (`lib/activity.ts`)
+- **Leave this group**: a button after the cards, with Undo (or, as the last member, asking first); Shared then shows Your shared calendar again, without tabs
 - The space loads again each time the tab is shown, so what other members changed meanwhile shows
-- After a change to the space, a server action (`app/shared/actions.ts`) makes the pages the browser kept for Back render again, so Back to `/shared` shows the space as it is now; `/shared` also checks its space once shown
+- `/shared` checks its space once shown, so Back to a page the browser kept from before a change to the space (created, joined, left) shows the space as it is now. (No server action refreshes it: one that revalidates makes Next.js push its own history entry, which broke closing a panel opened meanwhile.)
 
 #### UI/UX Details
-- **First-time flow:** Click Shared → "Create a Space" or "Join with Code" screen
-- **Returning user:** Click Shared → auto-loads their space's Calendar (default view)
-- **Navigation:** Calendar | Tasks | Settings in the middle of the top bar (no tabs before there is a space)
+- **First-time flow:** Click Shared → "Your shared calendar": Create space or Join space; after creating it, an **Invite your partner** card over the calendar (Share invite link, or Not now, remembered on the device), until someone joins
+- **Returning user:** Click Shared → their space's view (Calendar unless the URL says otherwise)
+- **Navigation:** Calendar | Tasks | Settings (no tabs before there is a space)
 - **Color palette:** each member's color marks their events and tasks
-- **Empty states:** friendly messages when there are no events or tasks yet
+- **Empty states:** friendly messages when there are no lists or tasks yet; an empty calendar is just the calendar
 
 ---
 
 ### App 2 — Shows Tracker (`/shows`)
 
-Minimalistic personal tracker for TV shows and movies.
+Minimalistic tracker for TV shows and movies, for anyone, with their friends.
 
 #### TMDB Integration
-- All media data (title, poster, overview, runtime, seasons, episodes, rating) comes from the TMDB API, through `lib/tmdb.ts` (server-only): `TMDB_READ_TOKEN` as a Bearer token, an 8 s timeout, and every field of TMDB's answers checked. The browser only calls `/api/shows` and loads posters from `image.tmdb.org`, in TMDB's sizes from `w92` to `w780`
-- Top rated and popular lists stay in memory for 10 minutes, searches for 5
-- Opening a title or adding it to a library upserts it into the `shows` table: title, year, poster path, overview, movie runtime, typical episode runtime (the latest episode's when TMDB has none), episode count of each regular season (no specials) and TMDB's rating
-- **Data freshness:** a copy older than **7 days** is fetched again the next time it is opened or added (kept as it is if TMDB can't be reached), and loading the library refreshes its titles older than 7 days after answering, one at a time, stopping at the first failure
-- TMDB's terms: their logo and notice at the bottom of Discover and of the search panel, and caching for at most 6 months (met by the refresh)
-- The `/api/shows` API allows 120 requests a minute per user
+- All media data (title, poster, overview, genres, runtime, seasons, episodes, rating) comes from the TMDB API, through `lib/tmdb.ts` (server-only): `TMDB_READ_TOKEN` as a Bearer token, an 8 s timeout, and every field of TMDB's answers checked. The browser only calls `/api/shows` and loads posters from `image.tmdb.org`, in TMDB's sizes from `w92` to `w780`
+- Top rated and popular lists stay in memory for 10 minutes, searches for 5, a title's recommendations for 6 hours
+- Opening a title or adding it to a library upserts it into the `shows` table: title, year, poster path, overview, genres, movie runtime, typical episode runtime (the latest episode's when TMDB has none), episode count of each regular season (no specials) and TMDB's rating
+- **Data freshness:** a copy older than **7 days** (or without genres, from before them) is fetched again the next time it is opened or added (kept as it is if TMDB can't be reached), and loading the library refreshes its titles older than 7 days after answering, one at a time, stopping at the first failure
+- TMDB's terms: their logo (linking to TMDB) and "This product uses the TMDB API but is not endorsed or certified by TMDB." at the bottom of Discover and of a title's panel (`components/shows/TmdbAttribution`), and caching for at most 6 months (met by the refresh)
+- The `/api/shows` API allows 240 requests a minute per user
 
-#### SPA Views (tabs in the middle of the top bar)
+#### SPA Views (tabs: in the middle of the top bar, or along the bottom on a phone)
 
-**1. Watchlist** (the first tab; it was called Home)
-- **Toggle at top:** TV Shows | Movies (filters all sections below; the same switch as Discover's)
+**1. Library** (`/shows`, the first tab; it was called Watchlist, and Home before)
+- **Toggle at top:** TV Shows | Movies (filters all sections below; the same switch as Discover's), the last one chosen remembered on the device
 - **Sections (vertical scroll):**
-  - **Planned** — want to watch list
   - **Watching** — currently watching, shows progress (e.g. S2 E5, or Not started)
+  - **Planned** — want to watch list
   - **Completed** — finished
   - Each lists the titles changed most recently first, whole rows until Show all (three on a phone, two wider), with a count
 - Each card: poster, title, year, a heart for a favourite, and Watching or Completed on the poster (as on every poster of a title in the library: Discover, search, the guide, Profile); Planned only where statuses are mixed (Favourites), not in its own section
-- Click card → detail panel, laid out as the title's page: on a wide screen, the poster with the title, type, year, TMDB's rating, and seasons and episodes (or a movie's runtime) under it, in a column that stays in view (where the panel is tall enough), and under them, for a title in the library:
+- Click card → detail panel (its URL: `?p=title:tv:1396`), laid out as the title's page: on a wide screen, the poster with the title, type, year, TMDB's rating, its **genres** (`Drama · Comedy`), and seasons and episodes (or a movie's runtime) under it, in a column that stays in view (where the panel is tall enough), and under them, for a title in the library:
   - Status: Planned | Watching | Completed, one over the other
   - Favourite
 - Beside it, Synopsis (the overview) first, then:
+  - **Friends** who have it, each with their picture, name and how far they are (Watching, Watched it, or Wants to watch it for a favourite they planned)
   - Progress of a TV show being watched: a season and an episode picker, and Next episode (on to the next season after a season's last episode); reaching the last episode offers Mark as completed (or Not yet). Progress is the last episode watched and is kept when the status changes
-  - Remove from library: asks first, then offers to add it again
+  - The seasons
+  - **More like this**: TMDB's recommendations for people who liked it, a row of posters that open their own panel
+  - **Recommend to a friend**: the user's friends, Send each; it shows in their Discover until they add it
+  - Remove from library: at once, with Undo, which adds it back as it was (status, progress, favourite)
+  - TMDB's logo and notice
 - **Quick actions** (the status, and the season and episode of a TV show being watched): the ⋯ button on a card where there is a mouse (shown on hover or focus), a right click, or a half-second long press on a touch screen; a small menu beside the card on desktop, a sheet from the bottom on a phone
-- One library state (`components/shows/library.tsx`) serves the Watchlist, Discover, search and the panels; it loads with the app and again whenever the page becomes visible; a 404 or 409 (e.g. a title removed in another tab) reloads it
+- One library state (`components/shows/library.tsx`, on TanStack Query) serves Library, Discover, search and the panels; it loads with the app and again whenever the page becomes visible, is kept in the browser for offline use, and a 404 or 409 (e.g. a title removed in another tab) reloads it
 
-**2. Discover (TV Shows / Movies)**
-- A TV Shows | Movies switch over identical layouts
-- Each section is one row of up to 20 cards that scrolls sideways (a swipe on a phone; a drag or ‹ › with a mouse). Sections from TMDB leave out titles with fewer than 50 (TV) or 100 (movies) votes, show each title only once (Trending, Popular, Coming Soon, the genres; Top Rated and Added by Friends may repeat), and read up to 3 pages to have 20
+**2. Discover** (`/shows/discover`, TV Shows / Movies)
+- A TV Shows | Movies switch over identical layouts, the last one chosen remembered on the device
+- Each section is one row of up to 20 cards that scrolls sideways (a swipe on a phone; a drag or ‹ › with a mouse), and loads once it comes near the screen, so opening Discover on a phone loads what is seen first. Sections from TMDB leave out titles with fewer than 50 (TV) or 100 (movies) votes, show each title only once (Trending, Popular, Coming Soon, the genres; Top Rated and Added by Friends may repeat), and read up to 3 pages to have 20
 - **Sections:**
+  - **Recommended by Friends** — what friends recommended, each card saying who from (`From Ana`), until it's in the library; only when there is something
   - **For You** — only with titles of that type in the library: TMDB's recommendations for up to 5 of them (favourites, then completed and watching ones first), merged, without what's already in the library
   - **Trending This Week** — TMDB's trending of the week
   - **Popular** — TMDB's popular
@@ -253,26 +276,27 @@ Minimalistic personal tracker for TV shows and movies.
   - **Added by Friends** — titles in accepted friends' libraries (any status), the ones most friends have first
 - Each card: poster, title, year, TMDB's average rating; Watching or Completed on the poster once it is in the library
 - Grey skeleton posters while loading; a failed section shows a message with Retry
-- Click card → detail panel (a bottom sheet on a phone) with "Add to Library" as Planned, Watching or Completed
-- Search field and the TV Shows | Movies switch at the top of Discover, centered
+- Click card → detail panel (the whole screen on a phone) with "Add to Library" as Planned, Watching or Completed
+- Search field and the TV Shows | Movies switch at the top of Discover, centered; TMDB's logo and notice at the bottom
 
-**3. Profile** — one column in the middle of the page; at the top, your profile picture (or initial) over your username, nothing else
+**3. Profile** (`/shows/profile`) — one column in the middle of the page; at the top, your profile picture (or initial) over your name and @username, nothing else
 - **Friend requests** received, with Accept and Decline (only when there are any)
 - **Stats** — hours watched (each TV show's episodes watched × its episode runtime, plus each completed movie's runtime, to one decimal), and the TV shows and movies completed: the numbers alone, without a breakdown or a note on how they are counted. A show being watched counts up to its current episode, a completed one all its episodes, a planned one none; a movie counts once completed. The browser and the server use the same function (`libraryStats` in `lib/show-types.ts`), so your own stats follow every change at once
-- **Favourite Shows/Movies** — the titles marked Favourite, TV shows and movies together, latest change first, whole rows until Show all, with the Watchlist's quick actions
+- **Favourite Shows/Movies** — the titles marked Favourite, TV shows and movies together, latest change first, whole rows until Show all, with the Library's quick actions
+- **Friends' activity** — what friends started watching, planned, finished, made a favourite or recommended, newest first (60 days); a title opens its panel
 - **Friends List:**
-  - **Add friend** — by username, in any case, with or without an `@`; from 2 characters it suggests up to 6 usernames that start with what's typed (a combobox, with how you're connected) and says whether an account has exactly that one; limited to 20 requests per 15 minutes and 60 searches a minute per user
-  - Your friends, and the requests you sent (Pending, with Cancel); removing a friend asks first
-  - Click friend → their profile (the whole screen on a phone), read-only: stats, Watching, Completed and Favourites. Planned titles that aren't favourites are left out, of the API answer too. A card opens the title's panel for your own library, so you can add it
+  - **Add friend** — by username or name, in any case, with or without an `@`; from 2 characters it suggests up to 6 people (a combobox, with how you're connected) and says whether an account has exactly that username; limited to 20 requests per 15 minutes and 60 searches a minute per user
+  - Your friends, and the requests you sent (Pending, with Cancel); removing a friend is at once, with Undo
+  - Click friend → their profile (the whole screen on a phone; its URL `?p=friend:<id>`), read-only: stats, Watching, Completed, Favourites, and **You both want to watch** (what you've both planned). Planned titles that aren't favourites are left out, of the API answer too. A card opens the title's panel for your own library, so you can add it
   - Only accepted friends see each other's libraries; anyone else gets 404
 - Friendships: one row per pair, pending until accepted; declining, cancelling and removing delete it, so either can ask again; asking someone who already asked you accepts their request (one statement, so two people asking each other at once become friends)
 
 #### UI/UX Details
-- **First-time flow:** Click Shows → Watchlist, a guide in three numbered steps: TV shows, then movies (what's trending and popular, or a search of that kind; a tap on a poster opens Planned, Watching and Completed over it, the title's status again takes it out), then friends (Add a friend), and a last screen with what was added by status and a fan of their posters (Go to my library). Skip ends it at any step; then an empty library shows "Start by discovering shows!", with Go to Discover, Search and Set up step by step
+- **First-time flow:** Click Shows → Library, a guide in three numbered steps: TV shows, then movies (what's trending and popular, or a search of that kind; a tap on a poster opens Planned, Watching and Completed over it, the title's status again takes it out), then friends (Add a friend), and a last screen with what was added by status and a fan of their posters (Go to my library). Skip ends it at any step; then an empty library shows "Start by discovering shows!", with Go to Discover, Search and Set up step by step
 - **Adding from a poster:** a + at the bottom right of every Discover and search poster opens the same Planned, Watching and Completed over it (each its icon and name centered in a pill); Watching a TV show then asks, over the poster, the last episode watched (Season, Episode, Save; leaving it keeps Not started). Once the title is in the library the + is a tick, which opens the quick actions
 - **Poster-heavy design** — visual grid of posters, Netflix/Letterboxd-inspired
 - **Quick actions:** ⋯ button, right click or long press on a card to change the status (and a TV show's episode). Users don't rate titles: the only rating is TMDB's
-- **Search:** the search field at the top of Discover (and Search in an empty Watchlist) opens the search panel (the whole screen on a phone): TV shows and movies together, 300 ms after typing stops. No search button in the top bar
+- **Search:** the search field at the top of Discover (and Search in an empty Library) opens the search panel (the whole screen on a phone): TV shows and movies together, 300 ms after typing stops. No search button in the top bar
 - **Loading states:** Skeleton loaders for TMDB API calls
 - **Empty states:** friendly messages per section, with a link to Discover
 
@@ -280,34 +304,40 @@ Minimalistic personal tracker for TV shows and movies.
 
 ## Database Schema
 
-As in `db/migrations/` (`001_initial.sql` to `006_library_updated_at.sql`). Ids are `uuid` (`gen_random_uuid()`); usernames and emails are `citext`, so case doesn't matter.
+As in `db/migrations/` (`001_initial.sql` to `020_genres_recommendations.sql`). Ids are `uuid` (`gen_random_uuid()`); usernames and emails are `citext`, so case doesn't matter.
 
 ### Single shared `users` table (across all apps)
 | Table | Key Fields |
 |---|---|
-| `users` | id, username (unique, `^[a-z0-9_]{3,20}$`), email (unique), password_hash, space_id (nullable), space_color (`#rrggbb`, unique within a space), space_joined_at, theme_preference (one of `lib/themes.ts`'s ids, default `minimal-neutrals`), password_changed_at, avatar_updated_at (when the profile picture was last set, nullable), name (1-50 characters, nullable), created_at |
+| `users` | id, username (unique, `^[a-z0-9_]{3,20}$`), email (unique), email_verified, name (1-50 characters, nullable), image (Better Auth's, unused), space_id (nullable), space_color (`#rrggbb`, unique within a space), space_joined_at, theme_preference (any text: the app shows Light for an id it doesn't know; default `minimal-neutrals`), avatar_updated_at (when the profile picture was last set, nullable), created_at, updated_at; password_hash and password_changed_at (from before Better Auth, kept in step with `accounts` by a trigger for the previous release, to be dropped) |
+
+### Auth tables (Better Auth, `016_better_auth.sql`)
+| Table | Key Fields |
+|---|---|
+| `accounts` | id, user_id, account_id, provider_id (`credential`), password (bcrypt), the OAuth columns (unused), created_at, updated_at |
+| `sessions` | id, user_id, token (unique), expires_at, ip_address, user_agent, created_at, updated_at |
+| `verifications` | id, identifier (the SHA-256 of a reset token), value (the user's id), expires_at, created_at, updated_at |
+| `password_resets` | from before Better Auth, unread; to be dropped |
 
 ### Shared App tables
 | Table | Key Fields |
 |---|---|
 | `spaces` | id, created_by (the owner), created_at (no name since `012`) |
-| `invites` | id, space_id, code (unique), expires_at, used |
-| `events` | id, space_id, title, notes, starts_at, ends_at (UTC `timestamptz`, end ≥ start), is_group |
-| `event_assignees` | event_id, user_id |
+| `invites` | id, space_id, code (unique), expires_at, used, created_by (who made it, for its link's page) |
+| `events` | id, space_id, title, notes (unread since `v1.2`), starts_at, ends_at (UTC `timestamptz`, end ≥ start), is_group, all_day |
+| `event_assignees` | event_id, user_id (one row per member it's for) |
 | `task_lists` | id, space_id, name, position |
-| `tasks` | id, list_id, title, notes, due_date (`date`), assignee_id (nullable), is_complete, position |
+| `tasks` | id, list_id, title, notes, due_date (`date`), assignee_id (nullable), is_complete, repeat (`daily`, `weekly`, `monthly`, `yearly` or null), position |
+| `calendar_feeds` | user_id (one per user), token (unique, the secret of their subscription link), created_at |
+| `activity` | id, user_id (who did it), space_id (Shared) or show_id (Shows), kind, data (`jsonb`), created_at; kept 60 days |
 
 ### Shows Tracker tables
 | Table | Key Fields |
 |---|---|
-| `shows` | id, tmdb_id, type (tv/movie; unique together with tmdb_id), title, poster_url (TMDB's path, e.g. `/abc.jpg`), year, overview, runtime (movie), episode_runtime (TV), episodes_per_season (`integer[]`), vote_average (0–10), last_updated |
+| `shows` | id, tmdb_id, type (tv/movie; unique together with tmdb_id), title, poster_url (TMDB's path, e.g. `/abc.jpg`), year, overview, genres (`text[]`), runtime (movie), episode_runtime (TV), episodes_per_season (`integer[]`), vote_average (0–10), last_updated |
 | `user_shows` | id, user_id, show_id, status (watching/planned/completed), rating (1–5; no longer read or written since users stopped rating titles, kept so an older image still works), current_season, current_episode, is_favourite, updated_at |
 | `friendships` | id, user_id (sent the request), friend_id, status (pending/accepted), created_at; one row per pair |
-
-### Auth tables
-| Table | Key Fields |
-|---|---|
-| `password_resets` | id, user_id, token_hash (SHA-256 of the emailed token), expires_at, used |
+| `recommendations` | id, from_user, to_user, show_id, created_at; one per pair and title |
 
 ### Migrations
 | File | What it does |
@@ -324,8 +354,14 @@ As in `db/migrations/` (`001_initial.sql` to `006_library_updated_at.sql`). Ids 
 | `012_unnamed_spaces_profile_pictures.sql` | `spaces.name` dropped; `users.avatar_updated_at` |
 | `013_names.sql` | `users.first_name` and `last_name`; the `unaccent` extension, for the friend search by name |
 | `014_one_name.sql` | `users.name` in place of `first_name` and `last_name` (joined, cut to 50 characters) |
+| `015_two_themes.sql` | two themes, Light (`minimal-neutrals`) and Dark (`graphite`), the default Light; accounts on the others moved to the closest; no more CHECK on the theme |
+| `016_better_auth.sql` | Better Auth: `users.email_verified` (true for every account from before), `image`, `updated_at`; `accounts` (every password, as a credential account), `sessions`, `verifications`; `users.password_hash` nullable, kept in step by a trigger |
+| `017_calendar_feeds_invite_links.sql` | `calendar_feeds`; `invites.created_by` |
+| `018_repeating_tasks.sql` | `tasks.repeat` |
+| `019_activity.sql` | `activity` |
+| `020_genres_recommendations.sql` | `shows.genres`; `recommendations` |
 
-`schema_migrations` records the applied files. Never edit a migration that has been applied; add the next `NNN_name.sql`.
+`schema_migrations` records the applied files. Never edit a migration that has been applied; add the next `NNN_name.sql`. From `015` on, migrations **expand and contract**: one only adds what the release that comes with it needs, and dropping or renaming a column or table, changing a column's type or making one NOT NULL waits for a later release, once no deployed image uses it, with a `-- contract: <what>, unread since vX.Y.Z` comment. `npm run check:migrations` (in CI) refuses a migration that doesn't. So the previous release keeps working while the new one's migrations run, and a rollback runs on the current schema. Waiting for the next release: dropping `events.notes`, `users.password_hash` and `password_changed_at` (with the trigger) and `password_resets` (unread since `v1.2.0`), and `user_shows.rating`
 
 ---
 
@@ -351,9 +387,14 @@ As in `db/migrations/` (`001_initial.sql` to `006_library_updated_at.sql`). Ids 
 ```
 Developer pushes to GitHub (main branch)
   → GitHub Actions, Deploy workflow (one run at a time, never cancelled midway):
-    1. check: npm ci, lint, typecheck and build in app/ (ci.yml, which also runs on every pull request)
-    2. image: build the Docker image, push it to Docker Hub (private repo) as
+    1. check (ci.yml, which also runs on every pull request): in app/, npm ci, Prettier,
+       lint, typecheck, the migration rule (check:migrations), the unit tests and the
+       build; and the Playwright tests against a Postgres service: every one on a pull
+       request, the smoke set (views.spec.ts and auth.spec.ts) before a deploy
+    2. image: build the Docker image, scan it (Grype: a fixable critical vulnerability
+       stops the deploy), push it to Docker Hub (private repo) as
        diogofrmota/diogomota-com:<short SHA>, :vX.Y.Z and :latest; tag the commit vX.Y.Z
+       and publish a GitHub Release with the commits since the previous version
     3. deploy: SSH into the VPS as deploy, copy docker-compose.prod.yml, nginx/, infra/
        and db/migrations/ to /opt/diogomota, then run infra/deploy.sh <short SHA>:
        pull the image, apply pending migrations, pin IMAGE_TAG in .env,
@@ -365,7 +406,7 @@ Developer pushes to GitHub (main branch)
 
 - **Trigger:** push to `main` branch only
 - **Versions:** `app/package.json` holds `X.Y.0`, bumped by hand (one minor per finished goal, `1.0.0` at launch); the image job sets the patch to one more than the newest `vX.Y.*` git tag, and a version other than `X.Y.0` fails it. The tag is only added once the image is on Docker Hub, so a failed build doesn't use up a number
-- **Rollback:** GitHub → Actions → Deploy → Run workflow on `main` with `image_tag` set to an older short SHA: it skips check and image and deploys that image with the current `main`'s stack files. Migrations only go forward, so the older image runs on the current schema. It holds until the next push or a run with an empty `image_tag`. Without GitHub: `bash /opt/diogomota/infra/deploy.sh <tag>` on the VPS
+- **Rollback:** GitHub → Actions → Deploy → Run workflow on `main` with `image_tag` set to an older short SHA: it skips check and image and deploys that image with the current `main`'s stack files. Migrations only go forward, so the older image runs on the current schema; since `015` they expand and contract (Database Schema, Migrations), so the previous image works on it. It holds until the next push or a run with an empty `image_tag`. Without GitHub: `bash /opt/diogomota/infra/deploy.sh <tag>` on the VPS
 - **Repository secrets:** `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` (Read & Write), `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (the deploy-only key `C:\Users\diogo\.ssh\diogomota_deploy`, comment `github-actions`, in `/home/deploy/.ssh/authorized_keys`), `VPS_KNOWN_HOSTS` (`ssh-keyscan 162.19.252.190`)
 - The deploy never touches `.env` (apart from `IMAGE_TAG`), `backups/` or `logs/` on the VPS; a changed `infra/crontab` is copied but not installed
 
@@ -375,11 +416,13 @@ Developer pushes to GitHub (main branch)
 [docs/operations.md](docs/operations.md) is the runbook: health and logs, restarts, rolling back, backups and restoring (dry run, undo, onto a new VPS), the offsite backup, rotating every secret, certificates, and a monthly check (calendar reminder set).
 
 ### Known limits and decisions
-- Rate limits are kept in the app's memory, so a restart or deploy resets them
+- The app's rate limits are kept in its memory, so a restart or deploy resets them; nginx's (login, sign-up, resets, joining, calendar subscriptions) hold
 - The CSP only covers framing, `base-uri` and plugins: a script policy for Next.js needs per-request nonces, which belongs in the app
-- Sign-up tells whether a username or email is taken (no email verification)
-- A new `AUTH_SECRET` logs everyone out: next-auth only reads `AUTH_SECRET`, so there is no overlap period
-- Migrations only go forward; a rollback runs the older image on the current schema
+- Sign-up tells whether a username or email is taken (the email is confirmed after signing up, not before)
+- A new `AUTH_SECRET` logs everyone out (it signs the session cookies): there is no overlap period. Moving to Better Auth (`v1.2.0`) logged everyone out once
+- Migrations only go forward and expand and contract; a rollback runs the older image on the current schema
+- The service worker only runs in production builds (with `next dev` its cache would hold files the dev server rebuilds), so offline use is only tried on the site itself
+- A calendar subscription link is a secret: whoever has it reads the calendar (Make a new link stops it)
 - Until the offsite backup is set up, the dumps are only on the VPS's own disk
 
 ---
@@ -389,12 +432,16 @@ Developer pushes to GitHub (main branch)
 diogomota.com/                            # repo root (this folder)
 ├── plan.md                               # this file: spec, decisions, build log
 ├── README.md                             # setup, commands, features and APIs, production
+├── CHANGELOG.md                          # what each version changed (each deploy's GitHub Release lists its commits)
+├── report.md                             # the review of 2026-11-13 that v1.2.0 came from
 ├── docs/
-│   └── operations.md                     # runbook for the VPS
+│   ├── operations.md                     # runbook for the VPS
+│   └── decisions/                        # one short record per decision (why, and what it costs)
 ├── .github/
+│   ├── dependabot.yml                    # weekly updates: npm, actions, Docker images
 │   └── workflows/
-│       ├── ci.yml                        # lint, typecheck, build (pull requests, and before every deploy)
-│       └── deploy.yml                    # push to main: check → image → deploy; Run workflow rolls back
+│       ├── ci.yml                        # format, lint, typecheck, migrations, unit tests, build; e2e (pull requests, and before every deploy)
+│       └── deploy.yml                    # push to main: check → image (scan, release) → deploy; Run workflow rolls back
 ├── docker-compose.yml                    # local dev (PostgreSQL on 127.0.0.1:5432)
 ├── docker-compose.prod.yml               # VPS (app, PostgreSQL, Nginx, Certbot)
 ├── .env.example                          # template for the local .env and app/.env.local
@@ -409,50 +456,62 @@ diogomota.com/                            # repo root (this folder)
 │   ├── offsite-backup.sh                 # optional offsite copy (rclone)
 │   └── crontab                           # deploy's crontab
 ├── nginx/
-│   ├── nginx.conf                        # HTTPS, reverse proxy, security headers
+│   ├── nginx.conf                        # HTTPS, reverse proxy, security headers, rate limits
 │   ├── bootstrap.conf                    # HTTP only, until the first certificate exists
 │   └── start.sh                          # picks one of the two on every start
 ├── db/
 │   └── migrations/                       # 001_initial.sql = full schema, later changes as 002_..., 003_...
 └── app/                                  # Next.js
-    ├── Dockerfile                        # standalone server + migration runner
-    ├── auth.ts                           # Auth.js config
+    ├── Dockerfile                        # standalone server + migration runner (Node 24)
+    ├── auth.ts                           # Better Auth config, getSession, requireUser
     ├── proxy.ts                          # route guard (Next 16's middleware)
     ├── playwright.config.ts
+    ├── vitest.config.mts                 # the unit tests (test/)
+    ├── .prettierrc.json                  # Prettier, 120 columns (npm run format)
     ├── scripts/migrate.mjs               # applies db/migrations
+    ├── scripts/check-migrations.mjs      # npm run check:migrations: expand and contract
     ├── scripts/run-e2e.mjs               # npm run test:e2e: stops what earlier runs left, runs Playwright, cleans up after it
     ├── app/
     │   ├── page.tsx                      # landing (/), with opengraph-image.tsx
     │   ├── apps/                         # app hub (/apps)
     │   ├── login/ signup/ forgot-password/ reset-password/ account/
-    │   ├── shared/page.tsx               # Shared SPA (protected), actions.ts (spaceChanged)
-    │   ├── shows/page.tsx                # Shows Tracker SPA (protected)
+    │   ├── privacy/                      # what is kept, and how to take it or delete it
+    │   ├── join/[code]/                  # an invite link's page, and its Join (actions.ts)
+    │   ├── shared/[[...view]]/page.tsx   # Shared SPA (protected), its views in the URL
+    │   ├── shows/[[...view]]/page.tsx    # Shows Tracker SPA (protected), its views in the URL
     │   ├── manifest.ts icon.svg apple-icon.png favicon.ico error.tsx not-found.tsx
     │   ├── fonts/                        # IBM Plex Mono
     │   ├── test/                         # test-only pages (404 in production)
     │   └── api/
-    │       ├── auth/[...nextauth]/       # Auth.js endpoints
+    │       ├── auth/[...all]/            # Better Auth's endpoints (email links, the session)
+    │       ├── account/                  # avatar, username, export (Download my data)
+    │       ├── calendar/[token]/         # calendar subscriptions (.ics, no session: the token)
     │       ├── health/                   # /api/health
-    │       ├── shared/                   # spaces/, events/, tasks/
-    │       ├── shows/                    # discover/, titles/, library/, friends/
+    │       ├── shared/                   # spaces/, events/, tasks/, activity/, calendar-feed/: one route file per endpoint
+    │       ├── shows/                    # discover/, titles/, library/, friends/, recommendations/, activity/
     │       └── test/                     # outbox/, tmdb/ (test hooks only)
     ├── components/
     │   ├── site/                         # SitePage, AppList, LoginPrompt, Form, MessagePage
     │   ├── auth/                         # AuthPage, LoginForm, SignUpForm, ForgotPasswordForm, ResetPasswordForm
     │   ├── account/                      # AccountMenu, AccountSettings
-    │   ├── common/                       # AppShell (and AppFrame), AppHeader, HeaderTabs, Dialog,
-    │   │                                 # Spinner, icons, ui.module.css (the apps' common parts)
-    │   ├── shared/                       # SharedApp, SpaceWelcome, SpaceSettings, Calendar, EventDialog,
-    │   │                                 # Tasks, TaskItem, TaskDialogs, Sortable, useTasks
-    │   └── shows/                        # ShowsApp, Watchlist, Discover, Profile, Stats, TitleGrid, LibraryGrid,
-    │                                     # TitleDialog, SearchDialog, QuickActions, FriendDialog, EpisodePicker, library
-    ├── lib/                              # db, tmdb (and tmdb-mock), email, password, password-reset,
-    │                                     # rate-limit, users, spaces, events, calendar, tasks, shows,
-    │                                     # friends, show-types, api-request, apps, test-hooks, ...
-    ├── hooks/                            # useAppView (views, panels, Back)
+    │   ├── common/                       # AppShell (and AppFrame), AppHeader, HeaderTabs (and BottomTabs), Dialog,
+    │   │                                 # ui.tsx (Button, Alert, Notice, Confirm), Undo, QueryProvider,
+    │   │                                 # OfflineSupport, ActivityFeed, Spinner, icons, ui.module.css
+    │   ├── shared/                       # SharedApp, SpaceWelcome, SpaceSettings, InviteLink, Calendar, EventDialog,
+    │   │                                 # Tasks, TaskItem, TaskDialogs, Sortable, useTasks, shared-data
+    │   └── shows/                        # ShowsApp, Watchlist (Library), Discover, Profile, Stats, TitleGrid, LibraryGrid,
+    │                                     # TitleDialog, SearchDialog, QuickActions, FriendDialog, EpisodePicker,
+    │                                     # TmdbAttribution, library, shows-data
+    ├── lib/                              # db, http (apiRoute), schemas (zod), accounts, auth-emails, activity,
+    │                                     # calendar-feeds, tmdb (and tmdb-mock), email, password, rate-limit,
+    │                                     # users, spaces, events, calendar, tasks, shows, friends, show-types,
+    │                                     # task-types, app-views, api-request, apps, test-hooks, ...
+    ├── hooks/                            # useAppView (views and panels in the URL, Back)
+    ├── test/                             # Vitest unit tests: calendar, tasks and shows, schemas and URLs
     ├── e2e/                              # Playwright specs, checks.ts, fixtures, teardown
     └── public/
-        ├── logos/                        # shared.svg, shows.svg
+        ├── sw.js                         # the service worker (offline)
+        ├── logos/                        # shared.svg, shows.svg, tmdb.svg (TMDB's own)
         └── icons/                        # home screen icons (192, 512, maskable 512)
 
 Not in the repo: .env and app/.env.local (gitignored), and backups/ and logs/ in /opt/diogomota on the VPS.
@@ -515,10 +574,10 @@ Everything done, in the order it happened (moved here from the former `roadmap.m
 - Git repo for this folder, `main` pushed to GitHub (stray home-folder repo removed)
 - Docker Hub repo `diogofrmota/diogomota-com`
 - Docker Hub tokens `github-actions` (read & write) and `vps-pull` (read-only), in the local `.env`
-- TMDB read token, local `AUTH_SECRET` and local Postgres password, in the local `.env`
+- TMDB read token and local `AUTH_SECRET`, in the local `.env`
 - OVH VPS `vps-51a51d69.vps.ovh.net`: IPv4 `162.19.252.190`, IPv6 `2001:41d0:701:1100::ec4e`, Ubuntu 24.04.4 LTS
 - SSH key `C:\Users\diogo\.ssh\id_ed25519` installed for `ubuntu` (key login, passwordless `sudo`)
-- `ubuntu` password changed, stored in the local `.env`
+- `ubuntu` password changed
 - Porkbun parking records (`ALIAS` and wildcard `CNAME` to `pixie.porkbun.com`) deleted, Porkbun nameservers kept
 - Porkbun `A` and `AAAA` records for `@` and `www` → `162.19.252.190` and `2001:41d0:701:1100::ec4e` (TTL 600)
 - Resend account and domain `diogomota.com` (region EU)
@@ -595,7 +654,11 @@ Everything done, in the order it happened (moved here from the former `roadmap.m
 - Account popups, typed dates, a slimmer month (2026-11-12): **`/account`**: the profile picture in the middle (a pencil on it), then a row each for Name, Username, Email and Theme with what they are now, then Update password and Log out, side by side; each opens a popup with its form (the profile picture's has the drop zone, and Adjust your picture over it), which closes once saved and says so under the rows. No dropdowns. **Email** can be changed (`changeEmail`, `updateEmail`), with the current password, to one no other account has. **Calendar**: the legend names each member by their name; with a mouse, a month's events are 22px, so two fit in a day under its number, and the month scrolls as a whole when its weeks have less room than that. The form is Create a new event, with Event title, no notes (an event's notes are kept), dates typed as `dd/mm/yyyy` and times as `__:__` (`MaskedField` in `EventDialog`), and Who?: each member's profile picture and All (`components/shared/MemberPicker`), which a task's dialog also has for its assignee. **Settings**: Leave this group, a button that asks first, in place of the Leave space card. **Shows**: a title's panel has no "In your library" on screen; its status (one over the other) and Favourite are under the poster and the facts, Synopsis heads the overview, and a watched season is on the faded green of a completed title. Profile's friend search says Search friends…, and the Watchlist's TV Shows | Movies switch is in the middle, as Discover's.
 - Phones: whole-screen popups, a tighter month (2026-11-12): **Shared**: the event form, an event, the task's dialog and Edit lists are the whole screen on a phone (they were sheets from the bottom), as is a title's panel in Shows (quick actions stay a sheet); on a touch screen a popup no longer starts with its text field focused (`typesFirst` in `components/common/Dialog`), so the keyboard doesn't cover it. A day of the month shows two events then "+1 more" (and so on), small, which opens the day; on a phone its number and events are 22px, so two fit (`data-compact-targets` exempts them from `e2e/checks.ts`'s 44px). The event form's button is Save. A task's due date is typed as `dd/mm/yyyy` (`components/shared/MaskedField`, out of `EventDialog`), not the browser's date field. **Shows**: on a phone, a friend's row has the name and @username on one line and Check profile and the bin under it. **`/apps`**: "Shared calendar for couples" and "Track TV Shows and Movies".
 
+- The review, and v1.2.0 (2026-11-13): `report.md` went through the site and both apps; what was picked from it, version `1.2.0` (`app/package.json`). **Accounts**: Better Auth (`better-auth` 1.7.14, its username plugin) in place of Auth.js (`app/auth.ts`, `016_better_auth.sql`): the site's `users`, with `accounts` (every bcrypt password moved there, so all still work; a trigger keeps `users.password_hash` in step for a rollback), `sessions` (database sessions, read on every request) and `verifications` (reset tokens, hashed); the forms stay server actions, Better Auth's same endpoints over HTTP are off. Email confirmation: sign-up sends a link (accounts from before count as confirmed); until it's opened `/apps` and `/account` say so (Send the link again) and resets don't go to that email; changing an email only happens once the link sent to the new one is opened (the same answer for one another account has). A new reset link stops the earlier ones. `/account` has Your data: Download my data (`/api/account/export`, JSON) and Delete my account (password; leaves the space, deletes the picture's file); `/privacy` says what is kept. **Server**: every API route is a file of its own on `apiRoute` (`lib/http.ts`: session, same-site, rate limit, a zod schema per body from `lib/schemas.ts`, shared with the browser); one function per operation in `lib/events.ts`, `lib/tasks.ts`, `lib/spaces.ts`; row locks (`FOR SHARE` for the calendar and tasks, `FOR UPDATE` for membership) in place of the one advisory lock. **Browser**: TanStack Query 5 for every API call (`components/common/QueryProvider`, `useTasks`, `library.tsx`, `shows-data.ts`), changes as plain data (`shared-data.ts`), kept in the browser per user for offline use and sent once back online; a service worker (`public/sw.js`, production only) keeps the apps' pages. Views and panels in the URL (`/shows/discover?p=title:tv:1396`, `app/shared/[[...view]]`, `app/shows/[[...view]]`, `hooks/useAppView.ts`): reload keeps them, links open them, a panel from a link closes without leaving. On a phone, the tabs along the bottom of the screen (`BottomTabs`, an icon over each name), the app's name in the top bar. `components/common/ui.tsx` (`Button`, `Alert`, `Notice`, `Confirm`), with the apps' copies of their styles gone (the variants on `.button`, two classes); `Undo` for deleting tasks, events, lists, friends and titles and for leaving a space (only leaving as the last member asks first). One rule for Log in and Sign up: Log in first and plain, Sign up filled. Two themes: Light (`minimal-neutrals`) and Dark (`graphite`) (`015_two_themes.sql`, no more CHECK on the theme). **Shared**: for couples (the welcome and `/apps`' call to action say so). Calendar: the agenda (the default on a phone), three days for a week on a phone, a swipe to the next or previous period, a now line, events dragged (and their end) with the mouse, events for any number of members (`assigneeIds`), only the period shown loaded (`?from=&to=`), no notes (the column waits for a contract migration), no empty-calendar line. Settings: invite links (`/join/<code>`, the share sheet, any member invites; `017`), Calendar in your phone (a subscription link per user, `/api/calendar/<token>`), Recent activity (`019_activity.sql`). Invite your partner over the calendar of a space of one. Tasks: repeating tasks (`018_repeating_tasks.sql`, `nextDue`), live (every 5 s while open), offline. Invite expiry as `14 Nov 2026, 15:30`, Lisbon on the 24-hour clock. **Shows**: the Watchlist is Library; a title's panel has its genres (`020`), the friends who have it, More like this and Recommend to a friend (`recommendations`, Recommended by Friends in Discover); a friend's profile has You both want to watch; Profile has Friends' activity; Discover's sections load as they come near, and the TV Shows | Movies switch is remembered on the device; TMDB's logo and notice are back (`TmdbAttribution`, at the bottom of Discover and a title's panel). `/apps`: "Track TV shows and movies with your friends"; the installed app's splash screen in Light. **Tooling**: Node 24 (Dockerfile, CI, `@types/node`); Prettier (120 columns, the whole app formatted, `format:check` in CI); Vitest unit tests (`test/`: Lisbon time, iCalendar, the time grid's lanes, repeating tasks, stats, For You's ranking, the schemas, the URLs); CI runs Prettier, lint, typecheck, `check:migrations` (expand and contract, `scripts/check-migrations.mjs`), the unit tests, the build and the Playwright tests against a Postgres service (all on pull requests, the smoke set before a deploy); the image is scanned (Grype) before it's pushed, and each deploy publishes a GitHub Release; Dependabot weekly; nginx rate limits for the auth forms and the calendar subscriptions. New e2e specs: `shared-features.spec.ts`, `shows-features.spec.ts`. Docs: `docs/decisions/`, `CHANGELOG.md`. Bugs the tests found on the way: a server action that refreshed `/shared` after a change to the space (`spaceChanged`, now gone) made Next.js push a history entry, which kept a panel open after Save; a dragged event ended a minute early; Invite your partner, once dismissed, didn't match the page the server sent (React rebuilt the page); More like this made a title's panel as wide as its row; the Library's guide went by the library kept in the browser rather than the server's. Checked locally: Prettier, lint, typecheck, the 24 unit tests, `check:migrations`, the build, and every e2e spec (139 tests: a full run had 137 pass, and the two that failed pass after their fixes, with the rest of their specs). Not deployed: the DMARC change and the contract migration are in the [To-do](#to-do).
+
 ## To-do
 
 - [ ] Optional: the offsite backup (`docs/operations.md`, Offsite backup): pick a provider, `rclone config`, save the crypt passwords, set `OFFSITE_DEST` in `infra/offsite-backup.sh`, uncomment its line in `infra/crontab`, push, then `crontab infra/crontab` on the VPS
 - [ ] Every month: the check in `docs/operations.md` (Monthly check)
+- [ ] DMARC: after a few weeks of clean reports, the TXT `_dmarc` record at Porkbun from `v=DMARC1; p=none;` to `v=DMARC1; p=quarantine; adkim=r; aspf=r;` (docs/operations.md, Email)
+- [ ] The next release after `v1.2.x`: a contract migration dropping `events.notes`, `users.password_hash`, `users.password_changed_at` (with the `accounts_sync_password` trigger and function), `password_resets` and `user_shows.rating`, with its `-- contract:` comment

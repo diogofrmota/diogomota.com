@@ -1,0 +1,54 @@
+# Weekly pull requests that keep dependencies current: the app's npm packages, the
+# GitHub Actions (pinned by commit SHA, so they never move on their own) and the
+# Docker images of the Dockerfile and the compose files. Each ecosystem's updates
+# come grouped in one pull request (security fixes on their own, as they come),
+# and CI (.github/workflows/ci.yml) checks each one before it is merged.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /app
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      npm:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    # A version out for less than a week waits: fresh releases are where supply-chain attacks land.
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: docker
+    directory: /app
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      docker:
+        patterns: ["*"]
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      compose:
+        patterns: ["*"]
+    # Postgres major versions need a dump and restore (docs/operations.md); only minor updates here.
+    ignore:
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]

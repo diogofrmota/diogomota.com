@@ -64,28 +64,21 @@ test("landing has a title, a description and Open Graph tags", async ({ page }) 
   await page.goto("/");
   await expect(page).toHaveTitle("diogo mota");
 
-  const meta = (attribute: string, value: string) =>
-    page.locator(`head meta[${attribute}="${value}"]`);
+  const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
   await expect(meta("name", "description")).toHaveAttribute("content", /devops engineer @ Richemont/);
   await expect(meta("property", "og:title")).toHaveAttribute("content", "diogo mota");
   await expect(meta("property", "og:description")).toHaveAttribute("content", /Lisbon, PT/);
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com");
   await expect(meta("property", "og:type")).toHaveAttribute("content", "website");
   // The dev server puts its own origin here; production builds use https://diogomota.com.
-  await expect(meta("property", "og:image")).toHaveAttribute(
-    "content",
-    /^https?:\/\/[^/]+\/opengraph-image\b/,
-  );
+  await expect(meta("property", "og:image")).toHaveAttribute("content", /^https?:\/\/[^/]+\/opengraph-image\b/);
 
   const image = await page.request.get("/opengraph-image");
   expect(image.ok()).toBe(true);
   expect(image.headers()["content-type"]).toBe("image/png");
 });
 
-test("landing uses the self-hosted IBM Plex Mono, with no third-party requests", async ({
-  page,
-  baseURL,
-}) => {
+test("landing uses the self-hosted IBM Plex Mono, with no third-party requests", async ({ page, baseURL }) => {
   const requests: URL[] = [];
   page.on("request", (request) => requests.push(new URL(request.url())));
   await page.goto("/");

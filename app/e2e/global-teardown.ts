@@ -10,11 +10,20 @@ import { withDatabase } from "./db";
 export default async function globalTeardown() {
   // Their profile pictures first, while their ids are known: files in the
   // test server's AVATAR_DIR (lib/avatars.ts; data/avatars, as it has none set).
-  const { rows } = await withDatabase((client) => client.query<{ id: string }>(
-    String.raw`SELECT id FROM users WHERE username LIKE 'e2e\_%' AND avatar_updated_at IS NOT NULL`));
+  const { rows } = await withDatabase((client) =>
+    client.query<{ id: string }>(
+      String.raw`SELECT id FROM users WHERE username LIKE 'e2e\_%' AND avatar_updated_at IS NOT NULL`,
+    ),
+  );
   await Promise.all(rows.map(({ id }) => rm(path.join("data", "avatars", `${id}.webp`), { force: true })));
-  await withDatabase((client) => client.query(String.raw`DELETE FROM spaces WHERE created_by IN (SELECT id FROM users WHERE username LIKE 'e2e\_%')`));
+  await withDatabase((client) =>
+    client.query(
+      String.raw`DELETE FROM spaces WHERE created_by IN (SELECT id FROM users WHERE username LIKE 'e2e\_%')`,
+    ),
+  );
   await withDatabase((client) => client.query(String.raw`DELETE FROM users WHERE username LIKE 'e2e\_%'`));
-  await withDatabase((client) => client.query(`DELETE FROM shows WHERE tmdb_id > 2100000000
-    AND NOT EXISTS (SELECT 1 FROM user_shows WHERE show_id = shows.id)`));
+  await withDatabase((client) =>
+    client.query(`DELETE FROM shows WHERE tmdb_id > 2100000000
+    AND NOT EXISTS (SELECT 1 FROM user_shows WHERE show_id = shows.id)`),
+  );
 }

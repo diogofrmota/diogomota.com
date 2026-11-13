@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { test as base, expect, type BrowserContext, type Page } from "@playwright/test";
+import { test as base, expect, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
 
 export { expect };
 
@@ -7,10 +7,12 @@ export { expect };
 // when test hooks are on; the posters, which browsers load from TMDB's image
 // server, are drawn here instead. Call this for contexts made with newContext().
 export async function fakeTmdbImages(context: BrowserContext) {
-  await context.route("https://image.tmdb.org/**", (route) => route.fulfill({
-    contentType: "image/svg+xml",
-    body: '<svg xmlns="http://www.w3.org/2000/svg" width="342" height="513"><rect width="342" height="513" fill="#4b6584"/></svg>',
-  }));
+  await context.route("https://image.tmdb.org/**", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="342" height="513"><rect width="342" height="513" fill="#4b6584"/></svg>',
+    }),
+  );
 }
 
 // Every test comes from its own made-up client address. The app rate-limits
@@ -35,7 +37,12 @@ export type TestUser = { username: string; email: string; password: string; name
 // deletes. The name's second word is as unique as the username, to find them by.
 export function newUser(): TestUser {
   const id = randomBytes(6).toString("hex");
-  return { username: `e2e_${id}`, email: `e2e_${id}@example.test`, password: `correct horse ${id}`, name: `Tester Ln${id}` };
+  return {
+    username: `e2e_${id}`,
+    email: `e2e_${id}@example.test`,
+    password: `correct horse ${id}`,
+    name: `Tester Ln${id}`,
+  };
 }
 
 /** Signs up with the sign-up form; without a name, leaves the Name field empty. */
@@ -120,4 +127,28 @@ export async function logOut(page: Page, username: string) {
 /** A form's error message. Scoped to main: Next.js has a route announcer with role alert too. */
 export function formAlert(page: Page) {
   return page.getByRole("main").getByRole("alert");
+}
+
+export type Email = { to: string; subject: string; text: string; html: string };
+
+/** The emails the app sent to `address` (only those with `subject`, if given), oldest first. */
+export async function emailsTo(request: APIRequestContext, address: string, subject?: string): Promise<Email[]> {
+  const response = await request.get(`/api/test/outbox?${new URLSearchParams({ to: address })}`);
+  const emails: Email[] = (await response.json()).emails;
+  return subject ? emails.filter((email) => email.subject === subject) : emails;
+}
+
+export const confirmSubject = "Confirm your email for diogomota.com";
+
+/**
+ * Opens the link of the newest email confirming `address` (sign-up sends one,
+ * and so does changing the email), as a path on this site, and waits for
+ * Account to say it worked.
+ */
+export async function confirmEmail(page: Page, address: string, expected = "Your email is confirmed.") {
+  await expect.poll(async () => (await emailsTo(page.request, address, confirmSubject)).length).toBeGreaterThan(0);
+  const emails = await emailsTo(page.request, address, confirmSubject);
+  const url = new URL(emails.at(-1)!.text.match(/^https?:\/\/\S+\/api\/auth\/verify-email\?\S+$/m)![0]);
+  await page.goto(`${url.pathname}${url.search}`);
+  await expect(page.getByRole("main").getByRole("status").filter({ hasText: expected })).toBeVisible();
 }

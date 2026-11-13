@@ -2,14 +2,15 @@
 
 import { headers } from "next/headers";
 import { after } from "next/server";
+import { auth, resetLinkLifetime } from "@/auth";
 import { emailError, normalizeEmail } from "@/lib/account-rules";
 import type { FormState } from "@/lib/form-state";
-import { RESET_LINK_LIFETIME, sendPasswordReset } from "@/lib/password-reset";
-import { clientIp, resetEmailLimit, resetRequestLimit } from "@/lib/rate-limit";
+import { clientIp, resetRequestLimit } from "@/lib/rate-limit";
 
 // The same answer whether or not an account has the email, so the form can't be
-// used to find out who has an account.
-const requested = `If an account uses that email, we've sent it a link to reset the password. The link works for ${RESET_LINK_LIFETIME}.`;
+// used to find out who has an account. The link only goes to a confirmed email,
+// at most 3 an hour per address (auth.ts, sendResetPassword).
+const requested = `If an account uses that email and it is confirmed, we've sent it a link to reset the password. The link works for ${resetLinkLifetime}.`;
 
 export async function requestPasswordReset(_previous: FormState, formData: FormData): Promise<FormState> {
   const email = normalizeEmail(formData.get("email"));
@@ -22,18 +23,14 @@ export async function requestPasswordReset(_previous: FormState, formData: FormD
     return { error: "Too many reset requests from your network. Try again in an hour.", values };
   }
 
-  // Past the limit for this address nothing is sent (the last link still works),
-  // and the answer stays the same.
-  if (resetEmailLimit(email.toLowerCase())) {
-    // After the response, so it takes as long whether or not the account exists.
-    after(async () => {
-      try {
-        await sendPasswordReset(email);
-      } catch (error) {
-        console.error("Couldn't send a password reset email", error);
-      }
-    });
-  }
+  // After the response, so it takes as long whether or not the account exists.
+  after(async () => {
+    try {
+      await auth.api.requestPasswordReset({ body: { email, redirectTo: "/reset-password" } });
+    } catch (error) {
+      console.error("Couldn't send a password reset email", error);
+    }
+  });
 
   return { success: requested, values };
 }

@@ -2,21 +2,24 @@
 
 import { usePathname } from "next/navigation";
 import { Activity, useCallback, useMemo, useState } from "react";
-import { AppViewContext, useAppViewHistory } from "@/hooks/useAppView";
+import { AppViewContext, useAppViewHistory, type AppViewState } from "@/hooks/useAppView";
 import { themeBackground, type Theme } from "@/lib/themes";
 import { AppHeader } from "./AppHeader";
-import { HeaderTabs } from "./HeaderTabs";
+import { BottomTabs, HeaderTabs } from "./HeaderTabs";
+import { OfflineSupport } from "./OfflineSupport";
 import styles from "./AppShell.module.css";
 import themeStyles from "./themes.module.css";
 
 export type AppTab = {
-  /** Unique within the app; saved in history entries (useAppView). */
+  /** Unique within the app; the path of its view (/shows/discover) and saved in history entries (useAppView). */
   id: string;
   label: string;
+  /** Over its label in the tab bar at the bottom of a phone's screen. */
+  icon: React.ReactNode;
   view: React.ReactNode;
 };
 
-/** What the top bar needs to show the tabs and switch between them. */
+/** What the tab bars need to show the tabs and switch between them. */
 export type TabNavProps = {
   /** Names the navigation landmark: the app's name. */
   label: string;
@@ -31,17 +34,27 @@ export type TabNavProps = {
  * the page has the whole width; without (/apps and the rest, Shared before
  * there is a space) it is a centered column.
  */
-export function AppFrame({ theme, username, avatarUrl, next, brand, account, nav, children, overlay }: {
+export function AppFrame({
+  theme,
+  username,
+  avatarUrl,
+  next,
+  brand,
+  account,
+  nav,
+  children,
+  overlay,
+}: {
   theme: Theme;
-  /** Null when logged out: the top bar has Login and Sign Up. */
+  /** Null when logged out: the top bar has Log in and Sign up. */
   username: string | null;
   /** The user's profile picture, in the account menu (lib/users.ts). */
   avatarUrl?: string | null;
-  /** Where Login and Sign Up return to. */
+  /** Where Log in and Sign up return to. */
   next?: string | null;
   /** diogomota.com on the left of the top bar (AppHeader). */
   brand?: boolean;
-  /** The account menu, or Login and Sign Up (AppHeader). */
+  /** The account menu, or Log in and Sign up (AppHeader). */
   account?: boolean;
   nav?: TabNavProps;
   /** The page, in <main>. */
@@ -51,21 +64,35 @@ export function AppFrame({ theme, username, avatarUrl, next, brand, account, nav
 }) {
   const pathname = usePathname();
   return (
-    <div className={`${themeStyles.theme} ${styles.shell} ${nav ? "" : styles.withoutNav}`} data-theme={theme}>
+    <div
+      className={`${themeStyles.theme} ${styles.shell} ${nav ? styles.withNav : styles.withoutNav}`}
+      data-theme={theme}
+    >
       {/* Browser UI color on mobile. React moves it into <head>. */}
       <meta name="theme-color" content={themeBackground(theme)} />
-      <AppHeader pathname={pathname} username={username} avatarUrl={avatarUrl} next={next} brand={brand} account={account}
-        tabs={nav && <HeaderTabs {...nav} />} />
+      <AppHeader
+        pathname={pathname}
+        username={username}
+        avatarUrl={avatarUrl}
+        next={next}
+        brand={brand}
+        account={account}
+        appName={nav?.label}
+        tabs={nav && <HeaderTabs {...nav} />}
+      />
       <main className={styles.main}>{children}</main>
+      {nav && <BottomTabs {...nav} />}
       {overlay}
     </div>
   );
 }
 
-// An app in the frame: the top bar (the app's tabs in the middle, the account
-// menu, with Switch app, on the right) and the current view. An app with
-// settings has them as one of its tabs (Shared's Settings). The URL stays the
-// same; useAppView keeps the view in history entries for the back button.
+// An app in the frame: the top bar and the current view. Its tabs are in the
+// middle of the top bar on a wide screen, and along the bottom of a phone's,
+// within reach of a thumb (the top bar then has the app's name). The account
+// menu, with Switch app, is on the right of the top bar. An app with settings
+// has them as one of its tabs (Shared's Settings). The view and the open panels
+// are in the URL (useAppView), so Back, reload and links work.
 //
 // Views that are switched away from stay mounted but hidden (<Activity>), so
 // they keep their state; their effects stop until they are shown again. The
@@ -75,6 +102,8 @@ export function AppFrame({ theme, username, avatarUrl, next, brand, account, nav
 // immediate, so nothing waits on the animation.
 export function AppShell({
   name,
+  basePath,
+  initial,
   tabs,
   username,
   avatarUrl,
@@ -83,6 +112,10 @@ export function AppShell({
   children,
 }: {
   name: string;
+  /** The app's path: /shows. Its views are under it: /shows/discover. */
+  basePath: string;
+  /** The view and panels of the URL the page was loaded on (the server reads them). */
+  initial: AppViewState;
   /** The first tab is the default view. */
   tabs: readonly AppTab[];
   username: string;
@@ -95,15 +128,18 @@ export function AppShell({
   children?: React.ReactNode;
 }) {
   const ids = useMemo(() => tabs.map((tab) => tab.id), [tabs]);
-  const history = useAppViewHistory(ids);
+  const history = useAppViewHistory(basePath, ids, initial);
   const { view, setView: showView } = history;
   // Which side the next view comes in from: every switch of view, from the
   // tabs or from inside a view (a link to Discover), says.
   const [direction, setDirection] = useState<"forward" | "back">("forward");
-  const setView = useCallback((next: string) => {
-    if (next !== view) setDirection(ids.indexOf(next) > ids.indexOf(view) ? "forward" : "back");
-    showView(next);
-  }, [ids, view, showView]);
+  const setView = useCallback(
+    (next: string) => {
+      if (next !== view) setDirection(ids.indexOf(next) > ids.indexOf(view) ? "forward" : "back");
+      showView(next);
+    },
+    [ids, view, showView],
+  );
   const appView = useMemo(() => ({ ...history, setView }), [history, setView]);
 
   function selectTab(id: string) {
@@ -114,7 +150,15 @@ export function AppShell({
   const nav = { label: name, tabs, current: view, onSelect: selectTab };
   return (
     <AppViewContext value={appView}>
-      <AppFrame theme={theme} username={username} avatarUrl={avatarUrl} brand={false} nav={hideNavigation ? undefined : nav} overlay={children}>
+      <OfflineSupport />
+      <AppFrame
+        theme={theme}
+        username={username}
+        avatarUrl={avatarUrl}
+        brand={false}
+        nav={hideNavigation ? undefined : nav}
+        overlay={children}
+      >
         <div className={styles.views} data-direction={direction}>
           {tabs.map((tab) => (
             <Activity key={tab.id} mode={tab.id === view ? "visible" : "hidden"}>

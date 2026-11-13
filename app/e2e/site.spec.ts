@@ -40,9 +40,7 @@ test("unknown URLs get a 404 page in the site style", async ({ page }) => {
   expect(response?.status()).toBe(404);
   await expect(page).toHaveTitle("page not found · diogo mota");
   await expect(page.getByRole("heading", { level: 1, name: "404" })).toBeVisible();
-  expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(
-    "rgb(0, 0, 0)",
-  );
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe("rgb(0, 0, 0)");
 
   await page.getByRole("link", { name: "Go Home" }).click();
   await expect(page).toHaveURL("/");
@@ -74,11 +72,19 @@ test("the web app manifest lets phones add the site to their home screen", async
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toBe("application/manifest+json");
   const manifest = await response.json();
-  expect(manifest).toMatchObject({ name: "diogo mota", short_name: "diogo mota", start_url: "/apps", display: "standalone" });
+  expect(manifest).toMatchObject({
+    name: "diogo mota",
+    short_name: "diogo mota",
+    start_url: "/apps",
+    display: "standalone",
+  });
 
   // A 192px and a 512px icon, and a maskable one, each the size it says (from its PNG header).
-  expect(manifest.icons.map((icon: { sizes: string; purpose: string }) => `${icon.sizes} ${icon.purpose}`))
-    .toEqual(["192x192 any", "512x512 any", "512x512 maskable"]);
+  expect(manifest.icons.map((icon: { sizes: string; purpose: string }) => `${icon.sizes} ${icon.purpose}`)).toEqual([
+    "192x192 any",
+    "512x512 any",
+    "512x512 maskable",
+  ]);
   for (const icon of manifest.icons) {
     const image = await page.request.get(icon.src);
     expect(image.headers()["content-type"], icon.src).toBe("image/png");
@@ -108,7 +114,10 @@ test("keyboard focus is visible", async ({ page }) => {
   await page.goto("/apps");
   // diogomota.com, Log in and Sign up in the top bar, then Sign up and Log in in the call to action over the cards, then the first card.
   for (let i = 0; i < 6; i++) await page.keyboard.press("Tab");
-  const card = page.getByRole("main").getByRole("listitem").filter({ has: page.getByRole("link", { name: "Shared", exact: true }) });
+  const card = page
+    .getByRole("main")
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("link", { name: "Shared", exact: true }) });
   await expect(card.getByRole("link")).toBeFocused();
   // The link covers its card, so the ring is drawn around the card.
   await expect(card).toHaveCSS("outline-style", "solid");

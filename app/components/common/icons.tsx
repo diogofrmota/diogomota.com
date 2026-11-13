@@ -240,3 +240,91 @@ export function PhotoIcon() {
     </Icon>
   );
 }
+
+// The tabs along the bottom of a phone's screen (AppShell): Tasks, Settings,
+// Library and Discover; Calendar and Profile are CalendarIcon and UserIcon.
+
+/** A list with ticks: task lists. */
+export function TasksIcon() {
+  return (
+    <Icon>
+      <path d="m4 6.5 1.5 1.5 3-3M4 13.5 5.5 15l3-3M11.5 7h8.5M11.5 14h8.5M11.5 19.5h8.5" />
+    </Icon>
+  );
+}
+
+export function SettingsIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" />
+    </Icon>
+  );
+}
+
+/** Posters side by side: the user's library. */
+export function LibraryIcon() {
+  return (
+    <Icon>
+      <rect x="3.5" y="4" width="5" height="16" rx="1" />
+      <rect x="10" y="4" width="5" height="16" rx="1" />
+      <path d="m16.7 5.3 3.8 14.2" />
+    </Icon>
+  );
+}
+
+/** A compass: finding something new. */
+export function CompassIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m15.5 8.5-2 5-5 2 2-5z" />
+    </Icon>
+  );
+}
+
+/** Sharing a link: the phone's share sheet. */
+export function ShareIcon() {
+  return (
+    <Icon>
+      <path d="M12 15V3.5M7.5 8 12 3.5 16.5 8M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12" />
+    </Icon>
+  );
+}
+
+/** Arrows in a loop: something that repeats. */
+export function RepeatIcon() {
+  return (
+    <Icon>
+      <path d="M17 2.5 20 5.5l-3 3M4 11V9.5a4 4 0 0 1 4-4h12M7 21.5 4 18.5l3-3M20 13v1.5a4 4 0 0 1-4 4H4" />
+    </Icon>
+  );
+}
+
+/** Lines of a list: the calendar's agenda. */
+export function ListIcon() {
+  return (
+    <Icon>
+      <path d="M8.5 6h11.5M8.5 12h11.5M8.5 18h11.5M4 6h.01M4 12h.01M4 18h.01" />
+    </Icon>
+  );
+}
+
+/** A copy of something: copying a link. */
+export function CopyIcon() {
+  return (
+    <Icon>
+      <rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2" />
+      <path d="M15.5 8.5V6A2 2 0 0 0 13.5 4H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5" />
+    </Icon>
+  );
+}
+
+/** An arrow out of a box: sending a title to someone. */
+export function SendIcon() {
+  return (
+    <Icon>
+      <path d="m21 3-9.5 9.5M21 3l-6.5 18-3-8.5L3 9.5z" />
+    </Icon>
+  );
+}

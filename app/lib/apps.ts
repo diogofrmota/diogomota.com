@@ -22,7 +22,7 @@ export const apps: readonly AppInfo[] = [
   {
     name: "Shows",
     href: "/shows",
-    description: "Track TV Shows and Movies",
+    description: "Track TV shows and movies with your friends",
     logo: "/logos/shows.svg",
   },
 ];

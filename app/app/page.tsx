@@ -18,8 +18,7 @@ export default function Home() {
       <main className={styles.main}>
         <h1>diogo mota</h1>
         <p>
-          devops engineer @{" "}
-          {/* An aria-label rather than hidden text, so copying the line doesn't pick it up. */}
+          devops engineer @ {/* An aria-label rather than hidden text, so copying the line doesn't pick it up. */}
           <a
             href="https://www.richemont.com/"
             target="_blank"

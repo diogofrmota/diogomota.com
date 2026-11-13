@@ -18,8 +18,21 @@ export const viewport = appViewport;
 // Account settings, opened from the account menu. Like /apps, in the apps'
 // frame and the user's theme, which is set here (and only here). The way back,
 // the title, then the settings, each opening a popup (AccountSettings).
-export default async function AccountPage() {
+// What an emailed link did, when it comes back here (auth.ts, app/account/actions.ts).
+const messages: Record<string, string> = {
+  changed: "Your email is changed.",
+  confirmed: "Your email is confirmed.",
+};
+
+export default async function AccountPage({ searchParams }: PageProps<"/account">) {
   const { id } = await requireUser("/account");
+  const { email, error } = await searchParams;
+  const message =
+    typeof error === "string"
+      ? "That link has expired or was already used. Send yourself a new one."
+      : typeof email === "string"
+        ? messages[email]
+        : undefined;
   const user = await findUserById(id);
   if (!user) notFound();
 
@@ -33,7 +46,7 @@ export default async function AccountPage() {
           </Link>
         </p>
         <h1 className={`${ui.heading} ${styles.title}`}>Account</h1>
-        <AccountSettings user={user} />
+        <AccountSettings user={user} message={message} />
       </div>
     </AppFrame>
   );

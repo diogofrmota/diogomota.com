@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { getSession } from "@/auth";
 import { AuthPage } from "@/components/auth/AuthPage";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { appAt, appViewport } from "@/lib/apps";
@@ -14,7 +14,7 @@ export const viewport = appViewport;
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;
   const next = safeNextPath(params.next);
-  if (await auth()) redirect(next ?? "/apps");
+  if (await getSession()) redirect(next ?? "/apps");
   // Sent from an app (its login prompt on /apps): the title says which.
   const app = appAt(next);
 

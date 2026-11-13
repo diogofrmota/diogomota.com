@@ -20,7 +20,11 @@ import styles from "./AccountMenu.module.css";
 // links. Escape, a click outside or tabbing away closes it. A chosen item
 // keeps it open, with a spinner in place of its icon, until the page it opens
 // is there (and the menu with it, closed); the current page's closes it at once.
-export function AccountMenu({ username, avatarUrl, switchApp }: {
+export function AccountMenu({
+  username,
+  avatarUrl,
+  switchApp,
+}: {
   username: string;
   /** Their profile picture (lib/users.ts), or null for their initial. */
   avatarUrl?: string | null;
@@ -36,7 +40,9 @@ export function AccountMenu({ username, avatarUrl, switchApp }: {
   const [openOn, setOpenOn] = useState<string | null>(null);
   const open = openOn === pathname;
   const setOpen = (value: boolean) => setOpenOn(value ? pathname : null);
-  const closeIfHere = (href: string) => { if (href === pathname) setOpen(false); };
+  const closeIfHere = (href: string) => {
+    if (href === pathname) setOpen(false);
+  };
 
   useEffect(() => {
     if (!open) return;

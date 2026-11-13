@@ -1,12 +1,9 @@
-import { addToLibrary, readLibrary, showsResponse } from "@/lib/shows";
+import { libraryAdd } from "@/lib/schemas";
+import { addToLibrary, readLibrary, showsRoute } from "@/lib/shows";
 
 // GET /api/shows/library: your library, the latest added or changed first.
-export function GET(request: Request) {
-  return showsResponse(request, readLibrary);
-}
+export const GET = showsRoute({}, ({ user }) => readLibrary(user.id));
 
 // POST /api/shows/library {type, tmdbId, status}: adds a title to your library as
 // "watching", "planned" or "completed" (409 if it is already there) and answers with its details.
-export function POST(request: Request) {
-  return showsResponse(request, addToLibrary, 201);
-}
+export const POST = showsRoute({ body: libraryAdd, status: 201 }, ({ user, body }) => addToLibrary(user.id, body));

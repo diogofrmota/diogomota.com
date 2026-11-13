@@ -8,7 +8,12 @@ import styles from "./Avatar.module.css";
  * their name is always beside it, or names what it is in. The size, shape and
  * colors of the letter come from `className`; the picture fills that circle.
  */
-export function Avatar({ username, url, className = "", style }: {
+export function Avatar({
+  username,
+  url,
+  className = "",
+  style,
+}: {
   username: string;
   url?: string | null;
   className?: string;
@@ -22,8 +27,14 @@ export function Avatar({ username, url, className = "", style }: {
         // The picture is already small and square (lib/avatars.ts), and
         // private: next/image's optimizer would only fetch it again.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={picture} alt="" className={styles.picture} decoding="async" draggable={false}
-          onError={() => setFailed(picture)} />
+        <img
+          src={picture}
+          alt=""
+          className={styles.picture}
+          decoding="async"
+          draggable={false}
+          onError={() => setFailed(picture)}
+        />
       ) : (
         username.charAt(0).toUpperCase()
       )}

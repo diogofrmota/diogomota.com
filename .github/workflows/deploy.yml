@@ -32,20 +32,25 @@ jobs:
     # Only main is built and deployed; a rollback skips the build.
     if: github.ref == 'refs/heads/main' && !inputs.image_tag
     uses: ./.github/workflows/ci.yml
+    # The quick set of Playwright tests; pull requests run them all.
+    with:
+      e2e: smoke
 
   image:
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write # to tag the commit with its version
+      contents: write # to tag the commit with its version and publish its release
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The existing vX.Y.Z tags, to pick the next version.
+          # The whole history and the existing vX.Y.Z tags: to pick the next version,
+          # and to list the commits since the last one in its release.
+          fetch-depth: 0
           fetch-tags: true
 
       - name: Short commit SHA
@@ -73,10 +78,35 @@ jobs:
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      # Built into the runner's Docker first, to be scanned before anything is pushed.
+      - name: Build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: ./app
           # db/migrations is outside ./app; the Dockerfile copies it from this named context.
+          build-contexts: migrations=db/migrations
+          build-args: APP_VERSION=${{ steps.version.outputs.version }}
+          load: true
+          tags: ${{ env.IMAGE }}:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Known vulnerabilities in the image (its OS packages and node_modules) that
+      # have a fix: a critical one stops the deploy. The report is in the job's log.
+      - name: Scan the image
+        uses: anchore/scan-action@8576240a41341d866dbd7ebc72cd9fc0ef023f54 # v7.4.2
+        with:
+          image: ${{ env.IMAGE }}:scan
+          fail-build: true
+          severity-cutoff: critical
+          only-fixed: true
+          output-format: table
+
+      # The same build again, from the cache, now pushed with its tags.
+      - name: Push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./app
           build-contexts: migrations=db/migrations
           build-args: APP_VERSION=${{ steps.version.outputs.version }}
           push: true
@@ -85,17 +115,30 @@ jobs:
             ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.IMAGE }}:latest
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
-      # After the push, so a failed build doesn't use up a version.
-      - name: Tag the commit ${{ steps.version.outputs.version }}
+      # After the push, so a failed build doesn't use up a version. The release lists
+      # the commits since the previous version (CHANGELOG.md says where to find them).
+      - name: Tag the commit ${{ steps.version.outputs.version }} and publish its release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
+          previous=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
           gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$VERSION" -f sha="$GITHUB_SHA" --silent
-          echo "Image \`$IMAGE:$VERSION\` (also \`:$TAG\` and \`:latest\`) pushed, commit tagged \`$VERSION\`." >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "Image \`$IMAGE:$VERSION\` (also \`:$TAG\`)."
+            echo
+            if [[ -n $previous ]]; then
+              echo "Changes since $previous:"
+              echo
+              git log --no-merges --pretty='- %s (%h)' "$previous..$GITHUB_SHA"
+            else
+              git log --no-merges --pretty='- %s (%h)' -n 30 "$GITHUB_SHA"
+            fi
+          } > release-notes.md
+          gh release create "$VERSION" --title "$VERSION" --notes-file release-notes.md --verify-tag
+          echo "Image \`$IMAGE:$VERSION\` (also \`:$TAG\` and \`:latest\`) pushed, commit tagged \`$VERSION\`, release published." >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
     needs: image

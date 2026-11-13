@@ -1,7 +1,6 @@
 /* Every theme's colors, as variables: the user picks one in /account
    (components/common/ThemePicker). Each theme's id and name are in
-   lib/themes.ts, in the same order, and the database accepts only those ids (db/migrations): a new
-   theme goes in all three.
+   lib/themes.ts, in the same order: a new theme goes in both.
 
    An element with .theme takes the colors of its data-theme: AppFrame's shell,
    which is the page's. The page behind it (html) takes them too: its
@@ -17,25 +16,9 @@
    compiled into one :is(), as specific as html:has(...), which would win over
    every theme's rule. */
 
-/* Light mode: cool slate, with indigo. New accounts' theme, and the one
-   logged out (lib/themes.ts, defaultTheme). */
-.theme[data-theme="light-2"],
-.theme[data-theme-preview="light-2"],
-:global(html):has(.theme[data-theme="light-2"]) {
-  --bg: #f1f5f9;
-  --surface: #ffffff;
-  --hover: #e2e8f0;
-  --text: #0f172a;
-  --muted: #475569;
-  --border: #dbe2ea;
-  --accent: #4f46e5;
-  --accent-soft: #eef2ff;
-  --danger: #be123c;
-  color-scheme: light;
-}
-
-/* Neutral: shadow black and slate gray on warm gray and light gray-blue, with
-   slate blue. */
+/* Light (id minimal-neutrals): shadow black and slate gray on warm gray and
+   light gray-blue, with slate blue. New accounts' theme, and the one logged out
+   (lib/themes.ts, defaultTheme). */
 .theme[data-theme="minimal-neutrals"],
 .theme[data-theme-preview="minimal-neutrals"],
 :global(html):has(.theme[data-theme="minimal-neutrals"]) {
@@ -51,23 +34,7 @@
   color-scheme: light;
 }
 
-/* Warm: leather, auburn and cappuccino on cream. */
-.theme[data-theme="warm-neutrals"],
-.theme[data-theme-preview="warm-neutrals"],
-:global(html):has(.theme[data-theme="warm-neutrals"]) {
-  --bg: #fff3db;
-  --surface: #fffaf0;
-  --hover: #f5e5c6;
-  --text: #51301f;
-  --muted: #76563f;
-  --border: #ead6b2;
-  --accent: #7a3110;
-  --accent-soft: #f5dfcb;
-  --danger: #a3122f;
-  color-scheme: light;
-}
-
-/* Graphite: charcoal, with steel blue. */
+/* Dark (id graphite): charcoal, with steel blue. */
 .theme[data-theme="graphite"],
 .theme[data-theme-preview="graphite"],
 :global(html):has(.theme[data-theme="graphite"]) {
@@ -83,56 +50,6 @@
   color-scheme: dark;
 }
 
-/* Ocean: midnight navy, with sky blue. */
-.theme[data-theme="dark-1"],
-.theme[data-theme-preview="dark-1"],
-:global(html):has(.theme[data-theme="dark-1"]) {
-  --bg: #0b1120;
-  --surface: #131c2e;
-  --hover: #1e293b;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --border: #26324a;
-  --accent: #38bdf8;
-  --accent-soft: #0c2a40;
-  --danger: #fb7185;
-  color-scheme: dark;
-}
-
-/* Space: starlight on the night sky, with nebula orchid (and stars, below). */
-.theme[data-theme="space"],
-.theme[data-theme-preview="space"],
-:global(html):has(.theme[data-theme="space"]) {
-  --bg: #070818;
-  --surface: #0f1230;
-  --hover: #1a1e45;
-  --text: #eef0ff;
-  --muted: #a9afdd;
-  --border: #2a2f63;
-  --accent: #f2a7ff;
-  --accent-soft: #341a4a;
-  --danger: #ff8f9c;
-  color-scheme: dark;
-}
-
 :global(html):has(.theme[data-theme]) {
   background: var(--bg);
-}
-
-/* A scattering of stars, some brighter than others, repeating. Only behind
-   what has no background of its own: the top bar, dialogs and cards have theirs. */
-.theme[data-theme="space"],
-.theme[data-theme-preview="space"] {
-  background-image:
-    radial-gradient(1px 1px at 12% 18%, rgb(255 255 255 / 0.75), transparent),
-    radial-gradient(1px 1px at 37% 72%, rgb(255 255 255 / 0.5), transparent),
-    radial-gradient(1.5px 1.5px at 58% 32%, rgb(255 255 255 / 0.7), transparent),
-    radial-gradient(1px 1px at 81% 64%, rgb(255 255 255 / 0.45), transparent),
-    radial-gradient(1px 1px at 91% 12%, rgb(242 167 255 / 0.6), transparent),
-    radial-gradient(1px 1px at 24% 88%, rgb(169 175 221 / 0.6), transparent);
-  background-size: 18rem 14rem;
-}
-
-.theme[data-theme-preview="space"] {
-  background-size: 3rem 2.5rem;
 }

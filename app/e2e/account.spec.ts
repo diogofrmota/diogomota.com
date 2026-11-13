@@ -1,6 +1,20 @@
 import { type Locator, type Page } from "@playwright/test";
 import sharp from "sharp";
-import { accountButton, accountSetting, expect, formAlert, logIn, logOut, newUser, signUp, test } from "./fixtures";
+import { withDatabase } from "./db";
+import {
+  accountButton,
+  accountSetting,
+  confirmEmail,
+  confirmSubject,
+  emailsTo,
+  expect,
+  formAlert,
+  logIn,
+  logOut,
+  newUser,
+  signUp,
+  test,
+} from "./fixtures";
 
 /** Clicks what opens a popup on /account (a setting's row, the profile picture, Update password) and returns the popup. */
 async function openPopup(page: Page, opener: Locator, name: string) {
@@ -10,7 +24,8 @@ async function openPopup(page: Page, opener: Locator, name: string) {
   return dialog;
 }
 const openSetting = (page: Page, name: string) => openPopup(page, accountSetting(page, name), name);
-const profilePicture = (page: Page) => page.getByRole("main").getByRole("button", { name: "Profile picture", exact: true });
+const profilePicture = (page: Page) =>
+  page.getByRole("main").getByRole("button", { name: "Profile picture", exact: true });
 /** What the last popup saved, said under the settings once it closes. */
 const notice = (page: Page, text: string) => page.getByRole("main").getByRole("status").filter({ hasText: text });
 
@@ -56,7 +71,9 @@ test("the account menu opens settings, and closes with Escape or a click outside
   await expect(page).toHaveURL("/apps");
 });
 
-test("Account: the profile picture in the middle, a row per setting with its value, then Update password and Log out", async ({ page }) => {
+test("Account: the profile picture in the middle, a row per setting with its value, then Update password and Log out", async ({
+  page,
+}) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
@@ -72,8 +89,10 @@ test("Account: the profile picture in the middle, a row per setting with its val
   expect(pictureBox.y + pictureBox.height).toBeLessThan(listBox.y);
 
   await expect(list.getByRole("button")).toHaveText([
-    new RegExp(`^Name.*${user.name}`), new RegExp(`^Username.*${user.username}`),
-    new RegExp(`^Email.*${user.email}`), /^Theme.*Light mode/,
+    new RegExp(`^Name.*${user.name}`),
+    new RegExp(`^Username.*${user.username}`),
+    new RegExp(`^Email.*${user.email}`),
+    /^Theme.*Light/,
   ]);
   // Nothing else to open on the page: no dropdowns.
   await expect(main.locator("details")).toHaveCount(0);
@@ -164,11 +183,17 @@ test("username checks ignore old responses and recover after a network failure",
   const status = form.getByRole("status");
   const endpoint = "**/api/account/username?*";
   let releaseOld!: () => void;
-  const oldResponse = new Promise<void>((resolve) => { releaseOld = resolve; });
+  const oldResponse = new Promise<void>((resolve) => {
+    releaseOld = resolve;
+  });
   let oldStarted!: () => void;
-  const started = new Promise<void>((resolve) => { oldStarted = resolve; });
+  const started = new Promise<void>((resolve) => {
+    oldStarted = resolve;
+  });
   let oldFinished!: () => void;
-  const finished = new Promise<void>((resolve) => { oldFinished = resolve; });
+  const finished = new Promise<void>((resolve) => {
+    oldFinished = resolve;
+  });
   await page.route(endpoint, async (route) => {
     if (new URL(route.request().url()).searchParams.get("username") === "e2e_slow") {
       oldStarted();
@@ -197,7 +222,11 @@ test("username checks ignore old responses and recover after a network failure",
   await expect(status).toHaveText("That username is available.");
 });
 
-test("username availability requires login, validates input and limits checks", async ({ page, playwright, baseURL }) => {
+test("username availability requires login, validates input and limits checks", async ({
+  page,
+  playwright,
+  baseURL,
+}) => {
   const endpoint = "/api/account/username";
   const anonymous = await playwright.request.newContext({ baseURL });
   expect((await anonymous.get(`${endpoint}?username=someone`)).status()).toBe(401);
@@ -249,13 +278,18 @@ test("Name sets the name, one word or more, which Shows' Profile shows over the 
   await expect(field).toHaveValue("Ana Sofia Reis");
 
   await page.goto("/shows");
-  await page.getByRole("navigation", { name: "Shows", exact: true }).getByRole("button", { name: "Profile", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Shows", exact: true })
+    .getByRole("button", { name: "Profile", exact: true })
+    .click();
   const main = page.getByRole("main");
   await expect(main.getByText("Ana Sofia Reis", { exact: true })).toBeVisible();
   await expect(main.getByText(`@${user.username}`, { exact: true })).toBeVisible();
 });
 
-test("Email changes with the current password, to one no other account has, and logs in after", async ({ page }) => {
+test("Email changes with the current password, once the link sent to the new one is opened, and logs in after", async ({
+  page,
+}) => {
   const taken = newUser();
   await signUp(page, taken);
   await expect(page).toHaveURL("/apps");
@@ -285,19 +319,27 @@ test("Email changes with the current password, to one no other account has, and 
   await save.click();
   await expect(form.getByText("That isn't your current password.")).toBeVisible();
 
-  // In any case: emails are citext.
+  // One another account has: the same answer (it says nothing of who has an account), and nothing changes.
   await field.fill(taken.email.toUpperCase());
   await password.fill(user.password);
   await save.click();
-  await expect(form.getByText("Another account uses that email.")).toBeVisible();
-  await expect(field).toHaveValue(taken.email.toUpperCase());
+  await expect(form).toBeHidden();
+  await expect(
+    notice(page, `We sent a link to ${taken.email.toUpperCase()}. Your email changes once you open it.`),
+  ).toBeVisible();
+  expect(await emailsTo(page.request, taken.email, confirmSubject)).toHaveLength(1);
 
+  await openSetting(page, "Email");
   await field.fill(email);
   await password.fill(user.password);
   await save.click();
   await expect(form).toBeHidden();
-  await expect(notice(page, "Email saved.")).toBeVisible();
+  await expect(notice(page, `We sent a link to ${email}. Your email changes once you open it.`)).toBeVisible();
+  // Not until the link is opened.
+  await expect(emailRow).toContainText(user.email);
+  await confirmEmail(page, email, "Your email is changed.");
   await expect(emailRow).toContainText(email);
+  await expect(emailRow).not.toContainText("not confirmed");
 
   // Logs in with the new one, not the old one.
   await logOut(page, user.username);
@@ -357,15 +399,16 @@ test("theme preference persists after logging in again", async ({ page }) => {
 
   const app = page.locator("[data-theme]");
   await page.goto("/shared");
-  await expect(app).toHaveAttribute("data-theme", "light-2");
+  await expect(app).toHaveAttribute("data-theme", "minimal-neutrals");
 
   await page.goto("/account");
-  // The theme in use, on its row.
+  // The theme in use, on its row; two to choose from, Light and Dark.
   const themeRow = accountSetting(page, "Theme");
-  await expect(themeRow).toContainText("Light mode");
+  await expect(themeRow).toContainText("Light");
   const form = await openSetting(page, "Theme");
-  await expect(form.getByRole("radio", { name: "Light mode", exact: true })).toBeChecked();
-  await form.getByRole("radio", { name: "Graphite", exact: true }).check();
+  await expect(form.getByRole("radio")).toHaveCount(2);
+  await expect(form.getByRole("radio", { name: "Light", exact: true })).toBeChecked();
+  await form.getByRole("radio", { name: "Dark", exact: true }).check();
   await form.getByRole("button", { name: "Save theme" }).click();
   await expect(form).toBeHidden();
   await expect(notice(page, "Theme saved.")).toBeVisible();
@@ -376,15 +419,18 @@ test("theme preference persists after logging in again", async ({ page }) => {
   await expect(page).toHaveURL("/apps");
 
   await page.goto("/account");
-  await expect(themeRow).toContainText("Graphite");
+  await expect(themeRow).toContainText("Dark");
   await openSetting(page, "Theme");
-  await expect(form.getByRole("radio", { name: "Graphite", exact: true })).toBeChecked();
+  await expect(form.getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
   await page.goto("/shared");
   await expect(app).toHaveAttribute("data-theme", "graphite");
   await expect(app).toHaveCSS("background-color", "rgb(31, 32, 35)");
 });
 
-test("a profile picture, chosen or dropped, is adjusted, made small and shows in the account menu; Remove picture takes it away", async ({ page, request }) => {
+test("a profile picture, chosen or dropped, is adjusted, made small and shows in the account menu; Remove picture takes it away", async ({
+  page,
+  request,
+}) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
@@ -397,8 +443,18 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   // A landscape phone photo, with metadata that mustn't be kept: blue on the left, orange on the right.
   const half = { width: 800, height: 1200, channels: 3 } as const;
   const photo = await sharp({ create: { ...half, width: 1600, background: "#3366cc" } })
-    .composite([{ input: await sharp({ create: { ...half, background: "#ff8800" } }).png().toBuffer(), left: 800, top: 0 }])
-    .withExif({ IFD0: { Copyright: "Where it was taken" } }).jpeg().toBuffer();
+    .composite([
+      {
+        input: await sharp({ create: { ...half, background: "#ff8800" } })
+          .png()
+          .toBuffer(),
+        left: 800,
+        top: 0,
+      },
+    ])
+    .withExif({ IFD0: { Copyright: "Where it was taken" } })
+    .jpeg()
+    .toBuffer();
   await picture.locator('input[type="file"]').setInputFiles({ name: "me.jpg", mimeType: "image/jpeg", buffer: photo });
 
   // Nothing is sent yet: first, which part of it to show, over the popup. Cancel keeps what there was.
@@ -437,7 +493,12 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   const saved = await page.request.get(url);
   expect(saved.headers()["content-type"]).toBe("image/webp");
   const info = await sharp(await saved.body()).metadata();
-  expect({ format: info.format, width: info.width, height: info.height, exif: info.exif }).toEqual({ format: "webp", width: 512, height: 512, exif: undefined });
+  expect({ format: info.format, width: info.width, height: info.height, exif: info.exif }).toEqual({
+    format: "webp",
+    width: 512,
+    height: 512,
+    exif: undefined,
+  });
   // The part chosen: the orange right.
   const [red, green, blue] = (await sharp(await saved.body()).stats()).channels.map((channel) => channel.mean);
   expect(red).toBeGreaterThan(230);
@@ -454,12 +515,19 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   await expect(picture.locator(`img[src="${url}"]`)).toHaveCount(1);
 
   // Dropped on the drop zone: a new picture, at a new URL.
-  const dropped = await page.evaluateHandle(async (base64) => {
-    const transfer = new DataTransfer();
-    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-    transfer.items.add(new File([bytes], "dropped.png", { type: "image/png" }));
-    return transfer;
-  }, (await sharp({ create: { width: 300, height: 500, channels: 4, background: "#ff8800" } }).png().toBuffer()).toString("base64"));
+  const dropped = await page.evaluateHandle(
+    async (base64) => {
+      const transfer = new DataTransfer();
+      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      transfer.items.add(new File([bytes], "dropped.png", { type: "image/png" }));
+      return transfer;
+    },
+    (
+      await sharp({ create: { width: 300, height: 500, channels: 4, background: "#ff8800" } })
+        .png()
+        .toBuffer()
+    ).toString("base64"),
+  );
   await picture.locator("label").dispatchEvent("drop", { dataTransfer: dropped });
   await crop.getByRole("button", { name: "Save picture" }).click();
   await expect(notice(page, "Profile picture saved.")).toBeVisible();
@@ -467,10 +535,16 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
 
   // What isn't a picture says so, here or (pretending to be one, which the browser can't show, so it goes as it is) from the server.
   await openPopup(page, profilePicture(page), "Profile picture");
-  await picture.locator('input[type="file"]').setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+  await picture
+    .locator('input[type="file"]')
+    .setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
   await expect(picture.getByRole("alert")).toHaveText("That isn't a picture. Choose a JPEG, PNG or WebP.");
-  await picture.locator('input[type="file"]').setInputFiles({ name: "fake.png", mimeType: "image/png", buffer: Buffer.from("not really a png") });
-  await expect(picture.getByRole("alert")).toHaveText("That file isn't a picture that can be read. Try a JPEG, PNG or WebP.");
+  await picture
+    .locator('input[type="file"]')
+    .setInputFiles({ name: "fake.png", mimeType: "image/png", buffer: Buffer.from("not really a png") });
+  await expect(picture.getByRole("alert")).toHaveText(
+    "That file isn't a picture that can be read. Try a JPEG, PNG or WebP.",
+  );
   await expect(menuPicture).toHaveCount(1);
 
   // Removed: the initial again, and the picture is gone.
@@ -500,15 +574,18 @@ test("logged out, /account redirects to /apps and Log in comes back to it", asyn
   await page.goto("/account");
   await expect(page).toHaveURL("/apps?next=%2Faccount");
   await expect(page.getByRole("dialog")).toBeHidden();
-  await expect(
-    page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" }),
-  ).toHaveAttribute("href", "/login?next=%2Faccount");
+  await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" })).toHaveAttribute(
+    "href",
+    "/login?next=%2Faccount",
+  );
 });
 
 test.describe("at 320px wide", () => {
   test.use({ viewport: { width: 320, height: 740 }, isMobile: true, hasTouch: true });
 
-  test("logged-in /apps, its open menu and /account, with a popup open, have no horizontal scroll", async ({ page }) => {
+  test("logged-in /apps, its open menu and /account, with a popup open, have no horizontal scroll", async ({
+    page,
+  }) => {
     const user = newUser();
     await signUp(page, user);
     await expect(page).toHaveURL("/apps");
@@ -536,4 +613,77 @@ test.describe("at 320px wide", () => {
     await expect(theme).toBeInViewport({ ratio: 1 });
     await expectNoHorizontalScroll(page);
   });
+});
+
+test("a theme that no longer exists shows as Light", async ({ page }) => {
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/apps");
+  await withDatabase((db) =>
+    db.query("UPDATE users SET theme_preference = 'space' WHERE username = $1", [user.username]),
+  );
+  await page.goto("/account");
+  await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
+  await expect(accountSetting(page, "Theme")).toContainText("Light");
+});
+
+test("an email not confirmed yet says so, and the link can be sent again", async ({ page }) => {
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/apps");
+  await page.goto("/account");
+  await expect(accountSetting(page, "Email")).toContainText("(not confirmed)");
+  await page.getByRole("button", { name: "Send the link again" }).click();
+  await expect(
+    page
+      .getByRole("main")
+      .getByRole("status")
+      .filter({ hasText: `We sent a new link to ${user.email}.` }),
+  ).toBeVisible();
+  await expect.poll(async () => (await emailsTo(page.request, user.email, confirmSubject)).length).toBe(2);
+  await confirmEmail(page, user.email);
+  await expect(accountSetting(page, "Email")).not.toContainText("not confirmed");
+  await expect(page.getByRole("button", { name: "Send the link again" })).toHaveCount(0);
+});
+
+test("Download my data has the account, library and space; Delete my account takes the password and deletes it all", async ({
+  page,
+}) => {
+  const user = newUser();
+  await signUp(page, user, "/signup?next=%2Fshared");
+  await page.getByRole("button", { name: "Create space" }).click();
+  await expect(page.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
+  const { data: space } = await (await page.request.get("/api/shared/spaces")).json();
+  await page.goto("/account");
+
+  // A file with what the site keeps about them.
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Download my data" }).click();
+  const file = await downloading;
+  expect(file.suggestedFilename()).toMatch(/^diogomota-data-\d{4}-\d{2}-\d{2}\.json$/);
+  const data = JSON.parse(await (await import("node:fs/promises")).readFile((await file.path())!, "utf8"));
+  expect(data.account).toMatchObject({ username: user.username, email: user.email, name: user.name });
+  expect(data.shared.members).toEqual([{ username: user.username, name: user.name, role: "owner" }]);
+  expect(data.shows.library).toEqual([]);
+  expect(JSON.stringify(data)).not.toContain("password");
+
+  // Deleting: the password first.
+  await page.getByRole("button", { name: "Delete my account" }).click();
+  const dialog = page.getByRole("dialog", { name: "Delete my account" });
+  await dialog.getByLabel("Password").fill("not the password");
+  await dialog.getByRole("button", { name: "Delete my account" }).click();
+  await expect(dialog.getByText("That isn't your password.")).toBeVisible();
+  await dialog.getByLabel("Password").fill(user.password);
+  await dialog.getByRole("button", { name: "Delete my account" }).click();
+  await expect(page).toHaveURL("/apps?account=deleted");
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(
+    "Your account and everything it had here were deleted.",
+  );
+  await withDatabase(async (db) => {
+    expect((await db.query("SELECT 1 FROM users WHERE username = $1", [user.username])).rowCount).toBe(0);
+    // The space went with its last member.
+    expect((await db.query("SELECT 1 FROM spaces WHERE id = $1", [space.id])).rowCount).toBe(0);
+  });
+  await logIn(page, user.username, user.password);
+  await expect(formAlert(page)).toHaveText("Wrong username/email or password.");
 });

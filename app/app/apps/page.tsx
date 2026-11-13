@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { auth } from "@/auth";
+import Link from "next/link";
+import { getSession } from "@/auth";
 import { AppFrame } from "@/components/common/AppShell";
 import ui from "@/components/common/ui.module.css";
 import { AppList } from "@/components/site/AppList";
@@ -29,10 +30,13 @@ export const viewport = appViewport;
 // `next` is set when a logged-out user was sent here from a protected page
 // (proxy.ts): Login and Sign Up return there, and for an app its login prompt opens.
 export default async function AppsPage({ searchParams }: PageProps<"/apps">) {
-  const session = await auth();
+  const session = await getSession();
   const user = session ? await findUserById(session.user.id) : null;
   const username = session?.user.username ?? null;
-  const next = username ? null : safeNextPath((await searchParams).next);
+  const query = await searchParams;
+  const next = username ? null : safeNextPath(query.next);
+  // Just deleted (app/account/actions.ts, deleteAccount): logged out, and told so.
+  const deleted = !username && query.account === "deleted";
   const prompted = appAt(next);
   // The image's Docker Hub version tag (Dockerfile, deploy.yml); unset outside the image.
   const version = process.env.APP_VERSION ?? "dev";
@@ -40,11 +44,24 @@ export default async function AppsPage({ searchParams }: PageProps<"/apps">) {
   return (
     <AppFrame theme={user?.themePreference ?? defaultTheme} username={username} avatarUrl={user?.avatarUrl} next={next}>
       <div className={styles.view}>
+        {deleted && (
+          <p role="status" className={ui.success}>
+            Your account and everything it had here were deleted.
+          </p>
+        )}
+        {user && !user.emailVerified && (
+          <p className={styles.verify}>
+            Confirm your email ({user.email}) with the link we sent, so you can reset your password if you forget it.{" "}
+            <Link href="/account">Send it again</Link>
+          </p>
+        )}
         {!username && <LoginCallout next={next} />}
         <h1 className={ui.heading}>Apps</h1>
         <AppList apps={apps} loggedIn={username !== null} prompted={prompted?.href} />
         {/* Which build is live: for whoever deploys it, so out of the way. */}
-        <p className={styles.version}>Version {version}</p>
+        <p className={styles.version}>
+          Version {version} · <Link href="/privacy">Privacy</Link>
+        </p>
       </div>
     </AppFrame>
   );

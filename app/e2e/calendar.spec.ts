@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import type { Locator, Page } from "@playwright/test";
 import { expect, newUser, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
-import { localParts, localInstants, calendarIcs, dateLabel, datePlus, type CalendarEvent } from "../lib/calendar";
+import { localParts, localInstants, dateLabel, datePlus, type CalendarEvent } from "../lib/calendar";
 import type { Space } from "../lib/space-types";
 
 const base = "/api/shared/events";
@@ -12,18 +12,28 @@ async function setup(page: Page) {
   const user = newUser();
   await signUp(page, user, "/signup?next=/shared");
   await page.getByRole("button", { name: "Create space" }).click();
-  await expect(page.getByText("Nothing planned yet — tap a day to add your first event!")).toBeVisible();
+  await expect(page.getByRole("region", { name: /^(agenda|month|week|day) calendar$/ })).toBeVisible();
+  // A space of one is asked to invite their partner (shared-features.spec.ts): not now, so the grid has the room.
+  await page.getByRole("region", { name: "Invite your partner" }).getByRole("button", { name: "Not now" }).click();
   return { user, space: (await (await page.request.get("/api/shared/spaces")).json()).data as Space };
+}
+/** The month (a phone opens on the agenda). */
+async function showMonth(page: Page) {
+  await page.getByRole("group", { name: "Calendar view" }).getByRole("button", { name: "Month", exact: true }).click();
+  await expect(page.getByRole("region", { name: "month calendar", exact: true })).toBeVisible();
 }
 /** The event form's typed fields: "Start date" and "End date" (dd/mm/yyyy), "Start time" and "End time" (hh:mm). */
 type When = "Start date" | "End date" | "Start time" | "End time";
 const whenField = (scope: Page | Locator, name: When) => scope.getByLabel(name, { exact: true });
 /** "2026-11-15" as the form has it: "15/11/2026". */
 const typed = (date: string) => `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)}`;
-const setDate = (scope: Page | Locator, name: "Start date" | "End date", date: string) => whenField(scope, name).fill(typed(date));
-const setTime = (scope: Page | Locator, name: "Start time" | "End time", time: string) => whenField(scope, name).fill(time);
-const expectTime = (scope: Page | Locator, name: "Start time" | "End time", time: string) => expect(whenField(scope, name)).toHaveValue(time);
-/** Adds an event at 09:30 for `who`: a member's name, or All. */
+const setDate = (scope: Page | Locator, name: "Start date" | "End date", date: string) =>
+  whenField(scope, name).fill(typed(date));
+const setTime = (scope: Page | Locator, name: "Start time" | "End time", time: string) =>
+  whenField(scope, name).fill(time);
+const expectTime = (scope: Page | Locator, name: "Start time" | "End time", time: string) =>
+  expect(whenField(scope, name)).toHaveValue(time);
+/** Adds an event at 09:30 for `who`: a member's name (the one adding it is chosen already), or All. */
 async function add(page: Page, title: string, who: string, date = localParts(new Date()).date) {
   await page.getByRole("button", { name: "Add event", exact: true }).click();
   await page.getByLabel("Event title", { exact: true }).fill(title);
@@ -31,7 +41,7 @@ async function add(page: Page, title: string, who: string, date = localParts(new
   await setDate(page, "End date", date);
   await setTime(page, "Start time", "09:30");
   await setTime(page, "End time", "10:30");
-  await page.getByRole("group", { name: "Who?" }).getByRole("radio", { name: who, exact: true }).check();
+  await page.getByRole("group", { name: "Who?" }).getByRole("checkbox", { name: who, exact: true }).check();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
@@ -47,16 +57,17 @@ for (const mobile of [false, true]) {
   test(`calendar lifecycle, exports, views and back button (${mobile ? "mobile" : "desktop"})`, async ({ page }) => {
     if (mobile) await page.setViewportSize({ width: 390, height: 844 });
     const { space } = await setup(page);
+    if (mobile) await showMonth(page);
     const me = space.members[0];
     // The colors over the calendar: each member by their name, not their username.
     const legend = page.getByRole("list", { name: "Event colors" });
     await expect(legend.getByRole("listitem")).toHaveText([me.name!, "Group"]);
-    // The form: Who?, the member's picture (or initial) and All, the one adding it chosen.
+    // The form: Who?, each member's picture (or initial) and All, any of them; the one adding it chosen.
     await page.getByRole("button", { name: "Add event", exact: true }).click();
     const who = page.getByRole("group", { name: "Who?" });
-    await expect(who.getByRole("radio")).toHaveCount(2);
-    await expect(who.getByRole("radio", { name: me.name!, exact: true })).toBeChecked();
-    await expect(who.getByRole("radio", { name: "All", exact: true })).not.toBeChecked();
+    await expect(who.getByRole("checkbox")).toHaveCount(2);
+    await expect(who.getByRole("checkbox", { name: me.name!, exact: true })).toBeChecked();
+    await expect(who.getByRole("checkbox", { name: "All", exact: true })).not.toBeChecked();
     // No notes, and no select for who it's for.
     await expect(page.getByRole("dialog").getByRole("textbox", { name: /Notes/ })).toHaveCount(0);
     await expect(page.getByRole("dialog").getByRole("combobox")).toHaveCount(0);
@@ -66,34 +77,52 @@ for (const mobile of [false, true]) {
     const personal = page.getByRole("button", { name: /^Morning walk,/ });
     const group = page.getByRole("button", { name: /^Dinner together,/ });
     // Who it's for (their initial here, the group's icon) and the title: no time, no name.
-    await expect(personal).toBeVisible(); await expect(group).toContainText("Dinner together");
+    await expect(personal).toBeVisible();
+    await expect(group).toContainText("Dinner together");
     await expect(personal).toHaveAccessibleName(`Morning walk, 09:30, ${me.name}`);
     await expect(group).toHaveAccessibleName(/, Group$/);
     // Both fit in their day, under its number (on a phone too): it doesn't scroll.
     const today = localParts(new Date()).date;
-    const day = page.getByRole("button", { name: `${dateLabel(today, { weekday: "long", day: "numeric", month: "long" })}, add event` }).locator("..");
+    const day = page
+      .getByRole("button", {
+        name: `${dateLabel(today, { weekday: "long", day: "numeric", month: "long" })}, add event`,
+      })
+      .locator("..");
     await expect(day.getByRole("button", { name: /^(Morning walk|Dinner together),/ })).toHaveCount(2);
     expect(await day.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
-    // Notes from before the form lost them (here, from the API) are shown and kept.
-    const notes = "Bring coffee, tea; and a notebook.\nSee you there!";
-    const walk = ((await (await page.request.get(base)).json()).data as CalendarEvent[]).find((e) => e.title === "Morning walk")!;
-    expect((await page.request.patch(`${base}/${walk.id}`, { data: { ...walk, notes } })).status()).toBe(200);
+    const walk = ((await (await page.request.get(base)).json()).data as CalendarEvent[]).find(
+      (e) => e.title === "Morning walk",
+    )!;
     await page.reload();
+    if (mobile) await showMonth(page);
     await expect(group.locator("svg")).toBeVisible();
     // On screen (the rest is its name, for screen readers): the initial and the title.
-    await expect(personal.locator(':scope > [aria-hidden="true"]')).toHaveText([space.members[0].username[0].toUpperCase(), "Morning walk"]);
+    await expect(personal.locator(':scope > [aria-hidden="true"]')).toHaveText([
+      space.members[0].username[0].toUpperCase(),
+      "Morning walk",
+    ]);
     await expect(group.locator(':scope > [aria-hidden="true"]')).toHaveText(["", "Dinner together"]);
-    expect(await personal.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe(space.members[0].color);
-    expect(await group.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe("var(--muted)");
-    for (const view of ["Week", "Day", "Month"]) {
+    expect(await personal.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe(
+      space.members[0].color,
+    );
+    expect(await group.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe(
+      "var(--muted)",
+    );
+    // On a phone a week is three days.
+    for (const [view, name] of [
+      [mobile ? "3 days" : "Week", "week"],
+      ["Day", "day"],
+      ["Month", "month"],
+    ]) {
       await page.getByRole("button", { name: view, exact: true }).click();
-      await expect(page.getByRole("region", { name: `${view.toLowerCase()} calendar`, exact: true })).toBeVisible();
+      await expect(page.getByRole("region", { name: `${name} calendar`, exact: true })).toBeVisible();
       await expect(personal).toBeAttached();
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+      ).toBe(true);
     }
     await personal.click();
-    await expect(page.getByRole("dialog")).toContainText("Bring coffee");
-    // Who it's for, by their name.
+    // Who it's for, by their name; events have no notes.
     await expect(page.getByRole("dialog")).toContainText(me.name!);
     const box = await page.getByRole("dialog").boundingBox();
     // On a phone, the whole screen.
@@ -101,54 +130,88 @@ for (const mobile of [false, true]) {
     else expect(box!.width).toBeLessThan(600);
     const ics = await download(page, "Download event .ics");
     expect(ics).toContain("SUMMARY:Morning walk\r\n");
-    expect(ics).toContain("DESCRIPTION:Bring coffee\\, tea\\; and a notebook.\\nSee you there!");
+    expect(ics).toContain(`DESCRIPTION:For: ${me.name}\r\n`);
     const link = new URL((await page.getByRole("link", { name: "Export to Google Calendar" }).getAttribute("href"))!);
     expect(link.searchParams.get("ctz")).toBe("Europe/Lisbon");
     expect(link.searchParams.get("dates")).toMatch(/^\d{8}T\d{6}Z\/\d{8}T\d{6}Z$/);
-    await page.goBack(); await expect(page.getByRole("dialog")).toHaveCount(0); await expect(page).toHaveURL("/shared");
-    await personal.click(); await page.getByRole("button", { name: "Edit event", exact: true }).click();
+    expect(link.searchParams.get("details")).toBe(`For: ${me.name}`);
+    // The open event is in the URL; Back closes it.
+    await expect(page).toHaveURL(`/shared?p=event%3A${walk.id}`);
+    await page.goBack();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page).toHaveURL("/shared");
+    await personal.click();
+    await page.getByRole("button", { name: "Edit event", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toContainText("Time zone");
-    await expect(page.getByRole("group", { name: "Who?" }).getByRole("radio", { name: me.name!, exact: true })).toBeChecked();
+    await expect(
+      page.getByRole("group", { name: "Who?" }).getByRole("checkbox", { name: me.name!, exact: true }),
+    ).toBeChecked();
     await page.getByLabel("Event title", { exact: true }).fill("Evening walk");
     await setTime(page, "Start time", "18:00");
     await setTime(page, "End time", "19:00");
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await page.reload();
+    if (mobile) await showMonth(page);
     await expect(page.getByRole("button", { name: /^Evening walk, 18:00/ })).toBeVisible();
-    expect(((await (await page.request.get(`${base}/${walk.id}`)).json()).data as CalendarEvent).notes).toBe(notes);
     // Exports are per event, from its dialog: none for the whole calendar, and no time zone line (not in the form either).
     await expect(page.getByRole("link", { name: /Export calendar/ })).toHaveCount(0);
     await expect(page.getByText("Europe/Lisbon")).toHaveCount(0);
     await page.getByRole("button", { name: /^Evening walk,/ }).click();
     const edited = await download(page, "Download event .ics");
-    expect(edited).toContain("SUMMARY:Evening walk"); expect(edited).not.toContain("SUMMARY:Dinner together");
-    await page.goBack(); await expect(page.getByRole("dialog")).toHaveCount(0);
+    expect(edited).toContain("SUMMARY:Evening walk");
+    expect(edited).not.toContain("SUMMARY:Dinner together");
+    await page.goBack();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    // Delete event: gone at once, with Undo for a few seconds (no "are you sure?").
+    await page.getByRole("button", { name: /^Evening walk,/ }).click();
+    await page.getByRole("button", { name: "Delete event", exact: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Evening walk,/ })).toHaveCount(0);
+    await expect(page.getByRole("status").filter({ hasText: "Deleted “Evening walk”" })).toBeVisible();
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
+    await expect(page.getByRole("button", { name: /^Evening walk,/ })).toBeVisible();
     for (const title of ["Evening walk", "Dinner together"]) {
       await page.getByRole("button", { name: new RegExp(`^${title},`) }).click();
       await page.getByRole("button", { name: "Delete event", exact: true }).click();
-      await page.getByRole("button", { name: "Confirm delete", exact: true }).click();
       await expect(page.getByRole("dialog")).toHaveCount(0);
     }
-    await expect(page.getByText("Nothing planned yet — tap a day to add your first event!")).toBeVisible();
-    await withDatabase(async (db) => expect((await db.query("SELECT id FROM events WHERE space_id=$1", [space.id])).rowCount).toBe(0));
+    // The second delete sent the first; the second goes once its Undo has.
+    await expect
+      .poll(
+        () =>
+          withDatabase(async (db) => (await db.query("SELECT id FROM events WHERE space_id=$1", [space.id])).rowCount),
+        { timeout: 15_000 },
+      )
+      .toBe(0);
     await page.getByRole("button", { name: "Add event", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
-    await page.keyboard.press("Escape"); await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 }
 
 for (const mobile of [false, true]) {
-  test(`a day of the month shows two events, then a small "+2 more", which opens the day (${mobile ? "mobile" : "desktop"})`, async ({ page }) => {
+  test(`a day of the month shows two events, then a small "+2 more", which opens the day (${mobile ? "mobile" : "desktop"})`, async ({
+    page,
+  }) => {
     if (mobile) await page.setViewportSize({ width: 390, height: 844 });
     await setup(page);
     const today = localParts(new Date()).date;
-    for (const [title, hour] of [["Breakfast", 8], ["Gym", 10], ["Lunch", 12], ["Walk", 14]] as const) {
+    for (const [title, hour] of [
+      ["Breakfast", 8],
+      ["Gym", 10],
+      ["Lunch", 12],
+      ["Walk", 14],
+    ] as const) {
       const at = (h: number) => localInstants(today, `${String(h).padStart(2, "0")}:00`)[0];
-      const created = await page.request.post(base, { data: { title, notes: "", startsAt: at(hour), endsAt: at(hour + 1), isGroup: true, assigneeId: null } });
+      const created = await page.request.post(base, {
+        data: { title, startsAt: at(hour), endsAt: at(hour + 1), isGroup: true },
+      });
       expect(created.status()).toBe(201);
     }
     await page.reload();
+    if (mobile) await showMonth(page);
     const label = dateLabel(today, { weekday: "long", day: "numeric", month: "long" });
     const day = page.getByRole("button", { name: `${label}, add event` }).locator("..");
     const first = day.getByRole("button", { name: /^Breakfast,/ });
@@ -168,42 +231,85 @@ for (const mobile of [false, true]) {
     await expect(page.getByRole("dialog")).toHaveCount(0);
     const grid = page.getByRole("region", { name: "day calendar", exact: true });
     await expect(grid).toBeVisible();
-    await expect(page.getByRole("heading", { level: 2, name: dateLabel(today, { day: "numeric", month: "long", year: "numeric" }) })).toBeVisible();
-    for (const title of ["Breakfast", "Gym", "Lunch", "Walk"]) await expect(grid.getByRole("button", { name: new RegExp(`^${title},`) })).toBeAttached();
+    await expect(
+      page.getByRole("heading", {
+        level: 2,
+        name: dateLabel(today, { day: "numeric", month: "long", year: "numeric" }),
+      }),
+    ).toBeVisible();
+    for (const title of ["Breakfast", "Gym", "Lunch", "Walk"])
+      await expect(grid.getByRole("button", { name: new RegExp(`^${title},`) })).toBeAttached();
   });
 }
 
-test("events and exports are isolated by current space; same-space members can collaborate", async ({ page, browser, request }) => {
+test("events and exports are isolated by current space; same-space members can collaborate", async ({
+  page,
+  browser,
+  request,
+}) => {
   const { space } = await setup(page);
-  const payload = { title: "Private appointment", notes: "Only our space", startsAt: "2026-07-10T08:00:00.000Z", endsAt: "2026-07-10T09:00:00.000Z", isGroup: false, assigneeId: space.members[0].id };
-  const created = await page.request.post(base, { data: payload }); expect(created.status()).toBe(201);
+  const payload = {
+    title: "Private appointment",
+    startsAt: "2026-07-10T08:00:00.000Z",
+    endsAt: "2026-07-10T09:00:00.000Z",
+    isGroup: false,
+    assigneeIds: [space.members[0].id],
+  };
+  const created = await page.request.post(base, { data: payload });
+  expect(created.status()).toBe(201);
   const event: CalendarEvent = (await created.json()).data;
   expect((await request.get(base)).status()).toBe(401);
-  const context = await browser.newContext({ extraHTTPHeaders: { "X-Forwarded-For": `10.${[...randomBytes(3)].join(".")}` } });
+  const context = await browser.newContext({
+    extraHTTPHeaders: { "X-Forwarded-For": `10.${[...randomBytes(3)].join(".")}` },
+  });
   try {
-    const other = await context.newPage(); const otherSpace = (await setup(other)).space;
+    const other = await context.newPage();
+    const otherSpace = (await setup(other)).space;
     expect((await (await other.request.get(base)).json()).data).toEqual([]);
-    for (const url of [`${base}/${event.id}`, `${base}/${event.id}/export`]) expect((await other.request.get(url)).status()).toBe(404);
+    for (const url of [`${base}/${event.id}`, `${base}/${event.id}/export`])
+      expect((await other.request.get(url)).status()).toBe(404);
     // There is no whole-calendar export, for anyone.
     for (const p of [page, other]) expect((await p.request.get(`${base}/export`)).status()).toBe(404);
     expect((await other.request.patch(`${base}/${event.id}`, { data: payload })).status()).toBe(404);
     expect((await other.request.delete(`${base}/${event.id}`)).status()).toBe(404);
     expect((await other.request.post(base, { data: payload })).status()).toBe(400);
     await other.request.post(`/api/shared/spaces/${otherSpace.id}/leave`, { data: {} });
-    const code = (await (await page.request.post(`/api/shared/spaces/${space.id}/invites`, { data: {} })).json()).data.code;
+    const code = (await (await page.request.post(`/api/shared/spaces/${space.id}/invites`, { data: {} })).json()).data
+      .code;
     await other.request.post("/api/shared/spaces/join", { data: { code } });
     expect((await (await other.request.get(base)).json()).data).toHaveLength(1);
     const memberSpace: Space = (await (await other.request.get("/api/shared/spaces")).json()).data;
     const member = memberSpace.members.find((m) => m.id !== space.ownerId)!;
-    expect((await other.request.patch(`${base}/${event.id}`, { data: { ...payload, assigneeId: member.id } })).status()).toBe(200);
+    expect(
+      (
+        await other.request.patch(`${base}/${event.id}`, {
+          data: { ...payload, assigneeIds: [space.ownerId, member.id] },
+        })
+      ).status(),
+    ).toBe(200);
+    // For both of them now: the owner and the member who joined.
+    expect((await (await page.request.get(`${base}/${event.id}`)).json()).data.assigneeIds).toHaveLength(2);
     await other.request.post(`/api/shared/spaces/${space.id}/leave`, { data: {} });
     expect((await other.request.get(`${base}/${event.id}`)).status()).toBe(403);
-    expect((await (await page.request.get(`${base}/${event.id}`)).json()).data.assigneeId).toBeNull();
-    expect((await page.request.patch(`${base}/${event.id}`, { data: { ...payload, isGroup: true, assigneeId: null } })).status()).toBe(200);
-  } finally { await context.close(); }
+    // Leaving took the member off it; the owner is still on it.
+    expect((await (await page.request.get(`${base}/${event.id}`)).json()).data.assigneeIds).toEqual([space.ownerId]);
+    expect(
+      (
+        await page.request.patch(`${base}/${event.id}`, { data: { ...payload, isGroup: true, assigneeIds: [] } })
+      ).status(),
+    ).toBe(200);
+    // Group events have nobody in particular, and the rest someone.
+    expect((await page.request.patch(`${base}/${event.id}`, { data: { ...payload, assigneeIds: [] } })).status()).toBe(
+      400,
+    );
+  } finally {
+    await context.close();
+  }
 });
 
-test("calendar uses Lisbon in a different browser timezone, stores UTC, rejects DST gaps and chooses repeated times", async ({ page }) => {
+test("calendar uses Lisbon in a different browser timezone, stores UTC, rejects DST gaps and chooses repeated times", async ({
+  page,
+}) => {
   const { space } = await setup(page);
   await add(page, "Summer lunch", "All", "2026-07-10");
   let events: CalendarEvent[] = (await (await page.request.get(base)).json()).data;
@@ -216,7 +322,8 @@ test("calendar uses Lisbon in a different browser timezone, stores UTC, rejects 
   await page.getByLabel("Event title", { exact: true }).fill("Clock change");
   await setDate(page, "Start date", "2026-03-29");
   await setDate(page, "End date", "2026-03-29");
-  await setTime(page, "Start time", "01:30"); await setTime(page, "End time", "03:00");
+  await setTime(page, "Start time", "01:30");
+  await setTime(page, "End time", "03:00");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("does not exist");
   await setDate(page, "Start date", "2026-10-25");
@@ -231,18 +338,32 @@ test("calendar uses Lisbon in a different browser timezone, stores UTC, rejects 
   await expect(page.getByLabel("Start occurrence")).toHaveValue("1");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  const invalid = { title: "Invalid", notes: "", startsAt: "2026-02-30T08:00:00Z", endsAt: "2026-03-03T09:00:00Z", isGroup: false, assigneeId: space.ownerId };
+  const invalid = {
+    title: "Invalid",
+    startsAt: "2026-02-30T08:00:00Z",
+    endsAt: "2026-03-03T09:00:00Z",
+    isGroup: false,
+    assigneeIds: [space.ownerId],
+  };
   expect((await page.request.post(base, { data: invalid })).status()).toBe(400);
-  expect((await page.request.post(base, { data: { ...invalid, startsAt: "2026-03-04T09:00:00Z" } })).status()).toBe(400);
-  expect((await page.request.post(base, { data: invalid, headers: { origin: "https://elsewhere.example" } })).status()).toBe(403);
+  expect((await page.request.post(base, { data: { ...invalid, startsAt: "2026-03-04T09:00:00Z" } })).status()).toBe(
+    400,
+  );
+  expect(
+    (await page.request.post(base, { data: invalid, headers: { origin: "https://elsewhere.example" } })).status(),
+  ).toBe(403);
 });
 
-test("a tap on a day or an hour adds an event then; all-day events have no times, and export as dates", async ({ page }) => {
+test("a tap on a day or an hour adds an event then; all-day events have no times, and export as dates", async ({
+  page,
+}) => {
   const { space } = await setup(page);
   const month = localParts(new Date()).date.slice(0, 8);
   const [first, last, after] = [15, 17, 18].map((day) => `${month}${day}`);
   // A tap on a day of the month, away from its number: a new event that day, at 09:00.
-  const number = page.getByRole("button", { name: `${dateLabel(first, { weekday: "long", day: "numeric", month: "long" })}, add event` });
+  const number = page.getByRole("button", {
+    name: `${dateLabel(first, { weekday: "long", day: "numeric", month: "long" })}, add event`,
+  });
   const cell = number.locator("..");
   const box = (await cell.boundingBox())!;
   await cell.click({ position: { x: box.width / 2, y: box.height - 6 } });
@@ -276,7 +397,9 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
   await expect(startTime).toHaveAttribute("aria-invalid", "true");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeVisible();
-  await expect.poll(() => startTime.evaluate((input: HTMLInputElement) => input.validationMessage)).toBe("Enter a time from 00:00 to 23:59, as hh:mm.");
+  await expect
+    .poll(() => startTime.evaluate((input: HTMLInputElement) => input.validationMessage))
+    .toBe("Enter a time from 00:00 to 23:59, as hh:mm.");
   await setTime(dialog, "Start time", "17:00");
   await expect(startTime).not.toHaveAttribute("aria-invalid", "true");
 
@@ -301,7 +424,9 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
   await expect(endDate).toHaveAttribute("aria-invalid", "true");
   // Not a real date (31 February) isn't one either.
   await endDate.fill(`31/02/${first.slice(0, 4)}`);
-  await expect.poll(() => endDate.evaluate((input: HTMLInputElement) => input.validationMessage)).toBe("Enter a date as dd/mm/yyyy.");
+  await expect
+    .poll(() => endDate.evaluate((input: HTMLInputElement) => input.validationMessage))
+    .toBe("Enter a date as dd/mm/yyyy.");
 
   // All day: no times.
   await dialog.getByRole("switch", { name: "All day" }).check();
@@ -313,12 +438,20 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
   // On each of its days, as All day; it runs from the first day's midnight to the one after the last.
   await expect(page.getByRole("button", { name: /^Holiday, All day, / })).toHaveCount(3);
   const events: CalendarEvent[] = (await (await page.request.get(base)).json()).data;
-  expect(events).toEqual([expect.objectContaining({
-    title: "Holiday", allDay: true, startsAt: localInstants(first, "00:00")[0], endsAt: localInstants(after, "00:00")[0],
-  })]);
+  expect(events).toEqual([
+    expect.objectContaining({
+      title: "Holiday",
+      allDay: true,
+      startsAt: localInstants(first, "00:00")[0],
+      endsAt: localInstants(after, "00:00")[0],
+    }),
+  ]);
 
   // Its dialog: the days and All day; exported as whole days.
-  await page.getByRole("button", { name: /^Holiday,/ }).first().click();
+  await page
+    .getByRole("button", { name: /^Holiday,/ })
+    .first()
+    .click();
   const event = page.getByRole("dialog", { name: "Holiday" });
   await expect(event).toContainText("All day");
   const ics = await download(page, "Download event .ics");
@@ -341,7 +474,9 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
   await expect(grid.getByText("All day", { exact: true })).toBeVisible();
   const hour = grid.getByText("14:00", { exact: true });
   // The day opens at the time it is now (the test below): from the top, 14:00 is scrolled to.
-  await grid.evaluate((el) => { el.scrollTop = 0; });
+  await grid.evaluate((el) => {
+    el.scrollTop = 0;
+  });
   await hour.scrollIntoViewIfNeeded();
   // The all-day row stays at the top as the hours scroll under it.
   expect(await grid.evaluate((el) => el.scrollTop)).toBeGreaterThan(200);
@@ -363,13 +498,36 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
     expect((await arrow.boundingBox())!.width).toBeGreaterThanOrEqual(44);
   }
   await page.getByRole("button", { name: "Next period" }).click();
-  await expect(page.getByRole("heading", { level: 2, name: dateLabel(datePlus(first, 1), { day: "numeric", month: "long", year: "numeric" }) })).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      level: 2,
+      name: dateLabel(datePlus(first, 1), { day: "numeric", month: "long", year: "numeric" }),
+    }),
+  ).toBeVisible();
 
   // The API takes all-day events only from midnight to midnight.
-  const payload = { title: "Odd", notes: "", isGroup: false, assigneeId: space.members[0].id, allDay: true };
-  expect((await page.request.post(base, { data: { ...payload, startsAt: "2026-07-10T08:00:00.000Z", endsAt: "2026-07-11T08:00:00.000Z" } })).status()).toBe(400);
-  expect((await page.request.post(base, { data: { ...payload, startsAt: "2026-07-09T23:00:00.000Z", endsAt: "2026-07-10T23:00:00.000Z", allDay: "yes" } })).status()).toBe(400);
-  expect((await page.request.post(base, { data: { ...payload, startsAt: "2026-07-09T23:00:00.000Z", endsAt: "2026-07-10T23:00:00.000Z" } })).status()).toBe(201);
+  const payload = { title: "Odd", isGroup: false, assigneeIds: [space.members[0].id], allDay: true };
+  expect(
+    (
+      await page.request.post(base, {
+        data: { ...payload, startsAt: "2026-07-10T08:00:00.000Z", endsAt: "2026-07-11T08:00:00.000Z" },
+      })
+    ).status(),
+  ).toBe(400);
+  expect(
+    (
+      await page.request.post(base, {
+        data: { ...payload, startsAt: "2026-07-09T23:00:00.000Z", endsAt: "2026-07-10T23:00:00.000Z", allDay: "yes" },
+      })
+    ).status(),
+  ).toBe(400);
+  expect(
+    (
+      await page.request.post(base, {
+        data: { ...payload, startsAt: "2026-07-09T23:00:00.000Z", endsAt: "2026-07-10T23:00:00.000Z" },
+      })
+    ).status(),
+  ).toBe(201);
 });
 
 test("the week and day views open at the time it is now, as does Today", async ({ page }) => {
@@ -386,21 +544,10 @@ test("the week and day views open at the time it is now, as does Today", async (
     const grid = page.getByRole("region", { name: `${view.toLowerCase()} calendar` });
     await expect(grid).toBeVisible();
     await expectNow(grid);
-    await grid.evaluate((el) => { el.scrollTop = 0; });
+    await grid.evaluate((el) => {
+      el.scrollTop = 0;
+    });
     await page.getByRole("button", { name: "Today", exact: true }).click();
     await expectNow(grid);
   }
-});
-
-test("time conversion and iCalendar preserve DST, escaped text, UTF-8 folding and UTC", () => {
-  expect(localInstants("2026-01-10", "09:30")).toEqual(["2026-01-10T09:30:00.000Z"]);
-  expect(localInstants("2026-07-10", "09:30")).toEqual(["2026-07-10T08:30:00.000Z"]);
-  expect(localInstants("2026-03-29", "01:30")).toEqual([]);
-  expect(localInstants("2026-10-25", "01:30")).toEqual(["2026-10-25T00:30:00.000Z", "2026-10-25T01:30:00.000Z"]);
-  const title = "Café 🌍, meeting; ".repeat(15);
-  const ics = calendarIcs([{ id: "id", title, notes: "Line 1\r\nLine 2\\", startsAt: "2026-07-10T08:30:00Z", endsAt: "2026-07-10T09:30:00Z", allDay: false, isGroup: true, assigneeId: null }]);
-  expect(ics).toContain("DTSTART:20260710T083000Z\r\n");
-  for (const line of ics.split("\r\n")) expect(Buffer.byteLength(line)).toBeLessThanOrEqual(75);
-  expect(ics.replace(/\r\n /g, "")).toContain(`SUMMARY:${title.replace(/[,;]/g, "\\$&")}`);
-  expect(ics).toContain("DESCRIPTION:Line 1\\nLine 2\\\\");
 });

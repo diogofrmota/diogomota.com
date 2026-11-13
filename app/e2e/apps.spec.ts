@@ -11,8 +11,9 @@ test("/apps shows a card for Shared and for Shows, with the version under them",
   await page.goto("/apps");
   await expect(page).toHaveTitle("apps · diogo mota");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Apps");
-  // "dev" unless APP_VERSION is set, as it is in the Docker image.
-  await expect(page.getByRole("main").getByText(/^Version (dev|v\d+\.\d+\.\d+)$/)).toBeVisible();
+  // "dev" unless APP_VERSION is set, as it is in the Docker image; then a link to Privacy.
+  await expect(page.getByRole("main").getByText(/^Version (dev|v\d+\.\d+\.\d+) · Privacy$/)).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
   expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows"]);
   await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(apps.length);
 
@@ -22,9 +23,7 @@ test("/apps shows a card for Shared and for Shows, with the version under them",
     await expect(item).toContainText(app.description);
     const logo = item.locator("img");
     await expect(logo).toHaveAttribute("src", app.logo);
-    expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(
-      true,
-    );
+    expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
   }
 });
 
@@ -41,7 +40,7 @@ test("/apps top bar has Log in and Sign up", async ({ page }) => {
 
   // Sign up is the call to action: filled with the accent.
   const signUp = account.getByRole("link", { name: "Sign up" });
-  await expect(signUp.locator("span").first()).toHaveCSS("background-color", "rgb(79, 70, 229)");
+  await expect(signUp.locator("span").first()).toHaveCSS("background-color", "rgb(48, 80, 122)");
   await signUp.click();
   await expect(page).toHaveURL("/signup");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Create your account");
@@ -55,13 +54,14 @@ test("/apps top bar has Log in and Sign up", async ({ page }) => {
 
 test("/apps, logged out, asks to log in or sign up over the cards", async ({ page }) => {
   await page.goto("/apps");
-  // Logged out, in Light mode.
-  await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "light-2");
+  // Logged out, in Light.
+  await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
   const callout = page.getByRole("region", { name: "One account for all apps" });
   await expect(callout.getByRole("paragraph")).toHaveText(
-    "Plan with your group in a shared calendar and task lists, and keep track of what you watch.");
+    "Plan together as a couple in a shared calendar and task lists, and keep track of what you watch with your friends.",
+  );
   // No icon: the title, the paragraph under it, then the two buttons side by
-  // side under that, Sign up (the call to action) first.
+  // side under that: as everywhere, Log in first, then Sign up (the call to action).
   await expect(callout.locator("svg, img")).toHaveCount(0);
   const calloutBox = (await callout.boundingBox())!;
   const headingBox = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
@@ -73,11 +73,11 @@ test("/apps, logged out, asks to log in or sign up over the cards", async ({ pag
   expect(text.y).toBeGreaterThanOrEqual(title.y + title.height);
   expect(signUp.y).toBeGreaterThanOrEqual(text.y + text.height);
   expect(login.y).toBe(signUp.y);
-  expect(login.x).toBeGreaterThan(signUp.x + signUp.width);
+  expect(signUp.x).toBeGreaterThan(login.x + login.width);
   // The paragraph is as wide as the box (less its padding), not broken off mid-box.
   expect(text.width).toBeGreaterThan(calloutBox.width - 60);
-  // Log in stands out from the tinted box: a 2px outline.
-  await expect(callout.getByRole("link", { name: "Log in" })).toHaveCSS("border-top-width", "2px");
+  // Log in plain, Sign up filled with the accent.
+  await expect(callout.getByRole("link", { name: "Log in" })).toHaveCSS("border-top-width", "1px");
 
   await callout.getByRole("link", { name: "Log in" }).click();
   await expect(page).toHaveURL("/login");
@@ -106,10 +106,7 @@ for (const app of apps) {
 
     const next = new URLSearchParams({ next: app.href });
     await expect(prompt.getByRole("link", { name: "Log in" })).toHaveAttribute("href", `/login?${next}`);
-    await expect(prompt.getByRole("link", { name: "Sign Up" })).toHaveAttribute(
-      "href",
-      `/signup?${next}`,
-    );
+    await expect(prompt.getByRole("link", { name: "Sign Up" })).toHaveAttribute("href", `/signup?${next}`);
 
     await prompt.getByRole("link", { name: "Log in" }).click();
     await expect(page).toHaveURL(`/login?${next}`);

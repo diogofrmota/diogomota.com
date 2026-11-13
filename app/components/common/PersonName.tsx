@@ -7,7 +7,15 @@ import styles from "./PersonName.module.css";
  * off with an ellipsis by `className`.
  */
 export function PersonName({ person, className }: { person: Named; className?: string }) {
-  return <span className={className}>
-    {person.name ? <>{person.name} <span className={styles.handle}>(@{person.username})</span></> : `@${person.username}`}
-  </span>;
+  return (
+    <span className={className}>
+      {person.name ? (
+        <>
+          {person.name} <span className={styles.handle}>(@{person.username})</span>
+        </>
+      ) : (
+        `@${person.username}`
+      )}
+    </span>
+  );
 }

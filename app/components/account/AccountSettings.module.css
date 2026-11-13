@@ -265,7 +265,9 @@
   color: var(--muted);
   font-size: var(--text-sm);
   cursor: pointer;
-  transition: border-color var(--duration-fast), background-color var(--duration-fast);
+  transition:
+    border-color var(--duration-fast),
+    background-color var(--duration-fast);
 }
 
 .dropZone svg {
@@ -480,4 +482,42 @@
   .dialog[open] {
     animation: none;
   }
+}
+
+/* Your data: Download my data and Delete my account, under a line. */
+.data {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border);
+}
+
+.data h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.data p {
+  margin: 0;
+}
+
+.data a {
+  color: inherit;
+}
+
+/* The email isn't confirmed yet: a note with Send the link again. */
+.verify {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.verify p {
+  margin: 0;
 }

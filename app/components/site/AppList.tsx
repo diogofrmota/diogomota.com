@@ -14,9 +14,7 @@ import styles from "./AppList.module.css";
 // only known once the server has rendered them).
 function PendingHint() {
   const { pending } = useLinkStatus();
-  return (
-    <span aria-hidden="true" className={`${styles.pending} ${pending ? styles.active : ""}`} />
-  );
+  return <span aria-hidden="true" className={`${styles.pending} ${pending ? styles.active : ""}`} />;
 }
 
 // The app cards on /apps: a picture of the app (AppPreview), then its icon,

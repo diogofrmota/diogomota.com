@@ -4,7 +4,8 @@ import { NAME_MAX, USERNAME_MAX, usernameError, usernameHint } from "./account-r
 import { query } from "./db";
 import { friendRequestLimit, userSearchLimit } from "./rate-limit";
 import type { FriendProfile, FriendsState, PeopleSearch, Person, PersonMatch } from "./show-types";
-import { sharedLibrary, ShowsError } from "./shows";
+import { HttpError } from "./http";
+import { bothPlanned, sharedLibrary } from "./shows";
 import { avatarUrlSql } from "./users";
 
 // Friendships of the Shows app: one row per pair of users (001_initial.sql),
@@ -19,7 +20,7 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 
 // A user id from the path; anything else is answered like a stranger's.
 function personId(value: string, notFound: string): string {
-  if (!uuidPattern.test(value)) throw new ShowsError(notFound, 404);
+  if (!uuidPattern.test(value)) throw new HttpError(notFound, 404);
   return value.toLowerCase();
 }
 
@@ -45,13 +46,15 @@ export async function readFriends(userId: string): Promise<FriendsState> {
 export async function sendFriendRequest(userId: string, body: Record<string, unknown>): Promise<FriendsState> {
   // Usernames are lowercase; "@bob" works too.
   const username = typeof body.username === "string" ? body.username.trim().replace(/^@/, "").toLowerCase() : "";
-  if (!username) throw new ShowsError("Enter a username.");
-  if (usernameError(username)) throw new ShowsError(`Usernames have ${usernameHint}`);
-  if (!friendRequestLimit(userId)) throw new ShowsError("Too many friend requests. Try again later.", 429);
+  if (!username) throw new HttpError("Enter a username.");
+  if (usernameError(username)) throw new HttpError(`Usernames have ${usernameHint}`);
+  if (!friendRequestLimit(userId)) throw new HttpError("Too many friend requests. Try again later.", 429);
 
-  const { rows: [other] } = await query<Pick<Person, "id" | "username">>("SELECT id, username FROM users WHERE username = $1", [username]);
-  if (!other) throw new ShowsError(`No account has the username ${username}.`, 404);
-  if (other.id === userId) throw new ShowsError("That's your own username.");
+  const {
+    rows: [other],
+  } = await query<Pick<Person, "id" | "username">>("SELECT id, username FROM users WHERE username = $1", [username]);
+  if (!other) throw new HttpError(`No account has the username ${username}.`, 404);
+  if (other.id === userId) throw new HttpError("That's your own username.");
   try {
     // One statement, so two people asking each other at once become friends.
     const { rows } = await query(
@@ -63,15 +66,22 @@ export async function sendFriendRequest(userId: string, body: Record<string, unk
     );
     if (!rows[0]) {
       // Neither inserted nor accepted: they are friends already, or the user asked before.
-      const { rows: [existing] } = await query<{ status: string }>(`SELECT status FROM friendships f WHERE ${pair}`, [userId, other.id]);
-      throw new ShowsError(existing?.status === "accepted" ? `You're already friends with ${other.username}.`
-        : `You've already sent ${other.username} a friend request.`, 409);
+      const {
+        rows: [existing],
+      } = await query<{ status: string }>(`SELECT status FROM friendships f WHERE ${pair}`, [userId, other.id]);
+      throw new HttpError(
+        existing?.status === "accepted"
+          ? `You're already friends with ${other.username}.`
+          : `You've already sent ${other.username} a friend request.`,
+        409,
+      );
     }
   } catch (error) {
     // One of the accounts was deleted since it was read.
     if (error instanceof DatabaseError && error.code === "23503") {
       throw error.constraint === "friendships_friend_id_fkey"
-        ? new ShowsError(`No account has the username ${username}.`, 404) : new ShowsError("Please log in again.", 401);
+        ? new HttpError(`No account has the username ${username}.`, 404)
+        : new HttpError("Please log in again.", 401);
     }
     throw error;
   }
@@ -106,7 +116,7 @@ export async function searchPeople(userId: string, value: unknown): Promise<Peop
   // What a username could start with: a-z, 0-9 and _.
   const username = text.length <= USERNAME_MAX && /^[a-z0-9_]+$/.test(text) ? text : null;
   if (handle && !username) return none;
-  if (!userSearchLimit(userId)) throw new ShowsError("Too many searches. Wait a minute and try again.", 429);
+  if (!userSearchLimit(userId)) throw new HttpError("Too many searches. Wait a minute and try again.", 429);
 
   // Usernames are stored in lowercase: a plain prefix LIKE, which
   // users_username_prefix_idx can serve. Names are compared in lowercase and
@@ -142,7 +152,7 @@ export async function acceptFriendRequest(userId: string, otherId: string): Prom
     "UPDATE friendships SET status = 'accepted' WHERE user_id = $2 AND friend_id = $1 AND status = 'pending'",
     [userId, personId(otherId, requestGone)],
   );
-  if (!rowCount) throw new ShowsError(requestGone, 404);
+  if (!rowCount) throw new HttpError(requestGone, 404);
   return readFriends(userId);
 }
 
@@ -152,7 +162,7 @@ export async function declineFriendRequest(userId: string, otherId: string): Pro
     "DELETE FROM friendships WHERE user_id = $2 AND friend_id = $1 AND status = 'pending'",
     [userId, personId(otherId, requestGone)],
   );
-  if (!rowCount) throw new ShowsError(requestGone, 404);
+  if (!rowCount) throw new HttpError(requestGone, 404);
   return readFriends(userId);
 }
 
@@ -162,7 +172,7 @@ export async function cancelFriendRequest(userId: string, otherId: string): Prom
     "DELETE FROM friendships WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'",
     [userId, personId(otherId, requestGone)],
   );
-  if (!rowCount) throw new ShowsError(requestGone, 404);
+  if (!rowCount) throw new HttpError(requestGone, 404);
   return readFriends(userId);
 }
 
@@ -170,11 +180,11 @@ const notFriends = "You aren't friends with this person.";
 
 /** Ends the friendship of the user and `friendId`, for both of them. */
 export async function removeFriend(userId: string, friendId: string): Promise<FriendsState> {
-  const { rowCount } = await query(
-    `DELETE FROM friendships f WHERE f.status = 'accepted' AND ${pair}`,
-    [userId, personId(friendId, notFriends)],
-  );
-  if (!rowCount) throw new ShowsError(notFriends, 404);
+  const { rowCount } = await query(`DELETE FROM friendships f WHERE f.status = 'accepted' AND ${pair}`, [
+    userId,
+    personId(friendId, notFriends),
+  ]);
+  if (!rowCount) throw new HttpError(notFriends, 404);
   return readFriends(userId);
 }
 
@@ -185,11 +195,14 @@ const onlyFriends = "Only friends can see each other's libraries.";
  * favourites and their stats. Anyone else, or an id nobody has, is a 404.
  */
 export async function readFriend(userId: string, friendId: string): Promise<FriendProfile> {
-  const { rows: [friend] } = await query<Person>(
+  const {
+    rows: [friend],
+  } = await query<Person>(
     `SELECT u.id, u.username, ${avatarUrlSql("u")} AS "avatarUrl", u.name
      FROM friendships f JOIN users u ON u.id = $2 WHERE f.status = 'accepted' AND ${pair}`,
     [userId, personId(friendId, onlyFriends)],
   );
-  if (!friend) throw new ShowsError(onlyFriends, 404);
-  return { ...friend, ...(await sharedLibrary(friend.id)) };
+  if (!friend) throw new HttpError(onlyFriends, 404);
+  const [library, planned] = await Promise.all([sharedLibrary(friend.id), bothPlanned(userId, friend.id)]);
+  return { ...friend, ...library, bothPlanned: planned };
 }

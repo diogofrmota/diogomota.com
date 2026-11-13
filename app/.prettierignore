@@ -1,0 +1,12 @@
+# Build output, dependencies and generated files.
+.next
+node_modules
+package-lock.json
+next-env.d.ts
+test-results
+playwright-report
+blob-report
+data
+public
+# Written by `next dev` (see its header).
+AGENTS.md

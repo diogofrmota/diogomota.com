@@ -149,7 +149,11 @@
 }
 
 .switchOff {
-  background: linear-gradient(color-mix(in srgb, var(--text) 45%, transparent), color-mix(in srgb, var(--text) 45%, transparent)) center / 45% 0.25rem no-repeat;
+  background: linear-gradient(
+      color-mix(in srgb, var(--text) 45%, transparent),
+      color-mix(in srgb, var(--text) 45%, transparent)
+    )
+    center / 45% 0.25rem no-repeat;
 }
 
 .posters {
@@ -177,11 +181,21 @@
   box-shadow: var(--shadow-sm);
 }
 
-.poster[data-art="amber"] { background: linear-gradient(160deg, #fbbf24, #b45309); }
-.poster[data-art="indigo"] { background: linear-gradient(160deg, #818cf8, #3730a3); }
-.poster[data-art="emerald"] { background: linear-gradient(160deg, #34d399, #047857); }
-.poster[data-art="rose"] { background: linear-gradient(160deg, #fb7185, #9f1239); }
-.poster[data-art="sky"] { background: linear-gradient(160deg, #38bdf8, #075985); }
+.poster[data-art="amber"] {
+  background: linear-gradient(160deg, #fbbf24, #b45309);
+}
+.poster[data-art="indigo"] {
+  background: linear-gradient(160deg, #818cf8, #3730a3);
+}
+.poster[data-art="emerald"] {
+  background: linear-gradient(160deg, #34d399, #047857);
+}
+.poster[data-art="rose"] {
+  background: linear-gradient(160deg, #fb7185, #9f1239);
+}
+.poster[data-art="sky"] {
+  background: linear-gradient(160deg, #38bdf8, #075985);
+}
 
 /* In the library: the tick at the poster's corner, as on a card. */
 .added {

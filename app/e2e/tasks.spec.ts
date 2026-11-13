@@ -41,9 +41,13 @@ async function readLists(page: Page): Promise<TaskList[]> {
   return (await (await page.request.get(base)).json()).data;
 }
 const chips = (page: Page) => page.getByRole("group", { name: "Task lists" });
-const todoTitles = (page: Page) => page.getByRole("list", { name: "To do" }).getByRole("checkbox")
-  .evaluateAll((boxes) => boxes.map((box) => box.getAttribute("aria-label")));
-const row = (page: Page, title: string) => page.getByRole("listitem").filter({ has: page.getByRole("checkbox", { name: title, exact: true }) });
+const todoTitles = (page: Page) =>
+  page
+    .getByRole("list", { name: "To do" })
+    .getByRole("checkbox")
+    .evaluateAll((boxes) => boxes.map((box) => box.getAttribute("aria-label")));
+const row = (page: Page, title: string) =>
+  page.getByRole("listitem").filter({ has: page.getByRole("checkbox", { name: title, exact: true }) });
 const handle = (page: Page, title: string) => page.getByRole("button", { name: `Reorder ${title}`, exact: true });
 
 // Moves an item from one position to another (1-based) with the keyboard, as a
@@ -63,8 +67,10 @@ async function keyboardMove(page: Page, title: string, from: number, to: number,
   await announced(`${title} dropped at position ${to} of ${of}.`);
 }
 async function mouseDrag(page: Page, from: Locator, to: Locator) {
-  const start = (await from.boundingBox())!, end = (await to.boundingBox())!;
-  const x = start.x + start.width / 2, y = start.y + start.height / 2;
+  const start = (await from.boundingBox())!,
+    end = (await to.boundingBox())!;
+  const x = start.x + start.width / 2,
+    y = start.y + start.height / 2;
   await page.mouse.move(x, y);
   await page.mouse.down();
   await page.mouse.move(x, y + 8, { steps: 2 });
@@ -79,7 +85,7 @@ async function touchDrag(page: Page, from: { x: number; y: number }, to: { x: nu
   await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [from] });
   for (let i = 1; i <= 12; i++) {
     await page.waitForTimeout(16);
-    const point = { x: from.x + (to.x - from.x) * i / 12, y: from.y + (to.y - from.y) * i / 12 };
+    const point = { x: from.x + ((to.x - from.x) * i) / 12, y: from.y + ((to.y - from.y) * i) / 12 };
     await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [point] });
   }
   await page.waitForTimeout(100);
@@ -107,7 +113,10 @@ test("lists: empty state, create, rename, reorder with the keyboard and delete, 
     await dialog.getByLabel("New list").press("Enter");
     await created;
   }
-  const names = () => dialog.getByRole("textbox", { name: /^Name of list/ }).evaluateAll((inputs) => inputs.map((i) => (i as HTMLInputElement).value));
+  const names = () =>
+    dialog
+      .getByRole("textbox", { name: /^Name of list/ })
+      .evaluateAll((inputs) => inputs.map((i) => (i as HTMLInputElement).value));
   await expect.poll(names).toEqual(["House", "Trip", "Groceries"]);
 
   const renamed = saved(page, /\/lists\/[^/]+$/, "PATCH");
@@ -120,12 +129,15 @@ test("lists: empty state, create, rename, reorder with the keyboard and delete, 
   await moved;
   await expect.poll(names).toEqual(["Groceries", "House", "Trip planning"]);
 
+  // Deleting a list: its row says so, with Undo, for a few seconds (no "are you sure?").
   await dialog.getByRole("button", { name: "Delete House" }).click();
-  await expect(dialog).toContainText("Delete “House” for everyone in your space?");
-  await dialog.getByRole("button", { name: "Keep list" }).click();
-  await dialog.getByRole("button", { name: "Delete House" }).click();
+  const deletedRow = dialog.getByRole("status").filter({ hasText: "Deleted “House”" });
+  await expect(deletedRow).toBeVisible();
+  await deletedRow.getByRole("button", { name: "Undo" }).click();
+  await expect(dialog.getByLabel("Name of list House")).toBeVisible();
   const deleted = saved(page, /\/lists\/[^/]+$/, "DELETE");
-  await dialog.getByRole("button", { name: "Delete list" }).click();
+  await dialog.getByRole("button", { name: "Delete House" }).click();
+  await expect(dialog.getByRole("status").filter({ hasText: "Deleted “House”" })).toBeVisible();
   await deleted;
   await dialog.getByRole("button", { name: "Done", exact: true }).click();
   await expect(dialog).toHaveCount(0);
@@ -144,10 +156,14 @@ test("lists: empty state, create, rename, reorder with the keyboard and delete, 
   await expect(dialog).toBeVisible();
   await page.goBack();
   await expect(dialog).toHaveCount(0);
-  await expect(page).toHaveURL("/shared");
+  await expect(page).toHaveURL("/shared/tasks");
 });
 
-test("tasks: add, reorder with mouse and keyboard (persists after reload), complete, assign and delete with undo", async ({ page, browser, isMobile }) => {
+test("tasks: add, reorder with mouse and keyboard (persists after reload), complete, assign and delete with undo", async ({
+  page,
+  browser,
+  isMobile,
+}) => {
   // Two sign-ups, two reloads and the 5 s undo window, twice: ~45 s on its own,
   // over the 60 s limit when the other workers keep the dev server busy.
   test.slow();
@@ -157,10 +173,13 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   try {
     const other = await context.newPage();
     await signUp(other, friend, "/signup?next=/shared");
-    await expect(other.getByRole("heading", { name: "Your shared space" })).toBeVisible();
-    const code = (await (await page.request.post(`/api/shared/spaces/${space.id}/invites`, { data: {} })).json()).data.code;
+    await expect(other.getByRole("heading", { name: "Your shared calendar" })).toBeVisible();
+    const code = (await (await page.request.post(`/api/shared/spaces/${space.id}/invites`, { data: {} })).json()).data
+      .code;
     expect((await other.request.post("/api/shared/spaces/join", { data: { code } })).ok()).toBe(true);
-  } finally { await context.close(); }
+  } finally {
+    await context.close();
+  }
   await page.reload();
   const members: Space["members"] = (await (await page.request.get("/api/shared/spaces")).json()).data.members;
   const member = members.find((m) => m.username === friend.username)!;
@@ -193,15 +212,19 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   // and nothing is sent. Clicked from inside the page, so the moment is timed
   // there and not by the test's round trips.
   const patches: string[] = [];
-  page.on("request", (request) => { if (request.method() === "PATCH") patches.push(request.url()); });
+  page.on("request", (request) => {
+    if (request.method() === "PATCH") patches.push(request.url());
+  });
   const tick = page.getByRole("list", { name: "To do" }).getByRole("checkbox", { name: "Fix the door" });
-  expect(await tick.evaluate(async (box: HTMLInputElement) => {
-    box.click();
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const shown = { checked: box.checked, inToDo: box.closest("ul")?.getAttribute("aria-label") === "To do" };
-    box.click();
-    return shown;
-  })).toEqual({ checked: true, inToDo: true });
+  expect(
+    await tick.evaluate(async (box: HTMLInputElement) => {
+      box.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const shown = { checked: box.checked, inToDo: box.closest("ul")?.getAttribute("aria-label") === "To do" };
+      box.click();
+      return shown;
+    }),
+  ).toEqual({ checked: true, inToDo: true });
   await expect(tick).not.toBeChecked();
   await expect(page.getByRole("heading", { level: 2, name: "House (3)", exact: true })).toBeVisible();
   await page.waitForTimeout(1000);
@@ -226,11 +249,17 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await changed;
   await expect(done).toHaveCount(0);
   await expect.poll(() => todoTitles(page)).toEqual(["Buy milk", "Water plants", "Fix the door"]);
-  expect((await readLists(page))[0].tasks.map((t) => [t.title, t.isComplete])).toEqual([["Buy milk", false], ["Water plants", false], ["Fix the door", false]]);
+  expect((await readLists(page))[0].tasks.map((t) => [t.title, t.isComplete])).toEqual([
+    ["Buy milk", false],
+    ["Water plants", false],
+    ["Fix the door", false],
+  ]);
 
   // Assign, with a due date and notes, then unassign.
   const tomorrow = datePlus(localParts(new Date()).date, 1);
-  await row(page, "Buy milk").getByRole("button", { name: /^Buy milk/ }).click();
+  await row(page, "Buy milk")
+    .getByRole("button", { name: /^Buy milk/ })
+    .click();
   const dialog = page.getByRole("dialog", { name: "Edit task" });
   // Who it's for on the left, when it's due on the right; Save and Delete (its × closes it).
   const assigneePicker = dialog.getByRole("group", { name: "Assignee" });
@@ -238,13 +267,17 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   const dueBox = (await dialog.getByLabel("Due date (optional)").boundingBox())!;
   expect(assigneeBox.x).toBeLessThan(dueBox.x);
   await expect(dialog.getByRole("button", { name: /^(Save|Cancel|Delete)/ })).toHaveText(["Save", "Delete"]);
-  // Each member's picture (or initial), by their name, then All, for nobody in particular: no select.
-  await expect(dialog.getByRole("combobox")).toHaveCount(0);
+  // Each member's picture (or initial), by their name, then All, for nobody in particular: the one
+  // select is how often it repeats.
+  await expect(dialog.getByRole("combobox")).toHaveCount(1);
+  await expect(dialog.getByRole("combobox", { name: "Repeat" })).toHaveValue("");
   await expect(assigneePicker.getByRole("radio")).toHaveCount(members.length + 1);
   await expect(assigneePicker.getByRole("radio", { name: "All", exact: true })).toBeChecked();
   await assigneePicker.getByRole("radio", { name: friend.name, exact: true }).check();
   // Typed day first: dd/mm/yyyy.
-  await dialog.getByLabel("Due date (optional)").fill(`${tomorrow.slice(8, 10)}/${tomorrow.slice(5, 7)}/${tomorrow.slice(0, 4)}`);
+  await dialog
+    .getByLabel("Due date (optional)")
+    .fill(`${tomorrow.slice(8, 10)}/${tomorrow.slice(5, 7)}/${tomorrow.slice(0, 4)}`);
   await dialog.getByLabel("Notes (optional)").fill("Two litres, semi-skimmed");
   changed = saved(page, /\/tasks\/[^/]+$/, "PATCH");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
@@ -255,12 +288,18 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await expect(row(page, "Buy milk")).toContainText("Two litres, semi-skimmed");
   await page.reload();
   await openTasks(page);
-  expect(await assignee.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--member-color"))).toBe(member.color);
+  expect(await assignee.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--member-color"))).toBe(
+    member.color,
+  );
   const milk = (await readLists(page))[0].tasks.find((t) => t.title === "Buy milk")!;
   expect(milk).toMatchObject({ assigneeId: member.id, dueDate: tomorrow, notes: "Two litres, semi-skimmed" });
-  await row(page, "Buy milk").getByRole("button", { name: /^Buy milk/ }).click();
+  await row(page, "Buy milk")
+    .getByRole("button", { name: /^Buy milk/ })
+    .click();
   await expect(assigneePicker.getByRole("radio", { name: friend.name, exact: true })).toBeChecked();
-  await expect(dialog.getByLabel("Due date (optional)")).toHaveValue(`${tomorrow.slice(8, 10)}/${tomorrow.slice(5, 7)}/${tomorrow.slice(0, 4)}`);
+  await expect(dialog.getByLabel("Due date (optional)")).toHaveValue(
+    `${tomorrow.slice(8, 10)}/${tomorrow.slice(5, 7)}/${tomorrow.slice(0, 4)}`,
+  );
   await assigneePicker.getByRole("radio", { name: "All", exact: true }).check();
   await dialog.getByRole("button", { name: "Clear" }).click();
   changed = saved(page, /\/tasks\/[^/]+$/, "PATCH");
@@ -268,13 +307,21 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await changed;
   await expect(row(page, "Buy milk").getByText(friend.username)).toHaveCount(0);
   await expect(row(page, "Buy milk")).not.toContainText("Due");
-  expect((await readLists(page))[0].tasks.find((t) => t.title === "Buy milk")).toMatchObject({ assigneeId: null, dueDate: null });
+  expect((await readLists(page))[0].tasks.find((t) => t.title === "Buy milk")).toMatchObject({
+    assigneeId: null,
+    dueDate: null,
+  });
 
   // Delete with undo: nothing is sent until the undo window closes. With the bin
   // button where there is a mouse; phones swipe (the phone test) or use the dialog.
   const deleteTask = async (title: string) => {
-    if (!isMobile) return row(page, title).getByRole("button", { name: `Delete ${title}` }).click();
-    await row(page, title).getByRole("button", { name: new RegExp(`^${title}`) }).click();
+    if (!isMobile)
+      return row(page, title)
+        .getByRole("button", { name: `Delete ${title}` })
+        .click();
+    await row(page, title)
+      .getByRole("button", { name: new RegExp(`^${title}`) })
+      .click();
     await dialog.getByRole("button", { name: "Delete", exact: true }).click();
     // A finger lifts after the tap; the emulated mouse stays where it clicked, at
     // the foot of the sheet, where the undo message then shows (and pauses while
@@ -282,7 +329,9 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
     await page.mouse.move(0, 0);
   };
   const deletes: string[] = [];
-  page.on("request", (r) => { if (r.method() === "DELETE") deletes.push(r.url()); });
+  page.on("request", (r) => {
+    if (r.method() === "DELETE") deletes.push(r.url());
+  });
   await deleteTask("Water plants");
   await expect.poll(() => todoTitles(page)).toEqual(["Buy milk", "Fix the door"]);
   const toast = page.getByRole("status").filter({ hasText: "Deleted “Water plants”" });
@@ -297,7 +346,9 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await expect(toast).toHaveCount(0);
   expect(deletes).toHaveLength(1);
   // From the task's dialog too.
-  await row(page, "Fix the door").getByRole("button", { name: /^Fix the door/ }).click();
+  await row(page, "Fix the door")
+    .getByRole("button", { name: /^Fix the door/ })
+    .click();
   await dialog.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("status").filter({ hasText: "Deleted “Fix the door”" })).toBeVisible();
@@ -317,7 +368,9 @@ test.describe("on a phone", () => {
     await createFirstList(page, "Groceries");
     await addTasks(page, "Apples", "Bread", "Coffee");
     await expect(row(page, "Apples").getByRole("button", { name: "Delete Apples" })).toBeHidden();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+    ).toBe(true);
 
     const moved = saved(page, /\/move$/);
     const coffee = await center(handle(page, "Coffee"));
@@ -338,9 +391,10 @@ test.describe("on a phone", () => {
     await touchDrag(page, { x: 320, y }, { x: 60, y });
     await expect.poll(() => todoTitles(page)).toEqual(["Coffee", "Apples"]);
     const toast = page.getByRole("status").filter({ hasText: "Deleted “Bread”" });
-    // Above the bottom of the screen (the tabs are in the top bar, nothing is along the bottom).
+    // Above the tab bar along the bottom of the screen.
     const box = (await toast.boundingBox())!;
-    expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height - 8);
+    const tabs = (await page.getByRole("navigation", { name: "Shared" }).boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(tabs.y);
     await toast.getByRole("button", { name: "Undo" }).tap();
     await expect.poll(() => todoTitles(page)).toEqual(["Coffee", "Apples", "Bread"]);
     const gone = saved(page, /\/tasks\/[^/]+$/, "DELETE");
@@ -351,7 +405,9 @@ test.describe("on a phone", () => {
     await expect.poll(() => todoTitles(page)).toEqual(["Coffee", "Apples"]);
 
     // A tap still opens the task, in a sheet at the bottom.
-    await row(page, "Apples").getByRole("button", { name: /^Apples/ }).tap();
+    await row(page, "Apples")
+      .getByRole("button", { name: /^Apples/ })
+      .tap();
     const sheet = await page.getByRole("dialog", { name: "Edit task" }).boundingBox();
     expect(Math.abs(sheet!.y + sheet!.height - 844)).toBeLessThan(2);
   });
@@ -365,7 +421,9 @@ test("changes show before the server answers, and roll back when it refuses", as
   const alert = page.getByRole("main").getByRole("alert");
 
   let release = () => {};
-  const held = new Promise<void>((resolve) => { release = resolve; });
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
   await page.route(`**${base}/*`, async (route) => {
     if (route.request().method() !== "PATCH") return route.fallback();
     await held;
@@ -380,7 +438,9 @@ test("changes show before the server answers, and roll back when it refuses", as
   await expect(page.getByText("Done (1)")).toHaveCount(0);
   await page.unrouteAll();
 
-  await page.route(`**${base}/*/move`, (route) => route.fulfill({ status: 409, json: { error: "The order changed meanwhile. Try again." } }));
+  await page.route(`**${base}/*/move`, (route) =>
+    route.fulfill({ status: 409, json: { error: "The order changed meanwhile. Try again." } }),
+  );
   await keyboardMove(page, "Pay rent", 2, 1, 2);
   await expect(alert).toContainText("The order changed meanwhile. Try again. Your change was undone.");
   await expect.poll(() => todoTitles(page)).toEqual(["Call the plumber", "Pay rent"]);
@@ -399,18 +459,33 @@ test("changes show before the server answers, and roll back when it refuses", as
   await expect.poll(() => todoTitles(page)).toEqual(["Call the plumber", "Pay rent"]);
 });
 
-test("the tasks API is scoped to the caller's current space and validates what it saves", async ({ page, browser, request }) => {
+test("the tasks API is scoped to the caller's current space and validates what it saves", async ({
+  page,
+  browser,
+  request,
+}) => {
   const space = await setup(page);
   const created = await page.request.post(`${base}/lists`, { data: { name: "  Private  " } });
   expect(created.status()).toBe(201);
   const list: TaskList = (await created.json()).data;
   expect(list).toMatchObject({ name: "Private", tasks: [] });
-  const taskResponse = await page.request.post(`${base}/lists/${list.id}/tasks`, { data: { title: "Secret", notes: "Hidden", dueDate: "2026-12-24", assigneeId: space.ownerId } });
+  const taskResponse = await page.request.post(`${base}/lists/${list.id}/tasks`, {
+    data: { title: "Secret", notes: "Hidden", dueDate: "2026-12-24", assigneeId: space.ownerId },
+  });
   expect(taskResponse.status()).toBe(201);
   const task: Task = (await taskResponse.json()).data;
-  expect(task).toMatchObject({ listId: list.id, title: "Secret", notes: "Hidden", dueDate: "2026-12-24", assigneeId: space.ownerId, isComplete: false });
+  expect(task).toMatchObject({
+    listId: list.id,
+    title: "Secret",
+    notes: "Hidden",
+    dueDate: "2026-12-24",
+    assigneeId: space.ownerId,
+    isComplete: false,
+  });
   const second: TaskList = (await (await page.request.post(`${base}/lists`, { data: { name: "Other" } })).json()).data;
-  const elsewhere: Task = (await (await page.request.post(`${base}/lists/${second.id}/tasks`, { data: { title: "Elsewhere" } })).json()).data;
+  const elsewhere: Task = (
+    await (await page.request.post(`${base}/lists/${second.id}/tasks`, { data: { title: "Elsewhere" } })).json()
+  ).data;
   expect((await request.get(base)).status()).toBe(401);
 
   const context = await browser.newContext(contextOptions());
@@ -430,22 +505,38 @@ test("the tasks API is scoped to the caller's current space and validates what i
     for (const response of await Promise.all(attempts)) expect(response.status()).toBe(404);
     // Its own list can't take another space's ids or members either.
     const own: TaskList = (await (await other.request.post(`${base}/lists`, { data: { name: "Own" } })).json()).data;
-    expect((await other.request.post(`${base}/lists/${own.id}/tasks`, { data: { id: task.id, title: "Clash" } })).status()).toBe(409);
-    expect((await other.request.post(`${base}/lists/${own.id}/tasks`, { data: { title: "Theirs", assigneeId: space.ownerId } })).status()).toBe(400);
+    expect(
+      (await other.request.post(`${base}/lists/${own.id}/tasks`, { data: { id: task.id, title: "Clash" } })).status(),
+    ).toBe(409);
+    expect(
+      (
+        await other.request.post(`${base}/lists/${own.id}/tasks`, {
+          data: { title: "Theirs", assigneeId: space.ownerId },
+        })
+      ).status(),
+    ).toBe(400);
     expect((await readLists(page)).find((l) => l.id === list.id)!.tasks).toEqual([task]);
     await other.request.post(`/api/shared/spaces/${otherSpace.id}/leave`, { data: {} });
     expect((await other.request.get(base)).status()).toBe(403);
 
     // A member who joins can work on the tasks; leaving drops their assignments.
-    const code = (await (await page.request.post(`/api/shared/spaces/${space.id}/invites`, { data: {} })).json()).data.code;
+    const code = (await (await page.request.post(`/api/shared/spaces/${space.id}/invites`, { data: {} })).json()).data
+      .code;
     await other.request.post("/api/shared/spaces/join", { data: { code } });
     const joined: Space = (await (await other.request.get("/api/shared/spaces")).json()).data;
     const memberId = joined.members.find((m) => m.id !== space.ownerId)!.id;
-    expect((await other.request.patch(`${base}/${task.id}`, { data: { assigneeId: memberId, isComplete: true } })).status()).toBe(200);
+    expect(
+      (await other.request.patch(`${base}/${task.id}`, { data: { assigneeId: memberId, isComplete: true } })).status(),
+    ).toBe(200);
     await other.request.post(`/api/shared/spaces/${space.id}/leave`, { data: {} });
     expect((await other.request.get(base)).status()).toBe(403);
-    expect((await readLists(page)).find((l) => l.id === list.id)!.tasks[0]).toMatchObject({ assigneeId: null, isComplete: true });
-  } finally { await context.close(); }
+    expect((await readLists(page)).find((l) => l.id === list.id)!.tasks[0]).toMatchObject({
+      assigneeId: null,
+      isComplete: true,
+    });
+  } finally {
+    await context.close();
+  }
 
   const invalid: [string, string, object][] = [
     ["POST", `${base}/lists`, { name: " " }],
@@ -459,17 +550,34 @@ test("the tasks API is scoped to the caller's current space and validates what i
     ["PATCH", `${base}/${task.id}`, { assigneeId: "00000000-0000-4000-8000-000000000000" }],
     ["POST", `${base}/${task.id}/move`, { beforeId: 7 }],
   ];
-  for (const [method, url, data] of invalid) expect((await page.request.fetch(url, { method, data })).status(), `${method} ${url} ${JSON.stringify(data)}`).toBe(400);
+  for (const [method, url, data] of invalid)
+    expect((await page.request.fetch(url, { method, data })).status(), `${method} ${url} ${JSON.stringify(data)}`).toBe(
+      400,
+    );
   // Positions are only within a list (or the space's lists).
   expect((await page.request.post(`${base}/${task.id}/move`, { data: { beforeId: elsewhere.id } })).status()).toBe(409);
-  expect((await page.request.post(`${base}/lists/${list.id}/move`, { data: { beforeId: task.id } })).status()).toBe(409);
-  expect((await page.request.get(`${base}/${task.id}`)).status()).toBe(404);
+  expect((await page.request.post(`${base}/lists/${list.id}/move`, { data: { beforeId: task.id } })).status()).toBe(
+    409,
+  );
+  // A task is read with its list (GET /api/shared/tasks): no GET of its own.
+  expect((await page.request.get(`${base}/${task.id}`)).status()).toBe(405);
   expect((await page.request.patch(`${base}/not-a-uuid`, { data: { title: "x" } })).status()).toBe(404);
-  expect((await page.request.post(`${base}/lists`, { data: { name: "Cross" }, headers: { origin: "https://elsewhere.example" } })).status()).toBe(403);
-  expect((await page.request.post(`${base}/lists`, { data: "name=x", headers: { "content-type": "text/plain" } })).status()).toBe(415);
+  expect(
+    (
+      await page.request.post(`${base}/lists`, {
+        data: { name: "Cross" },
+        headers: { origin: "https://elsewhere.example" },
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (await page.request.post(`${base}/lists`, { data: "name=x", headers: { "content-type": "text/plain" } })).status(),
+  ).toBe(415);
 
   // Deleting a list deletes its tasks.
   expect((await page.request.delete(`${base}/lists/${list.id}`)).status()).toBe(200);
-  await withDatabase(async (db) => expect((await db.query("SELECT 1 FROM tasks WHERE id = $1", [task.id])).rowCount).toBe(0));
+  await withDatabase(async (db) =>
+    expect((await db.query("SELECT 1 FROM tasks WHERE id = $1", [task.id])).rowCount).toBe(0),
+  );
   expect((await readLists(page)).map((l) => l.name)).toEqual(["Other"]);
 });

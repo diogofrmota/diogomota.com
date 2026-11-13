@@ -41,15 +41,6 @@
   padding-inline: var(--space-5);
 }
 
-/* Log in, beside the filled Sign up: an outline thick enough, and in the
-   accent, to stand out from the tinted background. The 2px border is in the
-   button's size (border-box), so the two stay the same height. */
-.actions .secondary {
-  border: 2px solid var(--accent);
-  background: var(--surface);
-  font-weight: var(--weight-semibold);
-}
-
 @media (min-width: 40rem) {
   .actions {
     grid-template-columns: repeat(2, minmax(8rem, max-content));

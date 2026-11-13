@@ -3,3 +3,6 @@
 // (014_one_name.sql).
 
 export type Named = { username: string; name: string | null };
+
+/** A person's name, or their username without one: "Diogo" or "diogofrmota". */
+export const memberName = (person: Named): string => person.name ?? person.username;

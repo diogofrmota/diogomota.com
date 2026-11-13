@@ -1,21 +1,14 @@
-import { mediaType, removeFromLibrary, showsResponse, tmdbId, updateLibraryEntry } from "@/lib/shows";
-
-type Context = { params: Promise<{ type: string; id: string }> };
+import { libraryPatch } from "@/lib/schemas";
+import { mediaType, removeFromLibrary, showsRoute, tmdbId, updateLibraryEntry } from "@/lib/shows";
 
 // PATCH /api/shows/library/{tv|movie}/{TMDB id} {status?, isFavourite?,
 // currentSeason?, currentEpisode?}: changes your entry for a title and answers
 // with it (404 if the title isn't in your library).
-export function PATCH(request: Request, context: Context) {
-  return showsResponse(request, async (userId, body) => {
-    const { type, id } = await context.params;
-    return updateLibraryEntry(userId, mediaType(type), tmdbId(id), body);
-  });
-}
+export const PATCH = showsRoute({ body: libraryPatch }, ({ user, params, body }) =>
+  updateLibraryEntry(user.id, mediaType(params.type), tmdbId(params.id), body),
+);
 
 // DELETE /api/shows/library/{tv|movie}/{TMDB id}: removes the title from your library.
-export function DELETE(request: Request, context: Context) {
-  return showsResponse(request, async (userId) => {
-    const { type, id } = await context.params;
-    return removeFromLibrary(userId, mediaType(type), tmdbId(id));
-  });
-}
+export const DELETE = showsRoute({}, ({ user, params }) =>
+  removeFromLibrary(user.id, mediaType(params.type), tmdbId(params.id)),
+);

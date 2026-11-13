@@ -2,10 +2,21 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useId, useState, type DragEvent } from "react";
-import { avatarChanged, changeEmail, changeName, changePassword, changeUsername, logOut, saveTheme } from "@/app/account/actions";
+import {
+  avatarChanged,
+  changeEmail,
+  changeName,
+  changePassword,
+  changeUsername,
+  deleteAccount,
+  logOut,
+  resendVerification,
+  saveTheme,
+} from "@/app/account/actions";
 import { AvatarCrop } from "@/components/account/AvatarCrop";
 import { LogoutButton } from "@/components/account/LogoutButton";
 import { Avatar } from "@/components/common/Avatar";
+import { clearOfflineData } from "@/components/common/QueryProvider";
 import { Dialog } from "@/components/common/Dialog";
 import { ChevronRightIcon, CloseIcon, PencilIcon, PhotoIcon } from "@/components/common/icons";
 import { InlineSpinner, PendingOverlay } from "@/components/common/Spinner";
@@ -54,10 +65,15 @@ function UsernameForm({ username, onSaved }: { username: string; onSaved: OnSave
   const showSavedResult = !draft || draft.previous !== state;
   const savedError = showSavedResult && state.values?.username === normalized ? state.fieldErrors?.username : undefined;
   const result = check?.username === normalized ? check : null;
-  const error = validation || savedError || (changed && result?.available === false ? "That username is taken." : undefined);
-  const message = error || (showSavedResult && state.error)
-    || (showSavedResult && !changed && state.success)
-    || (changed ? result?.error || (result?.available ? "That username is available." : "Checking availability…") : usernameHint);
+  const error =
+    validation || savedError || (changed && result?.available === false ? "That username is taken." : undefined);
+  const message =
+    error ||
+    (showSavedResult && state.error) ||
+    (showSavedResult && !changed && state.success) ||
+    (changed
+      ? result?.error || (result?.available ? "That username is available." : "Checking availability…")
+      : usernameHint);
 
   useEffect(() => {
     if (!changed || usernameError(normalized)) return;
@@ -71,7 +87,11 @@ function UsernameForm({ username, onSaved }: { username: string; onSaved: OnSave
         if (!controller.signal.aborted) setCheck({ username: normalized, available: data.available });
       } catch (error) {
         if (!controller.signal.aborted) {
-          setCheck({ username: normalized, error: error instanceof ApiError ? error.message : "Couldn't check availability. Try again or save to check." });
+          setCheck({
+            username: normalized,
+            error:
+              error instanceof ApiError ? error.message : "Couldn't check availability. Try again or save to check.",
+          });
         }
       }
     }, 350);
@@ -103,7 +123,11 @@ function UsernameForm({ username, onSaved }: { username: string; onSaved: OnSave
             setCheck(null);
           }}
         />
-        <p id={statusId} role="status" className={error || (changed && result?.error) ? formStyles.error : formStyles.hint}>
+        <p
+          id={statusId}
+          role="status"
+          className={error || (changed && result?.error) ? formStyles.error : formStyles.hint}
+        >
           {message}
         </p>
       </div>
@@ -130,7 +154,9 @@ function NameForm({ name, onSaved }: { name: string | null; onSaved: OnSaved }) 
         maxLength={NAME_MAX}
         defaultValue={state.values?.name ?? name ?? ""}
       />
-      <p className={formStyles.hint}>Your friends in Shows and the people in your shared space see it, with your username.</p>
+      <p className={formStyles.hint}>
+        Your friends in Shows and the people in your shared space see it, with your username.
+      </p>
       <FormMessage error={state.error} success={state.success} />
       <SubmitButton label="Save name" pending={pending} />
     </form>
@@ -159,7 +185,7 @@ function EmailForm({ email, onSaved }: { email: string; onSaved: OnSaved }) {
         label="Current password"
         name="currentPassword"
         type="password"
-        hint="To check it's you: you log in with your email, and password resets go to it."
+        hint="To check it's you: you log in with your email, and password resets go to it. We send a link to the new email, and it changes once you open it."
         error={errors.currentPassword}
         autoComplete="current-password"
         required
@@ -225,7 +251,15 @@ const avatarMaxMb = AVATAR_MAX_BYTES / 1024 / 1024;
  * then, once the page and the account menu have the saved one (avatarChanged),
  * `onSaved`. Remove picture goes back to the initial.
  */
-function AvatarForm({ username, avatarUrl, onSaved }: { username: string; avatarUrl: string | null; onSaved: OnSaved }) {
+function AvatarForm({
+  username,
+  avatarUrl,
+  onSaved,
+}: {
+  username: string;
+  avatarUrl: string | null;
+  onSaved: OnSaved;
+}) {
   const hintId = useId();
   // The photo being sent (an object URL), and the URL saved since the page loaded.
   const [preview, setPreview] = useState<string | null>(null);
@@ -237,8 +271,18 @@ function AvatarForm({ username, avatarUrl, onSaved }: { username: string; avatar
   const [cropping, setCropping] = useState<{ file: File; url: string } | null>(null);
   const shown = preview ?? (saved === undefined ? avatarUrl : saved);
 
-  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
-  useEffect(() => () => { if (cropping) URL.revokeObjectURL(cropping.url); }, [cropping]);
+  useEffect(
+    () => () => {
+      if (preview) URL.revokeObjectURL(preview);
+    },
+    [preview],
+  );
+  useEffect(
+    () => () => {
+      if (cropping) URL.revokeObjectURL(cropping.url);
+    },
+    [cropping],
+  );
 
   async function send(change: "upload" | "remove", file?: File) {
     setPending(change);
@@ -293,7 +337,11 @@ function AvatarForm({ username, avatarUrl, onSaved }: { username: string; avatar
       <div className={styles.avatarRow}>
         <span className={styles.avatarFrame}>
           <Avatar username={username} url={shown} className={styles.avatar} />
-          {pending === "upload" && <span className={styles.avatarBusy}><InlineSpinner /></span>}
+          {pending === "upload" && (
+            <span className={styles.avatarBusy}>
+              <InlineSpinner />
+            </span>
+          )}
         </span>
         {/* The input is in the label, so a click or tap anywhere on it chooses a
             file, and its focus ring goes around the whole drop zone. */}
@@ -313,7 +361,8 @@ function AvatarForm({ username, avatarUrl, onSaved }: { username: string; avatar
         >
           <PhotoIcon />
           <span className={styles.dropText}>
-            <span className={styles.dropAction}>{shown ? "Choose a new photo" : "Choose a photo"}</span> or drag one here
+            <span className={styles.dropAction}>{shown ? "Choose a new photo" : "Choose a photo"}</span> or drag one
+            here
           </span>
           <input
             type="file"
@@ -332,14 +381,32 @@ function AvatarForm({ username, avatarUrl, onSaved }: { username: string; avatar
         JPEG, PNG or WebP, up to {avatarMaxMb} MB. You choose the part of it to show, and it&apos;s made smaller. Your
         friends in Shows and the people in your shared space see it.
       </p>
-      {cropping && <AvatarCrop src={cropping.url} onCancel={() => setCropping(null)}
-        onSave={(picture) => { setCropping(null); void send("upload", picture); }}
-        onUnreadable={() => { setCropping(null); void send("upload", cropping.file); }} />}
-      <p role="status" className={ui.srOnly}>{pending === "upload" ? "Saving your picture…" : ""}</p>
+      {cropping && (
+        <AvatarCrop
+          src={cropping.url}
+          onCancel={() => setCropping(null)}
+          onSave={(picture) => {
+            setCropping(null);
+            void send("upload", picture);
+          }}
+          onUnreadable={() => {
+            setCropping(null);
+            void send("upload", cropping.file);
+          }}
+        />
+      )}
+      <p role="status" className={ui.srOnly}>
+        {pending === "upload" ? "Saving your picture…" : ""}
+      </p>
       <FormMessage error={result.error} success={result.success} />
       {shown && !preview && (
-        <button type="button" className={`${ui.button} ${ui.remove}`} disabled={pending !== null}
-          aria-busy={pending === "remove"} onClick={() => void send("remove")}>
+        <button
+          type="button"
+          className={`${ui.button} ${ui.remove}`}
+          disabled={pending !== null}
+          aria-busy={pending === "remove"}
+          onClick={() => void send("remove")}
+        >
           Remove picture
           <PendingOverlay pending={pending === "remove"} />
         </button>
@@ -369,32 +436,102 @@ function ThemeForm({ theme, labelledBy, onSaved }: { theme: Theme; labelledBy: s
   );
 }
 
-type Setting = "avatar" | "name" | "username" | "email" | "theme" | "password";
+/**
+ * Delete my account, after the password: it leaves its space (the space goes with
+ * its last member), and the library, friends and activity go with it. It can't be
+ * undone, so the button says so.
+ */
+function DeleteForm() {
+  const [state, action, pending] = useActionState(deleteAccount, {});
+  const errors = state.fieldErrors ?? {};
+  return (
+    <form action={action} noValidate className={formStyles.form} onSubmit={clearOfflineData}>
+      <p>
+        This deletes your account and everything it has here: your library, friends, recommendations and activity. You
+        leave your Shared space; if you&rsquo;re its last member, its calendar and tasks are deleted too. It can&rsquo;t
+        be undone. <Link href="/api/account/export">Download your data</Link> first if you want to keep it.
+      </p>
+      <Field
+        label="Password"
+        name="password"
+        type="password"
+        error={errors.password}
+        autoComplete="current-password"
+        required
+        data-autofocus
+      />
+      <FormMessage error={state.error} />
+      <SubmitButton label="Delete my account" pending={pending} danger />
+    </form>
+  );
+}
+
+/** Not confirmed yet: the link went to their email; this sends another. */
+function VerifyEmail({ email }: { email: string }) {
+  const [state, action, pending] = useActionState(resendVerification, {});
+  return (
+    <form action={action} className={styles.verify}>
+      <p>
+        Confirm your email: we sent a link to <strong>{email}</strong>. Until you open it, password resets don&rsquo;t
+        go to it.
+      </p>
+      <FormMessage error={state.error} success={state.success} />
+      <SubmitButton label="Send the link again" pending={pending} />
+    </form>
+  );
+}
+
+type Setting = "avatar" | "name" | "username" | "email" | "theme" | "password" | "delete";
 
 const titles: Record<Setting, string> = {
-  avatar: "Profile picture", name: "Name", username: "Username", email: "Email", theme: "Theme", password: "Update password",
+  avatar: "Profile picture",
+  name: "Name",
+  username: "Username",
+  email: "Email",
+  theme: "Theme",
+  password: "Update password",
+  delete: "Delete my account",
 };
 
 /**
  * Account's settings: the profile picture, in the middle; then a row each for
  * the name, username, email and theme, with what they are now; then Update
- * password and Log out. Each opens a popup with its form (Escape, a click
- * outside or its × close it), which closes once saved, saying so under the
- * rows; the page then shows the new value.
+ * password and Log out; then Your data: Download my data and Delete my
+ * account. Each opens a popup with its form (Escape, a click outside or its ×
+ * close it), which closes once saved, saying so under the rows; the page then
+ * shows the new value. An email not confirmed yet says so, with a way to send
+ * the link again; `message` is what an emailed link did (it came back here).
  */
-export function AccountSettings({ user }: {
-  user: { username: string; email: string; name: string | null; avatarUrl: string | null; themePreference: Theme };
+export function AccountSettings({
+  user,
+  message,
+}: {
+  user: {
+    username: string;
+    email: string;
+    emailVerified: boolean;
+    name: string | null;
+    avatarUrl: string | null;
+    themePreference: Theme;
+  };
+  message?: string;
 }) {
   const [open, setOpen] = useState<Setting | null>(null);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState(message ?? "");
   const headingId = useId();
-  const show = (setting: Setting) => { setNotice(""); setOpen(setting); };
+  const show = (setting: Setting) => {
+    setNotice("");
+    setOpen(setting);
+  };
   const close = () => setOpen(null);
-  const saved = (message: string) => { setOpen(null); setNotice(message); };
+  const saved = (message: string) => {
+    setOpen(null);
+    setNotice(message);
+  };
   const rows: { id: Setting; value: string | null }[] = [
     { id: "name", value: user.name },
     { id: "username", value: user.username },
-    { id: "email", value: user.email },
+    { id: "email", value: user.emailVerified ? user.email : `${user.email} (not confirmed)` },
     { id: "theme", value: themes.find((theme) => theme.id === user.themePreference)?.name ?? null },
   ];
 
@@ -403,7 +540,9 @@ export function AccountSettings({ user }: {
       <div className={styles.profile}>
         <button type="button" className={styles.avatarButton} aria-haspopup="dialog" onClick={() => show("avatar")}>
           <Avatar username={user.username} url={user.avatarUrl} className={styles.profileAvatar} />
-          <span className={styles.avatarEdit} aria-hidden="true"><PencilIcon /></span>
+          <span className={styles.avatarEdit} aria-hidden="true">
+            <PencilIcon />
+          </span>
           <span className={ui.srOnly}>Profile picture</span>
         </button>
       </div>
@@ -414,36 +553,83 @@ export function AccountSettings({ user }: {
             <button type="button" className={styles.row} aria-haspopup="dialog" onClick={() => show(id)}>
               <span className={styles.rowTitle}>{titles[id]}</span>
               <span className={ui.srOnly}>: </span>
-              <span className={value ? styles.rowValue : `${styles.rowValue} ${styles.rowEmpty}`}>{value ?? "Not set"}</span>
-              <span className={styles.rowChevron} aria-hidden="true"><ChevronRightIcon /></span>
+              <span className={value ? styles.rowValue : `${styles.rowValue} ${styles.rowEmpty}`}>
+                {value ?? "Not set"}
+              </span>
+              <span className={styles.rowChevron} aria-hidden="true">
+                <ChevronRightIcon />
+              </span>
             </button>
           </li>
         ))}
       </ul>
 
+      {!user.emailVerified && <VerifyEmail email={user.email} />}
+
       {/* What the last popup saved; always there, so it is read out when it changes. */}
-      <p role="status" className={notice ? `${ui.success} ${styles.notice}` : ui.srOnly}>{notice}</p>
+      <p role="status" className={notice ? `${ui.success} ${styles.notice}` : ui.srOnly}>
+        {notice}
+      </p>
 
       <div className={styles.buttons}>
-        <button type="button" className={ui.button} aria-haspopup="dialog" onClick={() => show("password")}>Update password</button>
+        <button type="button" className={ui.button} aria-haspopup="dialog" onClick={() => show("password")}>
+          Update password
+        </button>
         <form action={logOut}>
           <LogoutButton className={ui.button} />
         </form>
       </div>
 
+      {/* Your data (privacy): a copy of it all, or deleting it all. */}
+      <section className={styles.data} aria-labelledby="your-data">
+        <h2 id="your-data">Your data</h2>
+        <p className={ui.muted}>
+          What we keep and why is in <Link href="/privacy">Privacy</Link>.
+        </p>
+        <div className={styles.buttons}>
+          <a href="/api/account/export" download className={ui.button}>
+            Download my data
+          </a>
+          <button
+            type="button"
+            className={`${ui.button} ${ui.remove}`}
+            aria-haspopup="dialog"
+            onClick={() => show("delete")}
+          >
+            Delete my account
+          </button>
+        </div>
+      </section>
+
       {open && (
-        <Dialog key={open} className={`${styles.dialog} ${open === "theme" ? styles.wideDialog : ""}`} aria-labelledby={headingId} onClose={close}>
+        <Dialog
+          key={open}
+          className={`${styles.dialog} ${open === "theme" ? styles.wideDialog : ""}`}
+          aria-labelledby={headingId}
+          onClose={close}
+        >
           <div className={styles.dialogBody}>
             <div className={styles.dialogHeader}>
               <h2 id={headingId}>{titles[open]}</h2>
-              <button type="button" className={styles.close} aria-label="Close" onClick={close}><CloseIcon /></button>
+              <button type="button" className={styles.close} aria-label="Close" onClick={close}>
+                <CloseIcon />
+              </button>
             </div>
-            {open === "avatar" ? <AvatarForm username={user.username} avatarUrl={user.avatarUrl} onSaved={saved} />
-              : open === "name" ? <NameForm name={user.name} onSaved={saved} />
-              : open === "username" ? <UsernameForm username={user.username} onSaved={saved} />
-              : open === "email" ? <EmailForm email={user.email} onSaved={saved} />
-              : open === "theme" ? <ThemeForm theme={user.themePreference} labelledBy={headingId} onSaved={saved} />
-              : <PasswordForm />}
+            {open === "avatar" ? (
+              <AvatarForm username={user.username} avatarUrl={user.avatarUrl} onSaved={saved} />
+            ) : open === "name" ? (
+              <NameForm name={user.name} onSaved={saved} />
+            ) : open === "username" ? (
+              <UsernameForm username={user.username} onSaved={saved} />
+            ) : open === "email" ? (
+              <EmailForm email={user.email} onSaved={saved} />
+            ) : open === "theme" ? (
+              <ThemeForm theme={user.themePreference} labelledBy={headingId} onSaved={saved} />
+            ) : open === "delete" ? (
+              <DeleteForm />
+            ) : (
+              <PasswordForm />
+            )}
           </div>
         </Dialog>
       )}

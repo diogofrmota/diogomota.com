@@ -1,13 +1,15 @@
 import { themes } from "../lib/themes";
 import { checkThemes, rgb } from "./checks";
 import { accountSetting, expect, newUser, saveTheme, signUp, test } from "./fixtures";
-import { card, grid, openShows, section, tab, viewHeading } from "./shows";
+import { card, grid, loadSections, openShows, section, tab, viewHeading } from "./shows";
 
 // The themes (lib/themes.ts, with their colors in components/common/themes.module.css):
 // each one is picked and saved in Account, colors the page, and
 // passes axe wherever the apps put its colors together.
 
-test("every theme saves from Account, and colors the page, the page behind it and the browser's UI", async ({ page }) => {
+test("every theme saves from Account, and colors the page, the page behind it and the browser's UI", async ({
+  page,
+}) => {
   // A dozen saves or more.
   test.slow();
   await signUp(page, newUser());
@@ -18,7 +20,7 @@ test("every theme saves from Account, and colors the page, the page behind it an
   await row.click();
   const form = page.getByRole("dialog", { name: "Theme", exact: true });
   // New accounts start in the default theme.
-  await expect(form.getByRole("radio", { name: "Light mode", exact: true })).toBeChecked();
+  await expect(form.getByRole("radio", { name: "Light", exact: true })).toBeChecked();
   // All in one list, in lib/themes.ts's order, with no headings between them.
   const radios = form.getByRole("radio");
   await expect(radios).toHaveCount(themes.length);
@@ -88,7 +90,10 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await page.goBack();
     await expect(event).toBeHidden();
 
-    await page.getByRole("navigation", { name: "Shared", exact: true }).getByRole("button", { name: "Tasks", exact: true }).click();
+    await page
+      .getByRole("navigation", { name: "Shared", exact: true })
+      .getByRole("button", { name: "Tasks", exact: true })
+      .click();
     await page.getByLabel("List name").fill("Groceries");
     await page.getByRole("button", { name: "Create list" }).click();
     for (const title of ["Apples", "Bread"]) {
@@ -107,12 +112,12 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await checkThemes(page, "task");
   });
 
-  test("Shows: a title in the library, and the Watchlist", async ({ page }) => {
+  test("Shows: a title in the library, and the Library", async ({ page }) => {
     await openShows(page);
     await tab(page, "Discover").click();
     const popular = grid(page, "Popular TV shows");
     await expect(card(popular, "Harbor Lights")).toBeVisible();
-    await expect(page.getByTestId("skeleton").filter({ visible: true })).toHaveCount(0);
+    await loadSections(page);
     await card(popular, "Harbor Lights").click();
     const title = page.getByRole("dialog", { name: "Harbor Lights" });
     await title.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Watching" }).click();
@@ -120,7 +125,7 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await page.goBack();
     await expect(title).toBeHidden();
 
-    await tab(page, "Watchlist").click();
+    await tab(page, "Library").click();
     const harbor = card(grid(section(page, "Watching"), "Watching TV shows"), "Harbor Lights");
     await harbor.click();
     const detail = page.getByRole("dialog", { name: "Harbor Lights" });
@@ -130,6 +135,6 @@ test.describe("in every theme, axe finds nothing serious", () => {
     await page.goBack();
     await expect(detail).toBeHidden();
     await expect(harbor).toBeVisible();
-    await checkThemes(page, "Watchlist, with a title Watching");
+    await checkThemes(page, "Library, with a title Watching");
   });
 });

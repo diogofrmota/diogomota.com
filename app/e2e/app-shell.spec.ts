@@ -1,13 +1,27 @@
 import { type Page } from "@playwright/test";
-import { accountButton, accountMenuItems, appsMenuItems, expect, followAccountMenu, newUser, saveTheme, signUp, test } from "./fixtures";
+import {
+  accountButton,
+  accountMenuItems,
+  appsMenuItems,
+  expect,
+  followAccountMenu,
+  newUser,
+  saveTheme,
+  signUp,
+  test,
+} from "./fixtures";
 
 // The tabs. Shared's settings are one of them; Shows has none.
 const appViews = [
   { path: "/shared", name: "Shared", views: ["Calendar", "Tasks", "Settings"] },
-  { path: "/shows", name: "Shows", views: ["Watchlist", "Discover", "Profile"] },
+  { path: "/shows", name: "Shows", views: ["Library", "Discover", "Profile"] },
 ] as const;
 
-/** The app's tabs, in the middle of the top bar at every width. */
+/** A view's URL: the app's own path for its first view, the view under it for the others. */
+const viewUrl = (app: (typeof appViews)[number], view: string) =>
+  view === app.views[0] ? app.path : `${app.path}/${view.toLowerCase()}`;
+
+/** The app's tabs: in the middle of the top bar on a wide screen, along the bottom on a phone. */
 const tabBar = (page: Page, app: string) => page.getByRole("navigation", { name: app, exact: true });
 const tab = (page: Page, app: string, view: string) =>
   tabBar(page, app).getByRole("button", { name: view, exact: true });
@@ -26,7 +40,7 @@ async function openApp(page: Page, path: string) {
 }
 
 /** Saves a theme in Account (/account), opened from the account menu. */
-async function chooseTheme(page: Page, theme: "Graphite" | "Neutral") {
+async function chooseTheme(page: Page, theme: "Dark" | "Light") {
   await followAccountMenu(page, "Account");
   await expect(page).toHaveURL("/account");
   await saveTheme(page, theme);
@@ -47,7 +61,9 @@ async function expectNoHorizontalScroll(page: Page) {
 }
 
 for (const app of appViews) {
-  test(`${app.name}: the tabs switch views and the URL stays ${app.path}`, async ({ page }) => {
+  test(`${app.name}: the tabs switch views, each at its own URL under ${app.path}, without loading a page`, async ({
+    page,
+  }) => {
     await openApp(page, app.path);
     await expect(page).toHaveTitle(`${app.name} · diogo mota`);
     await expect(viewHeading(page)).toHaveText(app.views[0]);
@@ -61,7 +77,7 @@ for (const app of appViews) {
       await expect(viewHeading(page)).toHaveText(view);
       await expect(tab(page, app.name, view)).toHaveAttribute("aria-current", "page");
       await expect(tabBar(page, app.name).locator("[aria-current]")).toHaveCount(1);
-      await expect(page).toHaveURL(app.path);
+      await expect(page).toHaveURL(viewUrl(app, view));
     }
     expect(await page.evaluate(() => "sameDocument" in window)).toBe(true);
   });
@@ -85,7 +101,7 @@ test("back and forward move between views, and out of the app to /apps", async (
   await page.goBack();
   await expect(viewHeading(page)).toHaveText("Tasks");
   await expect(tab(page, "Shared", "Tasks")).toHaveAttribute("aria-current", "page");
-  await expect(page).toHaveURL("/shared");
+  await expect(page).toHaveURL("/shared/tasks");
   await page.goBack();
   await expect(viewHeading(page)).toHaveText("Calendar");
   await page.goForward();
@@ -107,22 +123,26 @@ test("back and forward move between views, and out of the app to /apps", async (
   await followAccountMenu(page, "Switch app");
   await expect(page).toHaveURL("/apps");
   await page.goBack();
-  await expect(page).toHaveURL("/shared");
+  await expect(page).toHaveURL("/shared/tasks");
   await expect(viewHeading(page)).toHaveText("Tasks");
 });
 
-test("a reload starts on the default view, and back still works after it", async ({ page }) => {
+test("a reload keeps the view (it's in the URL), and back still works after it", async ({ page }) => {
   await openApp(page, "/shows");
   await tab(page, "Shows", "Discover").click();
   await tab(page, "Shows", "Profile").click();
   await expect(viewHeading(page)).toHaveText("Profile");
 
   await page.reload();
-  await expect(viewHeading(page)).toHaveText("Watchlist");
-  await expect(tab(page, "Shows", "Watchlist")).toHaveAttribute("aria-current", "page");
+  await expect(viewHeading(page)).toHaveText("Profile");
+  await expect(tab(page, "Shows", "Profile")).toHaveAttribute("aria-current", "page");
   await page.goBack();
   await expect(viewHeading(page)).toHaveText("Discover");
-  await expect(page).toHaveURL("/shows");
+  await expect(page).toHaveURL("/shows/discover");
+  // A view's URL opens it, and one that isn't a view is a 404.
+  await page.goto("/shows/profile");
+  await expect(viewHeading(page)).toHaveText("Profile");
+  expect((await page.goto("/shows/watchlist"))!.status()).toBe(404);
 });
 
 test("back pressed while the page is still loading still goes to the previous view", async ({ page }) => {
@@ -140,18 +160,20 @@ test("back pressed while the page is still loading still goes to the previous vi
     await route.continue();
   });
   await page.reload({ waitUntil: "commit" });
-  // As rendered by the server.
-  await expect(viewHeading(page)).toHaveText("Watchlist");
+  // As rendered by the server, for its URL.
+  await expect(viewHeading(page)).toHaveText("Profile");
   await page.goBack({ waitUntil: "commit" });
   releaseScripts();
 
   await expect(viewHeading(page)).toHaveText("Discover");
   await expect(tab(page, "Shows", "Discover")).toHaveAttribute("aria-current", "page");
   await page.goBack();
-  await expect(viewHeading(page)).toHaveText("Watchlist");
+  await expect(viewHeading(page)).toHaveText("Library");
 });
 
-test("Switch app, in the account menu, goes to /apps, the way to the other app and to the site; /apps itself has no Switch app", async ({ page }) => {
+test("Switch app, in the account menu, goes to /apps, the way to the other app and to the site; /apps itself has no Switch app", async ({
+  page,
+}) => {
   const user = await openApp(page, "/shared");
   await accountButton(page, user.username).click();
   await expect(page.getByRole("link", { name: "Account", exact: true })).toBeVisible();
@@ -168,7 +190,7 @@ test("Switch app, in the account menu, goes to /apps, the way to the other app a
   await page.keyboard.press("Escape");
   await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
   await expect(page).toHaveURL("/shows");
-  await expect(viewHeading(page)).toHaveText("Watchlist");
+  await expect(viewHeading(page)).toHaveText("Library");
   await followAccountMenu(page, "Switch app");
   await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
@@ -181,7 +203,9 @@ test("Switch app, in the account menu, goes to /apps, the way to the other app a
   await expect(page).toHaveURL("/");
 });
 
-test("the top bar: in an app, its tabs in the middle and the account menu; elsewhere, diogomota.com and the account menu", async ({ page }) => {
+test("the top bar: in an app, its tabs in the middle and the account menu; elsewhere, diogomota.com and the account menu", async ({
+  page,
+}) => {
   const user = await openApp(page, "/shared");
   const header = page.getByRole("banner");
   const account = accountButton(page, user.username);
@@ -192,7 +216,8 @@ test("the top bar: in an app, its tabs in the middle and the account menu; elsew
     await expect(header.getByRole("navigation")).toHaveCount(2);
     await expect(header.getByRole("button")).toHaveCount(app.views.length + 1);
     // By name: each label's text is there twice (NavLabel's hidden bold copy).
-    for (const [i, view] of app.views.entries()) await expect(tabBar(page, app.name).getByRole("button").nth(i)).toHaveAccessibleName(view);
+    for (const [i, view] of app.views.entries())
+      await expect(tabBar(page, app.name).getByRole("button").nth(i)).toHaveAccessibleName(view);
     // The tabs in the middle of the bar, the account menu on the right.
     const tabs = (await tabBar(page, app.name).boundingBox())!;
     const bar = (await header.boundingBox())!;
@@ -207,7 +232,10 @@ test("the top bar: in an app, its tabs in the middle and the account menu; elsew
 
     // NavLabel's visible text (its first span; the second is the hidden bold copy).
     const text = (view: string) => tab(page, app.name, view).locator("span > span").first();
-    const widths = async () => Promise.all(app.views.map((view) => tab(page, app.name, view).evaluate((el) => el.getBoundingClientRect().width)));
+    const widths = async () =>
+      Promise.all(
+        app.views.map((view) => tab(page, app.name, view).evaluate((el) => el.getBoundingClientRect().width)),
+      );
     const before = await widths();
     for (const current of [app.views[1], app.views[0]]) {
       await tab(page, app.name, current).click();
@@ -231,7 +259,9 @@ test("the top bar: in an app, its tabs in the middle and the account menu; elsew
   }
 });
 
-test("the account menu: a button that shows it opens, with Account, Switch app and Log out, each with an icon; no Settings", async ({ page }) => {
+test("the account menu: a button that shows it opens, with Account, Switch app and Log out, each with an icon; no Settings", async ({
+  page,
+}) => {
   const user = await openApp(page, "/shows");
   const button = accountButton(page, user.username);
   // The username's initial and a chevron, both hidden: the button is named by the username alone.
@@ -254,21 +284,16 @@ test("the account menu: a button that shows it opens, with Account, Switch app a
   expect((await page.goto("/settings"))!.status()).toBe(404);
 });
 
-test("Shared's Settings tab: only once there is a space, and leaving there goes back to creating or joining one", async ({ page }) => {
-  // The space's changes are API calls; a server action then makes the pages the
-  // browser kept for Back render again (app/shared/actions.ts). Its response
-  // comes once that's done.
-  const refreshed = () => page.waitForResponse((response) =>
-    response.request().method() === "POST" && "next-action" in response.request().headers());
+test("Shared's Settings tab: only once there is a space, and leaving there goes back to creating or joining one", async ({
+  page,
+}) => {
   await signUp(page, newUser(), "/signup?next=%2Fshared");
-  await expect(viewHeading(page)).toHaveText("Start your shared space");
+  await expect(viewHeading(page)).toHaveText("Your shared calendar");
   // No tabs yet: the top bar has only the account menu.
   await expect(page.getByRole("banner").getByRole("button")).toHaveCount(1);
   await expect(page.getByRole("banner").getByRole("link")).toHaveCount(0);
-  let done = refreshed();
   await page.getByRole("button", { name: "Create space" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
-  await done;
 
   await tab(page, "Shared", "Settings").click();
   await expect(viewHeading(page)).toHaveText("Settings");
@@ -278,30 +303,29 @@ test("Shared's Settings tab: only once there is a space, and leaving there goes 
   await expect(viewHeading(page)).toHaveText("Tasks");
 
   await tab(page, "Shared", "Settings").click();
+  // The last member: leaving deletes the space, so it asks first (no Undo).
   await page.getByRole("button", { name: "Leave this group", exact: true }).click();
-  done = refreshed();
-  await page.getByRole("button", { name: "Confirm leave" }).click();
-  await expect(viewHeading(page)).toHaveText("Start your shared space");
+  await page.getByRole("button", { name: "Leave and delete" }).click();
+  await expect(viewHeading(page)).toHaveText("Your shared calendar");
   await expect(tabBar(page, "Shared")).toHaveCount(0);
-  await done;
 
-  // Back to /shared from another page shows it as it is now: no space.
+  // Back to /shared from another page shows it as it is now (SharedApp checks its space once shown): no space.
   await followAccountMenu(page, "Switch app");
   await expect(page).toHaveURL("/apps");
   await page.goBack();
-  await expect(page).toHaveURL("/shared");
-  await expect(viewHeading(page)).toHaveText("Start your shared space");
+  await expect(page).toHaveURL(/\/shared/);
+  await expect(viewHeading(page)).toHaveText("Your shared calendar");
 });
 
 test("the theme saved in Account is in the page as served, in the apps and the pages around them", async ({ page }) => {
   await openApp(page, "/shows");
   const shell = page.locator("[data-theme]");
   const themeColor = page.locator('meta[name="theme-color"]');
-  // New accounts start in Light mode.
-  await expect(shell).toHaveAttribute("data-theme", "light-2");
-  await expect(shell).toHaveCSS("background-color", "rgb(241, 245, 249)");
+  // New accounts start in Light.
+  await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
+  await expect(shell).toHaveCSS("background-color", "rgb(230, 230, 230)");
 
-  await chooseTheme(page, "Graphite");
+  await chooseTheme(page, "Dark");
   await expect(shell).toHaveAttribute("data-theme", "graphite");
   await expect(shell).toHaveCSS("background-color", "rgb(31, 32, 35)");
   await expect(themeColor).toHaveAttribute("content", "#1f2023");
@@ -318,7 +342,7 @@ test("the theme saved in Account is in the page as served, in the apps and the p
   }
 
   await page.goto("/shows");
-  await chooseTheme(page, "Neutral");
+  await chooseTheme(page, "Light");
   await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
   await page.goto("/shows");
   expect(await reloadHtml(page)).toContain('data-theme="minimal-neutrals"');
@@ -327,28 +351,26 @@ test("the theme saved in Account is in the page as served, in the apps and the p
   await expect(themeColor).toHaveAttribute("content", "#e6e6e6");
 });
 
-test("theme changes show on pages reached with the back button, and keep the view history", async ({
-  page,
-}) => {
+test("theme changes show on pages reached with the back button, and keep the view history", async ({ page }) => {
   await openApp(page, "/shows");
   const shell = page.locator("[data-theme]");
   await tab(page, "Shows", "Discover").click();
-  await chooseTheme(page, "Graphite");
+  await chooseTheme(page, "Dark");
   await expect(shell).toHaveAttribute("data-theme", "graphite");
 
   // Back in the app: in the new theme, on the view Account was opened from.
   await page.goBack();
-  await expect(page).toHaveURL("/shows");
+  await expect(page).toHaveURL("/shows/discover");
   await expect(viewHeading(page)).toHaveText("Discover");
   await expect(shell).toHaveAttribute("data-theme", "graphite");
 
   // The same for a change in Account reached with forward.
   await page.goForward();
   await expect(page).toHaveURL("/account");
-  await saveTheme(page, "Neutral");
+  await saveTheme(page, "Light");
   await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
   await page.goBack();
-  await expect(page).toHaveURL("/shows");
+  await expect(page).toHaveURL("/shows/discover");
   await expect(viewHeading(page)).toHaveText("Discover");
   await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
 });
@@ -356,7 +378,9 @@ test("theme changes show on pages reached with the back button, and keep the vie
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
-  test("at 320px, the top bar still fits, the tabs whole and the username cut off if need be", async ({ page }) => {
+  test("at 320px, the tabs are along the bottom (each its icon and name), and the top bar has the app's name", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 320, height: 740 });
     const user = { ...newUser(), username: `e2e_${Date.now()}abc` };
     await signUp(page, user, "/signup?next=%2Fshows");
@@ -367,17 +391,29 @@ test.describe("on a phone", () => {
       await page.goto(app.path);
       await expect(viewHeading(page)).toHaveText(app.views[0]);
       await expect(account).toBeInViewport({ ratio: 1 });
-      for (const view of app.views) await expect(tab(page, app.name, view)).toBeInViewport({ ratio: 1 });
-      const tabs = (await tabBar(page, app.name).boundingBox())!;
-      expect(Math.abs(tabs.x + tabs.width / 2 - 160)).toBeLessThanOrEqual(1);
-      // Side by side, not over one another, and each at least 44px wide to tap.
-      const last = (await tab(page, app.name, app.views.at(-1)!).boundingBox())!;
-      expect(last.x + last.width).toBeLessThanOrEqual((await account.boundingBox())!.x);
-      for (const view of app.views) expect((await tab(page, app.name, view).boundingBox())!.width).toBeGreaterThanOrEqual(44);
+      // The app's name in the top bar (the tabs say it to screen readers).
+      await expect(page.getByRole("banner")).toContainText(app.name);
+      // The tabs at the bottom of the screen, side by side, each at least 44px to tap, with an icon.
+      const bar = (await tabBar(page, app.name).boundingBox())!;
+      expect(Math.abs(bar.y + bar.height - 740)).toBeLessThanOrEqual(1);
+      for (const view of app.views) {
+        await expect(tab(page, app.name, view)).toBeInViewport({ ratio: 1 });
+        await expect(tab(page, app.name, view).locator("svg")).toHaveCount(1);
+        const box = (await tab(page, app.name, view).boundingBox())!;
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+      }
+      // The view's end isn't under them.
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      const main = (await page.getByRole("main").boundingBox())!;
+      expect(main.y + main.height).toBeLessThanOrEqual(bar.y + bar.height + 1);
+      await tab(page, app.name, app.views[1]).click();
+      await expect(viewHeading(page)).toHaveText(app.views[1]);
       expect((await account.boundingBox())!.width).toBeGreaterThanOrEqual(44);
       await expectNoHorizontalScroll(page);
       await account.click();
-      for (const name of ["Account", "Switch app"]) await expect(page.getByRole("link", { name, exact: true })).toBeInViewport({ ratio: 1 });
+      for (const name of ["Account", "Switch app"])
+        await expect(page.getByRole("link", { name, exact: true })).toBeInViewport({ ratio: 1 });
       await expectNoHorizontalScroll(page);
       await page.keyboard.press("Escape");
     }
@@ -447,7 +483,7 @@ test.describe("panels", () => {
     // Next.js replaces the current entry's history state when it refreshes.
     const refreshed = page.waitForResponse(
       (response) =>
-        new URL(response.url()).pathname === "/test/app-shell" && response.request().headers()["rsc"] === "1",
+        new URL(response.url()).pathname.startsWith("/test/app-shell") && response.request().headers()["rsc"] === "1",
     );
     await page.getByRole("button", { name: "Refresh" }).click();
     await refreshed;
@@ -456,6 +492,22 @@ test.describe("panels", () => {
     await page.goBack();
     await expect(viewHeading(page)).toHaveText("One");
     await page.goForward();
+    await expect(viewHeading(page)).toHaveText("Two");
+  });
+
+  test("panels are in the URL: one opens with its link, and closing it stays in the app", async ({ page }) => {
+    await page.goto("/test/app-shell/two?p=first");
+    await expect(viewHeading(page)).toHaveText("Two");
+    await expect(panel(page, "First panel")).toBeVisible();
+    await panel(page, "First panel").getByRole("button", { name: "Open second panel" }).click();
+    await expect(page).toHaveURL("/test/app-shell/two?p=first&p=second");
+    await page.reload();
+    await expect(panel(page, "Second panel")).toBeVisible();
+    // Opened by the link, not here: closing it doesn't go back out of the app.
+    await panel(page, "Second panel").getByRole("button", { name: "Close" }).click();
+    await panel(page, "First panel").getByRole("button", { name: "Close" }).click();
+    await expect(panel(page, "First panel")).toBeHidden();
+    await expect(page).toHaveURL("/test/app-shell/two");
     await expect(viewHeading(page)).toHaveText("Two");
   });
 });

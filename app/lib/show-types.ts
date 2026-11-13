@@ -8,7 +8,11 @@ export const mediaTypes: readonly MediaType[] = ["tv", "movie"];
 export type LibraryStatus = "watching" | "planned" | "completed";
 /** In the order of the Watchlist's sections, and of every status picker. */
 export const libraryStatuses: readonly LibraryStatus[] = ["planned", "watching", "completed"];
-export const statusNames: Record<LibraryStatus, string> = { watching: "Watching", planned: "Planned", completed: "Completed" };
+export const statusNames: Record<LibraryStatus, string> = {
+  watching: "Watching",
+  planned: "Planned",
+  completed: "Completed",
+};
 /** What a title can be added to the library as, from Discover, search and the guide. */
 export const addStatuses = ["planned", "watching", "completed"] as const satisfies readonly LibraryStatus[];
 
@@ -22,6 +26,8 @@ export type TitleSummary = {
   posterPath: string | null;
   /** TMDB's average rating, 0-10 with one decimal; null with no votes yet. */
   rating: number | null;
+  /** A line under the year on its card, e.g. "From Ana" in Recommended by Friends. */
+  note?: string;
 };
 
 /** The current user's library entry for a title. */
@@ -57,13 +63,31 @@ export type LibraryItem = TitleSummary & TitleLengths & { library: LibraryEntry 
 export type FriendItem = TitleSummary & Pick<TitleLengths, "episodesPerSeason"> & { library: SharedEntry };
 
 /** A title as shown in the detail panel, from the shows table (the TMDB cache). */
-export type TitleDetail = TitleSummary & TitleLengths & {
-  overview: string;
-  library: LibraryEntry | null;
-};
+export type TitleDetail = TitleSummary &
+  TitleLengths & {
+    overview: string;
+    /** TMDB's genre names, e.g. ["Drama", "Comedy"]; empty until the title is fetched again. */
+    genres: string[];
+    library: LibraryEntry | null;
+    /** The user's friends who have it in their library (planned only if a favourite), most recent first. */
+    friends: FriendWithTitle[];
+  };
+
+/** A friend who has a title, and how far they are (TitleDetail.friends). */
+export type FriendWithTitle = Named & { id: string; avatarUrl: string | null; status: LibraryStatus };
 
 export type DiscoverSection =
-  | "for-you" | "trending" | "popular" | "upcoming" | "top-rated" | "action" | "comedy" | "crime" | "sci-fi" | "friends";
+  | "recommended"
+  | "for-you"
+  | "trending"
+  | "popular"
+  | "upcoming"
+  | "top-rated"
+  | "action"
+  | "comedy"
+  | "crime"
+  | "sci-fi"
+  | "friends";
 
 /**
  * Discover's sections for TV shows and for movies, in their order: the three
@@ -72,6 +96,7 @@ export type DiscoverSection =
  */
 export const discoverSections: Record<MediaType, readonly { id: DiscoverSection; heading: string }[]> = {
   tv: [
+    { id: "recommended", heading: "Recommended by Friends" },
     { id: "for-you", heading: "For You" },
     { id: "trending", heading: "Trending This Week" },
     { id: "popular", heading: "Popular" },
@@ -82,6 +107,7 @@ export const discoverSections: Record<MediaType, readonly { id: DiscoverSection;
     { id: "friends", heading: "Added by Friends" },
   ],
   movie: [
+    { id: "recommended", heading: "Recommended by Friends" },
     { id: "for-you", heading: "For You" },
     { id: "trending", heading: "Trending This Week" },
     { id: "popular", heading: "Popular" },
@@ -149,8 +175,12 @@ export function nextEpisode(episodesPerSeason: readonly number[], current: Episo
 
 /** Whether `episode` is in the show (TMDB's episode count of each season). */
 export const hasEpisode = (episodesPerSeason: readonly number[], { season, episode }: Episode) =>
-  Number.isInteger(season) && Number.isInteger(episode) && season >= 1 && season <= episodesPerSeason.length &&
-  episode >= 1 && episode <= episodesPerSeason[season - 1];
+  Number.isInteger(season) &&
+  Number.isInteger(episode) &&
+  season >= 1 &&
+  season <= episodesPerSeason.length &&
+  episode >= 1 &&
+  episode <= episodesPerSeason[season - 1];
 
 /** Whether `episode` is the show's last one. */
 export const isLastEpisode = (episodesPerSeason: readonly number[], episode: Episode) =>
@@ -164,7 +194,8 @@ export function formatRuntime(minutes: number): string {
 const sum = (counts: readonly number[]) => counts.reduce((total, count) => total + count, 0);
 
 /** What the stats need of a title in a library. */
-type StatsItem = Pick<TitleSummary, "type"> & TitleLengths & { library: Pick<LibraryEntry, "status" | "currentSeason" | "currentEpisode"> };
+type StatsItem = Pick<TitleSummary, "type"> &
+  TitleLengths & { library: Pick<LibraryEntry, "status" | "currentSeason" | "currentEpisode"> };
 
 /**
  * The episodes of a TV show in the library that count as watched: every
@@ -204,7 +235,10 @@ export function libraryStats(items: readonly StatsItem[]): LibraryStats {
   for (const item of items) {
     const completed = item.library.status === "completed";
     if (item.type === "movie") {
-      if (completed) { stats.moviesCompleted++; stats.minutesWatched += item.runtime ?? 0; }
+      if (completed) {
+        stats.moviesCompleted++;
+        stats.minutesWatched += item.runtime ?? 0;
+      }
       continue;
     }
     if (completed) stats.tvCompleted++;
@@ -229,4 +263,38 @@ export type Person = Named & { id: string; avatarUrl: string | null };
 export type FriendsState = { friends: Person[]; incoming: Person[]; outgoing: Person[] };
 
 /** A friend's profile: what they're watching, what they've completed, their favourites and their stats. */
-export type FriendProfile = Person & { stats: LibraryStats; items: FriendItem[] };
+export type FriendProfile = Person & {
+  stats: LibraryStats;
+  items: FriendItem[];
+  /** Titles you have both planned: something to watch together. */
+  bothPlanned: TitleSummary[];
+};
+
+/**
+ * Merges lists of recommendations (TMDB's, one per title of the user's) into one
+ * (For You): a title in several lists, or near the top of one, comes first; then
+ * the better rated. Left out: the titles in `leftOut` (TMDB ids: in the library,
+ * or in the sections just under it) and those with fewer than `minVotes` votes.
+ */
+export function mergeRecommendations(
+  lists: readonly (readonly { title: TitleSummary; votes: number }[])[],
+  leftOut: ReadonlySet<number>,
+  minVotes: number,
+  size: number,
+): TitleSummary[] {
+  const scores = new Map<number, { title: TitleSummary; score: number }>();
+  for (const list of lists) {
+    list.forEach(({ title, votes }, rank) => {
+      if (leftOut.has(title.tmdbId) || votes < minVotes) return;
+      const entry = scores.get(title.tmdbId) ?? { title, score: 0 };
+      entry.score += 1 - rank / (list.length + 1);
+      scores.set(title.tmdbId, entry);
+    });
+  }
+  return [...scores.values()]
+    .sort(
+      (a, b) => b.score - a.score || (b.title.rating ?? 0) - (a.title.rating ?? 0) || a.title.tmdbId - b.title.tmdbId,
+    )
+    .slice(0, size)
+    .map(({ title }) => title);
+}

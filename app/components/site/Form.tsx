@@ -66,15 +66,26 @@ export function FormMessage({ error, success }: { error?: string; success?: stri
 
 // While the form is sent: a ring turns over the label, which stays the
 // button's name, and the button can't be pressed again.
-export function SubmitButton({ label, pending, wide = false }: {
+export function SubmitButton({
+  label,
+  pending,
+  wide = false,
+  danger = false,
+}: {
   label: string;
   pending: boolean;
   /** As wide as the form: the one thing to do on the page (login, sign up). */
   wide?: boolean;
+  /** Filled red: it does something that can’t be undone (deleting the account). */
+  danger?: boolean;
 }) {
   return (
-    <button type="submit" className={`${ui.button} ${ui.primary} ${wide ? styles.wide : styles.submit}`}
-      disabled={pending} aria-busy={pending || undefined}>
+    <button
+      type="submit"
+      className={`${ui.button} ${danger ? ui.danger : ui.primary} ${wide ? styles.wide : styles.submit}`}
+      disabled={pending}
+      aria-busy={pending || undefined}
+    >
       {label}
       <PendingOverlay pending={pending} />
     </button>

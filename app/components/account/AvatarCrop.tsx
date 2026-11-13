@@ -34,7 +34,8 @@ const middle = (points: Point[]): Point => ({
   x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
   y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
 });
-const spread = (points: Point[]) => (points.length > 1 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : 0);
+const spread = (points: Point[]) =>
+  points.length > 1 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : 0;
 
 /**
  * Choosing the part of a photo that becomes the profile picture: the photo in
@@ -45,7 +46,12 @@ const spread = (points: Point[]) => (points.length > 1 ? Math.hypot(points[0].x 
  * `onUnreadable` when the browser can't show the photo (HEIC, or TIFF outside
  * Safari): the server, which reads more kinds, then decides.
  */
-export function AvatarCrop({ src, onCancel, onSave, onUnreadable }: {
+export function AvatarCrop({
+  src,
+  onCancel,
+  onSave,
+  onUnreadable,
+}: {
   /** The photo, as an object URL. */
   src: string;
   onCancel: () => void;
@@ -63,8 +69,18 @@ export function AvatarCrop({ src, onCancel, onSave, onUnreadable }: {
   // Moves the photo by (dx, dy) and zooms it around (px, py), all in pixels of
   // the square on screen, (px, py) from its middle: the point of the photo
   // under (px, py) stays there as it zooms.
-  function adjust({ dx = 0, dy = 0, px = 0, py = 0, zoom = (current: number) => current }: {
-    dx?: number; dy?: number; px?: number; py?: number; zoom?: (current: number) => number;
+  function adjust({
+    dx = 0,
+    dy = 0,
+    px = 0,
+    py = 0,
+    zoom = (current: number) => current,
+  }: {
+    dx?: number;
+    dy?: number;
+    px?: number;
+    py?: number;
+    zoom?: (current: number) => number;
   }) {
     const side = stage.current?.clientWidth;
     if (!size || !side) return;
@@ -74,17 +90,22 @@ export function AvatarCrop({ src, onCancel, onSave, onUnreadable }: {
       // Photo pixels per pixel on screen, before and after.
       const before = base / current.zoom / side;
       const after = base / next / side;
-      return within({
-        zoom: next,
-        x: current.x + px * (before - after) - dx * after,
-        y: current.y + py * (before - after) - dy * after,
-      }, size);
+      return within(
+        {
+          zoom: next,
+          x: current.x + px * (before - after) - dx * after,
+          y: current.y + py * (before - after) - dy * after,
+        },
+        size,
+      );
     });
   }
 
   // The wheel zooms (React's wheel listeners can't stop the page scrolling).
   const latestAdjust = useRef(adjust);
-  useEffect(() => { latestAdjust.current = adjust; });
+  useEffect(() => {
+    latestAdjust.current = adjust;
+  });
   useEffect(() => {
     const element = stage.current!;
     function onWheel(event: WheelEvent) {
@@ -110,29 +131,43 @@ export function AvatarCrop({ src, onCancel, onSave, onUnreadable }: {
     context.imageSmoothingQuality = "high";
     context.drawImage(photo, crop.x - side / 2, crop.y - side / 2, side, side, 0, 0, out, out);
     // WebP where the browser makes it, PNG (its fallback) elsewhere.
-    context.canvas.toBlob((blob) => {
-      if (!blob) return onUnreadable();
-      onSave(new File([blob], blob.type === "image/webp" ? "picture.webp" : "picture.png", { type: blob.type }));
-    }, "image/webp", 0.92);
+    context.canvas.toBlob(
+      (blob) => {
+        if (!blob) return onUnreadable();
+        onSave(new File([blob], blob.type === "image/webp" ? "picture.webp" : "picture.png", { type: blob.type }));
+      },
+      "image/webp",
+      0.92,
+    );
   }
 
   // The photo, placed in the square by percentages of it, so it needs no measuring.
   const base = size && Math.min(size.width, size.height);
-  const placed: React.CSSProperties = size && base ? {
-    width: `${(size.width / base) * crop.zoom * 100}%`,
-    height: `${(size.height / base) * crop.zoom * 100}%`,
-    left: `${(0.5 - (crop.x / base) * crop.zoom) * 100}%`,
-    top: `${(0.5 - (crop.y / base) * crop.zoom) * 100}%`,
-  } : { visibility: "hidden" };
+  const placed: React.CSSProperties =
+    size && base
+      ? {
+          width: `${(size.width / base) * crop.zoom * 100}%`,
+          height: `${(size.height / base) * crop.zoom * 100}%`,
+          left: `${(0.5 - (crop.x / base) * crop.zoom) * 100}%`,
+          top: `${(0.5 - (crop.y / base) * crop.zoom) * 100}%`,
+        }
+      : { visibility: "hidden" };
 
-  const moveKeys: Record<string, Point> = { ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 }, ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 } };
+  const moveKeys: Record<string, Point> = {
+    ArrowLeft: { x: -1, y: 0 },
+    ArrowRight: { x: 1, y: 0 },
+    ArrowUp: { x: 0, y: -1 },
+    ArrowDown: { x: 0, y: 1 },
+  };
 
   return (
     <Dialog className={styles.dialog} aria-labelledby={headingId} onClose={onCancel}>
       <div className={styles.dialogBody}>
         <div className={styles.dialogHeader}>
           <h2 id={headingId}>Adjust your picture</h2>
-          <button type="button" className={styles.close} aria-label="Close" onClick={onCancel}><CloseIcon /></button>
+          <button type="button" className={styles.close} aria-label="Close" onClick={onCancel}>
+            <CloseIcon />
+          </button>
         </div>
         <div
           ref={stage}
@@ -158,8 +193,11 @@ export function AvatarCrop({ src, onCancel, onSave, onUnreadable }: {
             // One finger moves it; two also zoom, as far as they spread.
             const factor = spread(before) > 0 ? spread(now) / spread(before) : 1;
             adjust({
-              dx: to.x - from.x, dy: to.y - from.y, zoom: (current) => current * factor,
-              px: from.x - box.left - box.width / 2, py: from.y - box.top - box.height / 2,
+              dx: to.x - from.x,
+              dy: to.y - from.y,
+              zoom: (current) => current * factor,
+              px: from.x - box.left - box.width / 2,
+              py: from.y - box.top - box.height / 2,
             });
           }}
           onPointerUp={(event) => pointers.current.delete(event.pointerId)}
@@ -195,8 +233,15 @@ export function AvatarCrop({ src, onCancel, onSave, onUnreadable }: {
           Drag the photo to move it, and zoom in or out. The circle is what your picture shows.
         </p>
         <div className={styles.zoomRow}>
-          <button type="button" className={styles.zoomButton} aria-label="Zoom out" disabled={!size || crop.zoom <= 1}
-            onClick={() => adjust({ zoom: (current) => current - zoomStep })}><MinusIcon /></button>
+          <button
+            type="button"
+            className={styles.zoomButton}
+            aria-label="Zoom out"
+            disabled={!size || crop.zoom <= 1}
+            onClick={() => adjust({ zoom: (current) => current - zoomStep })}
+          >
+            <MinusIcon />
+          </button>
           <input
             type="range"
             aria-label="Zoom"
@@ -208,12 +253,23 @@ export function AvatarCrop({ src, onCancel, onSave, onUnreadable }: {
             disabled={!size}
             onChange={(event) => adjust({ zoom: () => Number(event.target.value) })}
           />
-          <button type="button" className={styles.zoomButton} aria-label="Zoom in" disabled={!size || crop.zoom >= maxZoom}
-            onClick={() => adjust({ zoom: (current) => current + zoomStep })}><PlusIcon /></button>
+          <button
+            type="button"
+            className={styles.zoomButton}
+            aria-label="Zoom in"
+            disabled={!size || crop.zoom >= maxZoom}
+            onClick={() => adjust({ zoom: (current) => current + zoomStep })}
+          >
+            <PlusIcon />
+          </button>
         </div>
         <div className={ui.actions}>
-          <button type="button" className={`${ui.button} ${ui.primary}`} disabled={!size} onClick={save}>Save picture</button>
-          <button type="button" className={ui.button} onClick={onCancel}>Cancel</button>
+          <button type="button" className={`${ui.button} ${ui.primary}`} disabled={!size} onClick={save}>
+            Save picture
+          </button>
+          <button type="button" className={ui.button} onClick={onCancel}>
+            Cancel
+          </button>
         </div>
       </div>
     </Dialog>

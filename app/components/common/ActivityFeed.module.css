@@ -1,0 +1,57 @@
+/* An activity feed (components/common/ActivityFeed): a picture, then who did
+   what and when, one line each, newest first. */
+.feed {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feed li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.feed p {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.avatar {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  font-size: var(--text-sm);
+}
+
+/* A title, which opens its panel. */
+.title {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .title:hover {
+    text-decoration: underline;
+  }
+}
+
+.when {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.empty {
+  margin: 0;
+  color: var(--muted);
+}

@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getSession } from "@/auth";
 import { AvatarError, avatarMaxBytes, removeAvatar, saveAvatar } from "@/lib/avatars";
 import { avatarUploadLimit } from "@/lib/rate-limit";
 
@@ -21,10 +21,11 @@ function fromThisSite(request: Request): boolean {
 const tooBig = `That picture is over ${avatarMaxBytes / 1024 / 1024} MB. Try a smaller one.`;
 
 export async function POST(request: Request) {
-  const session = await auth();
+  const session = await getSession();
   if (!session) return fail("Please log in again.", 401);
   if (!fromThisSite(request)) return fail("Request must come from this site.", 403);
-  if (!avatarUploadLimit(session.user.id)) return fail("Too many pictures at once. Wait a few minutes and try again.", 429);
+  if (!avatarUploadLimit(session.user.id))
+    return fail("Too many pictures at once. Wait a few minutes and try again.", 429);
   // The form around the file adds a little to its size.
   if (Number(request.headers.get("content-length")) > avatarMaxBytes + 64 * 1024) return fail(tooBig, 413);
 
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const session = await auth();
+  const session = await getSession();
   if (!session) return fail("Please log in again.", 401);
   if (!fromThisSite(request)) return fail("Request must come from this site.", 403);
   try {

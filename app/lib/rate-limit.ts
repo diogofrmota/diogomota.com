@@ -62,3 +62,5 @@ export const showsRequestLimit = rateLimit("shows", 240, MINUTE);
 export function clientIp(headers: Headers): string {
   return headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
 }
+/** Emails that confirm an address, sent again from Account, per user. */
+export const verifyEmailLimit = rateLimit("verify-email", 3, 60 * MINUTE);

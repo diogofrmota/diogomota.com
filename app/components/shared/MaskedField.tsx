@@ -8,11 +8,12 @@ type Masked = keyof typeof masks;
 /** What an empty field shows until it's focused; then its blanks. */
 const placeholders: Record<Masked, string> = { date: "dd/mm/yyyy", time: "__:__" };
 const invalidMessages: Record<Masked, string> = {
-  date: "Enter a date as dd/mm/yyyy.", time: "Enter a time from 00:00 to 23:59, as hh:mm.",
+  date: "Enter a date as dd/mm/yyyy.",
+  time: "Enter a time from 00:00 to 23:59, as hh:mm.",
 };
 /** The value's digits: "2026-11-15" is 15112026, "09:30" 0930. */
 const digitsOf: Record<Masked, (value: string) => string> = {
-  date: (value) => value ? `${value.slice(8, 10)}${value.slice(5, 7)}${value.slice(0, 4)}` : "",
+  date: (value) => (value ? `${value.slice(8, 10)}${value.slice(5, 7)}${value.slice(0, 4)}` : ""),
   time: (value) => value.replace(":", ""),
 };
 /** The value the digits make ("2026-11-15", "09:30"), or null while they don't make one. */
@@ -24,10 +25,15 @@ const valueOf: Record<Masked, (digits: string) => string | null> = {
     const real = Number(year) >= 1000 && date.getUTCMonth() === Number(month) - 1 && date.getUTCDate() === Number(day);
     return real ? `${year}-${month}-${day}` : null;
   },
-  time: (digits) => digits.length === 4 && Number(digits.slice(0, 2)) < 24 && Number(digits.slice(2)) < 60
-    ? `${digits.slice(0, 2)}:${digits.slice(2)}` : null,
+  time: (digits) =>
+    digits.length === 4 && Number(digits.slice(0, 2)) < 24 && Number(digits.slice(2)) < 60
+      ? `${digits.slice(0, 2)}:${digits.slice(2)}`
+      : null,
 };
-const fill = (mask: string, digits: string) => { let i = 0; return mask.replace(/_/g, () => digits[i++] ?? "_"); };
+const fill = (mask: string, digits: string) => {
+  let i = 0;
+  return mask.replace(/_/g, () => digits[i++] ?? "_");
+};
 /** Where the caret goes: after the last digit, or at the start. */
 function caretAfter(mask: string, count: number) {
   for (let i = 0, seen = 0; i < mask.length; i++) if (mask[i] === "_" && ++seen === count) return i + 1;
@@ -44,8 +50,20 @@ function caretAfter(mask: string, count: number) {
  * fields: their order (mm/dd/yyyy in the US) and AM and PM follow the device's
  * language. The event form's dates and times, and a task's due date.
  */
-export function MaskedField({ kind, label, value, onChange, required = true, className }: {
-  kind: Masked; label: string; value: string; onChange: (value: string) => void; required?: boolean; className?: string;
+export function MaskedField({
+  kind,
+  label,
+  value,
+  onChange,
+  required = true,
+  className,
+}: {
+  kind: Masked;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  className?: string;
 }) {
   const mask = masks[kind];
   const ref = useRef<HTMLInputElement>(null);
@@ -56,7 +74,10 @@ export function MaskedField({ kind, label, value, onChange, required = true, cla
   const [draft, setDraft] = useState<string | null>(null);
   // A new value from outside (the end following the start, Clear) replaces them.
   const [shown, setShown] = useState(value);
-  if (shown !== value) { setShown(value); setDraft(null); }
+  if (shown !== value) {
+    setShown(value);
+    setDraft(null);
+  }
   const digits = draft ?? digitsOf[kind](value);
   const text = digits || focused ? fill(mask, digits) : "";
   const invalid = draft !== null;
@@ -66,7 +87,9 @@ export function MaskedField({ kind, label, value, onChange, required = true, cla
     ref.current!.setSelectionRange(caret.current, caret.current);
     caret.current = null;
   });
-  useEffect(() => { ref.current?.setCustomValidity(invalid ? invalidMessages[kind] : ""); }, [invalid, kind]);
+  useEffect(() => {
+    ref.current?.setCustomValidity(invalid ? invalidMessages[kind] : "");
+  }, [invalid, kind]);
 
   function change(e: ChangeEvent<HTMLInputElement>) {
     const typed = e.currentTarget.value;
@@ -84,14 +107,38 @@ export function MaskedField({ kind, label, value, onChange, required = true, cla
     if (parsed !== null && parsed !== value) onChange(parsed);
   }
 
-  return <input ref={ref} type="text" className={className} aria-label={label} required={required}
-    inputMode="numeric" autoComplete="off" spellCheck={false} placeholder={placeholders[kind]} value={text}
-    aria-invalid={invalid && !focused ? true : undefined} onChange={change}
-    onFocus={(e) => {
-      setFocused(true);
-      if (digits) { e.currentTarget.select(); keepSelection.current = true; } else caret.current = 0;
-    }}
-    // The click that focused it would put the caret where it landed.
-    onMouseUp={(e) => { if (keepSelection.current) { e.preventDefault(); keepSelection.current = false; } }}
-    onBlur={() => { setFocused(false); keepSelection.current = false; }} />;
+  return (
+    <input
+      ref={ref}
+      type="text"
+      className={className}
+      aria-label={label}
+      required={required}
+      inputMode="numeric"
+      autoComplete="off"
+      spellCheck={false}
+      placeholder={placeholders[kind]}
+      value={text}
+      aria-invalid={invalid && !focused ? true : undefined}
+      onChange={change}
+      onFocus={(e) => {
+        setFocused(true);
+        if (digits) {
+          e.currentTarget.select();
+          keepSelection.current = true;
+        } else caret.current = 0;
+      }}
+      // The click that focused it would put the caret where it landed.
+      onMouseUp={(e) => {
+        if (keepSelection.current) {
+          e.preventDefault();
+          keepSelection.current = false;
+        }
+      }}
+      onBlur={() => {
+        setFocused(false);
+        keepSelection.current = false;
+      }}
+    />
+  );
 }

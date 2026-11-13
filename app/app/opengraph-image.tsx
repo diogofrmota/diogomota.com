@@ -12,29 +12,27 @@ const plexMono = await readFile(join(process.cwd(), "app/fonts/IBMPlexMono-Regul
 
 export default function OpenGraphImage() {
   return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#000",
-          color: "#fff",
-          fontFamily: "IBM Plex Mono",
-          fontSize: 44,
-          lineHeight: 1.625,
-        }}
-      >
-        {/* Like the landing page: equal white lines, left-aligned in a centered block. */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 44 }}>
-          <div>diogo mota</div>
-          <div>devops engineer @ Richemont</div>
-          <div>currently based in Lisbon, PT</div>
-        </div>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#000",
+        color: "#fff",
+        fontFamily: "IBM Plex Mono",
+        fontSize: 44,
+        lineHeight: 1.625,
+      }}
+    >
+      {/* Like the landing page: equal white lines, left-aligned in a centered block. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 44 }}>
+        <div>diogo mota</div>
+        <div>devops engineer @ Richemont</div>
+        <div>currently based in Lisbon, PT</div>
       </div>
-    ),
+    </div>,
     { ...size, fonts: [{ name: "IBM Plex Mono", data: plexMono, weight: 400, style: "normal" }] },
   );
 }

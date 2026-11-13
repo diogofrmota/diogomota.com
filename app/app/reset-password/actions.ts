@@ -1,10 +1,11 @@
 "use server";
 
+import { APIError } from "better-auth";
 import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { resetTokenUsername } from "@/lib/accounts";
 import { formPassword, passwordError } from "@/lib/account-rules";
 import type { FormState } from "@/lib/form-state";
-import { hashPassword } from "@/lib/password";
-import { resetPassword, resetTokenUsername } from "@/lib/password-reset";
 
 export async function setNewPassword(_previous: FormState, formData: FormData): Promise<FormState> {
   const token = formData.get("token");
@@ -22,8 +23,12 @@ export async function setNewPassword(_previous: FormState, formData: FormData): 
 
   // Before hashing, which is the slow part.
   if (!(await resetTokenUsername(token))) redirect(linkPage);
-  if (!(await resetPassword(token, await hashPassword(password)))) redirect(linkPage);
-
-  // The reset ended every session of the account, so this logs in afresh.
+  try {
+    // Uses up the token and ends every session of the account (auth.ts).
+    await auth.api.resetPassword({ body: { newPassword: password, token } });
+  } catch (error) {
+    if (error instanceof APIError) redirect(linkPage);
+    throw error;
+  }
   redirect("/login?password=changed");
 }

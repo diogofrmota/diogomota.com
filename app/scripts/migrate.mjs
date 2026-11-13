@@ -10,8 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 
-const migrationsDir =
-  process.env.MIGRATIONS_DIR ?? fileURLToPath(new URL("../../db/migrations/", import.meta.url));
+const migrationsDir = process.env.MIGRATIONS_DIR ?? fileURLToPath(new URL("../../db/migrations/", import.meta.url));
 
 // Arbitrary key for pg_advisory_lock, so two runs (e.g. overlapping deploys) never migrate at once.
 const LOCK_KEY = 4_021_977;

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { getSession } from "@/auth";
 import { AuthPage } from "@/components/auth/AuthPage";
 import { SignUpForm } from "@/components/auth/SignUpForm";
 import { appAt, appViewport } from "@/lib/apps";
@@ -13,7 +13,7 @@ export const viewport = appViewport;
 
 export default async function SignUpPage({ searchParams }: PageProps<"/signup">) {
   const next = safeNextPath((await searchParams).next);
-  if (await auth()) redirect(next ?? "/apps");
+  if (await getSession()) redirect(next ?? "/apps");
   const app = appAt(next);
 
   return (
@@ -24,6 +24,10 @@ export default async function SignUpPage({ searchParams }: PageProps<"/signup">)
     >
       <p>
         Already have an account? <Link href={authHref("/login", next)}>Log in</Link>
+      </p>
+      <p>
+        We&rsquo;ll send you a link to confirm your email. What we keep, and how to delete it:{" "}
+        <Link href="/privacy">Privacy</Link>.
       </p>
     </AuthPage>
   );

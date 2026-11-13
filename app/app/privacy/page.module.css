@@ -1,0 +1,21 @@
+/* /privacy: a readable column of text in the apps' frame. */
+.page {
+  width: 100%;
+  max-width: 42rem;
+  margin-inline: auto;
+}
+
+.page h2 {
+  margin: var(--space-8) 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.page ul {
+  display: grid;
+  gap: var(--space-2);
+  padding-left: var(--space-5);
+}
+
+.page a {
+  color: var(--accent);
+}

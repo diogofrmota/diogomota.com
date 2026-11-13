@@ -20,7 +20,11 @@ const searchTtlMs = 5 * 60_000;
 const recommendationsTtlMs = 6 * 60 * 60_000;
 
 export class TmdbError extends Error {
-  constructor(message: string, public status: number, options?: ErrorOptions) {
+  constructor(
+    message: string,
+    public status: number,
+    options?: ErrorOptions,
+  ) {
     super(message, options);
   }
 }
@@ -42,18 +46,22 @@ type TmdbMultiItem =
   | (TmdbMovieItem & { media_type: "movie" })
   | { media_type: "person" | "collection"; id: number };
 type TmdbEpisode = { runtime?: number | null };
-type TmdbTvDetails = TmdbTvItem & {
-  overview?: string;
-  episode_run_time?: number[];
-  seasons?: { season_number?: number; episode_count?: number }[];
-  last_episode_to_air?: TmdbEpisode | null;
-  next_episode_to_air?: TmdbEpisode | null;
-};
-type TmdbMovieDetails = TmdbMovieItem & { overview?: string; runtime?: number | null };
+type TmdbGenres = { genres?: { name?: unknown }[] };
+type TmdbTvDetails = TmdbTvItem &
+  TmdbGenres & {
+    overview?: string;
+    episode_run_time?: number[];
+    seasons?: { season_number?: number; episode_count?: number }[];
+    last_episode_to_air?: TmdbEpisode | null;
+    next_episode_to_air?: TmdbEpisode | null;
+  };
+type TmdbMovieDetails = TmdbMovieItem & TmdbGenres & { overview?: string; runtime?: number | null };
 
 /** A title's details, as stored in the shows table. */
 export type TmdbTitle = TitleSummary & {
   overview: string;
+  /** TMDB's genre names, e.g. ["Drama", "Comedy"]. */
+  genres: string[];
   runtime: number | null;
   episodeRuntime: number | null;
   episodesPerSeason: number[] | null;
@@ -84,8 +92,11 @@ async function get<T>(path: string, params: Record<string, string> = {}): Promis
   } catch (error) {
     if (error instanceof TmdbError) throw error;
     const timedOut = error instanceof DOMException && error.name === "TimeoutError";
-    throw new TmdbError(timedOut ? `TMDB took too long to answer ${path}.` : `Could not reach TMDB for ${path}.`,
-      timedOut ? 504 : 502, { cause: error });
+    throw new TmdbError(
+      timedOut ? `TMDB took too long to answer ${path}.` : `Could not reach TMDB for ${path}.`,
+      timedOut ? 504 : 502,
+      { cause: error },
+    );
   }
 }
 
@@ -117,7 +128,8 @@ export function remember<T>(key: string, ttlMs: number, load: () => Promise<T>):
 
 const validId = (id: unknown): id is number => Number.isInteger(id) && (id as number) > 0 && (id as number) < 2 ** 31;
 const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
-const minutes = (value: unknown) => (typeof value === "number" && value > 0 && value < 10_000 ? Math.round(value) : null);
+const minutes = (value: unknown) =>
+  typeof value === "number" && value > 0 && value < 10_000 ? Math.round(value) : null;
 
 function yearOf(date: unknown): number | null {
   const match = /^(\d{4})-/.exec(text(date));
@@ -136,7 +148,8 @@ function rating(average: unknown, count: unknown): number | null {
 }
 
 function summary(type: MediaType, item: TmdbTvItem | TmdbMovieItem): TitleSummary {
-  const tv = item as TmdbTvItem, movie = item as TmdbMovieItem;
+  const tv = item as TmdbTvItem,
+    movie = item as TmdbMovieItem;
   return {
     type,
     tmdbId: item.id,
@@ -155,7 +168,9 @@ export type Listed = { title: TitleSummary; votes: number };
 
 function listed(type: MediaType, page: TmdbPage<TmdbTvItem | TmdbMovieItem>): Listed[] {
   const results = Array.isArray(page?.results) ? page.results : [];
-  return results.filter((item) => validId(item?.id)).map((item) => ({ title: summary(type, item), votes: votesOf(item) }));
+  return results
+    .filter((item) => validId(item?.id))
+    .map((item) => ({ title: summary(type, item), votes: votesOf(item) }));
 }
 
 /**
@@ -173,21 +188,35 @@ export const topRatedVotes: Record<MediaType, number> = { tv: 500, movie: 2000 }
  * topRatedVotes votes, or the most popular of a genre (TMDB's genre ids differ
  * between TV and movies).
  */
-export type TmdbSource =
-  | { list: "trending" | "popular" | "upcoming" | "top-rated" }
-  | { list: "genre"; genre: number };
+export type TmdbSource = { list: "trending" | "popular" | "upcoming" | "top-rated" } | { list: "genre"; genre: number };
 
 function sourceRequest(type: MediaType, source: TmdbSource): [string, Record<string, string>] {
   switch (source.list) {
-    case "trending": return [`/trending/${type}/week`, {}];
-    case "popular": return [`/${type}/popular`, {}];
-    case "upcoming": return ["/movie/upcoming", {}];
-    case "top-rated": return [`/discover/${type}`, {
-      sort_by: "vote_average.desc", "vote_count.gte": String(topRatedVotes[type]), include_adult: "false",
-    }];
-    case "genre": return [`/discover/${type}`, {
-      with_genres: String(source.genre), sort_by: "popularity.desc", "vote_count.gte": String(minVotes[type]), include_adult: "false",
-    }];
+    case "trending":
+      return [`/trending/${type}/week`, {}];
+    case "popular":
+      return [`/${type}/popular`, {}];
+    case "upcoming":
+      return ["/movie/upcoming", {}];
+    case "top-rated":
+      return [
+        `/discover/${type}`,
+        {
+          sort_by: "vote_average.desc",
+          "vote_count.gte": String(topRatedVotes[type]),
+          include_adult: "false",
+        },
+      ];
+    case "genre":
+      return [
+        `/discover/${type}`,
+        {
+          with_genres: String(source.genre),
+          sort_by: "popularity.desc",
+          "vote_count.gte": String(minVotes[type]),
+          include_adult: "false",
+        },
+      ];
   }
 }
 
@@ -210,8 +239,11 @@ const maxPages = 3;
  * fewer than `votes` votes and those in `exclude` (TMDB ids, of this type):
  * reads the next page while the list isn't full, up to 3 pages.
  */
-export async function collectTitles(type: MediaType, source: TmdbSource,
-  { count, votes, exclude = new Set() }: { count: number; votes: number; exclude?: ReadonlySet<number> }): Promise<TitleSummary[]> {
+export async function collectTitles(
+  type: MediaType,
+  source: TmdbSource,
+  { count, votes, exclude = new Set() }: { count: number; votes: number; exclude?: ReadonlySet<number> },
+): Promise<TitleSummary[]> {
   const found: TitleSummary[] = [];
   const seen = new Set(exclude);
   for (let page = 1; page <= maxPages && found.length < count; page++) {
@@ -230,17 +262,23 @@ export async function collectTitles(type: MediaType, source: TmdbSource,
 /** TMDB's recommendations for people who liked a title (page 1, 20 at most), with their votes. They change slowly. */
 export function recommendedFor(type: MediaType, tmdbId: number): Promise<Listed[]> {
   return remember(`${type}/${tmdbId}/recommendations`, recommendationsTtlMs, async () =>
-    listed(type, await get<TmdbPage<TmdbTvItem | TmdbMovieItem>>(`/${type}/${tmdbId}/recommendations`, { page: "1" })));
+    listed(type, await get<TmdbPage<TmdbTvItem | TmdbMovieItem>>(`/${type}/${tmdbId}/recommendations`, { page: "1" })),
+  );
 }
 
 // "The Office!" and "the office" are the same search.
-const comparable = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+const comparable = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
 
 // How well a result matches the search: its title exactly, then titles that
 // start with it, then the rest; in each, the ones with a poster and enough
 // votes (minVotes) first: TMDB also finds obscure entries. TMDB's order otherwise.
 function searchRank(query: string, { title, votes }: Listed): number {
-  const wanted = comparable(query), found = comparable(title.title);
+  const wanted = comparable(query),
+    found = comparable(title.title);
   const match = found === wanted ? 0 : found.startsWith(wanted) ? 1 : 2;
   return match * 2 + (title.posterPath && votes >= minVotes[title.type] ? 0 : 1);
 }
@@ -255,12 +293,16 @@ export function searchTitles(query: string): Promise<TitleSummary[]> {
     const results = Array.isArray(page?.results) ? page.results : [];
     const titles = results.flatMap((item): Listed[] =>
       (item?.media_type === "tv" || item?.media_type === "movie") && validId(item.id)
-        ? [{ title: summary(item.media_type, item), votes: votesOf(item) }] : []);
+        ? [{ title: summary(item.media_type, item), votes: votesOf(item) }]
+        : [],
+    );
     // TMDB lists a title once per type, but a page can repeat one across pages' edges.
     const unique = [...new Map(titles.map((found) => [`${found.title.type}:${found.title.tmdbId}`, found])).values()];
     // Stable, so TMDB's order stays within each rank.
-    return unique.map((found, index) => ({ found, index, rank: searchRank(query, found) }))
-      .sort((a, b) => a.rank - b.rank || a.index - b.index).map(({ found }) => found.title);
+    return unique
+      .map((found, index) => ({ found, index, rank: searchRank(query, found) }))
+      .sort((a, b) => a.rank - b.rank || a.index - b.index)
+      .map(({ found }) => found.title);
   });
 }
 
@@ -270,11 +312,29 @@ export function searchTitles(query: string): Promise<TitleSummary[]> {
 function seasonEpisodes(seasons: TmdbTvDetails["seasons"]): number[] {
   const counts: number[] = [];
   for (const season of Array.isArray(seasons) ? seasons : []) {
-    const number = season?.season_number, count = season?.episode_count;
-    if (typeof number === "number" && Number.isInteger(number) && number >= 1 && number <= 1000 &&
-      typeof count === "number" && Number.isInteger(count) && count > 0) counts[number - 1] = count;
+    const number = season?.season_number,
+      count = season?.episode_count;
+    if (
+      typeof number === "number" &&
+      Number.isInteger(number) &&
+      number >= 1 &&
+      number <= 1000 &&
+      typeof count === "number" &&
+      Number.isInteger(count) &&
+      count > 0
+    )
+      counts[number - 1] = count;
   }
   return Array.from(counts, (count) => count ?? 0);
+}
+
+// The genre names, at most 5, each a short plain name.
+function genreNames(details: TmdbGenres | undefined): string[] {
+  const genres = Array.isArray(details?.genres) ? details.genres : [];
+  return genres
+    .map((genre) => text(genre?.name))
+    .filter((name) => name && name.length <= 40)
+    .slice(0, 5);
 }
 
 /** A title's details, straight from TMDB. */
@@ -286,8 +346,12 @@ export async function fetchTitle(type: MediaType, tmdbId: number): Promise<TmdbT
     return {
       ...summary("tv", { ...show, id: tmdbId }),
       overview: text(show?.overview),
+      genres: genreNames(show),
       runtime: null,
-      episodeRuntime: minutes(runtimes[0]) ?? minutes(show?.last_episode_to_air?.runtime) ?? minutes(show?.next_episode_to_air?.runtime),
+      episodeRuntime:
+        minutes(runtimes[0]) ??
+        minutes(show?.last_episode_to_air?.runtime) ??
+        minutes(show?.next_episode_to_air?.runtime),
       episodesPerSeason: seasonEpisodes(show?.seasons),
     };
   }
@@ -295,6 +359,7 @@ export async function fetchTitle(type: MediaType, tmdbId: number): Promise<TmdbT
   return {
     ...summary("movie", { ...movie, id: tmdbId }),
     overview: text(movie?.overview),
+    genres: genreNames(movie),
     runtime: minutes(movie?.runtime),
     episodeRuntime: null,
     episodesPerSeason: null,

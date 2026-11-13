@@ -20,7 +20,14 @@
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
   font-size: 1rem;
   line-height: 1.5;
 }
@@ -241,5 +248,27 @@
   .link,
   .authLink {
     font-size: 0.875rem;
+  }
+}
+
+/* In an app: its tabs in the middle on a wide screen; on a phone they are at
+   the bottom of the screen (AppShell's BottomTabs), and the middle has the app's
+   name (hidden from screen readers, which have the tabs' landmark). */
+.headerTabs {
+  display: none;
+}
+
+.appName {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (min-width: 48rem) {
+  .headerTabs {
+    display: block;
+  }
+
+  .appName {
+    display: none;
   }
 }

@@ -44,10 +44,14 @@ const modules = normalize(path.join(appDir, "node_modules") + "/");
 /** Every process running: its pid, its parent's and its command line. */
 function processes() {
   if (windows) {
-    const script = "[Console]::OutputEncoding = [Text.Encoding]::UTF8; ConvertTo-Json -Compress -InputObject " +
+    const script =
+      "[Console]::OutputEncoding = [Text.Encoding]::UTF8; ConvertTo-Json -Compress -InputObject " +
       "@(Get-CimInstance Win32_Process | Select-Object ProcessId, ParentProcessId, CommandLine)";
-    const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script],
-      { encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
+    const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], {
+      encoding: "utf8",
+      windowsHide: true,
+      maxBuffer: 64 * 1024 * 1024,
+    });
     return JSON.parse(output).map((p) => ({ pid: p.ProcessId, ppid: p.ParentProcessId, command: p.CommandLine ?? "" }));
   }
   return execFileSync("ps", ["-A", "-ww", "-o", "pid=,ppid=,args="], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
@@ -136,7 +140,8 @@ function stopTree(pid, list) {
 
 /** Waits until these processes are gone (and the test server's port with them), for up to 10 s. */
 async function gone(stopped) {
-  for (let i = 0; i < 100 && stopped.some((p) => alive(p.pid)); i++) await new Promise((resolve) => setTimeout(resolve, 100));
+  for (let i = 0; i < 100 && stopped.some((p) => alive(p.pid)); i++)
+    await new Promise((resolve) => setTimeout(resolve, 100));
 }
 
 /**
@@ -154,7 +159,12 @@ async function stopWhatPlaywrightLeft(pid) {
   const left = list.filter((p) => p.ppid === pid);
   if (!left.length) return;
   for (const p of left) stopTree(p.pid, list);
-  const name = (p) => kind(p.command) === "worker" ? "a test worker and its browser" : /\sdev\b/.test(p.command) ? "the test server" : "a process";
+  const name = (p) =>
+    kind(p.command) === "worker"
+      ? "a test worker and its browser"
+      : /\sdev\b/.test(p.command)
+        ? "the test server"
+        : "a process";
   console.log(`Stopped what the test run left running: ${left.map((p) => `${name(p)} (pid ${p.pid})`).join(", ")}.`);
   await gone(left);
 }
@@ -180,11 +190,13 @@ async function stopLeftovers() {
   const running = ours.find((p) => p.kind === "runner" && !p.orphaned);
   if (running) return `Another test run is going in this folder (pid ${running.pid}): let it end, or stop it, first.`;
 
-  const leftovers = ours.filter((p) =>
-    p.kind === "runner" ||
-    (p.kind === "worker" && p.orphaned) ||
-    (p.kind === "dev" && (devPort(p.command) === e2ePort || p.orphaned)) ||
-    (p.kind === "server" && p.orphaned));
+  const leftovers = ours.filter(
+    (p) =>
+      p.kind === "runner" ||
+      (p.kind === "worker" && p.orphaned) ||
+      (p.kind === "dev" && (devPort(p.command) === e2ePort || p.orphaned)) ||
+      (p.kind === "server" && p.orphaned),
+  );
   const names = {
     runner: "a test runner",
     worker: "a test worker and its browser",
@@ -193,7 +205,9 @@ async function stopLeftovers() {
   };
   if (leftovers.length) {
     for (const p of leftovers) stopTree(p.pid, list);
-    console.log(`Stopped what was left running in this folder: ${leftovers.map((p) => `${names[p.kind]} (pid ${p.pid})`).join(", ")}.`);
+    console.log(
+      `Stopped what was left running in this folder: ${leftovers.map((p) => `${names[p.kind]} (pid ${p.pid})`).join(", ")}.`,
+    );
     await gone(leftovers);
   }
 
@@ -201,8 +215,10 @@ async function stopLeftovers() {
   const stopped = new Set(leftovers.map((p) => p.pid));
   const own = ours.find((p) => p.kind === "dev" && !stopped.has(p.pid) && alive(p.pid));
   if (own) {
-    return `A dev server is running in this folder (pid ${own.pid}, port ${devPort(own.command)}), and Next runs one per ` +
-      "folder: stop it (Ctrl+C in its terminal) to run the tests.";
+    return (
+      `A dev server is running in this folder (pid ${own.pid}, port ${devPort(own.command)}), and Next runs one per ` +
+      "folder: stop it (Ctrl+C in its terminal) to run the tests."
+    );
   }
   return null;
 }

@@ -4,8 +4,7 @@ export const siteUrl = new URL("https://diogomota.com");
 export const siteName = "diogo mota";
 /** "diogomota.com": the name on the left of every top bar. */
 export const siteDomain = siteUrl.hostname;
-export const siteDescription =
-  "diogo mota, devops engineer @ Richemont, currently based in Lisbon, PT.";
+export const siteDescription = "diogo mota, devops engineer @ Richemont, currently based in Lisbon, PT.";
 
 // Open Graph fields shared by every page. Next.js merges metadata shallowly, so a
 // page that sets its own openGraph has to spread these back in.

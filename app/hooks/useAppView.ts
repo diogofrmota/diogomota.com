@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -11,28 +10,29 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import type { AppViewState } from "@/lib/app-views";
 
-// In-app navigation for the SPAs (/shared, /shows). The URL stays at the app's
-// path; which view is showing, and which modals or panels are open, is React
-// state. Every change is also a browser history entry (history.pushState), so
-// the back button moves to the previous view and closes panels, and forward
-// redoes it. A page load, reload included, starts on the default view, as
-// rendered by the server.
+// In-app navigation for the SPAs (/shared, /shows). Which view is showing, and
+// which modals or panels are open, is in the URL: the view is the path after
+// the app's (/shows/discover; the app's own path is its first view), and the
+// open panels, bottom to top, are its p parameters (?p=search&p=title:tv:1396).
+// So a reload keeps them, and any of them can be linked to or bookmarked.
 //
-// Each entry keeps that state under KEY in history.state, next to the Next.js
-// router's own keys (its patched pushState copies them over). After a refresh,
-// such as a server action that revalidates, Next.js replaces the current entry's
-// state with only its own keys, so the current entry is stamped again after
-// every render and before every push.
+// Moving between them never loads a page: every change is a history entry made
+// with history.pushState, which Next.js's router takes in (usePathname and
+// useSearchParams follow it). Back moves to the previous view and closes
+// panels, and forward redoes it. Each entry also keeps the state under KEY in
+// history.state, next to the Next.js router's own keys (its patched pushState
+// copies them over), with whether Back from it closes its top panel: true for a
+// panel opened here, false for one that came with the URL (a link), which
+// closes by replacing the entry instead, so closing it never leaves the app.
 
 const KEY = "appView";
 
-export type AppViewState = {
-  /** Id of the view (tab) that is showing. */
-  view: string;
-  /** Ids of the open modals and panels, bottom to top. */
-  panels: readonly string[];
-};
+/** Which view (tab) is showing, and the ids of the open modals and panels, bottom to top. */
+export type { AppViewState };
+
+type Entry = AppViewState & { backCloses: boolean };
 
 export type AppView = AppViewState & {
   /** Shows a view, closing any open panels. */
@@ -43,6 +43,9 @@ export type AppView = AppViewState & {
   closePanel: () => void;
 };
 
+/** At most this many panels are taken from a URL: more is a broken link. */
+const maxPanels = 5;
+
 function sameState(a: AppViewState, b: AppViewState): boolean {
   return (
     a.view === b.view &&
@@ -51,23 +54,50 @@ function sameState(a: AppViewState, b: AppViewState): boolean {
   );
 }
 
+/** The URL of a state: /shows, /shows/discover, /shows/discover?p=search. */
+export function appViewUrl(basePath: string, views: readonly string[], state: AppViewState): string {
+  const path = state.view === views[0] ? basePath : `${basePath}/${state.view}`;
+  const params = new URLSearchParams();
+  for (const panel of state.panels) params.append("p", panel);
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+}
+
+/**
+ * The state a URL of the app shows, from its path (the view; nothing after the
+ * app's own path is the first view) and p parameters; null for a path that
+ * isn't one of the app's views.
+ */
+export function appViewFromUrl(
+  basePath: string,
+  views: readonly string[],
+  pathname: string,
+  search: string | URLSearchParams,
+): AppViewState | null {
+  if (pathname !== basePath && !pathname.startsWith(`${basePath}/`)) return null;
+  const rest = pathname.slice(basePath.length).replace(/^\/+|\/+$/g, "");
+  if (rest.includes("/")) return null;
+  const view = rest || views[0];
+  if (!views.includes(view)) return null;
+  const params = typeof search === "string" ? new URLSearchParams(search) : search;
+  const panels = params
+    .getAll("p")
+    .filter((panel) => panel && panel.length <= 200)
+    .slice(0, maxPanels);
+  return { view, panels };
+}
+
 // The app state saved in a history entry, or null if it has none for these views.
-function savedState(historyState: unknown, views: readonly string[]): AppViewState | null {
+function savedEntry(historyState: unknown, views: readonly string[]): Entry | null {
   const saved = (historyState as Record<string, unknown> | null)?.[KEY] as
-    | { view?: unknown; panels?: unknown }
-    | undefined;
+    { view?: unknown; panels?: unknown; backCloses?: unknown } | undefined;
   if (typeof saved?.view !== "string" || !views.includes(saved.view)) return null;
   if (!Array.isArray(saved.panels)) return null;
   return {
     view: saved.view,
     panels: saved.panels.filter((panel): panel is string => typeof panel === "string"),
+    backCloses: saved.backCloses === true,
   };
-}
-
-function writeState(state: AppViewState, mode: "push" | "replace") {
-  const entry = { ...window.history.state, [KEY]: state };
-  if (mode === "push") window.history.pushState(entry, "");
-  else window.history.replaceState(entry, "");
 }
 
 // Whether the browser is on another history entry than the one this page loaded
@@ -86,20 +116,29 @@ function movedSinceLoad(): boolean {
 
 const subscribeNever = () => () => {};
 
-/** The navigation state of an app with these views; the first is the default. Used by AppShell. */
-export function useAppViewHistory(views: readonly string[]): AppView {
-  const pathname = usePathname();
+/**
+ * The navigation state of an app at `basePath` with these views (the first is
+ * the default), starting from `initial`: what the server rendered for the URL.
+ * Used by AppShell.
+ */
+export function useAppViewHistory(basePath: string, views: readonly string[], initial: AppViewState): AppView {
   // True only while hydrating the server-rendered page.
   const hydrating = useSyncExternalStore(
     subscribeNever,
     () => false,
     () => true,
   );
-  const [state, setState] = useState<AppViewState>(() => {
-    // A page load starts on the default view, as rendered by the server. Coming
-    // back to the app with back or forward resumes the view of that entry.
-    const saved = hydrating ? null : savedState(window.history.state, views);
-    return { view: saved?.view ?? views[0], panels: [] };
+  const [state, setState] = useState<Entry>(() => {
+    // A page load starts on what the server rendered for its URL. Coming back
+    // to the app with back or forward resumes that entry's state.
+    const saved = hydrating ? null : savedEntry(window.history.state, views);
+    return (
+      saved ?? {
+        view: views.includes(initial.view) ? initial.view : views[0],
+        panels: initial.panels,
+        backCloses: false,
+      }
+    );
   });
   // The newest state, for event handlers that run before React re-renders.
   const latest = useRef(state);
@@ -108,15 +147,32 @@ export function useAppViewHistory(views: readonly string[]): AppView {
   // Set until the first check for a back or forward during page load (below).
   const checkLoad = useRef(hydrating);
 
+  const inApp = useCallback(
+    () => window.location.pathname === basePath || window.location.pathname.startsWith(`${basePath}/`),
+    [basePath],
+  );
+
+  const write = useCallback(
+    (entry: Entry, mode: "push" | "replace") => {
+      const data = { ...window.history.state, [KEY]: entry };
+      const url = appViewUrl(basePath, views, entry);
+      if (mode === "push") window.history.pushState(data, "", url);
+      else window.history.replaceState(data, "", url);
+    },
+    [basePath, views],
+  );
+
   // Declared before the effect that stamps the current entry, so that a missed
-  // back or forward is applied before the default view could be stamped over it.
+  // back or forward is applied before the loaded state could be stamped over it.
   useEffect(() => {
     function restore(historyState: unknown) {
       // Back out of the app: the Next.js router takes it from here.
-      if (window.location.pathname !== pathname) return;
+      if (!inApp()) return;
       closing.current = false;
-      // An entry without saved state (replaced by Next.js) keeps the view.
-      latest.current = savedState(historyState, views) ?? { view: latest.current.view, panels: [] };
+      // An entry without saved state (replaced by Next.js, or reached by a link) is read from its URL.
+      const fromUrl = appViewFromUrl(basePath, views, window.location.pathname, window.location.search);
+      latest.current = savedEntry(historyState, views) ??
+        (fromUrl && { ...fromUrl, backCloses: false }) ?? { view: latest.current.view, panels: [], backCloses: false };
       setState(latest.current);
     }
     const onPopState = (event: PopStateEvent) => restore(event.state);
@@ -128,22 +184,26 @@ export function useAppViewHistory(views: readonly string[]): AppView {
       if (movedSinceLoad()) restore(window.history.state);
     }
     return () => window.removeEventListener("popstate", onPopState);
-  }, [pathname, views]);
+  }, [basePath, views, inApp]);
 
   // Keeps the current entry in step with the state (see the top of this file).
   useEffect(() => {
-    if (closing.current || window.location.pathname !== pathname) return;
-    const saved = savedState(window.history.state, views);
-    if (!saved || !sameState(saved, latest.current)) writeState(latest.current, "replace");
+    if (closing.current || !inApp()) return;
+    const saved = savedEntry(window.history.state, views);
+    if (!saved || !sameState(saved, latest.current) || saved.backCloses !== latest.current.backCloses)
+      write(latest.current, "replace");
   });
 
-  const go = useCallback((next: AppViewState, mode: "push" | "replace") => {
-    // Stamps the entry being left first, in case Next.js replaced its state.
-    if (mode === "push") writeState(latest.current, "replace");
-    writeState(next, mode);
-    latest.current = next;
-    setState(next);
-  }, []);
+  const go = useCallback(
+    (next: Entry, mode: "push" | "replace") => {
+      // Stamps the entry being left first, in case Next.js replaced its state.
+      if (mode === "push") write(latest.current, "replace");
+      write(next, mode);
+      latest.current = next;
+      setState(next);
+    },
+    [write],
+  );
 
   const setView = useCallback(
     (view: string) => {
@@ -152,7 +212,7 @@ export function useAppViewHistory(views: readonly string[]): AppView {
       if (view === current.view && current.panels.length === 0) return;
       // With panels open, their entry is replaced: back from the new view goes
       // to the view under them, rather than reopening them.
-      go({ view, panels: [] }, current.panels.length > 0 ? "replace" : "push");
+      go({ view, panels: [], backCloses: false }, current.panels.length > 0 ? "replace" : "push");
     },
     [go, views],
   );
@@ -161,21 +221,27 @@ export function useAppViewHistory(views: readonly string[]): AppView {
     (panel: string) => {
       const { view, panels } = latest.current;
       if (closing.current || panels[panels.length - 1] === panel) return;
-      go({ view, panels: [...panels, panel] }, "push");
+      go({ view, panels: [...panels, panel], backCloses: true }, "push");
     },
     [go],
   );
 
   const closePanel = useCallback(() => {
-    // Each panel was pushed on top of the entry without it, so going back
-    // closes it; popstate then updates the state.
-    if (closing.current || latest.current.panels.length === 0) return;
-    closing.current = true;
-    window.history.back();
-  }, []);
+    const current = latest.current;
+    if (closing.current || current.panels.length === 0) return;
+    // A panel opened here was pushed on top of the entry without it, so going
+    // back closes it (popstate then updates the state). One that came with the
+    // URL has no such entry under it: its entry is replaced.
+    if (current.backCloses) {
+      closing.current = true;
+      window.history.back();
+    } else {
+      go({ view: current.view, panels: current.panels.slice(0, -1), backCloses: false }, "replace");
+    }
+  }, [go]);
 
   return useMemo(
-    () => ({ ...state, setView, openPanel, closePanel }),
+    () => ({ view: state.view, panels: state.panels, setView, openPanel, closePanel }),
     [state, setView, openPanel, closePanel],
   );
 }

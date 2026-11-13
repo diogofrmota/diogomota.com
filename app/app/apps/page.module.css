@@ -12,3 +12,17 @@
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
+
+/* Confirm your email (AC2): a note over the apps until the link is opened. */
+.verify {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.verify a,
+.version a {
+  color: inherit;
+}

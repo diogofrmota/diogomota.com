@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { auth } from "@/auth";
+import { getSession } from "@/auth";
 import { AuthPage } from "@/components/auth/AuthPage";
 import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
 import { appViewport } from "@/lib/apps";
@@ -13,7 +13,7 @@ export const viewport = appViewport;
 // Open logged in too, in the user's theme: /account links here for users who
 // forgot their current password.
 export default async function ForgotPasswordPage() {
-  const session = await auth();
+  const session = await getSession();
   return (
     <AuthPage
       title="Forgot password"

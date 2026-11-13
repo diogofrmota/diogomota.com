@@ -14,7 +14,8 @@ export default defineConfig({
   workers: 2,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? "github" : "list",
+  // In CI, annotations on the run plus an HTML report, kept when a run fails (.github/workflows/ci.yml).
+  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   // Every sign-up and login runs bcrypt (~0.3 s each, on the one dev server
   // shared by all workers), and the dev server compiles routes on first use, so
   // auth flows need longer than the 5 s / 30 s defaults.
@@ -60,7 +61,8 @@ export default defineConfig({
     command: `npm run dev -- --port ${port}`,
     url: baseURL,
     reuseExistingServer: false,
-    env: { E2E_TEST_HOOKS: "1", DATABASE_POOL_MAX: "20" },
+    // AUTH_URL: the links in emails (confirming an email, a password reset) are to this server.
+    env: { E2E_TEST_HOOKS: "1", DATABASE_POOL_MAX: "20", AUTH_URL: baseURL },
     timeout: 120_000,
   },
 });

@@ -1,220 +1,1067 @@
-.calendar { max-width: 90rem; margin: auto; height: var(--app-view-height); display: flex; flex-direction: column; }
-.calendar > * { flex-shrink: 0; }
-.calendar h2 { font-size: var(--text-lg); font-weight: var(--weight-semibold); margin: 0; }
-.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-.toolbar, .actions, .dialogHeader { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-.dialogHeader { justify-content: space-between; }
-.muted { color: var(--muted); margin: 0; font-size: var(--text-sm); }
+.calendar {
+  max-width: 90rem;
+  margin: auto;
+  height: var(--app-view-height);
+  display: flex;
+  flex-direction: column;
+}
+.calendar > * {
+  flex-shrink: 0;
+}
+.calendar h2 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  margin: 0;
+}
+.toolbar,
+.actions,
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.dialogHeader {
+  justify-content: space-between;
+}
 /* ‹ Today ›, the period, the colors, Month | Week | Day and Add event in one row. */
-.toolbar { gap: .5rem 1rem; margin-bottom: .75rem; }
-.toolbar h2 { white-space: nowrap; }
-.calendar button, .dialog button, .dialog a { min-height: 44px; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-md); padding: .5rem .85rem; cursor: pointer; }
+.toolbar {
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.toolbar h2 {
+  white-space: nowrap;
+}
+.calendar button,
+.dialog button,
+.dialog a {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.85rem;
+  cursor: pointer;
+}
 /* ‹ Today ›, and the dialogs' × */
-.actions button, .dialogHeader button { min-width: 44px; }
+.actions button,
+.dialogHeader button {
+  min-width: 44px;
+}
 /* ‹ and ›: chevrons big enough to see at a glance. */
-.calendar .arrow { display: inline-grid; place-items: center; width: 44px; padding: 0; border-radius: 50%; }
-.arrow svg { width: 1.5rem; height: 1.5rem; }
+.calendar .arrow {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  padding: 0;
+  border-radius: 50%;
+}
+.arrow svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
 /* The dialogs' ×: a round button with a drawn cross. */
-.dialog .close { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border-color: transparent; border-radius: 50%; background: var(--hover); color: var(--muted); }
-.close svg { width: var(--icon-md); height: var(--icon-md); }
-.calendar .primary, .dialog .primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: var(--weight-semibold); transition: transform var(--duration-fast) var(--ease-out); }
-/* Pressed, the main action gives a little, so the tap is felt. */
-.calendar .primary:active, .dialog .primary:active { transform: scale(.97); }
-@media (prefers-reduced-motion: reduce) { .calendar .primary:active, .dialog .primary:active { transform: none; } }
+.dialog .close {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-color: transparent;
+  border-radius: 50%;
+  background: var(--hover);
+  color: var(--muted);
+}
+.close svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
 /* .danger confirms something that can't be undone; .remove starts it (components/common/ui.module.css). */
-.dialog .danger { background: var(--danger); border-color: var(--danger); color: var(--bg); font-weight: var(--weight-semibold); }
-.dialog .remove { padding-inline: 0; border-color: transparent; background: none; color: var(--danger); font-weight: var(--weight-semibold); }
 @media (hover: hover) {
-  .calendar button:hover, .dialog button:hover { background: var(--hover); }
-  .dialog .close:hover { background: var(--border); color: var(--text); }
+  .calendar button:hover,
+  .dialog button:hover {
+    background: var(--hover);
+  }
+  .dialog .close:hover {
+    background: var(--border);
+    color: var(--text);
+  }
   /* A day, or an hour, can be tapped to add an event there. */
-  .cell:hover, .hour:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
-  .outside:hover { background: color-mix(in srgb, var(--accent) 6%, var(--hover)); }
-  .calendar .primary:hover, .dialog .primary:hover { filter: brightness(.93); background: var(--accent); }
-  .dialog .danger:hover { filter: brightness(.93); background: var(--danger); }
-  .dialog .remove:hover { background: none; text-decoration: underline; }
-  .calendar .event:hover { background: color-mix(in srgb, var(--event-color) 30%, var(--surface)); }
+  .cell:hover,
+  .hour:hover {
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+  }
+  .outside:hover {
+    background: color-mix(in srgb, var(--accent) 6%, var(--hover));
+  }
+  .calendar .event:hover {
+    background: color-mix(in srgb, var(--event-color) 30%, var(--surface));
+  }
 }
 /* Add event: the plus and the label on one line, the plus taking some of the
    room on its side so the button looks even. */
-.calendar .add { display: inline-flex; align-items: center; justify-content: center; gap: .375rem; padding-left: .7rem; }
-.add svg { flex: none; width: var(--icon-md); height: var(--icon-md); }
-/* On the right, also when a narrow window wraps it onto a second row. */
+.calendar .add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding-left: 0.7rem;
+}
+.add svg {
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
 /* Its corners: its buttons' (--radius-md), plus the 3px around them. */
-.switcher { display: flex; margin-left: auto; padding: 3px; border-radius: calc(var(--radius-md) + 3px); background: var(--hover); }
-.switcher button { border: 0; background: transparent; }
-.switcher button[aria-pressed="true"] { background: var(--surface); box-shadow: var(--shadow-sm); color: var(--accent); font-weight: var(--weight-semibold); }
+.switcher {
+  display: flex;
+  margin-left: auto;
+  padding: 3px;
+  border-radius: calc(var(--radius-md) + 3px);
+  background: var(--hover);
+}
+.switcher button {
+  border: 0;
+  background: transparent;
+}
+.switcher button[aria-pressed="true"] {
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
 /* Takes the room between the period and the switcher, its colors on the right. */
-.legend { flex: 1 1 auto; justify-content: flex-end; display: flex; gap: .25rem .875rem; flex-wrap: wrap; font-size: var(--text-xs); color: var(--muted); margin: 0; padding: 0; list-style: none; }
-.legend li { display: flex; align-items: center; gap: .4rem; overflow-wrap: anywhere; }
-.dot { height: .625rem; width: .625rem; border-radius: 50%; flex-shrink: 0; }
-.groupDot { background: var(--muted); }
-.alert { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; padding: .5rem .5rem .5rem .75rem; border-left: 3px solid var(--danger); border-radius: var(--radius-sm); background: var(--hover); }
-.alert p { margin: 0; }
-.empty { margin: 0 0 .5rem; padding: .5rem .75rem; font-size: var(--text-sm); background: var(--accent-soft); border-radius: var(--radius-lg); color: var(--accent); }
+.legend {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  display: flex;
+  gap: 0.25rem 0.875rem;
+  flex-wrap: wrap;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow-wrap: anywhere;
+}
+.dot {
+  height: 0.625rem;
+  width: 0.625rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.groupDot {
+  background: var(--muted);
+}
+.empty {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--text-sm);
+  background: var(--accent-soft);
+  border-radius: var(--radius-lg);
+  color: var(--accent);
+}
 /* Fit all six weeks below the controls; only busy days and time views scroll.
    Keep dates usable on unusually short screens, where page scrolling is needed. */
-.scroller { flex: 1; min-height: 20rem; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: auto; }
-.month { height: 100%; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto repeat(6, minmax(0, 1fr)); }
-.weekday { position: sticky; top: 0; z-index: 2; background: var(--surface); padding: .4rem .25rem; text-align: center; color: var(--muted); font-size: var(--text-xs); border-bottom: 1px solid var(--border); }
-.cell { min-height: 0; min-width: 0; overflow: auto; padding: .2rem; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: pointer; }
-.outside { background: var(--hover); }
-.calendar .dayNumber { display: block; border: 0; background: transparent; padding: .25rem; width: 44px; margin: 0 auto .25rem; font-size: var(--text-sm); font-variant-numeric: tabular-nums; border-radius: 50%; }
-.calendar .today { background: var(--accent-soft); color: var(--accent); font-weight: var(--weight-bold); }
+.scroller {
+  flex: 1;
+  min-height: 20rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: auto;
+}
+.month {
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: auto repeat(6, minmax(0, 1fr));
+}
+.weekday {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+  padding: 0.4rem 0.25rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  border-bottom: 1px solid var(--border);
+}
+.cell {
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  padding: 0.2rem;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.outside {
+  background: var(--hover);
+}
+.calendar .dayNumber {
+  display: block;
+  border: 0;
+  background: transparent;
+  padding: 0.25rem;
+  width: 44px;
+  margin: 0 auto 0.25rem;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  border-radius: 50%;
+}
+.calendar .today {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: var(--weight-bold);
+}
 /* The member's color down its side and in its fill: no other border. Their
    picture (or initial, or the group's two people) and the title, on one line;
    at the top of an event among the hours, which is as tall as it is long. */
-.calendar .event { display: flex; align-items: center; gap: .3rem; text-align: left; width: 100%; min-height: 44px; margin-bottom: .2rem; padding: .25rem .35rem; background: color-mix(in srgb, var(--event-color) 15%, var(--surface)); color: var(--text); border: 0; border-left: 4px solid var(--event-color); border-radius: var(--radius-xs); overflow: hidden; }
-.calendar .timedEvent { align-items: flex-start; }
-.eventAvatar { display: grid; flex: none; place-items: center; width: 1.125rem; height: 1.125rem; border-radius: 50%; background: color-mix(in srgb, var(--event-color) 45%, var(--surface)); color: var(--text); font-size: .625rem; font-weight: var(--weight-bold); line-height: 1; text-box: trim-both cap alphabetic; }
-.eventAvatar svg { width: .75rem; height: .75rem; }
-.eventTitle { flex: 1; min-width: 0; font-size: var(--text-xs); font-weight: var(--weight-semibold); line-height: 1.125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.timeGrid { display: grid; grid-template-columns: 50px repeat(var(--days), minmax(0, 1fr)); }
-.week { min-width: 700px; }
-.calendar .timeHead, .timeHead { position: sticky; top: 0; z-index: 3; min-height: 50px; border: 0; border-bottom: 1px solid var(--border); background: var(--surface); border-radius: 0; text-align: center; font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
-.hours { height: 1440px; }
-.hours span { display: block; height: 60px; font-size: var(--text-xs); font-variant-numeric: tabular-nums; color: var(--muted); padding: .2rem; text-align: right; }
-.dayColumn { position: relative; height: 1440px; border-left: 1px solid var(--border); }
-.hour { height: 60px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.calendar .event {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  text-align: left;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 0.2rem;
+  padding: 0.25rem 0.35rem;
+  background: color-mix(in srgb, var(--event-color) 15%, var(--surface));
+  color: var(--text);
+  border: 0;
+  border-left: 4px solid var(--event-color);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+}
+.calendar .timedEvent {
+  align-items: flex-start;
+}
+.eventAvatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--event-color) 45%, var(--surface));
+  color: var(--text);
+  font-size: 0.625rem;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  text-box: trim-both cap alphabetic;
+}
+.eventAvatar svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.eventTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1.125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timeGrid {
+  display: grid;
+  grid-template-columns: 50px repeat(var(--days), minmax(0, 1fr));
+}
+.week {
+  min-width: 700px;
+}
+.calendar .timeHead,
+.timeHead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  min-height: 50px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 0;
+  text-align: center;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.hours {
+  height: 1440px;
+}
+.hours span {
+  display: block;
+  height: 60px;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  padding: 0.2rem;
+  text-align: right;
+}
+.dayColumn {
+  position: relative;
+  height: 1440px;
+  border-left: 1px solid var(--border);
+}
+.hour {
+  height: 60px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
 /* All-day events, in a row over the hours that stays under the days' names
    while the hours scroll (the names are 50px tall). Several of them scroll
    within it, so it never hides much of the day. */
-.allDayLabel, .allDayCell { position: sticky; top: 50px; z-index: 2; background: var(--surface); border-bottom: 1px solid var(--border); }
-.allDayLabel { display: grid; place-items: center; padding: .2rem; color: var(--muted); font-size: var(--text-2xs); text-align: center; }
-.allDayCell { min-width: 0; max-height: 7.5rem; overflow-y: auto; overscroll-behavior: contain; padding: .2rem; border-left: 1px solid var(--border); }
-.calendar .allDayEvent { background: color-mix(in srgb, var(--event-color) 26%, var(--surface)); }
+.allDayLabel,
+.allDayCell {
+  position: sticky;
+  top: 50px;
+  z-index: 2;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.allDayLabel {
+  display: grid;
+  place-items: center;
+  padding: 0.2rem;
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  text-align: center;
+}
+.allDayCell {
+  min-width: 0;
+  max-height: 7.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.2rem;
+  border-left: 1px solid var(--border);
+}
+.calendar .allDayEvent {
+  background: color-mix(in srgb, var(--event-color) 26%, var(--surface));
+}
 /* Another period or view: the new grid slides in from the side of its dates, or fades in. */
-.month[data-slide], .timeGrid[data-slide] { animation: grid-from-end .3s cubic-bezier(.2, .8, .2, 1) backwards; }
-.month[data-slide="back"], .timeGrid[data-slide="back"] { animation-name: grid-from-start; }
-.month[data-slide="fade"], .timeGrid[data-slide="fade"] { animation-name: grid-fade; animation-duration: .2s; }
-@keyframes grid-from-end { from { opacity: 0; transform: translateX(1.5rem); } }
-@keyframes grid-from-start { from { opacity: 0; transform: translateX(-1.5rem); } }
-@keyframes grid-fade { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .month[data-slide], .timeGrid[data-slide] { animation: none; } }
+.month[data-slide],
+.timeGrid[data-slide] {
+  animation: grid-from-end 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.month[data-slide="back"],
+.timeGrid[data-slide="back"] {
+  animation-name: grid-from-start;
+}
+.month[data-slide="fade"],
+.timeGrid[data-slide="fade"] {
+  animation-name: grid-fade;
+  animation-duration: 0.2s;
+}
+@keyframes grid-from-end {
+  from {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+}
+@keyframes grid-from-start {
+  from {
+    opacity: 0;
+    transform: translateX(-1.5rem);
+  }
+}
+@keyframes grid-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .month[data-slide],
+  .timeGrid[data-slide] {
+    animation: none;
+  }
+}
 /* Events fade in as they show (a new one, or another period's). */
-.calendar .event { animation: event-in .25s ease-out both; }
-@keyframes event-in { from { opacity: 0; transform: translateY(3px); } }
-@media (prefers-reduced-motion: reduce) { .calendar .event { animation: none; } }
+.calendar .event {
+  animation: event-in 0.25s ease-out both;
+}
+@keyframes event-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .calendar .event {
+    animation: none;
+  }
+}
 /* The content fills the dialog, so a click on the dialog itself is on the backdrop (components/common/Dialog). */
-.dialog { margin: auto; width: min(540px, calc(100% - 2rem)); max-height: 90dvh; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); }
-.dialog[open] { display: flex; flex-direction: column; }
-.dialog::backdrop { background: #0008; animation: backdrop-in .2s ease-out; }
-.dialog[open] { animation: dialog-in .22s cubic-bezier(.2, .9, .3, 1.1); }
-@keyframes dialog-in { from { opacity: 0; transform: translateY(8px) scale(.97); } }
-@keyframes backdrop-in { from { opacity: 0; } }
-.dialogBody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1.5rem; }
-.dialogHeader { flex-wrap: nowrap; align-items: flex-start; margin-bottom: 1rem; }
-.dialogHeader h2 { margin: .3rem 0; overflow-wrap: anywhere; font-size: var(--text-xl); }
-.dialogHeader button { flex-shrink: 0; }
-.form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 1rem; }
-.form label { display: grid; gap: .35rem; font-size: var(--text-sm); min-width: 0; }
-.form input, .form select, .form textarea { font: inherit; font-size: var(--text-md); width: 100%; min-width: 0; min-height: 44px; padding: .6rem .75rem; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); }
-.form textarea { resize: vertical; }
+.dialog {
+  margin: auto;
+  width: min(540px, calc(100% - 2rem));
+  max-height: 90dvh;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.dialog::backdrop {
+  background: #0008;
+  animation: backdrop-in 0.2s ease-out;
+}
+.dialog[open] {
+  animation: dialog-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+.dialogBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.5rem;
+}
+.dialogHeader {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+.dialogHeader h2 {
+  margin: 0.3rem 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-xl);
+}
+.dialogHeader button {
+  flex-shrink: 0;
+}
+.form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 1rem;
+}
+.form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: var(--text-sm);
+  min-width: 0;
+}
+.form input,
+.form select,
+.form textarea {
+  font: inherit;
+  font-size: var(--text-md);
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.6rem 0.75rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.form textarea {
+  resize: vertical;
+}
 /* A select's own arrow, inset from the right edge (EventDialog's Select). */
-.select { position: relative; display: block; min-width: 0; }
-.form .select select { appearance: none; -webkit-appearance: none; padding-right: 2.75rem; cursor: pointer; }
-.select svg { position: absolute; top: 50%; right: .9rem; width: 1.125rem; height: 1.125rem; color: var(--muted); transform: translateY(-50%); pointer-events: none; }
+.select {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+.form .select select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.75rem;
+  cursor: pointer;
+}
+.select svg {
+  position: absolute;
+  top: 50%;
+  right: 0.9rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
 /* When: All day, Starts and Ends, in one card with lines between. */
-.when { display: grid; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg); }
-.when > * + * { border-top: 1px solid var(--border); }
-.form .switchRow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 52px; padding: .25rem .9rem; font-size: var(--text-md); cursor: pointer; }
+.when {
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+}
+.when > * + * {
+  border-top: 1px solid var(--border);
+}
+.form .switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 52px;
+  padding: 0.25rem 0.9rem;
+  font-size: var(--text-md);
+  cursor: pointer;
+}
 /* The chips sit .375rem in from the card's edge: their corners are the card's less that. */
-.whenRow { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1rem; min-height: 52px; padding: .375rem .375rem .375rem .9rem; }
-.whenLabel { font-size: var(--text-md); }
-.chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; margin-left: auto; }
+.whenRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  min-height: 52px;
+  padding: 0.375rem 0.375rem 0.375rem 0.9rem;
+}
+.whenLabel {
+  font-size: var(--text-md);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-left: auto;
+}
 /* A switch, from a checkbox: the knob slides over when it's on. */
-.form .switch { position: relative; flex: none; width: 3rem; height: 1.75rem; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: var(--radius-xl); background: var(--border); appearance: none; -webkit-appearance: none; cursor: pointer; transition: background-color .2s; }
-.switch::after { content: ""; position: absolute; top: .1875rem; left: .1875rem; width: 1.375rem; height: 1.375rem; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0005; transition: transform .2s cubic-bezier(.3, 1.4, .6, 1); }
-.form .switch:checked { background: var(--accent); }
-.switch:checked::after { transform: translateX(1.25rem); }
-.form .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.form .switch {
+  position: relative;
+  flex: none;
+  width: 3rem;
+  height: 1.75rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xl);
+  background: var(--border);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px #0005;
+  transition: transform 0.2s cubic-bezier(0.3, 1.4, 0.6, 1);
+}
+.form .switch:checked {
+  background: var(--accent);
+}
+.switch:checked::after {
+  transform: translateX(1.25rem);
+}
+.form .switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 /* A date or a time, typed (EventDialog's MaskedField): its digits in the middle
    of a tinted box, the blanks and separators in place. Its corners: the card's
    less the .375rem around it. Wrong once left: a red ring. */
-.form .masked { width: auto; min-height: 44px; padding: 0 .75rem; border: 0; border-radius: calc(var(--radius-lg) - .375rem); background: var(--hover); color: var(--text); font-size: var(--text-md); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; text-align: center; transition: background-color .15s; }
-.form .date { width: calc(10ch + 1.5rem); }
-.form .time { width: calc(5ch + 1.5rem); }
-.form .masked::placeholder { color: var(--muted); opacity: 1; }
-.form .masked:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.form .masked[aria-invalid="true"] { box-shadow: inset 0 0 0 2px var(--danger); }
-@media (hover: hover) { .form .masked:hover { background: var(--border); } }
-@media (prefers-reduced-motion: reduce) { .form .switch, .switch::after, .form .masked { transition: none; } }
-.whenDetails { display: grid; gap: .5rem; }
-.details .whenDetails p { display: flex; align-items: center; gap: .6rem; }
-.whenDetails svg { flex: none; width: 1.25rem; height: 1.25rem; color: var(--muted); }
-.details { display: grid; gap: 1rem; }
-.details p { margin: 0; }
-.details a { display: inline-flex; align-items: center; gap: .375rem; font-size: var(--text-sm); }
-.details a svg { flex: none; width: 1rem; height: 1rem; }
+.form .masked {
+  width: auto;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 0.375rem);
+  background: var(--hover);
+  color: var(--text);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition: background-color 0.15s;
+}
+.form .date {
+  width: calc(10ch + 1.5rem);
+}
+.form .time {
+  width: calc(5ch + 1.5rem);
+}
+.form .masked::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+.form .masked:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.form .masked[aria-invalid="true"] {
+  box-shadow: inset 0 0 0 2px var(--danger);
+}
+@media (hover: hover) {
+  .form .masked:hover {
+    background: var(--border);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .form .switch,
+  .switch::after,
+  .form .masked {
+    transition: none;
+  }
+}
+.whenDetails {
+  display: grid;
+  gap: 0.5rem;
+}
+.details .whenDetails p {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.whenDetails svg {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--muted);
+}
+.details {
+  display: grid;
+  gap: 1rem;
+}
+.details p {
+  margin: 0;
+}
+.details a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--text-sm);
+}
+.details a svg {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
 /* Who the event is for: their color, in the place of the icons under it. */
-.assigneeDot { display: grid; flex: none; place-items: center; width: 1.25rem; height: 1.25rem; }
-.assigneeDot::before { content: ""; width: .75rem; height: .75rem; border-radius: 50%; background: var(--event-color); }
-.notes { white-space: pre-wrap; overflow-wrap: anywhere; }
-.error, .alert { animation: feedback-in var(--duration) var(--ease-out); }
+.assigneeDot {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.assigneeDot::before {
+  content: "";
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--event-color);
+}
+.notes {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 /* A message comes in from just above, so it is seen to be new. */
-@keyframes feedback-in { from { opacity: 0; transform: translateY(-4px); } }
-.error { margin: 0 0 1rem; padding: .5rem .75rem; border-left: 3px solid var(--danger); border-radius: var(--radius-sm); background: var(--hover); color: var(--text); }
-.confirm { padding: .85rem 1rem; border-left: 3px solid var(--danger); border-radius: var(--radius-sm); background: var(--hover); }
-.confirm p { margin: 0; }
-.confirm .actions { margin-top: .65rem; }
-.dialog button:disabled { opacity: .6; cursor: wait; }
+@keyframes feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.dialog button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
 /* A day of the month shows two events at most; past them, "+1 more" (and so
    on), small and quiet, which opens the day. */
-.calendar .more { display: block; width: 100%; min-height: 0; height: 14px; padding: 0 .35rem; border: 0; border-radius: var(--radius-xs); background: none; color: var(--muted); font-size: .625rem; font-weight: var(--weight-semibold); line-height: 14px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (hover: hover) { .calendar .more:hover { background: none; color: var(--text); text-decoration: underline; } }
+.calendar .more {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  height: 14px;
+  padding: 0 0.35rem;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--muted);
+  font-size: 0.625rem;
+  font-weight: var(--weight-semibold);
+  line-height: 14px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (hover: hover) {
+  .calendar .more:hover {
+    background: none;
+    color: var(--text);
+    text-decoration: underline;
+  }
+}
 /* With a mouse, a month's events are slim, so a day has room for two of them
    and "+1 more" under its number (2px, its number 24px and 2px, two events
-   22px and 2px, 14px: 92px). Where the six weeks don't have that much room
-   each, the month scrolls as a whole, not each day. */
+   22px and 2px, 14px, 2px, and the 1px line under the day: 93px). Where the six
+   weeks don't have that much room each, the month scrolls as a whole, not each day. */
 @media (min-width: 48rem) {
-  .month { grid-template-rows: auto repeat(6, minmax(5.75rem, 1fr)); }
-  .month .cell { padding: 2px; }
-  .calendar .dayNumber { min-height: 24px; height: 24px; width: 24px; margin-bottom: 2px; padding: 0; }
-  .calendar .month .event { min-height: 0; height: 1.375rem; margin-bottom: 2px; padding: 0 .35rem; }
+  .month {
+    grid-template-rows: auto repeat(6, minmax(calc(5.75rem + 1px), 1fr));
+  }
+  .month .cell {
+    padding: 2px;
+  }
+  .calendar .dayNumber {
+    min-height: 24px;
+    height: 24px;
+    width: 24px;
+    margin-bottom: 2px;
+    padding: 0;
+  }
+  .calendar .month .event {
+    min-height: 0;
+    height: 1.375rem;
+    margin-bottom: 2px;
+    padding: 0 0.35rem;
+  }
 }
 /* Phones: ‹ the period ›, then Today, the switcher and Add event, then the colors. */
 @media (max-width: 47.99rem) {
-  .toolbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .5rem; }
-  .actions { display: contents; }
-  .prev, .next { grid-row: 1; }
-  .prev { grid-column: 1; justify-self: start; }
-  .next { grid-column: 3; justify-self: end; }
+  .toolbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.5rem;
+  }
+  .actions {
+    display: contents;
+  }
+  .prev,
+  .next {
+    grid-row: 1;
+  }
+  .prev {
+    grid-column: 1;
+    justify-self: start;
+  }
+  .next {
+    grid-column: 3;
+    justify-self: end;
+  }
   /* Across the whole row, so it's centered, clear of the arrows either side. */
-  .toolbar h2 { grid-row: 1; grid-column: 1 / -1; padding-inline: 3.25rem; text-align: center; font-size: var(--text-md); white-space: normal; }
-  .goToday, .switcher, .add { grid-row: 2; }
-  .switcher { margin-left: 0; }
-  .calendar .goToday { padding-inline: .6rem; }
-  .switcher button { flex: 1; min-width: 0; padding-inline: 0; font-size: var(--text-sm); }
-  .calendar .add { grid-column: 3; padding-inline: .6rem; white-space: nowrap; }
-  .legend { grid-row: 3; grid-column: 1 / -1; justify-content: flex-start; }
-  .cell { padding: 1px; }
-  .calendar .event { padding: .15rem; border-left-width: 3px; }
-  .calendar .event { gap: .2rem; }
-  .eventAvatar { width: .875rem; height: .875rem; font-size: .5rem; }
-  .eventAvatar svg { width: .625rem; height: .625rem; }
-  .eventTitle { font-size: var(--text-2xs); line-height: .875rem; }
+  .toolbar h2 {
+    grid-row: 1;
+    grid-column: 1 / -1;
+    padding-inline: 3.25rem;
+    text-align: center;
+    font-size: var(--text-md);
+    white-space: normal;
+  }
+  .goToday,
+  .switcher,
+  .add {
+    grid-row: 2;
+  }
+  .switcher {
+    margin-left: 0;
+  }
+  .calendar .goToday {
+    padding-inline: 0.6rem;
+  }
+  .switcher button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 0;
+    font-size: var(--text-sm);
+  }
+  .calendar .add {
+    grid-column: 3;
+    padding-inline: 0.6rem;
+    white-space: nowrap;
+  }
+  .legend {
+    grid-row: 3;
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+  .cell {
+    padding: 1px;
+  }
+  .calendar .event {
+    padding: 0.15rem;
+    border-left-width: 3px;
+  }
+  .calendar .event {
+    gap: 0.2rem;
+  }
+  .eventAvatar {
+    width: 0.875rem;
+    height: 0.875rem;
+    font-size: 0.5rem;
+  }
+  .eventAvatar svg {
+    width: 0.625rem;
+    height: 0.625rem;
+  }
+  .eventTitle {
+    font-size: var(--text-2xs);
+    line-height: 0.875rem;
+  }
   /* A day of the month: its number (a 22px circle), then two events of 22px
      and "+1 more", tight, so they fit the day (1px and 1px, 22px and 2px, two
-     events 22px and 2px, 14px: 88px); the month scrolls as a whole where they
-     don't. The whole day is there to tap, too. */
-  .month { grid-template-rows: auto repeat(6, minmax(5.5rem, 1fr)); }
-  .calendar .dayNumber { width: 1.375rem; height: 1.375rem; min-height: 0; margin: 0 auto 2px; padding: 0; font-size: var(--text-xs); }
-  .calendar .month .event { min-height: 0; height: 1.375rem; margin-bottom: 2px; padding: 0 .15rem; }
-  .calendar .more { padding-inline: .15rem; font-size: .5625rem; }
-  .weekday { font-size: var(--text-xs); }
+     events 22px and 2px, 14px, and the 1px line under the day: 89px); the month
+     scrolls as a whole where they don't. The whole day is there to tap, too. */
+  .month {
+    grid-template-rows: auto repeat(6, minmax(calc(5.5rem + 1px), 1fr));
+  }
+  .calendar .dayNumber {
+    width: 1.375rem;
+    height: 1.375rem;
+    min-height: 0;
+    margin: 0 auto 2px;
+    padding: 0;
+    font-size: var(--text-xs);
+  }
+  .calendar .month .event {
+    min-height: 0;
+    height: 1.375rem;
+    margin-bottom: 2px;
+    padding: 0 0.15rem;
+  }
+  .calendar .more {
+    padding-inline: 0.15rem;
+    font-size: 0.5625rem;
+  }
+  .weekday {
+    font-size: var(--text-xs);
+  }
   /* The whole screen (as Shows' search): all of the form in view, with room for the keyboard. */
-  .dialog { margin: 0; width: 100%; max-width: none; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
-  .dialog[open] { animation-name: sheet-in; animation-duration: .28s; }
-  .dialogBody { padding: calc(1rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) calc(1.25rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
+  .dialog {
+    margin: 0;
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+  }
+  .dialog[open] {
+    animation-name: sheet-in;
+    animation-duration: 0.28s;
+  }
+  .dialogBody {
+    padding: calc(1rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+      calc(1.25rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  }
 }
 @media (max-width: 25rem) {
-  .addLabel { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .calendar .add { min-width: 44px; padding-inline: 0; }
+  .addLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .calendar .add {
+    min-width: 44px;
+    padding-inline: 0;
+  }
 }
-@keyframes sheet-in { from { transform: translateY(100%); } }
-@media (prefers-reduced-motion: reduce) { .dialog[open], .dialog::backdrop, .error, .alert { animation: none; } }
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog[open],
+  .dialog::backdrop {
+    animation: none;
+  }
+}
 @media (max-width: 47.99rem) and (max-height: 50rem) {
-  .calendar { margin-block: -.75rem; height: calc(var(--app-view-height) + 1.5rem); }
-  .toolbar { gap: .25rem .5rem; margin-bottom: .5rem; }
-  .empty { padding-block: .25rem; }
+  .calendar {
+    margin-block: -0.75rem;
+    height: calc(var(--app-view-height) + 1.5rem);
+  }
+  .toolbar {
+    gap: 0.25rem 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .empty {
+    padding-block: 0.25rem;
+  }
+}
+
+/* The agenda (the default on a phone): the coming days that have something
+   planned, each its name, then its events with their times. It scrolls as a
+   whole, in the page, rather than in a box of its own. */
+.agendaScroller {
+  flex: none;
+  min-height: 0;
+  border: 0;
+  overflow: visible;
+}
+.agenda {
+  display: grid;
+  gap: var(--space-5);
+  justify-items: start;
+}
+.agenda[data-slide] {
+  animation: grid-fade 0.2s var(--ease-out) backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agenda[data-slide] {
+    animation: none;
+  }
+}
+.agendaDay {
+  width: 100%;
+}
+.agendaDay h3 {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.calendar .agendaDay h3.today {
+  background: none;
+  color: var(--accent);
+}
+.agendaDay ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agendaDay li {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+.agendaTime {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.agendaDay .event {
+  margin: 0;
+}
+.agendaDay .eventTitle {
+  font-size: var(--text-sm);
+}
+
+/* Two pictures for an event of two or more, the second a little over the first. */
+.eventAvatars {
+  display: flex;
+  flex: none;
+}
+.eventAvatars > * + * {
+  margin-left: -0.375rem;
+  box-shadow: 0 0 0 1.5px var(--surface);
+}
+
+/* Now, in the week and day views: a red line across today, at the time it is. */
+.nowLine {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: var(--danger);
+  pointer-events: none;
+}
+.nowLine::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+/* Moving or resizing an event with the mouse: over the others, a little lifted,
+   while its new place is shown; the bottom edge is its handle for the length. */
+.calendar .dragging {
+  z-index: 4;
+  box-shadow: var(--shadow-md);
+  opacity: 0.92;
+  cursor: grabbing;
+}
+.resizeHandle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 0.5rem;
+  cursor: ns-resize;
+}
+
+/* Inviting your partner, over the calendar of a space of one (it goes once
+   someone joins, or with its ×). */
+.invitePrompt {
+  position: relative;
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-4) calc(var(--control-height) + var(--space-2)) var(--space-4) var(--space-4);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+}
+.invitePrompt h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+.invitePrompt p {
+  margin: 0;
+}
+.invitePrompt > .close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+/* A swipe left or right on a phone moves the calendar; up and down still scroll it. */
+@media (max-width: 47.99rem) {
+  .scroller {
+    touch-action: pan-y;
+  }
+  .agendaDay li {
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+  }
+}
+
+/* On a wide screen, inviting a partner is one row over the calendar: the words,
+   then the share button, so the grid keeps its room. */
+@media (min-width: 48rem) {
+  .invitePrompt {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    padding-block: var(--space-3);
+  }
+  .invitePrompt h2 {
+    font-size: var(--text-md);
+  }
 }

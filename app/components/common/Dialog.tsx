@@ -17,8 +17,17 @@ export function typesFirst(): boolean {
 // where typesFirst), else on the first focusable one (showModal ignores React's
 // autoFocus). Dialogs can stack, and the page behind doesn't scroll while one is
 // open (AppShell.module.css).
-export function Dialog({ className, style, onClose, children, ...labelling }: {
-  className: string; style?: React.CSSProperties; onClose: () => void; children: React.ReactNode;
+export function Dialog({
+  className,
+  style,
+  onClose,
+  children,
+  ...labelling
+}: {
+  className: string;
+  style?: React.CSSProperties;
+  onClose: () => void;
+  children: React.ReactNode;
 } & ({ "aria-labelledby": string } | { "aria-label": string })) {
   const ref = useRef<HTMLDialogElement>(null);
   // Only a click that also started on the backdrop closes it: lifting the
@@ -30,12 +39,30 @@ export function Dialog({ className, style, onClose, children, ...labelling }: {
     dialog.showModal();
     const first = dialog.querySelector<HTMLElement>("[data-autofocus]");
     if (first && (typesFirst() || !first.matches("input, textarea"))) first.focus();
-    return () => { dialog.close(); previous?.focus(); };
+    return () => {
+      dialog.close();
+      previous?.focus();
+    };
   }, []);
   // The content fills the dialog, so only a click on the backdrop lands on the dialog itself.
-  return <dialog ref={ref} className={className} style={style} {...labelling} onCancel={(e) => { e.preventDefault(); onClose(); }}
-    onPointerDown={(e) => { pressedBackdrop.current = e.target === e.currentTarget; }}
-    onClick={(e) => { if (e.target === e.currentTarget && pressedBackdrop.current) onClose(); }}>
-    {children}
-  </dialog>;
+  return (
+    <dialog
+      ref={ref}
+      className={className}
+      style={style}
+      {...labelling}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+      onPointerDown={(e) => {
+        pressedBackdrop.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && pressedBackdrop.current) onClose();
+      }}
+    >
+      {children}
+    </dialog>
+  );
 }

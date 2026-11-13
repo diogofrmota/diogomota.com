@@ -26,7 +26,12 @@ const maxPixels = 70_000_000;
 const side = 512;
 
 export class AvatarError extends Error {
-  constructor(message: string, public status = 400) { super(message); }
+  constructor(
+    message: string,
+    public status = 400,
+  ) {
+    super(message);
+  }
 }
 
 // Outside the build's file tracing (turbopackIgnore): it is where pictures are
@@ -37,7 +42,8 @@ function avatarDir(): string {
 
 /** The file of a user's picture. Only ever called with a UUID, so the name can't leave the folder. */
 function avatarFile(userId: string): string {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) throw new AvatarError("Not found.", 404);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId))
+    throw new AvatarError("Not found.", 404);
   return path.join(avatarDir(), `${userId.toLowerCase()}.webp`);
 }
 

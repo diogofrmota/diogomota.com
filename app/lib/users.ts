@@ -1,6 +1,6 @@
 import { DatabaseError } from "pg";
 import { query } from "./db";
-import { defaultTheme, type Theme } from "./themes";
+import { defaultTheme, isTheme, type Theme } from "./themes";
 
 export type User = {
   id: string;
@@ -11,6 +11,8 @@ export type User = {
   avatarUrl: string | null;
   /** "Diogo" or "Diogo Mota", as they want it; null until they set one (014_one_name.sql). */
   name: string | null;
+  /** Whether they opened the link that confirms their email (auth.ts): password resets only go to a confirmed one. */
+  emailVerified: boolean;
 };
 
 /**
@@ -25,29 +27,15 @@ export function avatarUrlSql(alias?: string): string {
     || (extract(epoch FROM ${column("avatar_updated_at")}) * 1000)::bigint END`;
 }
 
-const userColumns = `id, username, email, theme_preference AS "themePreference", ${avatarUrlSql()} AS "avatarUrl", name`;
-
-type LoginUser = {
-  id: string;
-  username: string;
-  passwordHash: string;
-  passwordChangedAt: Date | null;
-};
-
-// username and email are citext, so lookups ignore case. Usernames can't contain
-// "@", so one value never matches a username and a different account's email.
-export async function findUserForLogin(login: string): Promise<LoginUser | null> {
-  const { rows } = await query<LoginUser>(
-    `SELECT id, username, password_hash AS "passwordHash", password_changed_at AS "passwordChangedAt"
-     FROM users WHERE username = $1 OR email = $1`,
-    [login],
-  );
-  return rows[0] ?? null;
-}
+const userColumns = `id, username, email, theme_preference AS "themePreference", ${avatarUrlSql()} AS "avatarUrl", name,
+  email_verified AS "emailVerified"`;
 
 export async function findUserById(id: string): Promise<User | null> {
   const { rows } = await query<User>(`SELECT ${userColumns} FROM users WHERE id = $1`, [id]);
-  return rows[0] ?? null;
+  const user = rows[0];
+  if (!user) return null;
+  // The database takes any theme id (015_two_themes.sql): one that is no longer a theme shows the default.
+  return { ...user, themePreference: isTheme(user.themePreference) ? user.themePreference : defaultTheme };
 }
 
 /**
@@ -56,50 +44,6 @@ export async function findUserById(id: string): Promise<User | null> {
  */
 export async function themeOf(userId: string | undefined): Promise<Theme> {
   return (userId && (await findUserById(userId))?.themePreference) || defaultTheme;
-}
-
-export async function findUserByEmail(email: string): Promise<User | null> {
-  const { rows } = await query<User>(`SELECT ${userColumns} FROM users WHERE email = $1`, [email]);
-  return rows[0] ?? null;
-}
-
-// What every read of a session is checked against (app/auth.ts).
-// passwordChangedAt is null until the password is first changed.
-export async function findSessionUser(
-  id: string,
-): Promise<{ username: string; passwordChangedAt: Date | null } | null> {
-  const { rows } = await query<{ username: string; passwordChangedAt: Date | null }>(
-    `SELECT username, password_changed_at AS "passwordChangedAt" FROM users WHERE id = $1`,
-    [id],
-  );
-  return rows[0] ?? null;
-}
-
-export async function getPasswordHash(id: string): Promise<string | null> {
-  const { rows } = await query<{ passwordHash: string }>(
-    `SELECT password_hash AS "passwordHash" FROM users WHERE id = $1`,
-    [id],
-  );
-  return rows[0]?.passwordHash ?? null;
-}
-
-// Returns null when the username or the email is already taken, without saying which.
-// New accounts start in the default theme (lib/themes.ts), set here rather than
-// left to the column's default, so the code says which one it is.
-export async function createUser(account: {
-  username: string;
-  email: string;
-  passwordHash: string;
-  name: string;
-}): Promise<User | null> {
-  const { rows } = await query<User>(
-    `INSERT INTO users (username, email, password_hash, theme_preference, name)
-     VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT DO NOTHING
-     RETURNING ${userColumns}`,
-    [account.username, account.email, account.passwordHash, defaultTheme, account.name],
-  );
-  return rows[0] ?? null;
 }
 
 /** Sets the user's name. */
@@ -124,25 +68,6 @@ export async function updateUsername(id: string, username: string): Promise<bool
     if (error instanceof DatabaseError && error.code === "23505") return false; // unique_violation
     throw error;
   }
-}
-
-// Returns false when another account has that email (citext: in any case).
-export async function updateEmail(id: string, email: string): Promise<boolean> {
-  try {
-    await query(`UPDATE users SET email = $2 WHERE id = $1`, [id, email]);
-    return true;
-  } catch (error) {
-    if (error instanceof DatabaseError && error.code === "23505") return false; // unique_violation
-    throw error;
-  }
-}
-
-// Also ends the user's sessions (see findSessionUser).
-export async function updatePasswordHash(id: string, passwordHash: string): Promise<void> {
-  await query(`UPDATE users SET password_hash = $2, password_changed_at = now() WHERE id = $1`, [
-    id,
-    passwordHash,
-  ]);
 }
 
 export async function updateThemePreference(id: string, theme: Theme): Promise<void> {

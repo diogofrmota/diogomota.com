@@ -63,7 +63,9 @@
 }
 
 .error[role="alert"] {
-  animation: feedback-in var(--duration) var(--ease-out), nudge 0.3s 0.1s ease-in-out;
+  animation:
+    feedback-in var(--duration) var(--ease-out),
+    nudge 0.3s 0.1s ease-in-out;
 }
 
 .success {

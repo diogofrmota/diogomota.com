@@ -1,9 +1,9 @@
 "use server";
 
-import { CredentialsSignin } from "next-auth";
+import { APIError } from "better-auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { signIn } from "@/auth";
+import { auth } from "@/auth";
 import {
   emailError,
   formPassword,
@@ -15,11 +15,12 @@ import {
   usernameError,
 } from "@/lib/account-rules";
 import type { FormState } from "@/lib/form-state";
-import { authHref, safeNextPath } from "@/lib/next-path";
-import { hashPassword } from "@/lib/password";
+import { safeNextPath } from "@/lib/next-path";
 import { clientIp, signUpLimit } from "@/lib/rate-limit";
-import { createUser } from "@/lib/users";
 
+// Signs up and logs straight in. A link to confirm the email is sent at the same
+// time (auth.ts): until it is opened, the account works, but password resets
+// don't go to that email.
 export async function signUp(_previous: FormState, formData: FormData): Promise<FormState> {
   const name = normalizeName(formData.get("name"));
   const username = normalizeUsername(formData.get("username"));
@@ -36,12 +37,18 @@ export async function signUp(_previous: FormState, formData: FormData): Promise<
   if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors, values };
 
   // Before hashing, which is the slow part.
-  if (!signUpLimit(clientIp(await headers()))) {
+  const requestHeaders = await headers();
+  if (!signUpLimit(clientIp(requestHeaders))) {
     return { error: "Too many sign-ups from your network. Try again in an hour.", values };
   }
 
-  const user = await createUser({ username, email, passwordHash: await hashPassword(password), name });
-  if (!user) {
+  try {
+    await auth.api.signUpEmail({
+      body: { name, username, email, password, callbackURL: "/account?email=confirmed" },
+      headers: requestHeaders,
+    });
+  } catch (error) {
+    if (!(error instanceof APIError)) throw error;
     // Doesn't say whether the username or the email is taken.
     return {
       error:
@@ -49,15 +56,5 @@ export async function signUp(_previous: FormState, formData: FormData): Promise<
       values,
     };
   }
-
-  const next = safeNextPath(formData.get("next")) ?? "/apps";
-  try {
-    // Redirects on success.
-    await signIn("credentials", { login: username, password, redirectTo: next });
-  } catch (error) {
-    // The account exists; only logging in failed (e.g. the login rate limit).
-    if (error instanceof CredentialsSignin) redirect(authHref("/login", next));
-    throw error;
-  }
-  return {};
+  redirect(safeNextPath(formData.get("next")) ?? "/apps");
 }

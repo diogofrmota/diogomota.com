@@ -1,0 +1,119 @@
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
+import { card, mockBase, openShows, otherPerson, section, tab, typeSwitch, userId } from "./shows";
+
+// Shows' newer features: genres and More like this on a title, the friends who
+// have it, recommending it to a friend, what you both planned, your friends'
+// activity, the TMDB notice, and Discover remembering TV Shows or Movies.
+
+type Title = { type: "tv" | "movie"; tmdbId: number };
+const harbor: Title = { type: "tv", tmdbId: mockBase + 101 }; // Harbor Lights, 2021
+const orchard: Title = { type: "tv", tmdbId: mockBase + 1 }; // The Quiet Orchard, 2016
+
+async function add(page: Page, title: Title, status: "watching" | "planned" | "completed") {
+  expect((await page.request.post("/api/shows/library", { data: { ...title, status } })).status()).toBe(201);
+}
+
+/** Sends a friend request through the API (the other one then accepts it). */
+async function befriend(page: Page, other: { user: { username: string } }) {
+  expect((await page.request.post("/api/shows/friends", { data: { username: other.user.username } })).status()).toBe(
+    201,
+  );
+}
+
+test("a title's panel: its genres, the friends who have it, More like this, Recommend to a friend and TMDB's notice", async ({
+  page,
+  browser,
+}) => {
+  const me = await openShows(page);
+  const ana = await otherPerson(browser);
+  try {
+    await befriend(page, ana);
+    const meId = await userId(me.username);
+    expect((await ana.page.request.post(`/api/shows/friends/${meId}/accept`, { data: {} })).ok()).toBe(true);
+    await add(ana.page, harbor, "watching");
+
+    await page.goto(`/shows/discover?p=title:tv:${harbor.tmdbId}`);
+    const panel = page.getByRole("dialog", { name: "Harbor Lights" });
+    await expect(panel).toBeVisible();
+    // Genres, under the facts.
+    await expect(panel).toContainText("Drama · Mystery");
+    // The friends who have it, and how far they are.
+    const friends = panel.getByRole("region", { name: "Friends" });
+    await expect(friends).toContainText(ana.user.name);
+    await expect(friends).toContainText("Watching");
+    // More like this: posters that open their own panel.
+    const more = panel.getByRole("region", { name: "More like this" });
+    await expect(more.getByRole("listitem").first()).toBeVisible();
+    // TMDB's logo and notice.
+    await expect(panel.getByRole("link", { name: "TMDB" })).toHaveAttribute("href", "https://www.themoviedb.org/");
+    await expect(panel).toContainText("This product uses the TMDB API but is not endorsed or certified by TMDB.");
+
+    // Recommend it to Ana: it shows in her Discover, from me, until she adds it.
+    await panel.getByRole("button", { name: "Recommend to a friend" }).click();
+    const row = panel.getByRole("listitem").filter({ hasText: ana.user.name });
+    await row.getByRole("button", { name: "Send" }).click();
+    await expect(
+      panel.getByRole("status").filter({ hasText: `Sent Harbor Lights to ${ana.user.name}.` }),
+    ).toBeVisible();
+    await expect(row.getByRole("button", { name: "Sent" })).toBeDisabled();
+
+    await add(page, orchard, "watching");
+    await ana.page.request.delete(`/api/shows/library/tv/${harbor.tmdbId}`);
+    await ana.page.goto("/shows/discover");
+    const recommended = section(ana.page, "Recommended by Friends");
+    await expect(card(recommended, "Harbor Lights")).toBeVisible();
+    await expect(recommended).toContainText(`From ${me.name}`);
+
+    // Her Profile has what her friends did: I started watching The Quiet Orchard, and recommended Harbor Lights.
+    await ana.page.goto("/shows/profile");
+    const activity = section(ana.page, "Friends’ activity");
+    await expect(activity).toContainText(`${me.name} started watching The Quiet Orchard`);
+    await expect(activity).toContainText(`${me.name} recommended Harbor Lights to ${ana.user.name}`);
+    await activity.getByRole("button", { name: "The Quiet Orchard" }).click();
+    await expect(ana.page.getByRole("dialog", { name: "The Quiet Orchard" })).toBeVisible();
+  } finally {
+    await ana.context.close();
+  }
+});
+
+test("a friend's profile has what you both want to watch", async ({ page, browser }) => {
+  const me = await openShows(page);
+  const ana = await otherPerson(browser);
+  try {
+    await befriend(page, ana);
+    expect(
+      (await ana.page.request.post(`/api/shows/friends/${await userId(me.username)}/accept`, { data: {} })).ok(),
+    ).toBe(true);
+    await add(page, harbor, "planned");
+    await add(ana.page, harbor, "planned");
+    await add(page, orchard, "planned");
+    await page.goto(`/shows/profile?p=friend:${ana.id}`);
+    const together = page.getByRole("dialog").getByRole("region", { name: "You both want to watch" });
+    await expect(card(together, "Harbor Lights")).toBeVisible();
+    await expect(card(together, "The Quiet Orchard")).toHaveCount(0);
+  } finally {
+    await ana.context.close();
+  }
+});
+
+test("Discover remembers TV Shows or Movies on this device, and loads its sections as they come near", async ({
+  page,
+}) => {
+  await openShows(page);
+  // With a title, so the Library has its switch too (and not the guide).
+  await add(page, harbor, "watching");
+  await tab(page, "Discover").click();
+  await typeSwitch(page, "Movies").click();
+  await page.reload();
+  await expect(typeSwitch(page, "Movies")).toHaveAttribute("aria-pressed", "true");
+  // Library has its own.
+  await tab(page, "Library").click();
+  await expect(typeSwitch(page, "TV Shows")).toHaveAttribute("aria-pressed", "true");
+  // The last section only loads once scrolled to.
+  await tab(page, "Discover").click();
+  const last = section(page, "Added by Friends");
+  await last.scrollIntoViewIfNeeded();
+  await expect(last).toContainText("No movies from friends yet.");
+  await expect(page.getByRole("link", { name: "TMDB" })).toBeVisible();
+});

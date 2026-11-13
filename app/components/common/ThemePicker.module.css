@@ -35,7 +35,7 @@
 }
 
 /* The theme's page, with a card (text and secondary text) and an accent dot.
-   background-color, not background: Space adds its stars as an image. */
+   */
 .sample {
   display: flex;
   align-items: center;
