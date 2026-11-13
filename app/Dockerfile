@@ -11,7 +11,7 @@
 # Empty placeholder, replaced by --build-context migrations=...
 FROM scratch AS migrations
 
-FROM node:24-alpine AS base
+FROM node:25-alpine AS base
 # The base image's Alpine packages can lag behind their security fixes (zlib,
 # CVE-2026-4738, stopped a deploy's image scan): take the fixed ones.
 RUN apk upgrade --no-cache
