@@ -21,6 +21,33 @@ async function befriend(page: Page, other: { user: { username: string } }) {
   );
 }
 
+test("a library title's mobile popup fits its controls with wider font metrics", async ({ page }) => {
+  await openShows(page);
+  await add(page, harbor, "watching");
+  await page.goto(`/shows?p=title:tv:${harbor.tmdbId}`);
+  const panel = page.getByRole("dialog", { name: "Harbor Lights" });
+  await expect(panel.getByRole("group", { name: "Progress", exact: true })).toBeVisible();
+  // The Linux CI font is wider than Windows' system font. Exercise a wider
+  // fallback too, so the test does not depend on the host's font metrics.
+  await page.addStyleTag({ content: "[data-theme] { font-family: Verdana, sans-serif; }" });
+  for (const width of [320, 375, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(
+      await panel.evaluate((dialog) => {
+        const body = dialog.firstElementChild!;
+        return body.scrollWidth - body.clientWidth;
+      }),
+      `popup overflow at ${width}px`,
+    ).toBeLessThanOrEqual(1);
+    for (const button of await panel.getByRole("group", { name: "Status", exact: true }).getByRole("button").all()) {
+      expect(await button.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+    }
+    await panel.getByLabel("Season", { exact: true }).selectOption("2");
+    await panel.getByLabel("Episode", { exact: true }).selectOption("8");
+    await expect(panel.getByLabel("Episode", { exact: true })).toHaveValue("8");
+  }
+});
+
 test("title sections put recommendations before similar titles and removal, with a visible scrollbar", async ({
   page,
 }) => {
