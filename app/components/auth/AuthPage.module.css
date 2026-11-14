@@ -1,5 +1,5 @@
 /* One narrow column in the middle of the page: the title, the form in a card,
-   the links that belong to it close under it, then, set apart, the way back. */
+   then the lines that belong to it close under it. */
 .column {
   width: min(24rem, 100%);
   margin: 0 auto;
@@ -28,19 +28,22 @@
 
 .column .links {
   display: grid;
-  margin-top: var(--space-2);
+  gap: var(--space-3);
+  margin-top: var(--space-4);
   font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 }
 
 .links p {
   margin: 0;
 }
 
-/* 44px tall for touch, also inside a sentence. */
+/* 44px tall for touch, also inside a sentence: padding above and below that
+   reaches out of the line without making the line taller (an inline box's
+   padding doesn't), so the lines keep their spacing. */
 .links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--control-height);
+  padding-block: 0.9rem;
+  margin-block: -0.9rem;
   color: var(--accent);
   font-weight: var(--weight-medium);
   text-underline-offset: 0.2em;
@@ -54,9 +57,4 @@
 /* Two classes, to win over ui.module.css's justify-self whatever the order. */
 .action .wide {
   justify-self: stretch;
-}
-
-/* Back to apps: a quiet link, its chevron lined up with the column's edge. */
-.back {
-  margin: var(--space-6) 0 0 calc(-1 * var(--space-1));
 }

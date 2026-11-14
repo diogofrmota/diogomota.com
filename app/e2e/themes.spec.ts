@@ -13,7 +13,7 @@ test("every theme saves from Account, and colors the page, the page behind it an
   // A dozen saves or more.
   test.slow();
   await signUp(page, newUser());
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goto("/account");
   const shell = page.locator("[data-theme]");
   const row = accountSetting(page, "Theme");
@@ -64,7 +64,7 @@ test.describe("in every theme, axe finds nothing serious", () => {
 
   test("the theme picker, in Account", async ({ page }) => {
     await signUp(page, newUser());
-    await expect(page).toHaveURL("/apps");
+    await expect(page).toHaveURL("/");
     await page.goto("/account");
     // With the keyboard: the mouse would leave the row hovered, which fades between themes.
     await accountSetting(page, "Theme").press("Enter");

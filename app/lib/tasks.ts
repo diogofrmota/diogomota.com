@@ -203,8 +203,27 @@ export async function deleteTask(db: PoolClient, space: Space, userId: string, i
   return null;
 }
 
-export async function moveTask(db: PoolClient, space: Space, id: string, beforeId: string | null): Promise<null> {
+/**
+ * Moves a task before another of its list, or to its end (null). With
+ * `listId`, to the end of that list of the space instead (the task's popup, List).
+ */
+export async function moveTask(
+  db: PoolClient,
+  space: Space,
+  id: string,
+  beforeId: string | null,
+  listId?: string,
+): Promise<null> {
   const task = await findTask(db, space, id);
+  if (listId && listId !== task.listId) {
+    await findList(db, space, listId);
+    await db.query(
+      `UPDATE tasks SET list_id = $2, position = (SELECT coalesce(max(position) + 1, 0) FROM tasks WHERE list_id = $2)
+       WHERE id = $1`,
+      [id, listId],
+    );
+    return null;
+  }
   await move(db, "tasks", "list_id", task.listId, id, beforeId);
   return null;
 }

@@ -59,6 +59,7 @@ export type TaskChange =
   | { kind: "addTask"; task: Task }
   | { kind: "updateTask"; id: string; fields: TaskFields; today: string }
   | { kind: "moveTask"; listId: string; id: string; beforeId: string | null }
+  | { kind: "moveTaskTo"; id: string; listId: string }
   | { kind: "deleteTask"; id: string };
 
 const withoutTask = (lists: TaskList[], id: string) =>
@@ -103,6 +104,13 @@ export function applyTaskChange(lists: TaskList[], change: TaskChange): TaskList
       return lists.map((l) =>
         l.id === change.listId ? { ...l, tasks: moveBefore(l.tasks, change.id, change.beforeId) ?? l.tasks } : l,
       );
+    case "moveTaskTo": {
+      const task = lists.flatMap((l) => l.tasks).find((t) => t.id === change.id);
+      if (!task || task.listId === change.listId || !lists.some((l) => l.id === change.listId)) return lists;
+      return withoutTask(lists, change.id).map((l) =>
+        l.id === change.listId ? { ...l, tasks: [...l.tasks, { ...task, listId: change.listId }] } : l,
+      );
+    }
     case "deleteTask":
       return withoutTask(lists, change.id);
   }
@@ -132,6 +140,8 @@ function sendTaskChange(change: TaskChange): Promise<unknown> {
       return send(`/${change.id}`, "PATCH", change.fields);
     case "moveTask":
       return send(`/${change.id}/move`, "POST", { beforeId: change.beforeId });
+    case "moveTaskTo":
+      return send(`/${change.id}/move`, "POST", { beforeId: null, listId: change.listId });
     case "deleteTask":
       return send(`/${change.id}`, "DELETE");
   }

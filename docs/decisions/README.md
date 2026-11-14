@@ -17,3 +17,4 @@ One short record per decision that shapes the site: what was chosen, why, and wh
 | [0011](0011-no-ratings.md) | No ratings in Shows: TMDB's only | v1.1.0 |
 | [0012](0012-calendar-subscription.md) | The whole calendar as a subscription, not a download | v1.2.0 |
 | [0013](0013-motion-system.md) | One motion system, with rules | unreleased |
+| [0014](0014-home-is-the-apps.md) | Home is the apps; the intro is /about | unreleased |

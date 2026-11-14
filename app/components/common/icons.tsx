@@ -67,13 +67,31 @@ export function UsersIcon() {
   );
 }
 
-export function AppsIcon() {
+// Home, at the end of every tab bar: the way to / and from one app to another.
+export function HomeIcon() {
   return (
     <Icon>
-      <rect x="4" y="4" width="6.5" height="6.5" rx="1.5" />
-      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" />
-      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" />
-      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" />
+      <path d="M4 10.5 12 4l8 6.5" />
+      <path d="M6 9v10.5h4.5V14h3v5.5H18V9" />
+    </Icon>
+  );
+}
+
+// Log in: an arrow going in through a door.
+export function LoginIcon() {
+  return (
+    <Icon>
+      <path d="M10 4.5h7.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H10M4 12h10M10.5 8l4 4-4 4" />
+    </Icon>
+  );
+}
+
+// Sign up: a person and a +, someone new.
+export function UserPlusIcon() {
+  return (
+    <Icon>
+      <circle cx="10" cy="8" r="4" />
+      <path d="M3 20.5c.8-3.6 3.6-5.8 7-5.8 1.5 0 2.9.4 4 1.2M18.5 13v7M15 16.5h7" />
     </Icon>
   );
 }

@@ -8,7 +8,6 @@ import { memberName } from "@/lib/names";
 import { authHref } from "@/lib/next-path";
 import { inviteCodeOf } from "@/lib/schemas";
 import { readSpace, previewInvite } from "@/lib/spaces";
-import { themeOf } from "@/lib/users";
 import { JoinForm } from "./JoinForm";
 
 // The code is in the URL: no Referer header carries it anywhere, and no search engine lists it.
@@ -27,7 +26,6 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
   const code = inviteCodeOf((await params).code);
   const valid = /^[A-HJ-NP-Z2-9]{8}$/.test(code);
   const [preview, session] = await Promise.all([valid ? previewInvite(code) : null, getSession()]);
-  const theme = await themeOf(session?.user.id);
   const from = preview?.from ? memberName(preview.from) : null;
 
   if (!preview || preview.state !== "open") {
@@ -41,7 +39,6 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
               ? "It expired: each invite works for 24 hours. Ask for a new one."
               : "There's no such invite. Ask for a new link."
         }
-        theme={theme}
       />
     );
   }
@@ -51,7 +48,7 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
   if (!session) {
     const next = `/join/${code}`;
     return (
-      <AuthPage title={title} intro={intro} theme={theme}>
+      <AuthPage title={title} intro={intro} next={next}>
         <p className={ui.actions}>
           {/* As everywhere: Log in plain and first, Sign up filled after it. */}
           <Link href={authHref("/login", next)} className={ui.button}>
@@ -73,7 +70,6 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
         title={title}
         intro="You're already in a space, and you can be in one at a time. To join this one, leave yours first in Shared's Settings."
         action={{ href: "/shared/settings", label: "Open Settings" }}
-        theme={theme}
       />
     );
   }
@@ -82,7 +78,6 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
       title={title}
       intro={intro}
       form={<JoinForm code={code} label={from ? `Join ${from}'s space` : "Join the space"} />}
-      theme={theme}
     />
   );
 }

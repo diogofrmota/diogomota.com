@@ -1,5 +1,6 @@
 import { type Locator, type Page } from "@playwright/test";
 import sharp from "sharp";
+import { initials } from "../lib/names";
 import { withDatabase } from "./db";
 import {
   accountButton,
@@ -9,6 +10,7 @@ import {
   emailsTo,
   expect,
   formAlert,
+  linkNames,
   logIn,
   logOut,
   newUser,
@@ -37,15 +39,15 @@ async function expectNoHorizontalScroll(page: Page) {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
-test("Account and Apps in the tab bar go between /apps and the settings; /account has no top bar", async ({ page }) => {
+test("Account and Home in the tab bar go between home and the settings; /account has no top bar", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   const bar = page.getByRole("navigation", { name: "Account", exact: true });
-  await expect(bar.getByRole("link")).toHaveCount(2);
-  await expect(bar.getByRole("link").first()).toHaveAccessibleName("Account");
-  await expect(bar.getByRole("link").last()).toHaveAccessibleName("Apps");
-  await expect(bar.getByRole("link", { name: "Apps", exact: true })).toHaveAttribute("aria-current", "page");
+  // On a wide screen, the site's name on the left, then the tabs.
+  expect(await linkNames(bar)).toEqual(["diogomota.com", "Account", "Home"]);
+  await expect(bar.getByRole("link", { name: "diogomota.com" })).toHaveAttribute("href", "/");
+  await expect(bar.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
 
   await bar.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
@@ -53,26 +55,26 @@ test("Account and Apps in the tab bar go between /apps and the settings; /accoun
   await expect(page.getByRole("banner")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Back to apps" })).toHaveCount(0);
   await expect(bar.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("aria-current", "page");
-  await expect(bar.getByRole("link", { name: "Apps", exact: true })).not.toHaveAttribute("aria-current");
+  await expect(bar.getByRole("link", { name: "Home", exact: true })).not.toHaveAttribute("aria-current");
 
   // Who is logged in: their settings, each with what it is now.
   await expect(page.getByRole("main")).toContainText(user.email);
-  await bar.getByRole("link", { name: "Apps", exact: true }).click();
-  await expect(page).toHaveURL("/apps");
+  await bar.getByRole("link", { name: "Home", exact: true }).click();
+  await expect(page).toHaveURL("/");
 });
 
-test("Account: the profile picture in the middle, a row per setting with its value, then Update password and Log out", async ({
+test("Account: the profile picture in the middle, a row per setting with its value, then Log out, About and Privacy", async ({
   page,
 }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goto("/account");
   const main = page.getByRole("main");
 
-  // The picture (the initial, without one), in the middle of the column, over the rows.
+  // The picture (the name's initials, without one), in the middle of the column, over the rows.
   const picture = profilePicture(page);
-  await expect(picture).toContainText(user.username.charAt(0).toUpperCase());
+  await expect(picture).toContainText(initials(user.username, user.name));
   const list = main.getByRole("list");
   const [pictureBox, listBox] = [(await picture.boundingBox())!, (await list.boundingBox())!];
   expect(Math.abs(pictureBox.x + pictureBox.width / 2 - (listBox.x + listBox.width / 2))).toBeLessThanOrEqual(1);
@@ -83,13 +85,25 @@ test("Account: the profile picture in the middle, a row per setting with its val
     new RegExp(`^Username.*${user.username}`),
     new RegExp(`^Email.*${user.email}`),
     /^Theme.*Light/,
+    /^Password.*Change/,
   ]);
   // Nothing else to open on the page: no dropdowns.
   await expect(main.locator("details")).toHaveCount(0);
-  const update = main.getByRole("button", { name: "Update password", exact: true });
+  // Log out on its own under the rows, then About and Privacy under it.
+  const update = accountSetting(page, "Password");
   const logOutButton = main.getByRole("button", { name: "Log out", exact: true });
-  expect((await update.boundingBox())!.y).toBeGreaterThan(listBox.y + listBox.height);
-  expect((await logOutButton.boundingBox())!.x).toBeGreaterThan((await update.boundingBox())!.x);
+  const logOutBox = (await logOutButton.boundingBox())!;
+  expect(logOutBox.y).toBeGreaterThan(listBox.y + listBox.height);
+  for (const [name, href] of [
+    ["About", "/about"],
+    ["Privacy", "/privacy"],
+  ]) {
+    const link = main.getByRole("link", { name, exact: true }).first();
+    await expect(link).toHaveAttribute("href", href);
+  }
+  expect((await main.getByRole("link", { name: "About", exact: true }).boundingBox())!.y).toBeGreaterThan(
+    logOutBox.y + logOutBox.height,
+  );
 
   // Each opens a popup, which Escape, a click outside or its × closes, back on the button that opened it.
   for (const name of ["Name", "Username", "Email", "Theme"]) {
@@ -106,19 +120,19 @@ test("Account: the profile picture in the middle, a row per setting with its val
   await expect(password).toBeHidden();
 
   await logOutButton.click();
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" })).toBeVisible();
 });
 
 test("change username", async ({ page }) => {
   const taken = newUser();
   await signUp(page, taken);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await logOut(page, taken.username);
 
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goto("/account");
 
   const form = await openSetting(page, "Username");
@@ -153,20 +167,20 @@ test("change username", async ({ page }) => {
   // The session has the new name too.
   await expect(accountButton(page, renamed)).toBeVisible();
   await page.goto("/shows");
-  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
 
   await logOut(page, renamed);
   await logIn(page, user.username, user.password);
   await expect(formAlert(page)).toHaveText("Wrong username/email or password.");
   await logIn(page, renamed, user.password);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await expect(accountButton(page, renamed)).toBeVisible();
 });
 
 test("username checks ignore old responses and recover after a network failure", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goto("/account");
   const form = await openSetting(page, "Username");
   const field = form.getByLabel("Username");
@@ -223,7 +237,7 @@ test("username availability requires login, validates input and limits checks", 
   await anonymous.dispose();
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   expect((await page.request.get(`${endpoint}?username=ab`)).status()).toBe(400);
   const own = await page.request.get(`${endpoint}?username=${user.username.toUpperCase()}`);
   expect(await own.json()).toEqual({ data: { available: true } });
@@ -237,7 +251,7 @@ test("username availability requires login, validates input and limits checks", 
 test("Name sets the name, one word or more, which Shows' Profile shows over the @username", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goto("/account");
   // The one given at sign-up, on its row.
   const nameRow = accountSetting(page, "Name");
@@ -282,11 +296,11 @@ test("Email changes with the current password, once the link sent to the new one
 }) => {
   const taken = newUser();
   await signUp(page, taken);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await logOut(page, taken.username);
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goto("/account");
 
   const emailRow = accountSetting(page, "Email");
@@ -336,20 +350,20 @@ test("Email changes with the current password, once the link sent to the new one
   await logIn(page, user.email, user.password);
   await expect(formAlert(page)).toHaveText("Wrong username/email or password.");
   await logIn(page, email, user.password);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
 });
 
 test("change password, which logs out every device", async ({ page, browser }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   const otherDevice = await browser.newContext();
   const other = await otherDevice.newPage();
   await logIn(other, user.username, user.password);
-  await expect(other).toHaveURL("/apps");
+  await expect(other).toHaveURL("/");
   await page.goto("/account");
 
-  const form = await openPopup(page, page.getByRole("button", { name: "Update password" }), "Update password");
+  const form = await openPopup(page, accountSetting(page, "Password"), "Update password");
   await expect(form.getByLabel("Current password")).toBeFocused();
   const newPassword = "a whole new password";
   async function submit(current: string, password: string, confirm: string) {
@@ -372,7 +386,7 @@ test("change password, which logs out every device", async ({ page, browser }) =
   await expect(page).toHaveURL("/login?password=changed&next=%2Faccount");
   await expect(page.getByRole("main")).toContainText("Your password was changed. Log in with the new one.");
   await other.goto("/shared");
-  await expect(other).toHaveURL("/apps?next=%2Fshared");
+  await expect(other).toHaveURL("/?next=%2Fshared");
   await otherDevice.close();
 
   await logIn(page, user.username, user.password);
@@ -385,7 +399,7 @@ test("change password, which logs out every device", async ({ page, browser }) =
 test("theme preference persists after logging in again", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
 
   const app = page.locator("[data-theme]");
   await page.goto("/shared");
@@ -406,7 +420,7 @@ test("theme preference persists after logging in again", async ({ page }) => {
 
   await logOut(page, user.username);
   await logIn(page, user.username, user.password);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
 
   await page.goto("/account");
   await expect(themeRow).toContainText("Dark");
@@ -423,7 +437,7 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
 }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goto("/account");
   const picture = await openPopup(page, profilePicture(page), "Profile picture");
   // The account menu's button (the menu repeats it, for phones, once open).
@@ -498,7 +512,7 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   expect((await request.get(url)).status()).toBe(401);
 
   // Shown on the other pages too.
-  await page.goto("/apps");
+  await page.goto("/");
   await expect(menuPicture).toHaveAttribute("src", url);
   await page.goto("/account");
   await openPopup(page, profilePicture(page), "Profile picture");
@@ -543,26 +557,26 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   await expect(picture).toBeHidden();
   await expect(notice(page, "Profile picture removed.")).toBeVisible();
   await expect(menuPicture).toHaveCount(0);
-  await expect(accountButton(page, user.username)).toContainText(user.username.charAt(0).toUpperCase());
-  await expect(profilePicture(page)).toContainText(user.username.charAt(0).toUpperCase());
+  await expect(accountButton(page, user.username)).toContainText(initials(user.username, user.name));
+  await expect(profilePicture(page)).toContainText(initials(user.username, user.name));
   expect((await page.request.get(current)).status()).toBe(404);
 });
 
 test("forgot password, in Update password, opens the reset by email", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goto("/account");
 
-  const password = await openPopup(page, page.getByRole("button", { name: "Update password" }), "Update password");
+  const password = await openPopup(page, accountSetting(page, "Password"), "Update password");
   await expect(password).toContainText("Don't know your current password?");
   await password.getByRole("link", { name: "Reset it by email" }).click();
   await expect(page).toHaveURL("/forgot-password");
 });
 
-test("logged out, /account redirects to /apps and Log in comes back to it", async ({ page }) => {
+test("logged out, /account redirects home and Log in comes back to it", async ({ page }) => {
   await page.goto("/account");
-  await expect(page).toHaveURL("/apps?next=%2Faccount");
+  await expect(page).toHaveURL("/?next=%2Faccount");
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" })).toHaveAttribute(
     "href",
@@ -573,12 +587,10 @@ test("logged out, /account redirects to /apps and Log in comes back to it", asyn
 test.describe("at 320px wide", () => {
   test.use({ viewport: { width: 320, height: 740 }, isMobile: true, hasTouch: true });
 
-  test("logged-in /apps, its open menu and /account, with a popup open, have no horizontal scroll", async ({
-    page,
-  }) => {
+  test("logged-in home and /account, with a popup open, have no horizontal scroll", async ({ page }) => {
     const user = newUser();
     await signUp(page, user);
-    await expect(page).toHaveURL("/apps");
+    await expect(page).toHaveURL("/");
     await expectNoHorizontalScroll(page);
 
     await expect(page.getByRole("link", { name: "Account", exact: true })).toBeInViewport({ ratio: 1 });
@@ -607,7 +619,7 @@ test.describe("at 320px wide", () => {
 test("a theme that no longer exists shows as Light", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await withDatabase((db) =>
     db.query("UPDATE users SET theme_preference = 'space' WHERE username = $1", [user.username]),
   );
@@ -619,7 +631,7 @@ test("a theme that no longer exists shows as Light", async ({ page }) => {
 test("an email not confirmed yet says so, and the link can be sent again", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goto("/account");
   await expect(accountSetting(page, "Email")).toContainText("(not confirmed)");
   await page.getByRole("button", { name: "Send the link again" }).click();
@@ -664,7 +676,7 @@ test("Download my data has the account, library and space; Delete my account tak
   await expect(dialog.getByText("That isn't your password.")).toBeVisible();
   await dialog.getByLabel("Password").fill(user.password);
   await dialog.getByRole("button", { name: "Delete my account" }).click();
-  await expect(page).toHaveURL("/apps?account=deleted");
+  await expect(page).toHaveURL("/?account=deleted");
   await expect(page.getByRole("main").getByRole("status")).toHaveText(
     "Your account and everything it had here were deleted.",
   );

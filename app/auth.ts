@@ -11,10 +11,11 @@ import { removeAvatar } from "@/lib/avatars";
 import { getPool } from "@/lib/db";
 import { emailVerificationEmail, resetPasswordEmail } from "@/lib/auth-emails";
 import { sendEmail } from "@/lib/email";
-import { appsWithNext } from "@/lib/next-path";
+import { homeWithNext } from "@/lib/next-path";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { resetEmailLimit } from "@/lib/rate-limit";
 import { leaveSpaceOf } from "@/lib/spaces";
+import { findUserById, type User } from "@/lib/users";
 
 /**
  * How long an emailed password reset link works, in seconds, and in words for
@@ -210,10 +211,19 @@ export const getSession = cache(async (): Promise<{ user: SessionUser } | null> 
   return { user: { id: user.id, username: user.username, emailVerified: user.emailVerified } };
 });
 
-// The signed-in user. Without a session, redirects to /apps, which offers to
+/**
+ * The logged-in user's account (their theme, name and picture, for the page's
+ * frame and tab bar), or null. Read once per request, like getSession.
+ */
+export const getUser = cache(async (): Promise<User | null> => {
+  const session = await getSession();
+  return session ? findUserById(session.user.id) : null;
+});
+
+// The signed-in user. Without a session, redirects to home, which offers to
 // log in and come back to `path`.
 export async function requireUser(path: string): Promise<SessionUser> {
   const session = await getSession();
-  if (!session) redirect(appsWithNext(path));
+  if (!session) redirect(homeWithNext(path));
   return session.user;
 }

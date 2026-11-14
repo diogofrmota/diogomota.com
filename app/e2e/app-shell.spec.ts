@@ -73,10 +73,10 @@ for (const app of appViews) {
   });
 }
 
-test("back and forward move between views, and out of the app to /apps", async ({ page }) => {
+test("back and forward move between views, and out of the app to home", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   expect((await page.request.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
   await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
@@ -89,7 +89,7 @@ test("back and forward move between views, and out of the app to /apps", async (
 
   // Back from Account, a page of its own, to the view it was opened on.
   await page.goBack();
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goBack();
   await expect(viewHeading(page)).toHaveText("Tasks");
   await expect(tab(page, "Shared", "Tasks")).toHaveAttribute("aria-current", "page");
@@ -103,7 +103,7 @@ test("back and forward move between views, and out of the app to /apps", async (
   await page.goBack();
   await expect(viewHeading(page)).toHaveText("Calendar");
   await page.goBack();
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await expect(page.getByRole("heading", { level: 1, name: /^Apps/ })).toBeVisible();
   await page.goForward();
   await expect(page).toHaveURL("/shared");
@@ -113,7 +113,7 @@ test("back and forward move between views, and out of the app to /apps", async (
 
   // Same after leaving with Switch app, in the account menu.
   await followAccountMenu(page, "Switch app");
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goBack();
   await expect(page).toHaveURL("/shared/tasks");
   await expect(viewHeading(page)).toHaveText("Tasks");
@@ -163,19 +163,19 @@ test("back pressed while the page is still loading still goes to the previous vi
   await expect(viewHeading(page)).toHaveText("Library");
 });
 
-test("Apps returns to the launcher; its tab bar has Account and Apps", async ({ page }) => {
+test("Home goes home; its tab bar has Account and Home", async ({ page }) => {
   await openApp(page, "/shared");
   for (const app of appViews) {
     await page.goto(app.path);
     await expect(page.getByRole("banner")).toHaveCount(0);
     const navigation = tabBar(page, app.name);
     await expect(navigation.getByRole("button")).toHaveText([...app.views]);
-    await navigation.getByRole("link", { name: "Apps", exact: true }).click();
-    await expect(page).toHaveURL("/apps");
+    await navigation.getByRole("link", { name: "Home", exact: true }).click();
+    await expect(page).toHaveURL("/");
     await expect(page.getByRole("banner")).toHaveCount(0);
     const account = page.getByRole("navigation", { name: "Account", exact: true });
     await expect(account.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
-    await expect(account.getByRole("link", { name: "Apps", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(account.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
     await expect(account.getByRole("button", { name: "Log out" })).toHaveCount(0);
   }
 });
@@ -224,14 +224,14 @@ test("Shared's Settings tab: only once there is a space, and leaving there goes 
 
   await tab(page, "Shared", "Settings").click();
   // The last member: leaving deletes the space, so it asks first (no Undo).
-  await page.getByRole("button", { name: "Leave this group", exact: true }).click();
+  await page.getByRole("button", { name: "Leave this space", exact: true }).click();
   await page.getByRole("button", { name: "Leave and delete" }).click();
   await expect(viewHeading(page)).toHaveText("Your shared calendar");
   await expect(tabBar(page, "Shared").getByRole("button")).toHaveCount(0);
 
   // Back to /shared from another page shows it as it is now (SharedApp checks its space once shown): no space.
   await followAccountMenu(page, "Switch app");
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goBack();
   await expect(page).toHaveURL(/\/shared/);
   await expect(viewHeading(page)).toHaveText("Your shared calendar");
@@ -252,8 +252,8 @@ test("the theme saved in Account is in the page as served, in the apps and the p
 
   // The server renders the saved theme into the HTML, so it applies before any
   // script runs (no flash of the other theme on load). The same preference
-  // everywhere: both apps, /apps and Account.
-  for (const path of ["/shows", "/shared", "/apps", "/account"]) {
+  // everywhere: both apps, home and Account.
+  for (const path of ["/shows", "/shared", "/", "/account"]) {
     await page.goto(path);
     expect(await reloadHtml(page)).toContain('data-theme="graphite"');
     await expect(shell).toHaveAttribute("data-theme", "graphite");
@@ -280,7 +280,7 @@ test("theme changes show on pages reached with the back button, and keep the vie
 
   // Back in the app: in the new theme, on the view Account was opened from.
   await page.goBack();
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goBack();
   await expect(page).toHaveURL("/shows/discover");
   await expect(viewHeading(page)).toHaveText("Discover");
@@ -293,7 +293,7 @@ test("theme changes show on pages reached with the back button, and keep the vie
   await saveTheme(page, "Light");
   await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
   await page.goBack();
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goBack();
   await expect(page).toHaveURL("/shows/discover");
   await expect(viewHeading(page)).toHaveText("Discover");
@@ -335,7 +335,7 @@ test.describe("on a phone", () => {
       await tab(page, app.name, app.views[1]).click();
       await expect(viewHeading(page)).toHaveText(app.views[1]);
       await expectNoHorizontalScroll(page);
-      await expect(tabBar(page, app.name).getByRole("link", { name: "Apps", exact: true })).toBeInViewport();
+      await expect(tabBar(page, app.name).getByRole("link", { name: "Home", exact: true })).toBeInViewport();
     }
   });
 });

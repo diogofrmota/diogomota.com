@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
-import { appsWithNext } from "@/lib/next-path";
+import { homeWithNext } from "@/lib/next-path";
 
 // Keeps logged-out users out of the apps and account settings: pages redirect
-// to /apps (which offers to log in and come back), API routes answer 401.
+// to home (which offers to log in and come back), API routes answer 401.
 // The pages, routes and actions behind it check the session again themselves.
 export async function proxy(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -13,7 +13,7 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/")) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.redirect(new URL(appsWithNext(`${pathname}${search}`), request.nextUrl));
+  return NextResponse.redirect(new URL(homeWithNext(`${pathname}${search}`), request.nextUrl));
 }
 
 export const config = {

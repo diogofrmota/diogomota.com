@@ -14,8 +14,8 @@ export const viewport = appViewport;
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;
   const next = safeNextPath(params.next);
-  if (await getSession()) redirect(next ?? "/apps");
-  // Sent from an app (its login prompt on /apps): the title says which.
+  if (await getSession()) redirect(next ?? "/");
+  // Sent from an app (its login prompt on home): the title says which.
   const app = appAt(next);
 
   return (
@@ -24,6 +24,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       // Where a password reset or change sends the user, logged out everywhere.
       intro={params.password === "changed" ? "Your password was changed. Log in with the new one." : undefined}
       form={<LoginForm next={next} />}
+      current="login"
+      next={next}
     >
       <p>
         No account yet? <Link href={authHref("/signup", next)}>Sign up</Link>

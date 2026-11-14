@@ -37,7 +37,10 @@ const title = (max: number, what: string) =>
     .min(1, { error: `Enter ${what} between 1 and ${max} characters.` })
     .max(max, { error: `Enter ${what} between 1 and ${max} characters.` });
 
-/** Moving a list or a task before another one, or to the end (null). */
+/**
+ * Moving a list or a task before another one, or to the end (null); a task to
+ * the end of another list of the space with `listId`.
+ */
 export const moveInput = z.object({
   beforeId: z
     .string({ error: "Invalid position." })
@@ -45,6 +48,11 @@ export const moveInput = z.object({
     .transform((id) => id.toLowerCase())
     .nullable()
     .default(null),
+  listId: z
+    .string({ error: "List not found." })
+    .regex(uuidPattern, { error: "List not found." })
+    .transform((id) => id.toLowerCase())
+    .optional(),
 });
 export type MoveInput = z.input<typeof moveInput>;
 
@@ -198,3 +206,6 @@ export const recommendInput = z.object({
     .lt(2 ** 31, { error: "Title not found." }),
 });
 export type RecommendInput = z.input<typeof recommendInput>;
+
+/** Discover showed the recommendations of TV shows or movies the user was sent. */
+export const recommendationsSeenInput = z.object({ type: mediaTypeSchema });

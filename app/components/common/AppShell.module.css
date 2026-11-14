@@ -427,6 +427,39 @@
   }
 }
 
+/* The site's name (HeaderTabs, Brand): on the left of the header, where the
+   screen is wide enough for it beside four tabs in the middle; a phone's tab
+   bar is along the bottom and has Home. */
+.tabBar .brand {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .tabBar .brand {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: max(var(--space-6), env(safe-area-inset-left));
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    color: var(--text);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+
+  .tabBar .brandMark {
+    color: var(--accent);
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-weight: var(--weight-bold);
+  }
+}
+
 /* A link in the tab bar gives a little when pressed, as its buttons do. */
 .tabBar a {
   transition: scale var(--duration-fast) var(--ease-out);

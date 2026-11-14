@@ -1,4 +1,28 @@
-/* A profile picture fills the circle its letter would be in (Avatar.tsx). */
+/* The circle of every avatar (Avatar.tsx), at zero specificity: the class each
+   place gives it sets the size, and the colors where they differ, and wins.
+   Without a size from there it is 2rem. */
+:where(.avatar) {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Two initials take the room of one, at whatever size the place gives. */
+.avatar[data-initials="2"] > .letters {
+  font-size: 0.82em;
+  letter-spacing: -0.02em;
+}
+
+/* A profile picture fills the circle its letters would be in. */
 .withPicture {
   overflow: hidden;
   padding: 0;

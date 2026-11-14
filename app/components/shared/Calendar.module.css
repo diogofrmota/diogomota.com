@@ -655,6 +655,68 @@
   width: 1rem;
   height: 1rem;
 }
+/* Add to my calendar (one event): a button in the apps' style that opens its
+   two choices under it, Google Calendar and a file for the others. */
+.addTo {
+  justify-self: start;
+}
+.addTo > summary {
+  list-style: none;
+}
+.addTo > summary::-webkit-details-marker {
+  display: none;
+}
+.addTo > summary svg {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.addTo > summary svg:last-child {
+  color: var(--muted);
+  transition: rotate var(--duration-fast) var(--ease-out);
+}
+.addTo[open] > summary svg:last-child {
+  rotate: 180deg;
+}
+.addTo ul {
+  display: grid;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  list-style: none;
+}
+.dialog .addTo a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text);
+  font-size: var(--text-md);
+  text-decoration: none;
+}
+.dialog .addTo a svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--muted);
+}
+@media (hover: hover) {
+  .dialog .addTo a:hover {
+    background: var(--hover);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .addTo > summary svg:last-child {
+    transition: none;
+  }
+}
 /* Who the event is for: their color, in the place of the icons under it. */
 .assigneeDot {
   display: grid;
@@ -1201,4 +1263,166 @@
     width: 0.75rem;
     height: 0.75rem;
   }
+}
+
+/* An event's time before its title in a wide month ("09:00 Dentist"), and which
+   of its days an event of several is (the agenda, a phone's day). */
+.eventTime {
+  margin-right: 0.3rem;
+  color: var(--muted);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+.eventNote {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+/* An event of two people or more: half the first one's color, half the second's,
+   down its side and in its fill (the details' dot too, EventDialog). */
+.calendar .event[data-split] {
+  border-image: linear-gradient(var(--event-color) 50%, var(--event-color-2) 50%) 1;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--event-color) 15%, var(--surface)),
+    color-mix(in srgb, var(--event-color-2) 15%, var(--surface))
+  );
+}
+.assigneeDot[data-split]::before {
+  background: linear-gradient(90deg, var(--event-color) 50%, var(--event-color-2) 50%);
+}
+
+/* A wide month (Calendar.tsx, layoutWeek): each event a one-line bar of one
+   height, in its lane, so the days line up; one of several days goes across
+   them (--span: the cells it covers, with the 1px line between each), over the
+   days after its first, whose lane is kept empty for it. */
+@media (min-width: 48rem) {
+  .month .cell {
+    overflow: visible;
+  }
+  .calendar .month .event {
+    position: relative;
+    z-index: 1;
+    height: 1.375rem;
+    min-height: 0;
+    margin-bottom: 2px;
+    padding: 0 0.35rem;
+    gap: 0.3rem;
+    border-left-width: 3px;
+  }
+  .calendar .month .event[data-span] {
+    width: calc(var(--span) * 100% + var(--span) * 1px - 1px);
+  }
+  .month .eventTitle {
+    display: block;
+    font-size: var(--text-xs);
+    line-height: 1.375rem;
+    white-space: nowrap;
+    -webkit-line-clamp: none;
+  }
+  .lane {
+    display: block;
+    height: 1.375rem;
+    margin-bottom: 2px;
+  }
+}
+
+/* A phone's month: compact weeks, each day its number and a short bar for each
+   event (no text), the picked day ringed in the accent; its events are listed
+   under the month (.dayList), which scrolls with the page. */
+.calendar:has(.phoneMonth) {
+  height: auto;
+}
+.scroller:has(> .phoneMonth) {
+  flex: none;
+  min-height: 0;
+  overflow: visible;
+}
+.month.phoneMonth {
+  height: auto;
+  grid-template-rows: auto repeat(6, 3.25rem);
+}
+.phoneMonth .cell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  justify-items: center;
+  align-content: start;
+  gap: 3px;
+  padding: 3px 0 0;
+  overflow: hidden;
+}
+.phoneMonth .cell[data-picked] {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.calendar .phoneMonth .dayNumber {
+  width: 1.625rem;
+  height: 1.625rem;
+  margin: 0;
+  font-size: var(--text-xs);
+}
+.bars {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  width: 100%;
+  padding-inline: 4px;
+}
+.bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--event-color);
+}
+.bar[data-split] {
+  background: linear-gradient(90deg, var(--event-color) 50%, var(--event-color-2) 50%);
+}
+.barsMore {
+  color: var(--muted);
+  font-size: 0.5625rem;
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  text-align: center;
+}
+.dayList {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) max(var(--space-4), env(safe-area-inset-right)) 0
+    max(var(--space-4), env(safe-area-inset-left));
+}
+.dayListHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.dayListHeader h3 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+.dayListHeader svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+.dayList ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dayList li {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+.dayList .event {
+  margin: 0;
+}
+.dayList .eventTitle {
+  font-size: var(--text-sm);
+}
+.dayList p {
+  margin: 0;
 }

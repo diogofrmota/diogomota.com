@@ -5,20 +5,21 @@ const signUpConflict =
   "Couldn't sign up with that username and email. Try another username, or log in if you already have an account.";
 const next = (path: string) => new URLSearchParams({ next: path }).toString();
 
-test("sign up logs the new user in, and the cards go straight into the apps", async ({ page }) => {
+test("sign up logs the new user in, home, whose icons go straight into the apps", async ({ page }) => {
   const user = newUser();
   // Usernames are saved in lowercase.
   await signUp(page, { ...user, username: user.username.toUpperCase() });
 
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   const account = page.getByRole("navigation", { name: "Account" });
   await expect(accountButton(page, user.username)).toBeVisible();
   await expect(account.getByRole("link", { name: "Account", exact: true })).toBeVisible();
-  await expect(page.getByRole("region", { name: "One account for all apps" })).toHaveCount(0);
+  // Logged in, no front page: the apps' icons.
+  await expect(page.getByRole("region", { name: "Small apps for friends" })).toHaveCount(0);
 
   await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
-  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
 });
 
 test("sign up explains what is wrong with each field", async ({ page }) => {
@@ -39,7 +40,7 @@ test("sign up explains what is wrong with each field", async ({ page }) => {
 test("a taken username or email gets one message that doesn't say which", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await logOut(page, user.username);
 
   const other = newUser();
@@ -50,10 +51,10 @@ test("a taken username or email gets one message that doesn't say which", async 
   await expect(formAlert(page)).toHaveText(signUpConflict);
 });
 
-test("log out from Account, opened from the tab bar of /apps", async ({ page }) => {
+test("log out from Account, opened from the tab bar of home", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   // Not in the tab bar: Account and Apps.
   await expect(page.getByRole("navigation", { name: "Account" }).getByRole("button", { name: "Log out" })).toHaveCount(
     0,
@@ -63,34 +64,34 @@ test("log out from Account, opened from the tab bar of /apps", async ({ page }) 
   await expect(page).toHaveURL("/account");
   await page.getByRole("main").getByRole("button", { name: "Log out", exact: true }).click();
 
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   const account = page.getByRole("navigation", { name: "Account" });
   await expect(account.getByRole("link", { name: "Log in" })).toBeVisible();
   await expect(account.getByRole("link", { name: "Sign Up" })).toBeVisible();
   await page.goto("/shared");
-  await expect(page).toHaveURL(`/apps?${next("/shared")}`);
+  await expect(page).toHaveURL(`/?${next("/shared")}`);
 });
 
 test("log in with the username or the email, in any case", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await logOut(page, user.username);
 
   await logIn(page, user.username, user.password);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await expect(accountButton(page, user.username)).toBeVisible();
   await logOut(page, user.username);
 
   await logIn(page, user.email.toUpperCase(), user.password);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await expect(accountButton(page, user.username)).toBeVisible();
 });
 
 test("a wrong password and an unknown account get the same message", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await logOut(page, user.username);
 
   await logIn(page, user.username, "not the password");
@@ -102,18 +103,18 @@ test("a wrong password and an unknown account get the same message", async ({ pa
   await expect(formAlert(page)).toHaveText(wrongCredentials);
 
   await page.goto("/shows");
-  await expect(page).toHaveURL(`/apps?${next("/shows")}`);
+  await expect(page).toHaveURL(`/?${next("/shows")}`);
 });
 
-test("logged out, the apps redirect to /apps, which logs in and goes back", async ({ page }) => {
+test("logged out, the apps redirect home, which logs in and goes back", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await logOut(page, user.username);
 
   for (const path of ["/shared", "/shows", "/shows/anything?x=1", "/account"]) {
     await page.goto(path);
-    await expect(page).toHaveURL(`/apps?${next(path)}`);
+    await expect(page).toHaveURL(`/?${next(path)}`);
   }
 
   // The login prompt of the app the user tried to open is already open.
@@ -127,7 +128,7 @@ test("logged out, the apps redirect to /apps, which logs in and goes back", asyn
   await page.getByLabel("Password", { exact: true }).fill(user.password);
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL("/shows");
-  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
 });
 
 test("logged out, the apps' API routes answer 401", async ({ page }) => {
@@ -139,7 +140,7 @@ test("logged out, the apps' API routes answer 401", async ({ page }) => {
 
   // With a session the Spaces endpoint returns the user's current space.
   await signUp(page, newUser());
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   expect(await (await page.request.get("/api/shared/spaces")).json()).toEqual({ data: null });
 });
 
@@ -151,21 +152,21 @@ test("sign up returns to the app the user tried to open", async ({ page }) => {
 test("next never sends users off the site", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
 
   for (const target of ["//evil.example/x", "https://evil.example/", "/\\evil.example"]) {
     await logOut(page, user.username);
     await logIn(page, user.username, user.password, `/login?${next(target)}`);
-    await expect(page).toHaveURL("/apps");
+    await expect(page).toHaveURL("/");
   }
 });
 
-test("logged in, /login and /signup go on to /apps or next", async ({ page }) => {
+test("logged in, /login and /signup go on home or to next", async ({ page }) => {
   await signUp(page, newUser());
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
 
   await page.goto("/login");
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await page.goto(`/signup?${next("/shows")}`);
   await expect(page).toHaveURL("/shows");
 });
@@ -182,7 +183,7 @@ test("login is rate limited per client address", async ({ page }) => {
 test("sign-up is rate limited per client address", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await logOut(page, user.username);
 
   // Attempts that pass validation count, even when the username is taken.

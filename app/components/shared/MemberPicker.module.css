@@ -1,4 +1,5 @@
-/* MemberPicker: who an event or a task is for, as small circles in a row. */
+/* MemberPicker: who an event or a task is for, as chips in a row, each a
+   member's picture and first name, ringed in their color when chosen. */
 .picker {
   display: grid;
   gap: 0.35rem;
@@ -11,29 +12,29 @@
   padding: 0;
   font-size: var(--text-sm);
 }
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 0.5rem;
-  min-width: 0;
-}
 .options {
   display: flex;
   flex-wrap: wrap;
-  margin-left: -6px;
+  gap: var(--space-2);
 }
-/* Each one 44px for a finger, around a 2rem circle; the radio, unseen, covers
-   it, so a click or a tap is on the radio itself. Two classes, to win over
-   the dialogs' own rules for their labels and inputs. */
+/* Each chip at least 44px tall for a finger; the checkbox, unseen, covers it,
+   so a click or a tap is on the checkbox itself. Two classes, to win over the
+   dialogs' own rules for their labels and inputs. */
 .picker .option {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4) 0 var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
   cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease,
+    scale var(--duration-fast) var(--ease-out);
 }
 .picker .input {
   position: absolute;
@@ -45,68 +46,49 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: inherit;
   opacity: 0;
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
 }
-/* A picture, an initial on a tint of the member's color, or All on gray. */
+/* A picture, or initials on a tint of the member's color. */
 .circle {
-  display: grid;
-  place-items: center;
   width: 2rem;
   height: 2rem;
-  border-radius: 50%;
   background: color-mix(in srgb, var(--member-color) 22%, var(--surface));
   color: var(--text);
   font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  line-height: 1;
-  text-box: trim-both cap alphabetic;
-  transition:
-    box-shadow var(--duration-fast) ease,
-    scale var(--duration-fast) var(--ease-out);
 }
-.all {
-  background: var(--hover);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
+.name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
 }
-/* Chosen: a ring of its color, with a gap of the dialog's color between. */
-.option:has(.input:checked) .circle {
-  box-shadow:
-    0 0 0 2px var(--surface),
-    0 0 0 4px var(--member-color);
+/* Chosen: the chip ringed in its member's color, filled with a tint of it. */
+.picker .option:has(.input:checked) {
+  border-color: var(--member-color);
+  background: color-mix(in srgb, var(--member-color) 14%, var(--surface));
+  box-shadow: inset 0 0 0 1px var(--member-color);
 }
 .option:has(.input:focus-visible) {
   outline: 2px solid var(--accent);
-  outline-offset: 0;
+  outline-offset: 2px;
 }
 /* Pressed, it gives a little, as every button does (the shell's --press). */
-.option:active .circle {
+.picker .option:active {
   scale: var(--press);
 }
 @media (hover: hover) {
-  .option:hover:not(:has(.input:checked)) .circle {
-    box-shadow:
-      0 0 0 2px var(--surface),
-      0 0 0 4px var(--border);
+  .picker .option:hover:not(:has(.input:checked)) {
+    background: var(--hover);
   }
-}
-.chosen {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 @media (prefers-reduced-motion: reduce) {
-  .circle {
+  .picker .option {
     transition: none;
   }
-  .option:active .circle {
+  .picker .option:active {
     scale: none;
   }
 }

@@ -253,10 +253,12 @@ const avatarMaxMb = AVATAR_MAX_BYTES / 1024 / 1024;
  */
 function AvatarForm({
   username,
+  name,
   avatarUrl,
   onSaved,
 }: {
   username: string;
+  name: string | null;
   avatarUrl: string | null;
   onSaved: OnSaved;
 }) {
@@ -336,7 +338,7 @@ function AvatarForm({
     <div className={formStyles.form}>
       <div className={styles.avatarRow}>
         <span className={styles.avatarFrame}>
-          <Avatar username={username} url={shown} className={styles.avatar} />
+          <Avatar username={username} name={name} url={shown} className={styles.avatar} />
           {pending === "upload" && (
             <span className={styles.avatarBusy}>
               <InlineSpinner />
@@ -483,6 +485,7 @@ function VerifyEmail({ email }: { email: string }) {
 
 type Setting = "avatar" | "name" | "username" | "email" | "theme" | "password" | "delete";
 
+/** Each setting's popup title. */
 const titles: Record<Setting, string> = {
   avatar: "Profile picture",
   name: "Name",
@@ -495,9 +498,9 @@ const titles: Record<Setting, string> = {
 
 /**
  * Account's settings: the profile picture, in the middle; then a row each for
- * the name, username, email and theme, with what they are now; then Update
- * password and Log out; then Your data: Download my data and Delete my
- * account. Each opens a popup with its form (Escape, a click outside or its ×
+ * the name, username, email and theme, with what they are now, and for the
+ * password (Update password); then Log out on its own, About and Privacy small
+ * under it; then Your data: Download my data and Delete my account. Each opens a popup with its form (Escape, a click outside or its ×
  * close it), which closes once saved, saying so under the rows; the page then
  * shows the new value. An email not confirmed yet says so, with a way to send
  * the link again; `message` is what an emailed link did (it came back here).
@@ -528,18 +531,21 @@ export function AccountSettings({
     setOpen(null);
     setNotice(message);
   };
-  const rows: { id: Setting; value: string | null }[] = [
+  // Each row: the setting, what it is now, and its popup. The password isn't
+  // shown: its row says what it does.
+  const rows: { id: Setting; label?: string; value: string | null }[] = [
     { id: "name", value: user.name },
     { id: "username", value: user.username },
     { id: "email", value: user.emailVerified ? user.email : `${user.email} (not confirmed)` },
     { id: "theme", value: themes.find((theme) => theme.id === user.themePreference)?.name ?? null },
+    { id: "password", label: "Password", value: "Change" },
   ];
 
   return (
     <>
       <div className={styles.profile}>
         <button type="button" className={styles.avatarButton} aria-haspopup="dialog" onClick={() => show("avatar")}>
-          <Avatar username={user.username} url={user.avatarUrl} className={styles.profileAvatar} />
+          <Avatar username={user.username} name={user.name} url={user.avatarUrl} className={styles.profileAvatar} />
           <span className={styles.avatarEdit} aria-hidden="true">
             <PencilIcon />
           </span>
@@ -548,7 +554,7 @@ export function AccountSettings({
       </div>
 
       <ul className={styles.list}>
-        {rows.map(({ id, value }) => (
+        {rows.map(({ id, label, value }) => (
           <li key={id}>
             <button
               type="button"
@@ -557,7 +563,7 @@ export function AccountSettings({
               aria-haspopup="dialog"
               onClick={() => show(id)}
             >
-              <span className={styles.rowTitle}>{titles[id]}</span>
+              <span className={styles.rowTitle}>{label ?? titles[id]}</span>
               <span className={ui.srOnly}>: </span>
               <span className={value ? styles.rowValue : `${styles.rowValue} ${styles.rowEmpty}`}>
                 {value ?? "Not set"}
@@ -577,14 +583,13 @@ export function AccountSettings({
         {notice}
       </p>
 
-      <div className={styles.buttons}>
-        <button type="button" className={ui.button} aria-haspopup="dialog" onClick={() => show("password")}>
-          Update password
-        </button>
-        <form action={logOut}>
-          <LogoutButton className={ui.button} />
-        </form>
-      </div>
+      {/* Log out on its own, then the pages about the site, small. */}
+      <form action={logOut} className={styles.logout}>
+        <LogoutButton className={ui.button} />
+      </form>
+      <p className={styles.siteLinks}>
+        <Link href="/about">About</Link> · <Link href="/privacy">Privacy</Link>
+      </p>
 
       {/* Your data (privacy): a copy of it all, or deleting it all. */}
       <section className={styles.data} aria-labelledby="your-data">
@@ -622,7 +627,7 @@ export function AccountSettings({
               </button>
             </div>
             {open === "avatar" ? (
-              <AvatarForm username={user.username} avatarUrl={user.avatarUrl} onSaved={saved} />
+              <AvatarForm username={user.username} name={user.name} avatarUrl={user.avatarUrl} onSaved={saved} />
             ) : open === "name" ? (
               <NameForm name={user.name} onSaved={saved} />
             ) : open === "username" ? (

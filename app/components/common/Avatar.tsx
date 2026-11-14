@@ -1,28 +1,39 @@
 "use client";
 import { useState } from "react";
+import { initials } from "@/lib/names";
 import styles from "./Avatar.module.css";
 
 /**
- * Someone's profile picture, or the first letter of their username without
- * one (or when it doesn't load: a file lost with a volume, say). Decorative:
- * their name is always beside it, or names what it is in. The size, shape and
- * colors of the letter come from `className`; the picture fills that circle.
+ * Someone's profile picture, or their initials without one (or when it doesn't
+ * load: a file lost with a volume, say), in a circle. Decorative: their name
+ * is always beside it, or names what it is in. Its size, and its colors when
+ * they differ, come from `className`; the circle itself is here, at zero
+ * specificity, so every `className` wins over it.
  */
 export function Avatar({
   username,
+  name,
   url,
   className = "",
   style,
 }: {
   username: string;
+  /** Their name, for the initials; the username's first letter without one. */
+  name?: string | null;
   url?: string | null;
   className?: string;
   style?: React.CSSProperties;
 }) {
   const [failed, setFailed] = useState<string | null>(null);
   const picture = url && failed !== url ? url : null;
+  const letters = initials(username, name);
   return (
-    <span aria-hidden="true" className={`${className} ${picture ? styles.withPicture : ""}`} style={style}>
+    <span
+      aria-hidden="true"
+      className={`${styles.avatar} ${className} ${picture ? styles.withPicture : ""}`}
+      data-initials={picture ? undefined : letters.length}
+      style={style}
+    >
       {picture ? (
         // The picture is already small and square (lib/avatars.ts), and
         // private: next/image's optimizer would only fetch it again.
@@ -36,7 +47,7 @@ export function Avatar({
           onError={() => setFailed(picture)}
         />
       ) : (
-        username.charAt(0).toUpperCase()
+        <span className={styles.letters}>{letters}</span>
       )}
     </span>
   );

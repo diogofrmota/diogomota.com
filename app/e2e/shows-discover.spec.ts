@@ -107,16 +107,16 @@ test("Discover shows TMDB's lists, three genres and Added by Friends, for TV sho
   );
   await loadSections(page);
   await expect(section(page, "Added by Friends")).toContainText("No TV shows from friends yet.");
-  // In this order. For You is made from the library's titles: none without any.
+  // In this order: the friends' first, then TMDB's. For You is made from the library's titles: none without any.
   const headings = page.getByRole("main").getByRole("heading", { level: 2 });
   await expect(headings).toHaveText([
+    "Added by Friends",
     "Trending This Week",
     "Popular",
     "Top Rated",
     "Comedy",
     "Crime",
     "Sci-Fi & Fantasy",
-    "Added by Friends",
   ]);
 
   // Movies: the same, with what's in cinemas soon, and their own genres.
@@ -151,6 +151,7 @@ test("Discover shows TMDB's lists, three genres and Added by Friends, for TV sho
     "Orbit Nine, 2026, rated 7.7 out of 10",
   );
   await expect(headings).toHaveText([
+    "Added by Friends",
     "Trending This Week",
     "Popular",
     "Coming Soon",
@@ -158,7 +159,6 @@ test("Discover shows TMDB's lists, three genres and Added by Friends, for TV sho
     "Action",
     "Comedy",
     "Science Fiction",
-    "Added by Friends",
   ]);
 
   // Back to TV shows: shown at once, from what the page already loaded. All but
@@ -525,8 +525,8 @@ test("For You recommends titles like the ones in the library, leaving out the on
   await expect(list.getByRole("button").first()).toHaveAccessibleName("Lanterns at Dusk, 2019, rated 8.4 out of 10");
   await expect(card(list, "The Quiet Orchard")).toHaveCount(0);
   await expect(card(list, "Top Rated Series 2")).toHaveCount(0);
-  // First of all.
-  await expect(page.getByRole("main").getByRole("heading", { level: 2 }).first()).toHaveText("For You");
+  // First after the friends' sections (Recommended by Friends only shows with something in it).
+  await expect(page.getByRole("main").getByRole("heading", { level: 2 }).nth(1)).toHaveText("For You");
   for (const tmdbId of [mockBase + 1, mockBase + 2])
     expect(await tmdbRequests(page, `/tv/${tmdbId}/recommendations`)).not.toHaveLength(0);
 

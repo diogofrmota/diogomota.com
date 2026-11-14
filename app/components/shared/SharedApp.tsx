@@ -57,7 +57,7 @@ function Shared({ user, initialSpace, initial }: { user: User; initialSpace: Spa
                 icon: <CalendarIcon />,
                 view: <Calendar space={space} userId={user.id} />,
               },
-              { id: "tasks", label: "Tasks", icon: <TasksIcon />, view: <Tasks space={space} /> },
+              { id: "tasks", label: "Tasks", icon: <TasksIcon />, view: <Tasks space={space} userId={user.id} /> },
               {
                 id: "settings",
                 label: "Settings",

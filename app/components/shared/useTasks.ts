@@ -162,6 +162,7 @@ export function useTasks() {
       updateTask: (id: string, fields: TaskFields) => change({ kind: "updateTask", id, fields, today: today() }),
       moveTask: (listId: string, id: string, beforeId: string | null) =>
         change({ kind: "moveTask", listId, id, beforeId }),
+      moveTaskTo: (id: string, listId: string) => change({ kind: "moveTaskTo", id, listId }),
       /** Ticks a task off: it moves to Done (or comes back, repeating) once tickedMs has passed. */
       tickTask,
       /** Unticks a task ticked off within tickedMs, which leaves it where it was. */

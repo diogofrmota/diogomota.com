@@ -3,15 +3,16 @@
 // last showed (their data is kept by components/common/QueryProvider, and their
 // changes wait there for the connection).
 //
-// - The apps' pages (/shared, /shows and their views): from the network, and
-//   the copy from the last time they loaded when it can't be reached.
+// - Home and the apps' pages (/, /shared, /shows and their views): from the
+//   network, and the copy from the last time they loaded when it can't be
+//   reached, so the installed app (which starts on home) opens offline.
 // - Next.js's built files (/_next/static, whose names change with their
 //   content), the icons and the logos: from this cache once fetched.
 // - Everything else, the APIs too, goes to the network as usual.
 // Logging out deletes the cache (clearOfflineData).
 
 const cacheName = "diogomota-offline-v1";
-const appPages = /^\/(shared|shows)(\/|$)/;
+const appPages = /^\/((shared|shows)(\/|$)|$)/;
 const staticFiles = /^\/(_next\/static|icons|logos)\//;
 
 self.addEventListener("install", () => self.skipWaiting());

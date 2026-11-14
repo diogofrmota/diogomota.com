@@ -3,7 +3,7 @@ import { useId } from "react";
 import { Avatar } from "@/components/common/Avatar";
 import { Dialog } from "@/components/common/Dialog";
 import { CloseIcon } from "@/components/common/icons";
-import { PersonName } from "@/components/common/PersonName";
+import { memberName } from "@/lib/names";
 import { useAppView } from "@/hooks/useAppView";
 import type { FriendProfile, Person } from "@/lib/show-types";
 import { LibrarySection } from "./LibraryGrid";
@@ -54,8 +54,15 @@ export function FriendDialog({ id }: { id: string }) {
       <div className={styles.dialogBody}>
         <div className={styles.dialogHeader}>
           <div className={styles.friendHeading}>
-            {person && <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />}
-            <h2 id={headingId}>{person ? <PersonName person={person} /> : "Friend"}</h2>
+            {person && (
+              <Avatar username={person.username} name={person.name} url={person.avatarUrl} className={styles.avatar} />
+            )}
+            {/* The name, with the username on its own line under it (a long one wraps whole, not around a bracket). */}
+            {/* The popup is named by both: the name, then the @username. */}
+            <div id={headingId} className={styles.friendTitle}>
+              <h2>{person ? memberName(person) : "Friend"}</h2>
+              {person?.name && <p className={styles.friendHandle}>@{person.username}</p>}
+            </div>
           </div>
           <button type="button" className={styles.close} aria-label="Close" onClick={closePanel}>
             <CloseIcon />

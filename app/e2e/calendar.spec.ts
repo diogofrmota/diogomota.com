@@ -4,6 +4,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expect, newUser, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
 import { localParts, localInstants, dateLabel, type CalendarEvent } from "../lib/calendar";
+import { initials } from "../lib/names";
 import type { Space } from "../lib/space-types";
 
 const base = "/api/shared/events";
@@ -49,7 +50,14 @@ async function add(page: Page, title: string, who: string, date = localParts(new
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
+/** An event's exports are in its Add to my calendar menu: opens it, if it isn't. */
+async function addToCalendar(page: Page) {
+  const menu = page.getByRole("dialog").locator("details").filter({ hasText: "Add to my calendar" });
+  if (!(await menu.evaluate((details: HTMLDetailsElement) => details.open))) await menu.locator("summary").click();
+  return menu;
+}
 async function download(page: Page, name: string) {
+  await addToCalendar(page);
   const downloading = page.waitForEvent("download");
   await page.getByRole("link", { name, exact: true }).click();
   const file = await downloading;
@@ -80,34 +88,42 @@ for (const mobile of [false, true]) {
     await add(page, "Dinner together", "All");
     const personal = page.getByRole("button", { name: /^Morning walk,/ });
     const group = page.getByRole("button", { name: /^Dinner together,/ });
-    // Who it's for (their initial here, the group's icon) and the title: no time, no name.
+    // Who it's for (their initials here, the group's icon) and the title: on a wide month, with its time.
     await expect(personal).toBeVisible();
     await expect(group).toContainText("Dinner together");
     await expect(personal).toHaveAccessibleName(`Morning walk, 09:30, ${me.name}`);
     await expect(group).toHaveAccessibleName(`Dinner together, 09:30, ${me.name}`);
-    // Both fit in their day, under its number (on a phone too): it doesn't scroll.
     const today = localParts(new Date()).date;
-    const day = page
-      .getByRole("button", {
-        name: `${dateLabel(today, { weekday: "long", day: "numeric", month: "long" })}, add event`,
-      })
-      .locator("..");
-    await expect(day.getByRole("button", { name: /^(Morning walk|Dinner together),/ })).toHaveCount(2);
-    expect(await day.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
+    const todayLabel = dateLabel(today, { weekday: "long", day: "numeric", month: "long" });
+    if (mobile) {
+      // A phone's month: today has two bars (no text), and is picked: its events are listed under the month.
+      const day = page.getByRole("button", { name: `${todayLabel}, 2 events` });
+      await expect(day).toHaveAttribute("aria-pressed", "true");
+      await expect(day.locator("..").locator("[class*='bar']:not([class*='bars'])")).toHaveCount(2);
+      const list = page.getByRole("region", { name: "Today" });
+      await expect(list.getByRole("button", { name: /^(Morning walk|Dinner together),/ })).toHaveCount(2);
+      await expect(list.getByRole("button", { name: `Add event on ${todayLabel}` })).toBeVisible();
+    } else {
+      // Both fit in their day, under its number: it doesn't scroll.
+      const day = page.getByRole("button", { name: `${todayLabel}, add event` }).locator("..");
+      await expect(day.getByRole("button", { name: /^(Morning walk|Dinner together),/ })).toHaveCount(2);
+      expect(await day.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
+    }
     const walk = ((await (await page.request.get(base)).json()).data as CalendarEvent[]).find(
       (e) => e.title === "Morning walk",
     )!;
     await page.reload();
     if (mobile) await showMonth(page);
 
-    // On screen (the rest is its name, for screen readers): the initial and the title.
+    // On screen (the rest is its name, for screen readers): the initials and the title, after its time on a wide month.
+    const letters = initials(space.members[0].username, space.members[0].name);
     await expect(personal.locator(':scope > [aria-hidden="true"]')).toHaveText([
-      space.members[0].username[0].toUpperCase(),
-      "Morning walk",
+      letters,
+      mobile ? "Morning walk" : /^09:30\s*Morning walk$/,
     ]);
     await expect(group.locator(':scope > [aria-hidden="true"]')).toHaveText([
-      space.members[0].username[0].toUpperCase(),
-      "Dinner together",
+      letters,
+      mobile ? "Dinner together" : /^09:30\s*Dinner together$/,
     ]);
     expect(await personal.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe(
       space.members[0].color,
@@ -128,10 +144,10 @@ for (const mobile of [false, true]) {
       expect(box!.width).toBeLessThan(390);
       expect(box!.height).toBeLessThan(844);
     } else expect(box!.width).toBeLessThan(600);
-    const ics = await download(page, "Download event .ics");
+    const ics = await download(page, "Apple or Outlook (.ics)");
     expect(ics).toContain("SUMMARY:Morning walk\r\n");
     expect(ics).toContain(`DESCRIPTION:For: ${me.name}\r\n`);
-    const link = new URL((await page.getByRole("link", { name: "Export to Google Calendar" }).getAttribute("href"))!);
+    const link = new URL((await page.getByRole("link", { name: "Google Calendar" }).getAttribute("href"))!);
     expect(link.searchParams.get("ctz")).toBe("Europe/Lisbon");
     expect(link.searchParams.get("dates")).toMatch(/^\d{8}T\d{6}Z\/\d{8}T\d{6}Z$/);
     expect(link.searchParams.get("details")).toBe(`For: ${me.name}`);
@@ -158,7 +174,7 @@ for (const mobile of [false, true]) {
     await expect(page.getByRole("link", { name: /Export calendar/ })).toHaveCount(0);
     await expect(page.getByText("Europe/Lisbon")).toHaveCount(0);
     await page.getByRole("button", { name: /^Evening walk,/ }).click();
-    const edited = await download(page, "Download event .ics");
+    const edited = await download(page, "Apple or Outlook (.ics)");
     expect(edited).toContain("SUMMARY:Evening walk");
     expect(edited).not.toContain("SUMMARY:Dinner together");
     await page.goBack();
@@ -191,56 +207,92 @@ for (const mobile of [false, true]) {
   });
 }
 
-for (const mobile of [false, true]) {
-  test(`a day of the month shows two events, then a small "+2 more", which opens the day (${mobile ? "mobile" : "desktop"})`, async ({
-    page,
-  }) => {
-    if (mobile) await page.setViewportSize({ width: 390, height: 844 });
-    await setup(page);
-    const today = localParts(new Date()).date;
-    for (const [title, hour] of [
-      ["Breakfast", 8],
-      ["Gym", 10],
-      ["Lunch", 12],
-      ["Walk", 14],
-    ] as const) {
-      const at = (h: number) => localInstants(today, `${String(h).padStart(2, "0")}:00`)[0];
-      const created = await page.request.post(base, {
-        data: { title, startsAt: at(hour), endsAt: at(hour + 1), isGroup: true },
-      });
-      expect(created.status()).toBe(201);
-    }
-    await page.reload();
-    if (mobile) await showMonth(page);
-    const label = dateLabel(today, { weekday: "long", day: "numeric", month: "long" });
-    const day = page.getByRole("button", { name: `${label}, add event` }).locator("..");
-    const first = day.getByRole("button", { name: /^Breakfast,/ });
-    await expect(first).toBeVisible();
-    await expect(day.getByRole("button", { name: /^Gym,/ })).toBeVisible();
-    await expect(day.getByRole("button", { name: /^(Lunch|Walk),/ })).toHaveCount(0);
-    // Under the first two: how many more, in small letters, smaller than an event. The day doesn't scroll.
-    const more = day.getByRole("button", { name: `+2 more on ${label}`, exact: true });
-    await expect(more).toContainText("+2 more");
-    const [moreBox, firstBox] = [(await more.boundingBox())!, (await first.boundingBox())!];
-    expect(moreBox.y).toBeGreaterThan(firstBox.y + firstBox.height);
-    expect(moreBox.height).toBeLessThan(firstBox.height);
-    expect(parseFloat(await more.evaluate((el) => getComputedStyle(el).fontSize))).toBeLessThanOrEqual(10);
-    expect(await day.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
-    // It opens the day, with all four.
-    await more.click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    const grid = page.getByRole("region", { name: "agenda calendar", exact: true });
-    await expect(grid).toBeVisible();
-    await expect(
-      page.getByRole("heading", {
-        level: 2,
-        name: dateLabel(today, { month: "long", year: "numeric" }),
-      }),
-    ).toBeVisible();
-    for (const title of ["Breakfast", "Gym", "Lunch", "Walk"])
-      await expect(grid.getByRole("button", { name: new RegExp(`^${title},`) })).toBeAttached();
-  });
+/** Four events today, 08:00 to 15:00, for the whole group. */
+async function fourToday(page: Page) {
+  const today = localParts(new Date()).date;
+  for (const [title, hour] of [
+    ["Breakfast", 8],
+    ["Gym", 10],
+    ["Lunch", 12],
+    ["Walk", 14],
+  ] as const) {
+    const at = (h: number) => localInstants(today, `${String(h).padStart(2, "0")}:00`)[0];
+    const created = await page.request.post(base, {
+      data: { title, startsAt: at(hour), endsAt: at(hour + 1), isGroup: true },
+    });
+    expect(created.status()).toBe(201);
+  }
+  return { today, label: dateLabel(today, { weekday: "long", day: "numeric", month: "long" }) };
 }
+
+test(`a day of the month shows two events, then a small "+2 more", which opens the day`, async ({ page }) => {
+  await setup(page);
+  const { today, label } = await fourToday(page);
+  await page.reload();
+  const day = page.getByRole("button", { name: `${label}, add event` }).locator("..");
+  const first = day.getByRole("button", { name: /^Breakfast,/ });
+  await expect(first).toBeVisible();
+  await expect(day.getByRole("button", { name: /^Gym,/ })).toBeVisible();
+  await expect(day.getByRole("button", { name: /^(Lunch|Walk),/ })).toHaveCount(0);
+  // Under the first two: how many more, in small letters, smaller than an event. The day doesn't scroll.
+  const more = day.getByRole("button", { name: `+2 more on ${label}`, exact: true });
+  await expect(more).toContainText("+2 more");
+  const [moreBox, firstBox] = [(await more.boundingBox())!, (await first.boundingBox())!];
+  expect(moreBox.y).toBeGreaterThan(firstBox.y + firstBox.height);
+  expect(moreBox.height).toBeLessThan(firstBox.height);
+  expect(parseFloat(await more.evaluate((el) => getComputedStyle(el).fontSize))).toBeLessThanOrEqual(10);
+  expect(await day.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
+  // It opens the day, with all four.
+  await more.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const grid = page.getByRole("region", { name: "agenda calendar", exact: true });
+  await expect(grid).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      level: 2,
+      name: dateLabel(today, { month: "long", year: "numeric" }),
+    }),
+  ).toBeVisible();
+  for (const title of ["Breakfast", "Gym", "Lunch", "Walk"])
+    await expect(grid.getByRole("button", { name: new RegExp(`^${title},`) })).toBeAttached();
+});
+
+test("on a phone, a day of the month is its bars, three then +1, and a tap on it lists its events under the month", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setup(page);
+  const { label } = await fourToday(page);
+  const tomorrow = dateLabel(localParts(new Date(Date.now() + 86_400_000)).date, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  await page.reload();
+  await showMonth(page);
+  // No text in the month: a bar for each event, three, then +1.
+  const day = page.getByRole("button", { name: `${label}, 4 events` });
+  const cell = day.locator("..");
+  await expect(cell.locator("[class*='bar']:not([class*='bars']):not([class*='barsMore'])")).toHaveCount(3);
+  await expect(cell).toContainText("+1");
+  await expect(cell.getByRole("button", { name: /^Breakfast,/ })).toHaveCount(0);
+  // Today is picked to start with: all four under the month, with their times, and Add event on it.
+  await expect(day).toHaveAttribute("aria-pressed", "true");
+  const list = page.getByRole("region", { name: "Today" });
+  for (const title of ["Breakfast", "Gym", "Lunch", "Walk"])
+    await expect(list.getByRole("button", { name: new RegExp(`^${title},`) })).toBeVisible();
+  await expect(list).toContainText("08:00 – 09:00");
+  // Another day: picked, and nothing planned on it (unless the month moved past today's).
+  const other = page.getByRole("button", { name: new RegExp(`^${tomorrow}, `) });
+  if (await other.count()) {
+    await other.click();
+    await expect(other).toHaveAttribute("aria-pressed", "true");
+    await expect(day).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByRole("region", { name: "Tomorrow" })).toContainText("Nothing planned.");
+    await page.getByRole("button", { name: `Add event on ${tomorrow}` }).click();
+    await expect(page.getByRole("dialog", { name: "Create a new event" })).toBeVisible();
+  }
+});
 
 test("events and exports are isolated by current space; same-space members can collaborate", async ({
   page,
@@ -435,8 +487,21 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
   await setDate(dialog, "End date", last);
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  // On each of its days, as All day; it runs from the first day's midnight to the one after the last.
-  await expect(page.getByRole("button", { name: /^Holiday, All day, / })).toHaveCount(3);
+  // One bar across its days (one for each week they're in), as All day; it runs from the first day's
+  // midnight to the one after the last.
+  const days = [first, `${month}16`, last];
+  const mondayOf = (date: string) => {
+    const day = new Date(`${date}T12:00:00Z`);
+    day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+    return day.toISOString().slice(0, 10);
+  };
+  const weeks = new Set(days.map(mondayOf)).size;
+  const bars = page.getByRole("button", { name: /^Holiday, All day, / });
+  await expect(bars).toHaveCount(weeks);
+  const dayWidth = (await cell.boundingBox())!.width;
+  const widest = Math.max(...(await bars.evaluateAll((all) => all.map((bar) => bar.getBoundingClientRect().width))));
+  // Days in one week: the bar crosses them all.
+  expect(widest).toBeGreaterThan(dayWidth * (weeks === 1 ? 2.5 : 1.5) - 4);
   const events: CalendarEvent[] = (await (await page.request.get(base)).json()).data;
   expect(events).toEqual([
     expect.objectContaining({
@@ -454,10 +519,10 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
     .click();
   const event = page.getByRole("dialog", { name: "Holiday" });
   await expect(event).toContainText("All day");
-  const ics = await download(page, "Download event .ics");
+  const ics = await download(page, "Apple or Outlook (.ics)");
   expect(ics).toContain(`DTSTART;VALUE=DATE:${first.replace(/-/g, "")}\r\n`);
   expect(ics).toContain(`DTEND;VALUE=DATE:${after.replace(/-/g, "")}\r\n`);
-  const link = new URL((await event.getByRole("link", { name: "Export to Google Calendar" }).getAttribute("href"))!);
+  const link = new URL((await event.getByRole("link", { name: "Google Calendar" }).getAttribute("href"))!);
   expect(link.searchParams.get("dates")).toBe(`${first.replace(/-/g, "")}/${after.replace(/-/g, "")}`);
   // Its form opens with All day on.
   await event.getByRole("button", { name: "Edit event" }).click();

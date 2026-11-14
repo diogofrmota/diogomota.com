@@ -15,6 +15,7 @@ import {
   type TaskFields,
   type TaskList,
 } from "@/lib/task-types";
+import { datePlus, localParts } from "@/lib/calendar";
 import { MaskedField } from "./MaskedField";
 import { MemberPicker } from "./MemberPicker";
 import { SortableList, useSortableItem } from "./Sortable";
@@ -38,22 +39,40 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
+/** The due dates a tap away in a task's popup: today, tomorrow and a week from today. */
+const quickDates = [
+  { label: "Today", days: 0 },
+  { label: "Tomorrow", days: 1 },
+  { label: "Next week", days: 7 },
+] as const;
+
+/**
+ * A task's popup: its title, who it's for, when it's due (typed, or Today,
+ * Tomorrow, Next week), how often it repeats, its notes and its list (another
+ * one moves it there, to the end), then Save and Delete.
+ */
 export function TaskDialog({
   task,
   list,
+  lists,
   space,
   onClose,
   onSave,
+  onMove,
   onDelete,
 }: {
   task: Task;
   list: TaskList;
+  lists: readonly TaskList[];
   space: Space;
   onClose: () => void;
   onSave: (fields: TaskFields) => void;
+  /** Moves the task to the end of another list. */
+  onMove: (listId: string) => void;
   onDelete: () => void;
 }) {
   const [dueDate, setDueDate] = useState(task.dueDate ?? "");
+  const today = localParts(new Date()).date;
   const [assignees, setAssignees] = useState(() => taskAssignees(task));
   const [error, setError] = useState("");
   function save(e: FormEvent<HTMLFormElement>) {
@@ -78,18 +97,19 @@ export function TaskDialog({
       Object.entries(next).filter(([key, value]) => task[key as keyof typeof next] !== value),
     );
     if (Object.keys(fields).length) onSave(fields);
+    const listId = String(form.get("list") ?? list.id);
+    if (listId !== list.id && lists.some((l) => l.id === listId)) onMove(listId);
     onClose();
   }
   return (
     <Sheet title="Edit task" onClose={onClose}>
       <form className={styles.form} onSubmit={save}>
-        <p className={ui.muted}>In {list.name}</p>
+        {lists.length < 2 && <p className={ui.muted}>In {list.name}</p>}
         {error && <Alert>{error}</Alert>}
         <label>
           Title
           <input name="title" required maxLength={200} defaultValue={task.title} autoComplete="off" />
         </label>
-        <p className={styles.extraOptions}>Extra options:</p>
         <div className={styles.fields}>
           <MemberPicker
             multiple
@@ -119,6 +139,16 @@ export function TaskDialog({
                 )}
               </span>
             </label>
+            <div className={styles.quickDates} role="group" aria-label="Due">
+              {quickDates.map(({ label, days }) => {
+                const value = datePlus(today, days);
+                return (
+                  <button key={label} type="button" aria-pressed={dueDate === value} onClick={() => setDueDate(value)}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
             {/* Ticked off, a repeating task comes back with its next due date (lib/task-types.ts, nextDue). */}
             <label>
               Repeat?
@@ -140,6 +170,21 @@ export function TaskDialog({
           Notes
           <textarea name="notes" rows={4} maxLength={10000} defaultValue={task.notes} />
         </label>
+        {lists.length > 1 && (
+          <label>
+            List
+            <span className={styles.select}>
+              <select name="list" defaultValue={list.id}>
+                {lists.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDownIcon />
+            </span>
+          </label>
+        )}
         {/* No Cancel: the × at the top closes it without saving. Delete offers Undo. */}
         <div className={ui.actions}>
           <Button variant="primary" type="submit">

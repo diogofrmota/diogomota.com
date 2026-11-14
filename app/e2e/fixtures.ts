@@ -1,5 +1,12 @@
 import { randomBytes } from "node:crypto";
-import { test as base, expect, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type APIRequestContext,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 
 export { expect };
 
@@ -62,14 +69,14 @@ export async function logIn(page: Page, login: string, password: string, path = 
   await page.getByRole("button", { name: "Log in" }).click();
 }
 
-/** The account menu's items, top to bottom; on /apps, without Switch app. */
-export const accountMenuItems = ["Account", "Switch app", "Log out"];
-export const appsMenuItems = accountMenuItems.filter((item) => item !== "Switch app");
-
-/** Opens the account menu in the top bar (the username) and follows its link named `name`. */
+/**
+ * Goes where the account menu went before the tab bars had it all: home (its
+ * Switch app, the tab bar's Home now), and from there to Account (the tab
+ * bar's Account) or another link of the tab bar named `name`.
+ */
 export async function followAccountMenu(page: Page, name: string) {
-  const apps = page.getByRole("link", { name: "Apps", exact: true });
-  if (await apps.isVisible()) await apps.click();
+  const home = page.getByRole("link", { name: "Home", exact: true });
+  if (await home.isVisible()) await home.click();
   if (name === "Switch app") return;
   const disclosure = page.getByRole("navigation", { name: "Account" }).locator("button[aria-expanded]");
   if (await disclosure.isVisible()) await disclosure.click();
@@ -116,7 +123,7 @@ export async function saveTheme(page: Page, name: string) {
   await expect(dialog).toBeHidden();
 }
 
-/** The account menu button in the top bar, labelled with the username. */
+/** Account in the tab bar of home and the pages around the apps (once the account menu, by the username). */
 export function accountButton(page: Page, username: string) {
   return page
     .getByRole("navigation", { name: "Account" })
@@ -124,7 +131,7 @@ export function accountButton(page: Page, username: string) {
     .or(page.locator('nav[aria-label="Account"]:not(header nav) a[href="/account"]'));
 }
 
-/** Logs out with Log out on /account (the tab bar of /apps has Account and Apps). */
+/** Logs out with Log out on /account (the tab bar of home has Account and Home). */
 export async function logOut(page: Page, username: string) {
   await page.goto("/account");
   void username;
@@ -159,4 +166,21 @@ export async function confirmEmail(page: Page, address: string, expected = "Your
   const url = new URL(emails.at(-1)!.text.match(/^https?:\/\/\S+\/api\/auth\/verify-email\?\S+$/m)![0]);
   await page.goto(`${url.pathname}${url.search}`);
   await expect(page.getByRole("main").getByRole("status").filter({ hasText: expected })).toBeVisible();
+}
+
+/**
+ * The names of a tab bar's links, as screen readers read them (a picture or an
+ * icon in one is hidden from them): ["diogomota.com", "Account", "Home"] on a
+ * wide screen, where the site's name is on the header's left.
+ */
+export async function linkNames(nav: Locator): Promise<string[]> {
+  return nav.getByRole("link").evaluateAll((links) =>
+    links
+      .filter((link) => (link as HTMLElement).offsetParent !== null)
+      .map((link) => {
+        const copy = link.cloneNode(true) as HTMLElement;
+        copy.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
+        return (copy.textContent ?? "").replace(/\s+/g, " ").trim();
+      }),
+  );
 }

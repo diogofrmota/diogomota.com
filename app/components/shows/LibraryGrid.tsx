@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useId, useRef, useState, type MouseEvent, type PointerEvent } from "react";
-import { HeartIcon, MoreIcon } from "@/components/common/icons";
+import { CheckIcon, HeartIcon, MoreIcon } from "@/components/common/icons";
 import {
   formatEpisode,
+  nextEpisode,
   progressOf,
   statusNames,
   titleKey,
@@ -11,9 +12,11 @@ import {
   type TitleSummary,
 } from "@/lib/show-types";
 import { ProgressLine, StatusBadge } from "./AddToLibrary";
+import { useLibrary } from "./library";
 import { useOpenActions } from "./QuickActions";
 import { useOpenTitle } from "./shows-data";
 import { Poster, SkeletonGrid, useGridColumns } from "./TitleGrid";
+import ui from "@/components/common/ui.module.css";
 import styles from "./Shows.module.css";
 
 const longPressMs = 500;
@@ -71,12 +74,20 @@ function useLongPress(onLongPress: (x: number, y: number) => void) {
 /** A title in the user's library, or in a friend's, with its seasons for the progress line. */
 type CardItem = TitleSummary & Pick<TitleLengths, "episodesPerSeason"> & { library: SharedEntry };
 
-/** "Watching, season 2 episode 5" and "S2 E5" for a TV show being watched. */
+/** "Watching, season 2 episode 5" and "S2 E5" (or "Next: S1 E1", not started) for a TV show being watched. */
 function libraryFacts(item: CardItem) {
   const { status } = item.library;
   const progress = item.type === "tv" && status === "watching" ? progressOf(item.library) : undefined;
+  const first = item.episodesPerSeason?.length ? nextEpisode(item.episodesPerSeason, null) : null;
   return {
-    meta: progress !== undefined ? (progress ? formatEpisode(progress) : "Not started") : null,
+    meta:
+      progress !== undefined
+        ? progress
+          ? formatEpisode(progress)
+          : first
+            ? `Next: ${formatEpisode(first)}`
+            : "Not started"
+        : null,
     label: [
       item.title,
       item.year,
@@ -94,11 +105,28 @@ const cardSizes = "(min-width: 48rem) 160px, 34vw";
 // A friend's titles are read-only: a card opens the detail panel, which is
 // about the user's own library, and has no quick actions. As in TitleGrid, the
 // button is the poster and the title, and covers the status badge and the facts.
-// Watching and Completed are always on the poster; Planned only where the
-// cards' statuses are mixed (`plannedBadge`), not in the Watchlist's Planned.
-function LibraryCard({ item, readOnly, plannedBadge }: { item: CardItem; readOnly: boolean; plannedBadge: boolean }) {
+// Watching and Completed are on the poster where the cards' statuses are
+// mixed; Planned only where `plannedBadge` says; none where the section's
+// heading says it (`statusBadges` false, Library). A TV show of the user's
+// being watched has a tick for its next episode under it: watched, in one tap.
+function LibraryCard({
+  item,
+  readOnly,
+  plannedBadge,
+  statusBadges,
+}: {
+  item: CardItem;
+  readOnly: boolean;
+  plannedBadge: boolean;
+  statusBadges: boolean;
+}) {
   const openTitle = useOpenTitle();
   const openActions = useOpenActions();
+  const { change } = useLibrary();
+  const next =
+    !readOnly && item.type === "tv" && item.library.status === "watching" && item.episodesPerSeason?.length
+      ? nextEpisode(item.episodesPerSeason, progressOf(item.library))
+      : null;
   const longPress = useLongPress((x, y) => openActions(item, { left: x, right: x, top: y, bottom: y }));
   const facts = libraryFacts(item);
   const { status, isFavourite } = item.library;
@@ -122,8 +150,19 @@ function LibraryCard({ item, readOnly, plannedBadge }: { item: CardItem; readOnl
         </span>
         <span className={styles.cardTitle}>{item.title}</span>
       </button>
-      {(status !== "planned" || plannedBadge) && <StatusBadge status={status} />}
+      {statusBadges && (status !== "planned" || plannedBadge) && <StatusBadge status={status} />}
       <span className={styles.cardMeta}>{[item.year, facts.meta].filter(Boolean).join(" · ")}</span>
+      {next && (
+        <button
+          type="button"
+          className={styles.nextEpisodeButton}
+          onClick={() => change(item, { currentSeason: next.season, currentEpisode: next.episode })}
+        >
+          <CheckIcon />
+          {formatEpisode(next)}
+          <span className={ui.srOnly}> of {item.title} watched</span>
+        </button>
+      )}
       {!readOnly && (
         <button
           type="button"
@@ -144,19 +183,21 @@ export function LibraryGrid({
   label,
   readOnly = false,
   plannedBadge = true,
+  statusBadges = true,
   gridRef,
 }: {
   items: readonly CardItem[];
   label: string;
   readOnly?: boolean;
   plannedBadge?: boolean;
+  statusBadges?: boolean;
   gridRef?: (grid: HTMLElement | null) => void;
 }) {
   return (
     <ul ref={gridRef} className={styles.grid} aria-label={label}>
       {items.map((item) => (
         <li key={titleKey(item)}>
-          <LibraryCard item={item} readOnly={readOnly} plannedBadge={plannedBadge} />
+          <LibraryCard item={item} readOnly={readOnly} plannedBadge={plannedBadge} statusBadges={statusBadges} />
         </li>
       ))}
     </ul>
@@ -172,6 +213,7 @@ export function LibrarySection({
   empty,
   readOnly,
   plannedBadge,
+  statusBadges,
 }: {
   heading: string;
   /** Names the grid, e.g. "Watching TV shows". */
@@ -181,8 +223,10 @@ export function LibrarySection({
   items: readonly CardItem[] | null;
   empty: React.ReactNode;
   readOnly?: boolean;
-  /** Whether Planned titles have a badge too (Watching and Completed always do): false where the heading says it. */
+  /** Whether Planned titles have a badge too (Watching and Completed do): false where the heading says it. */
   plannedBadge?: boolean;
+  /** Whether the posters have their status at all: false where every title is of the heading's (Library). */
+  statusBadges?: boolean;
 }) {
   const id = useId();
   const [expanded, setExpanded] = useState(false);
@@ -209,6 +253,7 @@ export function LibrarySection({
             label={label}
             readOnly={readOnly}
             plannedBadge={plannedBadge}
+            statusBadges={statusBadges}
             gridRef={grid.ref}
           />
           {items.length > count && (

@@ -156,6 +156,22 @@
   display: contents;
 }
 
+/* Log out, on its own under the settings. */
+.logout {
+  margin-top: var(--space-6);
+}
+
+/* About and Privacy: the pages about the site, small and grey under Log out. */
+.siteLinks {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.siteLinks a {
+  color: inherit;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .row {
     transition: none;

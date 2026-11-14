@@ -166,9 +166,9 @@ test("two people become friends: a request, accepting it, each other's libraries
   await tab(page, "Profile").click();
   const friends = section(page, "Friends");
   await expect(friends).toContainText("No friends yet.");
-  // A search field, named for screen readers only (its label is 1px, clipped), and nothing else about it.
-  expect((await friends.getByText("Add a friend").boundingBox())!.width).toBeLessThanOrEqual(1);
-  await expect(page.getByLabel("Add a friend")).toHaveAttribute("placeholder", "Search friends…");
+  // A field labelled Add a friend, on the screen too (it adds people; it doesn't search your friends).
+  await expect(friends.getByText("Add a friend", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Add a friend")).toHaveAttribute("placeholder", "Their username");
   await expect(friends).not.toContainText("Friends add you by your username");
   // In any case, with or without an @.
   await addFriend(page, `@${bobName.toUpperCase()}`);

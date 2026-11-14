@@ -32,8 +32,9 @@ async function expectFocusedWithMouse(page: Page, field: Locator) {
 
 test("the site's pages", async ({ page }) => {
   for (const [path, view] of [
-    ["/", "landing"],
-    ["/apps", "apps"],
+    ["/", "home"],
+    ["/about", "about"],
+    ["/privacy", "privacy"],
     ["/login", "login"],
     ["/signup", "sign up"],
     ["/forgot-password", "forgot password"],
@@ -48,7 +49,7 @@ test("the site's pages", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "something went wrong" })).toBeVisible();
   await checkView(page, "error page");
 
-  await page.goto("/apps");
+  await page.goto("/");
   await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Log in to open Shows" })).toBeVisible();
   await checkView(page, "login prompt");
@@ -60,7 +61,7 @@ test("the site's pages", async ({ page }) => {
 
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await checkView(page, "apps, logged in");
   await page.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
@@ -169,7 +170,7 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await expect(page.getByLabel("Calendar link")).toHaveValue(/\/api\/calendar\//);
   await checkView(page, "Settings");
   // The last member: leaving deletes the space, so it asks first.
-  await page.getByRole("button", { name: "Leave this group", exact: true }).click();
+  await page.getByRole("button", { name: "Leave this space", exact: true }).click();
   await expect(page.getByRole("button", { name: "Leave and delete" })).toBeVisible();
   await checkView(page, "Settings, confirm leave");
 

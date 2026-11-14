@@ -51,7 +51,9 @@
     margin: auto;
     width: calc(100% - 1.5rem);
     max-width: 36rem;
-    height: auto;
+    /* As tall as what is in it (pinned at the top and the bottom, auto would
+       fill the screen), up to the max-height above, then it scrolls inside. */
+    height: fit-content;
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
   }

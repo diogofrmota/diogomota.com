@@ -126,7 +126,8 @@ test("a title's panel: its genres, the friends who have it, More like this, Reco
     await ana.page.goto("/shows/profile");
     const activity = section(ana.page, "Friends’ activity");
     await expect(activity).toContainText(`${me.name} started watching The Quiet Orchard`);
-    await expect(activity).toContainText(`${me.name} recommended Harbor Lights to ${ana.user.name}`);
+    // Recommended to her: "to you", in her own feed.
+    await expect(activity).toContainText(`${me.name} recommended Harbor Lights to you`);
     await activity.getByRole("button", { name: "The Quiet Orchard" }).click();
     await expect(ana.page.getByRole("dialog", { name: "The Quiet Orchard" })).toBeVisible();
   } finally {
@@ -169,8 +170,8 @@ test("Discover remembers TV Shows or Movies on this device, and loads its sectio
   await expect(typeSwitch(page, "TV Shows")).toHaveAttribute("aria-pressed", "true");
   // The last section only loads once scrolled to.
   await tab(page, "Discover").click();
-  const last = section(page, "Added by Friends");
+  const last = section(page, "Science Fiction");
   await last.scrollIntoViewIfNeeded();
-  await expect(last).toContainText("No movies from friends yet.");
+  await expect(last.getByRole("list", { name: "Science Fiction movies" }).getByRole("listitem").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "TMDB" })).toBeVisible();
 });

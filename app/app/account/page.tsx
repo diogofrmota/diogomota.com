@@ -12,10 +12,11 @@ export const metadata: Metadata = { title: "account", robots: { index: false } }
 
 export const viewport = appViewport;
 
-// Account settings, opened from Account in the tab bar of /apps. Like /apps, in
-// the apps' frame and the user's theme, which is set here (and only here), with
-// the same tab bar (Account current, Apps the way back) and no top bar. The
-// title, then the settings, each opening a popup (AccountSettings), and Log out.
+// Account settings, opened from Account in the tab bar of home and the pages
+// around the apps. Like home, in the apps' frame and the user's theme, which is
+// set here (and only here), with the same tab bar (Account current, Home the
+// way back). The title, then the settings, each opening a popup
+// (AccountSettings), Log out, About and Privacy, and the user's data.
 // What an emailed link did, when it comes back here (auth.ts, app/account/actions.ts).
 const messages: Record<string, string> = {
   changed: "Your email is changed.",
@@ -35,7 +36,13 @@ export default async function AccountPage({ searchParams }: PageProps<"/account"
   if (!user) notFound();
 
   return (
-    <AppFrame theme={user.themePreference} username={user.username} avatarUrl={user.avatarUrl} launcher="account">
+    <AppFrame
+      theme={user.themePreference}
+      username={user.username}
+      name={user.name}
+      avatarUrl={user.avatarUrl}
+      current="account"
+    >
       <div className={`${ui.view} ${styles.page}`}>
         <h1 className={`${ui.heading} ${styles.title}`}>Account</h1>
         <AccountSettings user={user} message={message} />

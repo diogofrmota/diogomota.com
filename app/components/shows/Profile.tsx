@@ -107,7 +107,7 @@ function FriendRow({ person, onRemove }: { person: Person; onRemove: () => void 
       <div className={styles.personRow}>
         {/* The whole row opens their profile; "Check profile" on its right says so. */}
         <button type="button" className={styles.personLink} onClick={() => openFriend(person)}>
-          <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />
+          <Avatar username={person.username} name={person.name} url={person.avatarUrl} className={styles.avatar} />
           <PersonName person={person} className={styles.personName} />{" "}
           <span className={styles.checkProfile}>Check profile</span>
         </button>
@@ -120,7 +120,7 @@ function FriendRow({ person, onRemove }: { person: Person; onRemove: () => void 
 }
 
 /** What the user's friends did lately in Shows: started, finished, loved or recommended a title. */
-function FriendsActivity() {
+function FriendsActivity({ username }: { username: string }) {
   const id = useId();
   const openTitle = useOpenTitle();
   const { data, error, loading, retry } = useShowsData<ActivityItem[]>("/activity", false);
@@ -138,6 +138,7 @@ function FriendsActivity() {
           items={data ?? []}
           empty="Nothing yet: what your friends start, finish and love shows up here."
           onOpenTitle={openTitle}
+          viewer={username}
         />
       )}
     </section>
@@ -192,7 +193,12 @@ export function Profile({ user }: { user: Named & { avatarUrl: string | null } }
       {/* The Profile tab in the top bar shows which view this is; the page shows whose. */}
       <h1 className={ui.srOnly}>Profile</h1>
       <div className={styles.profileHeader}>
-        <Avatar username={username} url={avatarUrl} className={`${styles.avatar} ${styles.profileAvatar}`} />
+        <Avatar
+          username={username}
+          name={name}
+          url={avatarUrl}
+          className={`${styles.avatar} ${styles.profileAvatar}`}
+        />
         {name && <p className={styles.profileName}>{name}</p>}
         <p className={name ? styles.profileUsername : styles.profileName}>@{username}</p>
       </div>
@@ -206,7 +212,12 @@ export function Profile({ user }: { user: Named & { avatarUrl: string | null } }
             <ul className={styles.people} aria-labelledby={requestsId}>
               {incoming.map((person) => (
                 <li key={person.id} className={styles.personRow}>
-                  <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />
+                  <Avatar
+                    username={person.username}
+                    name={person.name}
+                    url={person.avatarUrl}
+                    className={styles.avatar}
+                  />
                   <PersonName person={person} className={styles.personName} />
                   <span className={styles.personActions}>
                     <Button
@@ -266,7 +277,7 @@ export function Profile({ user }: { user: Named & { avatarUrl: string | null } }
         </>
       )}
 
-      <FriendsActivity />
+      <FriendsActivity username={username} />
 
       <section className={styles.section} aria-labelledby={friendsId} aria-busy={!state && !loadError}>
         <div className={styles.sectionHeader}>
@@ -331,7 +342,12 @@ export function Profile({ user }: { user: Named & { avatarUrl: string | null } }
                 <ul className={styles.people} aria-labelledby={sentId}>
                   {state.outgoing.map((person) => (
                     <li key={person.id} className={styles.personRow}>
-                      <Avatar username={person.username} url={person.avatarUrl} className={styles.avatar} />
+                      <Avatar
+                        username={person.username}
+                        name={person.name}
+                        url={person.avatarUrl}
+                        className={styles.avatar}
+                      />
                       <PersonName person={person} className={styles.personName} />
                       <button
                         type="button"

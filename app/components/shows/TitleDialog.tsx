@@ -130,7 +130,12 @@ function FriendsWithIt({ friends }: { friends: TitleDetail["friends"] }) {
       <ul>
         {friends.map((friend) => (
           <li key={friend.id}>
-            <Avatar username={friend.username} url={friend.avatarUrl} className={styles.friendAvatar} />
+            <Avatar
+              username={friend.username}
+              name={friend.name}
+              url={friend.avatarUrl}
+              className={styles.friendAvatar}
+            />
             <span>
               <PersonName person={friend} />
               <span className={styles.friendStatus}>{statusWords[friend.status]}</span>
@@ -189,7 +194,12 @@ function RecommendToFriend({ title }: { title: Pick<TitleSummary, "type" | "tmdb
           <ul className={styles.recommendList}>
             {friends.data.friends.map((friend) => (
               <li key={friend.id}>
-                <Avatar username={friend.username} url={friend.avatarUrl} className={styles.friendAvatar} />
+                <Avatar
+                  username={friend.username}
+                  name={friend.name}
+                  url={friend.avatarUrl}
+                  className={styles.friendAvatar}
+                />
                 <PersonName person={friend} />
                 <Button busy={busy === friend.id} disabled={sent.has(friend.id)} onClick={() => void send(friend)}>
                   {sent.has(friend.id) ? "Sent" : "Send"}
@@ -228,8 +238,8 @@ function MoreLikeThis({ title }: { title: Pick<TitleSummary, "type" | "tmdbId"> 
  * page, over a blurred copy of the poster. On one side, the poster with the
  * title and its facts under it (beside it on a phone), then, for a title in
  * the library, its status and Favourite; on the other, the synopsis first,
- * then Add to Library (or a TV show's progress once it's being watched), the
- * seasons, and Remove from library last. On a wide screen the poster's side
+ * then Add to Library (a title being watched: its progress, before the
+ * synopsis), the seasons, and Remove from library last. On a wide screen the poster's side
  * stays in view.
  */
 export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "type" | "tmdbId">; onClose: () => void }) {
@@ -275,6 +285,54 @@ export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "typ
       setAdding(null);
     }
   }
+
+  // The library's part: its progress (a TV show being watched: first, as it's what the panel is opened
+  // for), or Add to Library.
+  const progressFirst = item?.library.status === "watching";
+  const progress = detail && (
+    <>
+      {!library.items ? (
+        library.loadError ? (
+          <LoadError message={library.loadError} onRetry={library.reload} />
+        ) : (
+          <span className={`${styles.skeletonLine} ${styles.skeleton}`} />
+        )
+      ) : item ? (
+        <LibraryProgress item={item} detail={detail} />
+      ) : (
+        <div className={styles.addGroup} role="group" aria-labelledby={addId}>
+          {removed && (
+            <p role="status" className={styles.removedNotice}>
+              Removed from your library.
+              <Button variant="quiet" onClick={() => void undoRemove(removed)}>
+                Undo
+              </Button>
+            </p>
+          )}
+          <h3 id={addId}>Add to Library</h3>
+          <div className={styles.addButtons}>
+            {addStatuses.map((status, i) => {
+              const Icon = statusIcons[status];
+              return (
+                <button
+                  key={status}
+                  type="button"
+                  className={styles.addOption}
+                  data-status={status}
+                  disabled={adding !== null}
+                  ref={i === 0 ? firstAdd : undefined}
+                  onClick={() => add(status)}
+                >
+                  <Icon />
+                  {adding === status ? "Adding…" : statusNames[status]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   return (
     <Dialog className={`${styles.dialog} ${styles.titleDialog}`} aria-labelledby={headingId} onClose={onClose}>
@@ -323,51 +381,13 @@ export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "typ
               </div>
             ) : (
               <>
+                {progressFirst && progress}
                 <section className={styles.synopsis} aria-labelledby={synopsisId}>
                   <h3 id={synopsisId}>Synopsis</h3>
                   <Overview key={detail.overview} text={detail.overview || "No overview on TMDB yet."} />
                 </section>
                 <FriendsWithIt friends={detail.friends} />
-                {!library.items ? (
-                  library.loadError ? (
-                    <LoadError message={library.loadError} onRetry={library.reload} />
-                  ) : (
-                    <span className={`${styles.skeletonLine} ${styles.skeleton}`} />
-                  )
-                ) : item ? (
-                  <LibraryProgress item={item} detail={detail} />
-                ) : (
-                  <div className={styles.addGroup} role="group" aria-labelledby={addId}>
-                    {removed && (
-                      <p role="status" className={styles.removedNotice}>
-                        Removed from your library.
-                        <Button variant="quiet" onClick={() => void undoRemove(removed)}>
-                          Undo
-                        </Button>
-                      </p>
-                    )}
-                    <h3 id={addId}>Add to Library</h3>
-                    <div className={styles.addButtons}>
-                      {addStatuses.map((status, i) => {
-                        const Icon = statusIcons[status];
-                        return (
-                          <button
-                            key={status}
-                            type="button"
-                            className={styles.addOption}
-                            data-status={status}
-                            disabled={adding !== null}
-                            ref={i === 0 ? firstAdd : undefined}
-                            onClick={() => add(status)}
-                          >
-                            <Icon />
-                            {adding === status ? "Adding…" : statusNames[status]}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                {!progressFirst && progress}
                 {addError && <Alert>{addError}</Alert>}
                 {detail.type === "tv" && !!detail.episodesPerSeason?.length && (
                   <Seasons seasons={detail.episodesPerSeason} item={item} />

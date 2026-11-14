@@ -12,8 +12,10 @@ import { useAppView } from "@/hooks/useAppView";
 import {
   dateLabel,
   datePlus,
+  dayOfEvent,
   eventDates,
   eventFor,
+  layoutWeek,
   localInstants,
   localParts,
   type CalendarEvent,
@@ -125,6 +127,9 @@ function agendaByDay(events: CalendarEvent[], first: string, more: boolean) {
   return [...days].sort(([a], [b]) => a.localeCompare(b));
 }
 
+/** The events a phone's day of the month shows as bars; past them, "+1" (and so on). */
+const phoneBars = 3;
+
 // Invite your partner, dismissed (Not now) on this device, for this space: kept
 // in localStorage, and in memory where that can't be written. The server can't
 // know, so the page comes without it and it shows once hydrated: one dismissed
@@ -173,6 +178,8 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
   const [mode, setMode] = useState<Mode | null>(null);
   const view: Mode = mode ?? (phone ? "agenda" : "month");
   const [agendaCount, setAgendaCount] = useState(agendaPage);
+  // The day picked in a phone's month: its events are listed under the month.
+  const [picked, setPicked] = useState<string | null>(null);
   // Which way the grid last moved: it comes in from that side.
   const [slide, setSlide] = useState<"forward" | "back" | "fade">("fade");
   const [error, setError] = useState("");
@@ -228,10 +235,18 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
 
   const names = useMemo(() => new Map(space.members.map((m) => [m.id, memberName(m)])), [space.members]);
   const eventsOn = (day: string) =>
-    events.filter((event) => {
-      const { start, end } = eventDates(event);
-      return start.date <= day && end.date >= day;
-    });
+    events
+      .filter((event) => {
+        const { start, end } = eventDates(event);
+        return start.date <= day && end.date >= day;
+      })
+      .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.startsAt.localeCompare(b.startsAt));
+  // The month's six weeks, and each week's events in their lanes.
+  const weeks = useMemo(() => Array.from({ length: 6 }, (_, w) => days.slice(w * 7, w * 7 + 7)), [days]);
+  const weekEvents = useMemo(() => weeks.map((week) => layoutWeek(week, events)), [weeks, events]);
+  // A phone's picked day: the one tapped, else the day the month is shown by (today, or its first).
+  const pickedDay = picked && days.includes(picked) ? picked : date;
+  const pickedEvents = view === "month" && phone ? eventsOn(pickedDay) : [];
 
   const panel = panels.at(-1);
   const selectedId = panel?.startsWith("event:") ? panel.slice(6) : null;
@@ -254,6 +269,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
     setSlide(direction);
     setDate(next);
     setMode(nextView);
+    setPicked(null);
     if (next !== date || nextView !== view) setAgendaCount(agendaPage);
   }
   // A month on: its first day, or today for this month (where the agenda starts).
@@ -282,21 +298,41 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
     } else swipe.current = null;
   }
 
-  function eventButton(event: CalendarEvent) {
-    const members = event.assigneeIds
-      .map((id) => space.members.find((m) => m.id === id))
-      .filter((m): m is Space["members"][number] => !!m);
+  /** The people an event is for, who are still members (the group's events: none). */
+  const membersOf = (event: CalendarEvent) =>
+    event.isGroup
+      ? []
+      : event.assigneeIds
+          .map((id) => space.members.find((m) => m.id === id))
+          .filter((m): m is Space["members"][number] => !!m);
+
+  /** An event's color, and a second one for an event of two people or more: its bar is half of each. */
+  function eventColors(event: CalendarEvent): CSSProperties {
+    const [first, second] = membersOf(event);
+    return {
+      "--event-color": first?.color ?? "var(--muted)",
+      ...(second && { "--event-color-2": second.color }),
+    } as CSSProperties;
+  }
+
+  /**
+   * An event, as a button that opens it: who it's for (their pictures, or the
+   * group's icon) and its title. In a wide month, `span` days wide (a bar
+   * across an event's days) and its start time before the title; `note` is
+   * which of its days this is ("day 1 of 2", the agenda).
+   */
+  function eventButton(event: CalendarEvent, options: { span?: number; time?: boolean; note?: string | null } = {}) {
+    const members = membersOf(event);
     const who = event.isGroup ? "Group" : eventFor(event, names);
     const when = event.allDay ? "All day" : localParts(event.startsAt).time;
+    const startsHere = !event.allDay && options.time;
     return (
       <button
         key={event.id}
         className={styles.event}
-        style={{
-          ...({
-            "--event-color": event.isGroup ? "var(--muted)" : (members[0]?.color ?? "var(--muted)"),
-          } as CSSProperties),
-        }}
+        data-split={members.length > 1 || undefined}
+        data-span={options.span && options.span > 1 ? options.span : undefined}
+        style={{ ...eventColors(event), ...(options.span && ({ "--span": options.span } as CSSProperties)) }}
         onClick={(e) => {
           e.stopPropagation();
           openPanel(`event:${event.id}`);
@@ -312,6 +348,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
               <Avatar
                 key={member.id}
                 username={member.username}
+                name={member.name}
                 url={member.avatarUrl}
                 className={styles.eventAvatar}
               />
@@ -319,9 +356,15 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
           </span>
         )}
         <span className={styles.eventTitle} aria-hidden="true">
+          {startsHere && <span className={styles.eventTime}>{when}</span>}
           {event.title}
         </span>
-        <span className={ui.srOnly}>{`${event.title}, ${when}, ${who}`}</span>
+        {options.note && (
+          <span className={styles.eventNote} aria-hidden="true">
+            {options.note}
+          </span>
+        )}
+        <span className={ui.srOnly}>{`${event.title}, ${when}, ${who}${options.note ? `, ${options.note}` : ""}`}</span>
       </button>
     );
   }
@@ -438,7 +481,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
                     return (
                       <li key={event.id} style={stagger(row++, settled)}>
                         <span className={styles.agendaTime}>{time}</span>
-                        {eventButton(event)}
+                        {eventButton(event, { note: dayOfEvent(event, day) })}
                       </li>
                     );
                   })}
@@ -462,8 +505,61 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
               </Button>
             )}
           </div>
+        ) : phone ? (
+          // A phone's month: each day its number and a short bar for each event (no text: a seventh of a phone is
+          // too narrow for one), "+1" past three. A tap on a day picks it: its events are listed under the month.
+          <div
+            key={`month:${first}`}
+            className={`${styles.month} ${styles.phoneMonth}`}
+            data-slide={slide}
+            data-compact-targets
+          >
+            {days.slice(0, 7).map((day) => (
+              <div className={styles.weekday} key={day}>
+                {dateLabel(day, { weekday: "narrow" })}
+              </div>
+            ))}
+            {days.map((day) => {
+              const onDay = eventsOn(day);
+              const label = dateLabel(day, { weekday: "long", day: "numeric", month: "long" });
+              const isPicked = day === pickedDay;
+              const count = onDay.length ? `${onDay.length} event${onDay.length === 1 ? "" : "s"}` : "nothing planned";
+              return (
+                <div
+                  key={day}
+                  className={`${styles.cell} ${day.slice(0, 7) !== date.slice(0, 7) ? styles.outside : ""}`}
+                  data-picked={isPicked || undefined}
+                  onClick={() => setPicked(day)}
+                >
+                  <button
+                    className={`${styles.dayNumber} ${day === now ? styles.today : ""}`}
+                    aria-label={`${label}, ${count}`}
+                    aria-pressed={isPicked}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPicked(day);
+                    }}
+                  >
+                    {Number(day.slice(-2))}
+                  </button>
+                  <span className={styles.bars} aria-hidden="true">
+                    {onDay.slice(0, phoneBars).map((event) => (
+                      <span
+                        key={event.id}
+                        className={styles.bar}
+                        data-split={membersOf(event).length > 1 || undefined}
+                        style={eventColors(event)}
+                      />
+                    ))}
+                    {onDay.length > phoneBars && <span className={styles.barsMore}>+{onDay.length - phoneBars}</span>}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         ) : (
-          // data-compact-targets: on a phone, a day's number, events and "+N more" are smaller than a finger (e2e/checks.ts).
+          // data-compact-targets: a day's number, events and "+N more" are smaller than a finger (e2e/checks.ts).
+          // Week by week: each event in its lane (layoutWeek), one of several days a bar across them.
           <div key={`month:${first}`} className={styles.month} data-slide={slide} data-compact-targets>
             {days.slice(0, 7).map((day) => (
               <div className={styles.weekday} key={day}>
@@ -471,44 +567,91 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
               </div>
             ))}
             {/* A tap anywhere on a day, but on an event, adds an event that day; its number is the button for keyboards and screen readers.
-                Its first two events, then "+1 more" (and so on), which opens the day with all of them. */}
-            {days.map((day) => {
-              const onDay = eventsOn(day);
-              const label = dateLabel(day, { weekday: "long", day: "numeric", month: "long" });
-              return (
-                <div
-                  key={day}
-                  className={`${styles.cell} ${day.slice(0, 7) !== date.slice(0, 7) ? styles.outside : ""}`}
-                  onClick={() => addOn(day)}
-                >
-                  <button
-                    className={`${styles.dayNumber} ${day === now ? styles.today : ""}`}
-                    aria-label={`${label}, add event`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      addOn(day);
-                    }}
+                Its first two lanes, then "+1 more" (and so on), which opens the day in the agenda with all of them. */}
+            {weeks.map((week, w) =>
+              week.map((day, col) => {
+                const covering = weekEvents[w].filter((item) => item.col <= col && col < item.col + item.span);
+                const hidden = covering.filter((item) => item.lane >= monthEvents).length;
+                const lanes = Math.min(monthEvents, Math.max(0, ...covering.map((item) => item.lane + 1)));
+                const label = dateLabel(day, { weekday: "long", day: "numeric", month: "long" });
+                return (
+                  <div
+                    key={day}
+                    className={`${styles.cell} ${day.slice(0, 7) !== date.slice(0, 7) ? styles.outside : ""}`}
+                    onClick={() => addOn(day)}
                   >
-                    {Number(day.slice(-2))}
-                  </button>
-                  {onDay.slice(0, monthEvents).map((event) => eventButton(event))}
-                  {onDay.length > monthEvents && (
                     <button
-                      className={styles.more}
+                      className={`${styles.dayNumber} ${day === now ? styles.today : ""}`}
+                      aria-label={`${label}, add event`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        move(day, "agenda");
+                        addOn(day);
                       }}
                     >
-                      +{onDay.length - monthEvents} more<span className={ui.srOnly}> on {label}</span>
+                      {Number(day.slice(-2))}
                     </button>
-                  )}
-                </div>
-              );
-            })}
+                    {Array.from({ length: lanes }, (_, lane) => {
+                      const item = covering.find((each) => each.lane === lane);
+                      // An event's bar starts on its first day in the week; the days after it keep its lane free.
+                      if (item?.col === col) {
+                        const startDay = eventDates(item.event).start.date;
+                        return eventButton(item.event, { span: item.span, time: startDay === day });
+                      }
+                      return <span key={`lane-${lane}`} className={styles.lane} aria-hidden="true" />;
+                    })}
+                    {hidden > 0 && (
+                      <button
+                        className={styles.more}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          move(day, "agenda");
+                        }}
+                      >
+                        +{hidden} more<span className={ui.srOnly}> on {label}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              }),
+            )}
           </div>
         )}
       </div>
+      {view === "month" && phone && (
+        // The day picked in a phone's month (today, or the month's first): its events, and Add event on it.
+        <section className={styles.dayList} aria-labelledby="picked-day">
+          <div className={styles.dayListHeader}>
+            <h3 id="picked-day">
+              <time dateTime={pickedDay}>{agendaDay(pickedDay, now)}</time>
+            </h3>
+            <Button onClick={() => addOn(pickedDay)}>
+              <PlusIcon />
+              Add event
+              <span className={ui.srOnly}>
+                {" "}
+                on {dateLabel(pickedDay, { weekday: "long", day: "numeric", month: "long" })}
+              </span>
+            </Button>
+          </div>
+          {pickedEvents.length ? (
+            <ul>
+              {pickedEvents.map((event) => {
+                const { start, end } = eventDates(event);
+                const from = start.date === pickedDay ? localParts(event.startsAt).time : "…";
+                const until = end.date === pickedDay ? localParts(event.endsAt).time : "…";
+                return (
+                  <li key={event.id}>
+                    <span className={styles.agendaTime}>{event.allDay ? "All day" : `${from} – ${until}`}</span>
+                    {eventButton(event, { note: dayOfEvent(event, pickedDay) })}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className={ui.muted}>Nothing planned.</p>
+          )}
+        </section>
+      )}
       {(selected || newEvent) && (
         <EventDialog
           key={panel}

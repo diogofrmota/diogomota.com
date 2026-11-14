@@ -1,24 +1,27 @@
 import Link from "next/link";
+import { getUser } from "@/auth";
 import { AppFrame } from "@/components/common/AppShell";
-import { ChevronLeftIcon } from "@/components/common/icons";
+import type { LauncherTab } from "@/components/common/HeaderTabs";
 import { LinkPending } from "@/components/common/LinkPending";
 import ui from "@/components/common/ui.module.css";
-import { defaultTheme, type Theme } from "@/lib/themes";
+import { defaultTheme } from "@/lib/themes";
 import styles from "./AuthPage.module.css";
 
-// Frame for /login, /signup and the password reset pages, in the apps' frame
-// and look: the top bar with only diogomota.com (these pages are the way to log
-// in), then a centered column with the form in a card (its button as wide as
-// the card: the page's one action), a few lines of links under it, and a quiet
-// way back to /apps. In the default theme, unless the user is logged in (the
-// reset pages are open then too): then in theirs.
-export function AuthPage({
+// Frame for /login, /signup, the password reset pages and an invite, in the
+// apps' frame and look, with the tab bar of the pages around the apps (Log in,
+// Sign up and Home, this page's tab marked; Account and Home logged in), then a
+// centered column with the form in a card (its button as wide as the card: the
+// page's one action) and a few lines under it. In the default theme, unless
+// the user is logged in (the reset pages and invites are open then too): then
+// in theirs.
+export async function AuthPage({
   title,
   intro,
   form,
   children,
   action,
-  theme = defaultTheme,
+  current,
+  next,
 }: {
   title: string;
   /** A line between the title and the form. */
@@ -28,10 +31,21 @@ export function AuthPage({
   children?: React.ReactNode;
   /** The page's action as a button, for a page without a form (an expired reset link). */
   action?: { href: string; label: string };
-  theme?: Theme;
+  /** /login or /signup: its tab in the tab bar is the current one. */
+  current?: Extract<LauncherTab, "login" | "signup">;
+  /** Where the tab bar's Log in and Sign up return to. */
+  next?: string | null;
 }) {
+  const user = await getUser();
   return (
-    <AppFrame theme={theme} username={null} account={false}>
+    <AppFrame
+      theme={user?.themePreference ?? defaultTheme}
+      username={user?.username ?? null}
+      name={user?.name}
+      avatarUrl={user?.avatarUrl}
+      current={current}
+      next={next}
+    >
       <div className={styles.column}>
         <h1 className={`${ui.heading} ${styles.title}`}>{title}</h1>
         {intro && <p className={`${ui.muted} ${styles.intro}`}>{intro}</p>}
@@ -45,12 +59,6 @@ export function AuthPage({
             </Link>
           </p>
         )}
-        <p className={styles.back}>
-          <Link href="/apps" className={`${ui.button} ${ui.quiet}`}>
-            <LinkPending icon={<ChevronLeftIcon />} />
-            Back to apps
-          </Link>
-        </p>
       </div>
     </AppFrame>
   );

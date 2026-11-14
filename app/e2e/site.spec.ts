@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
+import { linkNames } from "./fixtures";
 
 // /reset-password without a token shows its "link expired" message.
-const pages = ["/", "/apps", "/login", "/signup", "/forgot-password", "/reset-password", "/no-such-page"];
+const pages = ["/", "/about", "/login", "/signup", "/forgot-password", "/reset-password", "/privacy", "/no-such-page"];
 
 async function expectNoHorizontalScroll(page: Page) {
   await page.evaluate(() => document.fonts.ready);
@@ -17,12 +18,12 @@ async function expectNoHorizontalScroll(page: Page) {
 test.describe("at 320px wide", () => {
   test.use({ viewport: { width: 320, height: 740 }, isMobile: true, hasTouch: true });
 
-  test("no page scrolls sideways, nor /apps with the login prompt open", async ({ page }) => {
+  test("no page scrolls sideways, nor home with the login prompt open", async ({ page }) => {
     for (const path of pages) {
       await page.goto(path);
       await expectNoHorizontalScroll(page);
     }
-    await page.goto("/apps");
+    await page.goto("/");
     await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await expectNoHorizontalScroll(page);
@@ -35,14 +36,24 @@ test("health check reports ok", async ({ request }) => {
   expect(await response.json()).toEqual({ status: "ok" });
 });
 
-test("unknown URLs get a 404 page in the site style", async ({ page }) => {
+test("unknown URLs get a 404 page in the apps' look, with the tab bar and Go home", async ({ page }) => {
   const response = await page.goto("/no-such-page");
   expect(response?.status()).toBe(404);
   await expect(page).toHaveTitle("page not found · diogo mota");
-  await expect(page.getByRole("heading", { level: 1, name: "404" })).toBeVisible();
-  expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe("rgb(0, 0, 0)");
+  await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
+  // Light, logged out: the theme's gray, not the black of /about.
+  await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(
+    "rgb(230, 230, 230)",
+  );
+  expect(await linkNames(page.getByRole("navigation", { name: "Account" }))).toEqual([
+    "diogomota.com",
+    "Log in",
+    "Sign up",
+    "Home",
+  ]);
 
-  await page.getByRole("link", { name: "Go Home" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Go home" }).click();
   await expect(page).toHaveURL("/");
 });
 
@@ -63,7 +74,7 @@ test("favicon and touch icon are served", async ({ page }) => {
 });
 
 test("the web app manifest lets phones add the site to their home screen", async ({ page }) => {
-  for (const path of ["/", "/apps"]) {
+  for (const path of ["/", "/about"]) {
     await page.goto(path);
     await expect(page.locator('head link[rel="manifest"]')).toHaveAttribute("href", "/manifest.webmanifest");
     await expect(page.locator('head meta[name="apple-mobile-web-app-title"]')).toHaveAttribute("content", "diogo mota");
@@ -75,7 +86,9 @@ test("the web app manifest lets phones add the site to their home screen", async
   expect(manifest).toMatchObject({
     name: "diogo mota",
     short_name: "diogo mota",
-    start_url: "/apps",
+    // Home, the apps; the id is still /apps, where it opened before, so phones that added it keep one app.
+    id: "/apps",
+    start_url: "/",
     display: "standalone",
   });
 
@@ -96,25 +109,28 @@ test("the web app manifest lets phones add the site to their home screen", async
 test("a page that fails to render shows the error page, whose Retry renders it again", async ({ page }) => {
   // A test page that fails once for each id (app/test/error).
   await page.goto(`/test/error?id=${randomUUID()}`);
-  await expect(page.getByRole("heading", { level: 1, name: "something went wrong" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Something went wrong" })).toBeVisible();
   await expect(page).toHaveTitle("something went wrong · diogo mota");
-  await expect(page.getByRole("link", { name: "Back to Apps" })).toHaveAttribute("href", "/apps");
+  // In the apps' look, without a tab bar: the server that failed can't say who is logged in.
+  await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
+  await expect(page.getByRole("navigation")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Go home" })).toHaveAttribute("href", "/");
   await page.getByRole("button", { name: "Retry" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Rendered" })).toBeVisible();
 });
 
 test("keyboard focus is visible", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/about");
   await page.keyboard.press("Tab");
   const richemont = page.getByRole("link", { name: "Richemont" });
   await expect(richemont).toBeFocused();
   await expect(richemont).toHaveCSS("outline-style", "solid");
   await expect(richemont).toHaveCSS("outline-color", "rgb(255, 255, 255)");
 
-  await page.goto("/apps");
-  // The tab bar first (a header on a wide screen): Log in, Sign up and Apps; then
-  // Log in and Sign up in the callout, then Shared.
-  for (let i = 0; i < 6; i++) await page.keyboard.press("Tab");
+  await page.goto("/");
+  // The tab bar first (a header on a wide screen): the site's name, Log in, Sign up
+  // and Home; then Log in and Sign up at the top of the page, then Shared.
+  for (let i = 0; i < 7; i++) await page.keyboard.press("Tab");
   const card = page
     .getByRole("main")
     .getByRole("listitem")

@@ -216,3 +216,49 @@ export function timedEvents(events: CalendarEvent[], date: string) {
   finish();
   return items;
 }
+
+/** An event in a week of the month: the day it starts in the week (its column), how many of the week's days it covers, and its lane. */
+export type WeekEvent = { event: CalendarEvent; col: number; span: number; lane: number };
+
+/**
+ * The events of a week of the month (its seven days), each in a lane: the row
+ * it takes in every day it covers, the lowest one free in all of them. So an
+ * event of several days is one bar across them, and the events of each day
+ * stay lined up under it. Events of several days first, then by when they start.
+ */
+export function layoutWeek(week: readonly string[], events: CalendarEvent[]): WeekEvent[] {
+  const first = week[0],
+    last = week[week.length - 1];
+  const items = events
+    .map((event) => ({ event, ...eventDates(event) }))
+    .filter(({ start, end }) => start.date <= last && end.date >= first)
+    .map(({ event, start, end }) => {
+      const col = week.indexOf(start.date < first ? first : start.date);
+      const to = week.indexOf(end.date > last ? last : end.date);
+      return { event, col, span: to - col + 1, long: start.date !== end.date };
+    })
+    .sort(
+      (a, b) =>
+        Number(b.long) - Number(a.long) ||
+        a.col - b.col ||
+        b.span - a.span ||
+        Number(b.event.allDay) - Number(a.event.allDay) ||
+        a.event.startsAt.localeCompare(b.event.startsAt),
+    );
+  const taken: boolean[][] = [];
+  return items.map(({ event, col, span }) => {
+    let lane = 0;
+    while (taken[lane]?.slice(col, col + span).some(Boolean)) lane++;
+    taken[lane] ??= Array<boolean>(week.length).fill(false);
+    for (let day = col; day < col + span; day++) taken[lane][day] = true;
+    return { event, col, span, lane };
+  });
+}
+
+/** "day 2 of 3", for an event of several days on one of them; nothing for an event of one day. */
+export function dayOfEvent(event: Pick<CalendarEvent, "startsAt" | "endsAt" | "allDay">, day: string): string | null {
+  const { start, end } = eventDates(event);
+  if (start.date === end.date) return null;
+  const days = (from: string, to: string) => Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
+  return `day ${days(start.date, day) + 1} of ${days(start.date, end.date) + 1}`;
+}

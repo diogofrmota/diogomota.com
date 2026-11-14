@@ -68,6 +68,11 @@
   font-size: var(--text-sm);
 }
 
+/* Show more, under the lines a feed starts with. */
+.more {
+  margin-top: var(--space-3);
+}
+
 .empty {
   margin: 0;
   color: var(--muted);

@@ -31,5 +31,5 @@ export async function logIn(_previous: FormState, formData: FormData): Promise<F
     if (error instanceof APIError) return { error: "Wrong username/email or password.", values };
     throw error;
   }
-  redirect(safeNextPath(formData.get("next")) ?? "/apps");
+  redirect(safeNextPath(formData.get("next")) ?? "/");
 }

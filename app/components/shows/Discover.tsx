@@ -4,6 +4,7 @@ import { SearchIcon } from "@/components/common/icons";
 import { SegmentThumb } from "@/components/common/motion";
 import ui from "@/components/common/ui.module.css";
 import { useAppView } from "@/hooks/useAppView";
+import { apiRequest } from "@/lib/api-request";
 import { discoverSections, type DiscoverSection, type MediaType, type TitleSummary } from "@/lib/show-types";
 import { useLibrary } from "./library";
 import { useOpenTitle, useRememberedType, useShowsData } from "./shows-data";
@@ -63,6 +64,17 @@ function Section({ type, section, heading }: { type: MediaType; section: Discove
   );
   const kind = type === "tv" ? "TV shows" : "movies";
   const note = notes[section];
+  // Recommended by Friends shown: its recommendations are seen, and home's
+  // Shows badge stops counting them (lib/badges.ts).
+  const recommendationsShown = section === "recommended" && !!data?.length;
+  useEffect(() => {
+    if (!recommendationsShown) return;
+    apiRequest("/api/shows/recommendations/seen", {
+      method: "POST",
+      body: { type },
+      fallback: "Couldn't mark the recommendations as seen.",
+    }).catch(() => {});
+  }, [recommendationsShown, type]);
   // Recommended by Friends only shows when there is something in it.
   if (section === "recommended" && !data?.length) return <div ref={ref as React.RefObject<HTMLDivElement>} />;
   return (

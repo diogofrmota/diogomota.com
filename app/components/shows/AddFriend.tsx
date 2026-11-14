@@ -1,6 +1,5 @@
 "use client";
 import { Button } from "@/components/common/ui";
-import ui from "@/components/common/ui.module.css";
 import { useEffect, useId, useState } from "react";
 import { Avatar } from "@/components/common/Avatar";
 import { CheckIcon } from "@/components/common/icons";
@@ -180,7 +179,8 @@ export function AddFriend({ busy, onAdd }: { busy: boolean; onAdd: (username: st
         if (await onAdd(to)) setValue("");
       }}
     >
-      <label htmlFor={inputId} className={ui.srOnly}>
+      {/* Said on the screen too: the field adds people, it doesn't search your friends. */}
+      <label htmlFor={inputId} className={styles.addFriendLabel}>
         Add a friend
       </label>
       <div className={styles.addFriendRow}>
@@ -188,7 +188,7 @@ export function AddFriend({ busy, onAdd }: { busy: boolean; onAdd: (username: st
           <input
             id={inputId}
             value={value}
-            placeholder="Search friends…"
+            placeholder="Their username"
             maxLength={searchMax + 1}
             role="combobox"
             aria-expanded={expanded}
@@ -229,7 +229,7 @@ export function AddFriend({ busy, onAdd }: { busy: boolean; onAdd: (username: st
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(match)}
               >
-                <Avatar username={match.username} url={match.avatarUrl} className={styles.avatar} />
+                <Avatar username={match.username} name={match.name} url={match.avatarUrl} className={styles.avatar} />
                 <PersonName person={match} className={styles.personName} />
                 {match.relation !== "none" && <span className={styles.relation}>{relationNames[match.relation]}</span>}
               </li>

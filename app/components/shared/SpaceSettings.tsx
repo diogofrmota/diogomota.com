@@ -160,7 +160,9 @@ function ActivityCard() {
       </h2>
       {activity.isPending && <Spinner label="Loading activity…" />}
       {activity.isError && <Alert onRetry={() => void activity.refetch()}>{activity.error.message}</Alert>}
-      {activity.data && <ActivityFeed items={activity.data} empty="Nothing yet: what you both do shows here." />}
+      {activity.data && (
+        <ActivityFeed items={activity.data} limit={5} empty="Nothing yet: what you both do shows here." />
+      )}
     </section>
   );
 }
@@ -208,6 +210,7 @@ function SpaceCards({
             <li key={member.id}>
               <Avatar
                 username={member.username}
+                name={member.name}
                 url={member.avatarUrl}
                 className={styles.memberAvatar}
                 style={{ "--member-color": member.color } as CSSProperties}
@@ -239,7 +242,7 @@ function SpaceCards({
           onConfirm={leave}
           onCancel={() => setConfirmLeave(false)}
         >
-          You&rsquo;re the last member: leaving deletes this group, its calendar and its tasks. Leave it?
+          You&rsquo;re the last member: leaving deletes this space, its calendar and its tasks. Leave it?
         </Confirm>
       ) : (
         <Button
@@ -247,10 +250,10 @@ function SpaceCards({
           busy={leaving || !!undo.pending}
           onClick={() => {
             if (last) setConfirmLeave(true);
-            else undo.schedule({ label: "Leaving this group…", commit: () => void leave() });
+            else undo.schedule({ label: "Leaving this space…", commit: () => void leave() });
           }}
         >
-          Leave this group
+          Leave this space
         </Button>
       )}
       {leaveError && <Notice error>{leaveError}</Notice>}

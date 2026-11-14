@@ -18,7 +18,7 @@ export function authHref(page: "/login" | "/signup", next?: string | null): stri
   return next ? `${page}?${new URLSearchParams({ next })}` : page;
 }
 
-// /apps, where a logged-out user can log in and is then sent on to `path`.
-export function appsWithNext(path: string): string {
-  return `/apps?${new URLSearchParams({ next: path })}`;
+// Home, where a logged-out user can log in and is then sent on to `path`.
+export function homeWithNext(path: string): string {
+  return `/?${new URLSearchParams({ next: path })}`;
 }

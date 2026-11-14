@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { PendingOverlay } from "@/components/common/Spinner";
 import ui from "@/components/common/ui.module.css";
 import styles from "./Form.module.css";
@@ -16,21 +16,38 @@ type FieldProps = Omit<React.ComponentProps<"input">, "id" | "className"> & {
 
 // A labelled input with a hint, read out with it. An error takes the hint's
 // place: the messages restate the rule, so showing both would say it twice.
+// A password field has Show (and then Hide) in it, to check what was typed.
 export function Field({ label, hideLabel = false, hint, error, ...input }: FieldProps) {
   const id = useId();
+  const [shown, setShown] = useState(false);
+  const password = input.type === "password";
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+  const field = (
+    <input
+      id={id}
+      className={styles.input}
+      aria-invalid={error ? true : undefined}
+      aria-describedby={describedBy}
+      {...input}
+      type={password && shown ? "text" : input.type}
+    />
+  );
   return (
     <div className={styles.field}>
       <label htmlFor={id} className={hideLabel ? ui.srOnly : styles.label}>
         {label}
       </label>
-      <input
-        id={id}
-        className={styles.input}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy}
-        {...input}
-      />
+      {password ? (
+        <span className={styles.password}>
+          {field}
+          <button type="button" className={styles.reveal} aria-controls={id} onClick={() => setShown(!shown)}>
+            {shown ? "Hide" : "Show"}
+            <span className={ui.srOnly}> password</span>
+          </button>
+        </span>
+      ) : (
+        field
+      )}
       {error ? (
         <p id={`${id}-error`} className={styles.error}>
           {error}

@@ -2173,16 +2173,19 @@ div.people {
 .onboardingFriends {
   max-width: 36rem;
 }
+/* Pinned to the bottom of the screen while the posters scroll: on a phone just
+   above the tab bar (--bottom-bar, AppShell.module.css), which already clears
+   the home indicator, so Next is always in reach. */
 .onboardingNav {
   position: sticky;
-  bottom: 0;
+  bottom: calc(var(--bottom-bar, 0px) + env(safe-area-inset-bottom));
   z-index: 2;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 0.75rem;
   margin-top: 1.5rem;
-  padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom));
+  padding: 0.75rem 0;
   border-top: 1px solid var(--border);
   background: var(--bg);
 }
@@ -2213,6 +2216,19 @@ div.people {
   width: 2.75rem;
   height: 2.75rem;
   font-size: var(--text-lg);
+}
+/* The friend's name, then their @username on its own line. */
+.friendTitle {
+  min-width: 0;
+}
+.friendTitle h2 {
+  overflow-wrap: anywhere;
+}
+.friendHandle {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
 }
 .friendDialog .dialogHeader + .section {
   margin-top: 1rem;
@@ -2430,4 +2446,122 @@ div.people {
 /* What a refused change in a title's controls was (ChangeError). */
 .changeError {
   margin: 0;
+}
+
+/* Add a friend: the field's label, over it (Profile). */
+.addFriendLabel {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+/* Library's top (Watchlist): TV Shows | Movies on the left, as the posters are
+   under it, then, for a long library, its search and its sort; under it on a
+   phone, beside it on a wider screen. */
+.libraryTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.libraryControls {
+  display: flex;
+  flex: 1 1 18rem;
+  gap: var(--space-2);
+  max-width: 28rem;
+}
+.librarySearch,
+.librarySort {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.librarySearch {
+  flex: 1;
+  min-width: 0;
+}
+.librarySearch svg,
+.librarySort svg {
+  position: absolute;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--muted);
+  pointer-events: none;
+}
+.librarySearch svg {
+  left: var(--space-3);
+}
+.librarySort svg {
+  right: var(--space-3);
+}
+.librarySearch input,
+.librarySort select {
+  width: 100%;
+  min-height: var(--control-height);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-md);
+}
+.librarySearch input {
+  padding: 0 var(--space-3) 0 calc(var(--space-3) + var(--icon-sm) + var(--space-2));
+}
+.librarySort select {
+  padding: 0 calc(var(--space-3) + var(--icon-sm) + var(--space-1)) 0 var(--space-3);
+  appearance: none;
+  cursor: pointer;
+}
+@media (max-width: 47.99rem) {
+  .libraryTop > :first-child {
+    flex: 1 1 100%;
+  }
+  .libraryControls {
+    max-width: none;
+  }
+}
+
+/* A TV show being watched: its next episode, ticked off from the card in one tap.
+   Over the card's own button, which covers the card (as its menu is). */
+.nextEpisodeButton {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  justify-self: start;
+  min-height: var(--control-height);
+  margin-top: var(--space-1);
+  padding: 0 var(--space-3) 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+.nextEpisodeButton svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--accent);
+}
+.nextEpisodeButton:active {
+  scale: var(--press);
+}
+@media (hover: hover) {
+  .nextEpisodeButton:hover {
+    background: var(--hover);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nextEpisodeButton:active {
+    scale: none;
+  }
 }

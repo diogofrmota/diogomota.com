@@ -1,5 +1,5 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Dialog, typesFirst } from "@/components/common/Dialog";
 import { CalendarIcon, ChevronDownIcon, ClockIcon, CloseIcon, ExternalIcon } from "@/components/common/icons";
 import { Alert, Button } from "@/components/common/ui";
@@ -69,6 +69,15 @@ export function EventDialog({
   onDelete: (event: CalendarEvent) => void;
 }) {
   const [editing, setEditing] = useState(!event);
+  // Edit event shows the form in a dialog already open: its title field takes
+  // the focus then (where typesFirst), as it does when a new event's dialog
+  // opens (Dialog, data-autofocus). Not with autoFocus, which the server would
+  // render one way and a browser with a mouse another.
+  const titleField = useRef<HTMLInputElement>(null);
+  const switchedToEdit = useRef(false);
+  useEffect(() => {
+    if (editing && switchedToEdit.current && typesFirst()) titleField.current?.focus();
+  }, [editing]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const newStart = time ?? "09:00";
@@ -178,7 +187,11 @@ export function EventDialog({
     setError("");
     setEditing(false);
   }
-  const color = event && !event.isGroup ? space.members.find((m) => m.id === event.assigneeIds[0])?.color : undefined;
+  // Who it's for, as the calendar shows it: their color, half and half for two people or more.
+  const colors =
+    event && !event.isGroup
+      ? event.assigneeIds.flatMap((id) => space.members.find((m) => m.id === id)?.color ?? [])
+      : [];
   const forWhom = event ? eventFor(event, names) : "";
   const sameDay = start.date === end.date;
   return (
@@ -194,8 +207,9 @@ export function EventDialog({
         {editing ? (
           <form onSubmit={save} className={styles.form}>
             <fieldset disabled={pending}>
-              {/* data-autofocus when the dialog opens on the form (a new event), autoFocus when Edit event shows it;
-            not on a touch screen, where the keyboard would come up over the form before it's seen. */}
+              {/* Focused when the dialog opens on the form (a new event: data-autofocus) and when Edit event
+                  shows it (the effect above); not on a touch screen, where the keyboard would come up over
+                  the form before it's seen. */}
               <label>
                 Event title
                 <input
@@ -203,7 +217,7 @@ export function EventDialog({
                   required
                   maxLength={200}
                   defaultValue={event?.title}
-                  autoFocus={typesFirst()}
+                  ref={titleField}
                   data-autofocus
                 />
               </label>
@@ -316,7 +330,13 @@ export function EventDialog({
                 <p>
                   <span
                     className={styles.assigneeDot}
-                    style={{ "--event-color": color ?? "var(--muted)" } as React.CSSProperties}
+                    data-split={colors.length > 1 || undefined}
+                    style={
+                      {
+                        "--event-color": colors[0] ?? "var(--muted)",
+                        "--event-color-2": colors[1] ?? colors[0],
+                      } as React.CSSProperties
+                    }
                     aria-hidden="true"
                   />
                   <span>{forWhom}</span>
@@ -348,21 +368,34 @@ export function EventDialog({
                   )}
                 </p>
               </div>
-              {/* This event only: to Google Calendar, or as a file for any other calendar. Settings has the whole calendar. */}
-              <div className={styles.actions}>
-                <a href={googleCalendarLink(event, forWhom)} target="_blank" rel="noopener noreferrer">
-                  Export to Google Calendar
-                  <ExternalIcon />
-                </a>
-                <a href={`/api/shared/events/${event.id}/export`} download>
-                  Download event .ics
-                </a>
-              </div>
+              {/* This event only, in one button: to Google Calendar, or as a file for Apple's, Outlook or
+                  any other calendar. Settings has the whole calendar, as a subscription. */}
+              <details className={styles.addTo}>
+                <summary className={ui.button}>
+                  <CalendarIcon />
+                  Add to my calendar
+                  <ChevronDownIcon />
+                </summary>
+                <ul>
+                  <li>
+                    <a href={googleCalendarLink(event, forWhom)} target="_blank" rel="noopener noreferrer">
+                      Google Calendar
+                      <ExternalIcon />
+                    </a>
+                  </li>
+                  <li>
+                    <a href={`/api/shared/events/${event.id}/export`} download>
+                      Apple or Outlook (.ics)
+                    </a>
+                  </li>
+                </ul>
+              </details>
               <div className={ui.actions}>
                 <Button
                   variant="primary"
                   onClick={() => {
                     setError("");
+                    switchedToEdit.current = true;
                     setEditing(true);
                   }}
                 >

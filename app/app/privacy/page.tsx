@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getSession } from "@/auth";
+import { getUser } from "@/auth";
 import { AppFrame } from "@/components/common/AppShell";
 import ui from "@/components/common/ui.module.css";
 import { appViewport } from "@/lib/apps";
-import { themeOf } from "@/lib/users";
+import { contactEmail } from "@/lib/site";
+import { defaultTheme } from "@/lib/themes";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -16,12 +17,18 @@ export const metadata: Metadata = {
 export const viewport = appViewport;
 
 // What the apps keep about their users (AC1), in plain words: linked from
-// sign-up, /apps and /account. In the user's theme when logged in.
+// sign-up, home and /account. In the user's theme when logged in. Where to
+// write to is CONTACT_EMAIL (lib/site.ts): without it, "ask Diogo".
 export default async function PrivacyPage() {
-  const session = await getSession();
-  const theme = await themeOf(session?.user.id);
+  const user = await getUser();
+  const contact = contactEmail();
   return (
-    <AppFrame theme={theme} username={session?.user.username ?? null}>
+    <AppFrame
+      theme={user?.themePreference ?? defaultTheme}
+      username={user?.username ?? null}
+      name={user?.name}
+      avatarUrl={user?.avatarUrl}
+    >
       <article className={styles.page}>
         <h1 className={ui.heading}>Privacy</h1>
         <p className={ui.muted}>
@@ -68,7 +75,16 @@ export default async function PrivacyPage() {
           a file) and <strong>Delete my account</strong>, which deletes it all at once: you leave your space (the space
           goes with its last member) and your library, friends and activity go. Backups forget it within two weeks.
         </p>
-        <p>Questions, or anything you want changed: ask Diogo.</p>
+        <p>
+          Questions, or anything you want changed:{" "}
+          {contact ? (
+            <>
+              write to <a href={`mailto:${contact}`}>{contact}</a>.
+            </>
+          ) : (
+            "ask Diogo."
+          )}
+        </p>
         <p className={ui.note}>Last changed on 13 November 2026.</p>
       </article>
     </AppFrame>

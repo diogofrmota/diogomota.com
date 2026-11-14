@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Avatar } from "@/components/common/Avatar";
-import type { ActivityItem } from "@/lib/activity-types";
+import ui from "@/components/common/ui.module.css";
+import { groupActivity, type ActivityItem } from "@/lib/activity-types";
 import { localParts } from "@/lib/calendar";
 import { memberName } from "@/lib/names";
 import type { TitleSummary } from "@/lib/show-types";
@@ -27,7 +29,7 @@ function onDay(startsAt: string) {
 }
 
 /** What happened, as a sentence after the person's name, with the title (a button) where there is one. */
-function sentence(item: ActivityItem, title: React.ReactNode): React.ReactNode {
+function sentence(item: ActivityItem, title: React.ReactNode, viewer?: string): React.ReactNode {
   switch (item.kind) {
     case "joined":
       return "joined the space";
@@ -56,50 +58,99 @@ function sentence(item: ActivityItem, title: React.ReactNode): React.ReactNode {
     case "recommended":
       return (
         <>
-          recommended {title} to {memberName(item.data.to)}
+          recommended {title} to {item.data.to.username === viewer ? "you" : memberName(item.data.to)}
         </>
       );
   }
 }
 
+const list = new Intl.ListFormat("en-GB", { type: "conjunction" });
+
+/** A run of one kind by one person, as one line. */
+function runSentence(run: ActivityItem[]): string {
+  const n = run.length;
+  const names = (values: string[]) => list.format([...new Set(values)]);
+  const first = run[0];
+  switch (first.kind) {
+    case "event-added":
+      return `added ${n} events`;
+    case "event-changed":
+      return `changed ${n} events`;
+    case "event-deleted":
+      return `deleted ${n} events`;
+    case "list-added":
+      return `made the lists ${names(run.map((item) => (item.kind === "list-added" ? item.data.name : "")))}`;
+    case "task-added":
+      return `added ${n} tasks to ${names(run.map((item) => (item.kind === "task-added" ? item.data.list : "")))}`;
+    case "task-done":
+      return `ticked off ${n} tasks`;
+    default:
+      return "";
+  }
+}
+
 /**
  * An activity feed (lib/activity.ts): what the space's members, or the user's
- * friends, did lately, newest first. In Shows, a title opens its panel.
+ * friends, did lately, newest first, a run of the same thing as one line. In
+ * Shows, a title opens its panel. With `limit`, the first that many lines,
+ * then Show more for the rest.
  */
 export function ActivityFeed({
   items,
   empty,
   onOpenTitle,
+  viewer,
+  limit,
 }: {
   items: ActivityItem[];
   empty: string;
   onOpenTitle?: (title: TitleSummary) => void;
+  /** The user's username: something done to them reads "to you". */
+  viewer?: string;
+  limit?: number;
 }) {
+  const [all, setAll] = useState(false);
   if (!items.length) return <p className={styles.empty}>{empty}</p>;
+  const lines = groupActivity(items);
+  const shown = limit && !all ? lines.slice(0, limit) : lines;
   return (
-    <ol className={styles.feed}>
-      {items.map((item, index) => {
-        const title =
-          item.title &&
-          (onOpenTitle ? (
-            <button type="button" className={styles.title} onClick={() => onOpenTitle(item.title!)}>
-              {item.title.title}
-            </button>
-          ) : (
-            <strong>{item.title.title}</strong>
-          ));
-        return (
-          <li key={item.id} style={{ "--i": index } as React.CSSProperties}>
-            <Avatar username={item.person.username} url={item.person.avatarUrl} className={styles.avatar} />
-            <p>
-              <strong>{memberName(item.person)}</strong> {sentence(item, title)}
-              <time dateTime={item.createdAt} className={styles.when}>
-                {timeAgo(item.createdAt)}
-              </time>
-            </p>
-          </li>
-        );
-      })}
-    </ol>
+    <>
+      <ol className={styles.feed}>
+        {shown.map((run, index) => {
+          const item = run[0];
+          const title =
+            item.title &&
+            (onOpenTitle ? (
+              <button type="button" className={styles.title} onClick={() => onOpenTitle(item.title!)}>
+                {item.title.title}
+              </button>
+            ) : (
+              <strong>{item.title.title}</strong>
+            ));
+          return (
+            <li key={item.id} style={{ "--i": index } as React.CSSProperties}>
+              <Avatar
+                username={item.person.username}
+                name={item.person.name}
+                url={item.person.avatarUrl}
+                className={styles.avatar}
+              />
+              <p>
+                <strong>{memberName(item.person)}</strong>{" "}
+                {run.length > 1 ? runSentence(run) : sentence(item, title, viewer)}
+                <time dateTime={item.createdAt} className={styles.when}>
+                  {timeAgo(item.createdAt)}
+                </time>
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+      {shown.length < lines.length && (
+        <button type="button" className={`${ui.button} ${styles.more}`} onClick={() => setAll(true)}>
+          Show more
+        </button>
+      )}
+    </>
   );
 }

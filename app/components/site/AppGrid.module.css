@@ -1,0 +1,154 @@
+/* Home's apps, logged in (AppGrid): their icons in a grid, like a phone's home
+   screen, left-aligned in the page's column: four to a row on a phone, six
+   from 40rem, each its icon with its name under it. */
+.grid {
+  --icon-size: 4rem;
+
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 40rem) {
+  .grid {
+    --icon-size: 4.5rem;
+
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--space-6) var(--space-4);
+  }
+}
+
+/* Each comes in from just below, one after another (--i), 30ms apart. */
+.grid li {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  animation: app-in var(--duration) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
+}
+
+@keyframes app-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.app {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--space-1);
+  border-radius: var(--radius-lg);
+  color: var(--text);
+  text-decoration: none;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+
+.app:active {
+  scale: var(--press);
+}
+
+.app:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grid li {
+    animation: none;
+  }
+
+  .app:active {
+    scale: none;
+  }
+}
+
+/* The icon draws its own colored tile (public/logos), the same in every theme. */
+.icon {
+  position: relative;
+  display: block;
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+.logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 22.5%;
+  box-shadow: var(--shadow-sm);
+}
+
+@media (hover: hover) {
+  .app:hover .logo {
+    filter: brightness(1.04);
+  }
+}
+
+.name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* What is waiting, on the icon's top right corner: in the accent (red means
+   delete in the apps), ringed in the page's color so it stands off the icon. */
+.badge {
+  position: absolute;
+  top: -0.375rem;
+  right: -0.375rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 0.3rem;
+  border: 2px solid var(--bg);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--bg);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  box-sizing: content-box;
+}
+
+/* A ring over the icon that only shows, and turns, while the app loads. */
+.pending {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 40%;
+  height: 40%;
+  border: 3px solid rgb(255 255 255 / 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.active {
+  opacity: 1;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .active {
+    animation-duration: 3s;
+  }
+}

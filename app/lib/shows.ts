@@ -505,6 +505,20 @@ async function recommendedToUser(userId: string, type: MediaType): Promise<Title
   return rows.map(({ from, ...title }) => ({ ...title, note: `From ${list.format(from)}` }));
 }
 
+/**
+ * Marks the recommendations of TV shows or movies the user was sent as seen:
+ * Discover showed them (Recommended by Friends), so home's Shows badge stops
+ * counting them (lib/badges.ts).
+ */
+export async function recommendationsSeen(userId: string, type: MediaType): Promise<null> {
+  await query(
+    `UPDATE recommendations r SET seen_at = now() FROM shows s
+     WHERE s.id = r.show_id AND r.to_user = $1 AND s.type = $2 AND r.seen_at IS NULL`,
+    [userId, type],
+  );
+  return null;
+}
+
 /** A Discover section of TV shows or movies (lib/show-types.ts, discoverSections). */
 export function discoverSection(userId: string, type: MediaType, section: string): Promise<TitleSummary[]> {
   if (!discoverSections[type].some((known) => known.id === section)) throw new HttpError("Section not found.", 404);

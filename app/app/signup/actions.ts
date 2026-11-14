@@ -56,5 +56,5 @@ export async function signUp(_previous: FormState, formData: FormData): Promise<
       values,
     };
   }
-  redirect(safeNextPath(formData.get("next")) ?? "/apps");
+  redirect(safeNextPath(formData.get("next")) ?? "/");
 }

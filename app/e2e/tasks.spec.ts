@@ -141,13 +141,13 @@ test("lists: empty state, create, rename, reorder with the keyboard and delete, 
   await deleted;
   await dialog.getByRole("button", { name: "Done", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(chips(page).getByRole("button")).toHaveText(["Groceries", "Trip planning", "New list"]);
+  await expect(chips(page).getByRole("button")).toHaveText(["Today", "Groceries", "Trip planning", "New list"]);
 
   // The open list is remembered on this device.
   await chips(page).getByRole("button", { name: "Trip planning" }).click();
   await page.reload();
   await openTasks(page);
-  await expect(chips(page).getByRole("button")).toHaveText(["Groceries", "Trip planning", "New list"]);
+  await expect(chips(page).getByRole("button")).toHaveText(["Today", "Groceries", "Trip planning", "New list"]);
   await expect(chips(page).getByRole("button", { name: "Trip planning" })).toHaveAttribute("aria-pressed", "true");
   expect((await readLists(page)).map((l) => l.name)).toEqual(["Groceries", "Trip planning"]);
 
@@ -592,3 +592,80 @@ test("the tasks API is scoped to the caller's current space and validates what i
   );
   expect((await readLists(page)).map((l) => l.name)).toEqual(["Other"]);
 });
+
+test("Today lists what is due from every list, for you or nobody; quick dates and List move a task", async ({
+  page,
+}) => {
+  const space = await setup(page);
+  const me = space.members[0].id;
+  const today = localParts(new Date()).date;
+  const create = async (path: string, data: object) => {
+    const response = await page.request.post(`${base}${path}`, { data });
+    expect(response.ok(), await response.text()).toBe(true);
+    return (await response.json()).data;
+  };
+  const home = await create("/lists", { name: "Home" });
+  const shop = await create("/lists", { name: "Groceries" });
+  await create(`/lists/${home.id}/tasks`, { title: "Pay rent", dueDate: today, assigneeIds: [me] });
+  await create(`/lists/${home.id}/tasks`, { title: "Fix the shelf", dueDate: datePlus(today, -2) });
+  await create(`/lists/${home.id}/tasks`, { title: "Book flights", dueDate: datePlus(today, 5) });
+  await create(`/lists/${shop.id}/tasks`, { title: "Olive oil", dueDate: today });
+  await create(`/lists/${shop.id}/tasks`, { title: "Eggs" });
+  await openTasks(page);
+
+  // Today first, with how many are due; Due today in the accent, Overdue in red.
+  const todayChip = chips(page).getByRole("button", { name: /^Today/ });
+  await expect(chips(page).getByRole("button")).toHaveText(["Today3", "Home", "Groceries", "New list"]);
+  await chips(page).getByRole("button", { name: "Home", exact: true }).click();
+  const accent = await page
+    .locator("[data-theme]")
+    .evaluate((shell) => getComputedStyle(shell).getPropertyValue("--accent"));
+  await expect(row(page, "Pay rent").getByText("Due today")).toHaveCSS("color", hexToRgb(accent.trim()));
+  await expect(row(page, "Fix the shelf").getByText(/^Overdue/)).toBeVisible();
+
+  // Today: the three due today or before, from both lists, under each list's name; not the one due later.
+  await todayChip.click();
+  await expect(page.getByRole("heading", { level: 2, name: "Today (3)" })).toBeVisible();
+  const titlesIn = (name: string) =>
+    page
+      .getByRole("list", { name, exact: true })
+      .getByRole("checkbox")
+      .evaluateAll((boxes) => boxes.map((box) => box.getAttribute("aria-label")));
+  await expect.poll(() => titlesIn("Home")).toEqual(["Pay rent", "Fix the shelf"]);
+  await expect.poll(() => titlesIn("Groceries")).toEqual(["Olive oil"]);
+  await expect(page.getByRole("checkbox", { name: "Book flights" })).toHaveCount(0);
+  // There is no adding to Today: it isn't a list.
+  await expect(page.getByLabel("Write a task")).toHaveCount(0);
+
+  // A task's popup: Today, Tomorrow, Next week set its due date; List moves it to the end of another.
+  await chips(page).getByRole("button", { name: "Groceries", exact: true }).click();
+  await row(page, "Eggs").getByRole("button", { name: "Eggs", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Edit task" });
+  const due = dialog.getByRole("group", { name: "Due" });
+  await due.getByRole("button", { name: "Tomorrow" }).click();
+  await expect(due.getByRole("button", { name: "Tomorrow" })).toHaveAttribute("aria-pressed", "true");
+  const tomorrow = datePlus(today, 1);
+  await expect(dialog.getByLabel("Due date", { exact: true })).toHaveValue(
+    `${tomorrow.slice(8, 10)}/${tomorrow.slice(5, 7)}/${tomorrow.slice(0, 4)}`,
+  );
+  await dialog.getByLabel("List").selectOption({ label: "Home" });
+  const moved = saved(page, /\/tasks\/[^/]+\/move$/);
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await moved;
+  await expect(row(page, "Eggs")).toHaveCount(0);
+  await expect
+    .poll(async () => {
+      const lists = await readLists(page);
+      const eggs = lists.flatMap((list) => list.tasks).find((task) => task.title === "Eggs");
+      return eggs && { listId: eggs.listId, dueDate: eggs.dueDate };
+    })
+    .toEqual({ listId: home.id, dueDate: tomorrow });
+  await chips(page).getByRole("button", { name: "Home", exact: true }).click();
+  expect((await todoTitles(page)).at(-1)).toBe("Eggs");
+});
+
+/** "#30507a" as getComputedStyle has colors: "rgb(48, 80, 122)". */
+function hexToRgb(hex: string) {
+  const value = parseInt(hex.replace("#", ""), 16);
+  return `rgb(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255})`;
+}

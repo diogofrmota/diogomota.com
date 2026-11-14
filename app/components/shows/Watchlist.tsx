@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { ChevronDownIcon, SearchIcon } from "@/components/common/icons";
 import { Button } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
 import { useAppView } from "@/hooks/useAppView";
@@ -36,9 +37,20 @@ function Empty({ status, type }: { status: LibraryStatus; type: MediaType }) {
   );
 }
 
-// The section's heading says the status. Watching and Completed say it on each
-// poster too, as they do everywhere (LibraryGrid); Planned doesn't.
-function Section({ status, type, items }: { status: LibraryStatus; type: MediaType; items: LibraryItem[] | null }) {
+// The section's heading says the status, so its posters don't (LibraryGrid,
+// statusBadges): every one of them is of it. With a search, an empty section
+// says that nothing in it matches.
+function Section({
+  status,
+  type,
+  items,
+  search,
+}: {
+  status: LibraryStatus;
+  type: MediaType;
+  items: LibraryItem[] | null;
+  search: string;
+}) {
   const heading = statusNames[status];
   const kind = type === "tv" ? "TV shows" : "movies";
   return (
@@ -47,11 +59,16 @@ function Section({ status, type, items }: { status: LibraryStatus; type: MediaTy
       label={`${heading} ${kind}`}
       loadingLabel={`Loading your ${heading.toLowerCase()} ${kind}…`}
       items={items}
-      empty={<Empty status={status} type={type} />}
+      empty={search ? `No ${heading.toLowerCase()} ${kind} match “${search}”.` : <Empty status={status} type={type} />}
       plannedBadge={false}
+      statusBadges={false}
     />
   );
 }
+
+type Sort = "recent" | "az";
+/** Past this many titles of a type, the Library has a search and a sort. */
+const manyTitles = 6;
 
 // The Library's sections, in this order: what is being watched first.
 const sectionOrder: readonly LibraryStatus[] = ["watching", "planned", "completed"];
@@ -105,7 +122,15 @@ export function Watchlist() {
       left.current = true;
     };
   }, []);
-  const ofType = items?.filter((item) => item.type === type) ?? null;
+  // Search (by title) and sort (the latest added or changed first, as they come, or A to Z), for a long library.
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<Sort>("recent");
+  const allOfType = items?.filter((item) => item.type === type) ?? null;
+  const controls = (allOfType?.length ?? 0) > manyTitles;
+  const query = controls ? search.trim().toLocaleLowerCase() : "";
+  const matching = allOfType?.filter((item) => !query || item.title.toLocaleLowerCase().includes(query)) ?? null;
+  const ofType =
+    matching && controls && sort === "az" ? [...matching].sort((a, b) => a.title.localeCompare(b.title)) : matching;
   return (
     <div className={styles.view}>
       {/* The Library tab shows which view this is. */}
@@ -120,9 +145,32 @@ export function Watchlist() {
         <Welcome onSetUp={() => setGuide(true)} />
       ) : (
         <>
-          {/* Centered, as in Discover. */}
-          <div className={styles.discoverTop}>
+          {/* On the left, as the posters are under it; then, for a long library, its search and sort. */}
+          <div className={styles.libraryTop}>
             <TypeSwitch type={type} onChange={setType} />
+            {controls && (
+              <div className={styles.libraryControls}>
+                <label className={styles.librarySearch}>
+                  <span className={ui.srOnly}>Search your library</span>
+                  <SearchIcon />
+                  <input
+                    type="search"
+                    value={search}
+                    placeholder={`Search your ${type === "tv" ? "TV shows" : "movies"}`}
+                    autoComplete="off"
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </label>
+                <label className={styles.librarySort}>
+                  <span className={ui.srOnly}>Sort</span>
+                  <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+                    <option value="recent">Recently updated</option>
+                    <option value="az">A–Z</option>
+                  </select>
+                  <ChevronDownIcon />
+                </label>
+              </div>
+            )}
           </div>
           {/* Keyed by type, so each section starts collapsed. */}
           {sectionOrder.map((status) => (
@@ -131,6 +179,7 @@ export function Watchlist() {
               status={status}
               type={type}
               items={ofType && ofType.filter((item) => item.library.status === status)}
+              search={query ? search.trim() : ""}
             />
           ))}
         </>

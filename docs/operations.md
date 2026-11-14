@@ -271,7 +271,7 @@ Rotate a secret when it may have leaked (pasted somewhere, a lost laptop, an acc
 | Docker Hub `vps-pull` (read-only) | `~/.docker/config.json` of `deploy` on the VPS | local `.env`, `DOCKERHUB_PULL_TOKEN` |
 | Deploy key | GitHub secret `VPS_SSH_KEY`; its public half in `~/.ssh/authorized_keys` of `deploy` | `C:\Users\diogo\.ssh\diogomota_deploy` |
 
-To change a value in the VPS `.env` by hand, use `nano .env`: a pasted value doesn't end up in the shell history. After any change there, `docker compose up -d app` recreates the app with the new values.
+To change a value in the VPS `.env` by hand, use `nano .env`: a pasted value doesn't end up in the shell history. After any change there, `docker compose up -d app` recreates the app with the new values. The same goes for `CONTACT_EMAIL`, not a secret: the address `/privacy` links to (empty, it says to ask Diogo).
 
 ### AUTH_SECRET
 

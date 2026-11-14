@@ -34,7 +34,7 @@ test.beforeEach(async ({ request }) => {
 async function existingUser(page: Page): Promise<TestUser> {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await confirmEmail(page, user.email);
   await logOut(page, user.username);
   return user;
@@ -120,7 +120,7 @@ test("reset the password with the emailed link, then log in with the new one", a
   await logIn(page, user.username, user.password);
   await expect(formAlert(page)).toHaveText(wrongCredentials);
   await logIn(page, user.email, "a brand new password");
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await expect(accountButton(page, user.username)).toBeVisible();
 });
 
@@ -148,7 +148,7 @@ test("a used link doesn't work again, not even from a page opened before", async
   await logIn(page, user.username, "the second new password");
   await expect(formAlert(page)).toHaveText(wrongCredentials);
   await logIn(page, user.username, "the first new password");
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
 });
 
 test("an expired link is rejected and the password stays the same", async ({ page, request }) => {
@@ -173,7 +173,7 @@ test("an expired link is rejected and the password stays the same", async ({ pag
   await expect(page.getByRole("main")).toContainText(linkExpired);
 
   await logIn(page, user.username, user.password);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
 });
 
 test("a new request replaces the earlier link", async ({ page, request }) => {
@@ -194,12 +194,12 @@ test("a new request replaces the earlier link", async ({ page, request }) => {
 test("a reset logs out every session of the account", async ({ page, browser, request }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   await confirmEmail(page, user.email);
   const otherDevice = await browser.newContext();
   const other = await otherDevice.newPage();
   await logIn(other, user.username, user.password);
-  await expect(other).toHaveURL("/apps");
+  await expect(other).toHaveURL("/");
 
   // Reset from the first device while it's still logged in.
   await requestReset(page, user.email);
@@ -209,7 +209,7 @@ test("a reset logs out every session of the account", async ({ page, browser, re
 
   for (const tab of [page, other]) {
     await tab.goto("/shared");
-    await expect(tab).toHaveURL("/apps?next=%2Fshared");
+    await expect(tab).toHaveURL("/?next=%2Fshared");
   }
   await otherDevice.close();
 });
@@ -238,7 +238,7 @@ test("an address gets at most 3 reset emails an hour, with the same answer after
 test("an email nobody confirmed gets no reset link (the same answer)", async ({ page, request }) => {
   const user = newUser();
   await signUp(page, user);
-  await expect(page).toHaveURL("/apps");
+  await expect(page).toHaveURL("/");
   // Until it is, /apps says so.
   await expect(page.getByRole("main")).toContainText(`Confirm your email (${user.email})`);
   await logOut(page, user.username);

@@ -1,0 +1,22 @@
+/* Confirm your email (VerifyNote): a note over home's apps, marked with the
+   accent, until the link is opened; Send it again under the text. */
+.note {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  margin: 0 0 var(--space-6);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.note p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.error {
+  color: var(--danger);
+  font-size: var(--text-sm);
+}

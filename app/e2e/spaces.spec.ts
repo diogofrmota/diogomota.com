@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 import { expect, newUser, openSpaceSettings, sharedTab, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
+import { initials } from "../lib/names";
 import type { Space } from "../lib/space-types";
 
 const base = "/api/shared/spaces";
@@ -39,9 +40,9 @@ async function join(page: Page, code: string) {
  * or join one.
  */
 async function leave(page: Page) {
-  await page.getByRole("button", { name: "Leave this group", exact: true }).click();
+  await page.getByRole("button", { name: "Leave this space", exact: true }).click();
   const confirm = page.getByRole("button", { name: "Leave and delete", exact: true });
-  const undo = page.getByRole("status").filter({ hasText: "Leaving this group…" });
+  const undo = page.getByRole("status").filter({ hasText: "Leaving this space…" });
   await expect(confirm.or(undo)).toBeVisible();
   if (await confirm.isVisible()) await confirm.click();
   await expect(page.getByRole("heading", { name: "Your shared calendar" })).toBeVisible({ timeout: 15_000 });
@@ -77,11 +78,11 @@ test("two users create, copy invite, join, transfer ownership and delete the las
     await settings(other);
     // Any member can invite.
     await expect(other.getByRole("button", { name: "Share invite link" })).toBeVisible();
-    // Each with their picture (or initial), name and @username.
+    // Each with their picture (or initials), name and @username.
     const members = other.getByRole("region", { name: "Members" });
     await expect(members.getByRole("listitem")).toHaveText([
-      new RegExp(`^.${owner.name} \\(@${owner.username}\\)Owner$`),
-      new RegExp(`^.${member.name} \\(@${member.username}\\) \\(you\\)$`),
+      new RegExp(`^${initials(owner.username, owner.name)}${owner.name} \\(@${owner.username}\\)Owner$`),
+      new RegExp(`^${initials(member.username, member.name)}${member.name} \\(@${member.username}\\) \\(you\\)$`),
     ]);
     const data: Space = (await (await other.request.get(base)).json()).data;
     expect(new Set(data.members.map((member) => member.color)).size).toBe(2);
@@ -202,7 +203,7 @@ test("on mobile the welcome and Settings fit both themes", async ({ page }) => {
       await page.locator("[data-theme]").evaluate((shell) => shell.setAttribute("data-theme", "graphite"));
     await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", theme);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await expect(page.getByRole("button", { name: "Leave this group", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Leave this space", exact: true })).toBeVisible();
   }
 });
 
@@ -259,7 +260,7 @@ test("an invite link shows who sent it, and joins once logged in (never by itsel
     // Logged out: who sent it, then Log in and Sign up, which come back to it.
     await other.goto(`/join/${code}`);
     await expect(other.getByRole("heading", { level: 1 })).toHaveText(`${owner.name} invited you to Shared`);
-    await other.getByRole("link", { name: "Sign up" }).click();
+    await other.getByRole("main").getByRole("link", { name: "Sign up" }).click();
     const member = newUser();
     await other.getByLabel("Name", { exact: true }).fill(member.name);
     await other.getByLabel("Username").fill(member.username);

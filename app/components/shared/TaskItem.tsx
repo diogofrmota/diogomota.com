@@ -154,13 +154,24 @@ export function TaskRow({
                   title={memberName(member)}
                   style={{ "--member-color": member.color } as CSSProperties}
                 >
-                  <Avatar username={member.username} url={member.avatarUrl} className={styles.taskAvatar} />
+                  <Avatar
+                    username={member.username}
+                    name={member.name}
+                    url={member.avatarUrl}
+                    className={styles.taskAvatar}
+                  />
                   <span className={styles.assigneeName}>{memberName(member)}</span>
                 </span>
               ))}
             </span>
           )}
-          {due && <span className={`${styles.meta} ${due.startsWith("Overdue") ? styles.overdue : ""}`}>{due}</span>}
+          {due && (
+            <span
+              className={`${styles.meta} ${due.startsWith("Overdue") ? styles.overdue : due === "Due today" ? styles.dueToday : ""}`}
+            >
+              {due}
+            </span>
+          )}
           {task.repeat && (
             <span className={`${styles.meta} ${styles.repeat}`}>
               <RepeatIcon />

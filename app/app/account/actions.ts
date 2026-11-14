@@ -17,7 +17,7 @@ import {
   usernameError,
 } from "@/lib/account-rules";
 import type { FormState } from "@/lib/form-state";
-import { appsWithNext } from "@/lib/next-path";
+import { homeWithNext } from "@/lib/next-path";
 import { passwordCheckLimit, verifyEmailLimit } from "@/lib/rate-limit";
 import { isTheme } from "@/lib/themes";
 import { findUserById, updateName, updateThemePreference, updateUsername } from "@/lib/users";
@@ -25,7 +25,7 @@ import { findUserById, updateName, updateThemePreference, updateUsername } from 
 // Actions are reachable by anyone who can send a POST, so each one checks the session.
 async function currentUser() {
   const session = await getSession();
-  if (!session) redirect(appsWithNext("/account"));
+  if (!session) redirect(homeWithNext("/account"));
   return session.user;
 }
 
@@ -148,14 +148,14 @@ export async function resendVerification(): Promise<FormState> {
   if (user.emailVerified) return { success: "Your email is confirmed." };
   if (!verifyEmailLimit(user.id)) return { error: "You asked for a few links already. Try again in an hour." };
   const current = await findUserById(user.id);
-  if (!current) redirect(appsWithNext("/account"));
+  if (!current) redirect(homeWithNext("/account"));
   await auth.api.sendVerificationEmail({ body: { email: current.email, callbackURL: "/account?email=confirmed" } });
   return { success: `We sent a new link to ${current.email}.` };
 }
 
 /**
  * Deletes the account, after the password: it leaves its space first (auth.ts,
- * beforeDelete), and everything of theirs goes with it. Then back to /apps,
+ * beforeDelete), and everything of theirs goes with it. Then back home,
  * logged out, which says it's done.
  */
 export async function deleteAccount(_previous: FormState, formData: FormData): Promise<FormState> {
@@ -167,7 +167,7 @@ export async function deleteAccount(_previous: FormState, formData: FormData): P
 
   await auth.api.deleteUser({ body: { password }, headers: await headers() });
   revalidatePath("/", "layout");
-  redirect("/apps?account=deleted");
+  redirect("/?account=deleted");
 }
 
 // Called once the profile picture has changed (set or removed) through
@@ -181,5 +181,5 @@ export async function avatarChanged(): Promise<void> {
 
 export async function logOut(): Promise<void> {
   await auth.api.signOut({ headers: await headers() }).catch(() => {});
-  redirect("/apps");
+  redirect("/");
 }

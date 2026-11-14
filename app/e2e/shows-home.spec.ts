@@ -350,16 +350,24 @@ test("the Library starts with a welcome, fills up from Discover, and the TV Show
   await expect(main.getByRole("heading", { name: "Start by discovering shows!" })).toHaveCount(0);
   // Watching, Planned, then Completed.
   await expect(main.getByRole("heading", { level: 2 })).toHaveText(["Watching", "Planned", "Completed"]);
-  // TV shows first; the switch on Discover is its own. In the middle, as there.
+  // TV shows first; the switch on Discover is its own. On the left, lined up with the posters under it.
   await pressed(typeSwitch(page, "TV Shows"));
-  expect(Math.abs((await middle(page.getByRole("group", { name: "Show" }))) - center)).toBeLessThanOrEqual(1);
   const watching = section(page, "Watching");
   await expect(grid(watching, "Watching TV shows").getByRole("listitem")).toHaveCount(1);
+  const switchBox = (await page.getByRole("group", { name: "Show" }).boundingBox())!;
+  const gridBox = (await grid(watching, "Watching TV shows").boundingBox())!;
+  expect(Math.abs(switchBox.x - gridBox.x)).toBeLessThanOrEqual(1);
   const harborCard = card(watching, "Harbor Lights");
   await expect(harborCard).toHaveAccessibleName("Harbor Lights, 2021, Watching, not started");
-  // Watching on the poster, as everywhere.
-  await expect(wholeCard(harborCard)).toContainText("Watching");
-  await expect(wholeCard(harborCard)).toContainText("2021 · Not started");
+  // Not "Watching" on the poster: the section says it. Its next episode, a tap away.
+  await expect(wholeCard(harborCard).getByText("Watching", { exact: true })).toHaveCount(0);
+  await expect(wholeCard(harborCard)).toContainText("2021 · Next: S1 E1");
+  await wholeCard(harborCard).getByRole("button", { name: "S1 E1 of Harbor Lights watched" }).click();
+  await expect(wholeCard(harborCard)).toContainText("2021 · S1 E1");
+  await expect(wholeCard(harborCard).getByRole("button", { name: "S1 E2 of Harbor Lights watched" })).toBeVisible();
+  await expect
+    .poll(async () => (await libraryRows(user.username)).find((entry) => entry.tmdb_id === harbor.tmdbId))
+    .toMatchObject({ current_season: 1, current_episode: 1 });
   await expect(harborCard.locator("img")).toHaveAttribute("src", new RegExp(`/e2e-poster-${harbor.tmdbId}\\.jpg$`));
   await expect(section(page, "Planned")).toHaveText(/No shows planned yet — explore Discover!/);
   await expect(section(page, "Completed")).toHaveText(/No shows completed yet\./);
@@ -407,15 +415,18 @@ test("the detail panel changes status, progress and favourite, and removes the t
   await expect(detail).not.toContainText("min episodes");
   await expect(detail).not.toContainText("Rating and details from TMDB");
   await expect(detail).toContainText("Overview of Harbor Lights.");
-  // On a wide screen: the title and its facts under the poster, and the overview at the top beside them.
+  // On a wide screen: the title and its facts under the poster, and beside them, being watched, its
+  // progress at the top (what the panel is opened for), then the overview.
   const posterBox = (await detail.locator("img").nth(1).boundingBox())!;
   const headingBox = (await detail.getByRole("heading", { level: 2 }).boundingBox())!;
   const overviewBox = (await detail.getByText("Overview of Harbor Lights.").boundingBox())!;
+  const progressBox = (await detail.getByRole("group", { name: "Progress" }).boundingBox())!;
   expect(headingBox.y).toBeGreaterThanOrEqual(posterBox.y + posterBox.height);
   expect(Math.abs(headingBox.x - posterBox.x)).toBeLessThanOrEqual(1);
   expect(overviewBox.x).toBeGreaterThan(posterBox.x + posterBox.width);
-  expect(overviewBox.y).toBeLessThan(posterBox.y + posterBox.height / 2);
-  // The overview under Synopsis, at the top.
+  expect(progressBox.y).toBeLessThan(posterBox.y + posterBox.height / 2);
+  expect(overviewBox.y).toBeGreaterThan(progressBox.y + progressBox.height);
+  // The overview under Synopsis.
   const synopsisBox = (await detail.getByRole("heading", { level: 3, name: "Synopsis" }).boundingBox())!;
   expect(synopsisBox.y).toBeLessThan(overviewBox.y);
   expect(Math.abs(synopsisBox.x - overviewBox.x)).toBeLessThanOrEqual(1);
@@ -504,7 +515,8 @@ test("the detail panel changes status, progress and favourite, and removes the t
   await expect(section(page, "Watching")).toHaveText(/not watching any shows yet/);
   const completed = card(section(page, "Completed"), "Harbor Lights");
   await expect(completed).toHaveAccessibleName("Harbor Lights, 2021, Completed, favourite");
-  await expect(wholeCard(completed)).toHaveText(/^Harbor LightsCompleted2021$/);
+  // No status on the poster in Library: its section says it.
+  await expect(wholeCard(completed)).toHaveText(/^Harbor Lights2021$/);
   await page.reload();
   await expect(completed).toHaveAccessibleName("Harbor Lights, 2021, Completed, favourite");
 
@@ -766,7 +778,7 @@ test("the library API lists, changes and removes titles, and checks every change
   });
   const other = await context.newPage();
   await signUp(other, newUser());
-  await expect(other).toHaveURL("/apps");
+  await expect(other).toHaveURL("/");
   expect((await (await other.request.get("/api/shows/library")).json()).data).toEqual([]);
   expect((await other.request.patch(entryUrl(harbor), { data: { status: "completed" } })).status()).toBe(404);
   expect((await other.request.delete(entryUrl(harbor))).status()).toBe(404);

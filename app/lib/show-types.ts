@@ -90,13 +90,15 @@ export type DiscoverSection =
   | "friends";
 
 /**
- * Discover's sections for TV shows and for movies, in their order: the three
- * after Top Rated are genres. For You is only there with titles of that type in
- * the library: it is made from them.
+ * Discover's sections for TV shows and for movies, in their order: the
+ * friends' first (Recommended by Friends, Added by Friends: what makes Shows
+ * different), then TMDB's lists; the ones after Top Rated are genres. For You
+ * is only there with titles of that type in the library: it is made from them.
  */
 export const discoverSections: Record<MediaType, readonly { id: DiscoverSection; heading: string }[]> = {
   tv: [
     { id: "recommended", heading: "Recommended by Friends" },
+    { id: "friends", heading: "Added by Friends" },
     { id: "for-you", heading: "For You" },
     { id: "trending", heading: "Trending This Week" },
     { id: "popular", heading: "Popular" },
@@ -104,10 +106,10 @@ export const discoverSections: Record<MediaType, readonly { id: DiscoverSection;
     { id: "comedy", heading: "Comedy" },
     { id: "crime", heading: "Crime" },
     { id: "sci-fi", heading: "Sci-Fi & Fantasy" },
-    { id: "friends", heading: "Added by Friends" },
   ],
   movie: [
     { id: "recommended", heading: "Recommended by Friends" },
+    { id: "friends", heading: "Added by Friends" },
     { id: "for-you", heading: "For You" },
     { id: "trending", heading: "Trending This Week" },
     { id: "popular", heading: "Popular" },
@@ -116,7 +118,6 @@ export const discoverSections: Record<MediaType, readonly { id: DiscoverSection;
     { id: "action", heading: "Action" },
     { id: "comedy", heading: "Comedy" },
     { id: "sci-fi", heading: "Science Fiction" },
-    { id: "friends", heading: "Added by Friends" },
   ],
 };
 

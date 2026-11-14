@@ -33,6 +33,46 @@
   font-size: var(--text-md);
 }
 
+/* A password field, with Show/Hide inside its right end. */
+.password {
+  position: relative;
+  display: block;
+}
+
+.password .input {
+  padding-right: 4.5rem;
+}
+
+/* As tall as the field (44px, for a finger), at its right end. */
+.reveal {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  min-width: 3.75rem;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .reveal:hover {
+    background: var(--hover);
+  }
+}
+
+.reveal:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .input:focus-visible {
   border-color: var(--accent);
 }

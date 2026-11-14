@@ -68,7 +68,13 @@ test("task Who? saves multiple people, keeps pictures after reload, and removes 
     expect(box.height).toBeLessThan(844);
     // It grows in from 0.95 of its size, out of the row pressed; it doesn't slide up (motion.spec.ts).
     await expect(dialog).toHaveCSS("animation-name", /popup-in/);
-    await expect(dialog.getByText("Extra options:", { exact: true })).toBeVisible();
+    // No "Extra options:" label; the due date has Today, Tomorrow and Next week a tap away.
+    await expect(dialog.getByText("Extra options:", { exact: true })).toHaveCount(0);
+    await expect(dialog.getByRole("group", { name: "Due" }).getByRole("button")).toHaveText([
+      "Today",
+      "Tomorrow",
+      "Next week",
+    ]);
     const picker = dialog.getByRole("group", { name: "Who?" });
     await expect(picker.getByRole("checkbox")).toHaveCount(2);
     await picker.getByRole("checkbox", { name: user.name, exact: true }).check();
