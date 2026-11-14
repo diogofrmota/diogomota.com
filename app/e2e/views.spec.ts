@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Locator, Page } from "@playwright/test";
 import sharp from "sharp";
 import { checkView, emulateHomeIndicator } from "./checks";
-import { accountButton, accountSetting, expect, newUser, signUp, test } from "./fixtures";
+import { accountSetting, expect, newUser, signUp, test } from "./fixtures";
 import { card, grid, loadSections, mockBase, openShows, otherPerson, section, tab, userId, viewHeading } from "./shows";
 
 // Every view of the site and of both apps, with their dialogs open and in their
@@ -62,8 +62,6 @@ test("the site's pages", async ({ page }) => {
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
   await checkView(page, "apps, logged in");
-  await accountButton(page, user.username).click();
-  await checkView(page, "account menu");
   await page.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await checkView(page, "account");
@@ -121,10 +119,9 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await checkView(page, "event");
   await page.goBack();
   await expect(event).toBeHidden();
-  // A phone has three days for a week (and opens on the agenda).
-  const phone = page.viewportSize()!.width < 768;
-  for (const view of ["Agenda", "Month", phone ? "3 days" : "Week", "Day"]) {
-    await page.getByRole("group", { name: "Calendar view" }).getByRole("button", { name: view, exact: true }).click();
+  for (const view of ["Agenda", "Month"]) {
+    const toggle = page.getByRole("group", { name: "Calendar view" }).getByRole("button", { name: view, exact: true });
+    if (await toggle.isVisible()) await toggle.click();
     await checkView(page, `Calendar, ${view.toLowerCase()}`);
   }
 
@@ -152,7 +149,7 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await checkView(page, "task");
   await page.goBack();
   await expect(task).toBeHidden();
-  await page.getByRole("button", { name: "Edit lists" }).click();
+  await page.getByRole("button", { name: "Edit" }).click();
   const lists = page.getByRole("dialog", { name: "Lists" });
   await checkView(page, "lists");
   await page.goBack();

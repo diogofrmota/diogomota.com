@@ -8,7 +8,28 @@ import {
   type LibraryItem,
   type TitleSummary,
 } from "@/lib/show-types";
-import { applyTaskFields, moveBefore, nextDue, type Task } from "@/lib/task-types";
+import { applyTaskFields, moveBefore, nextDue, taskAssignees, type Task } from "@/lib/task-types";
+
+test("task assignment handles cached single assignments, multiple people, and clearing everyone", () => {
+  const task: Task = {
+    id: "task",
+    listId: "list",
+    title: "Trip",
+    notes: "",
+    dueDate: null,
+    assigneeId: "ana",
+    isComplete: false,
+    repeat: null,
+  };
+  expect(taskAssignees(task)).toEqual(["ana"]);
+  const shared = applyTaskFields(task, { assigneeIds: ["ana", "diogo", "ana"] }, "2026-11-13");
+  expect(taskAssignees(shared)).toEqual(["ana", "diogo"]);
+  expect(applyTaskFields(shared, { assigneeIds: [] }, "2026-11-13")).toMatchObject({
+    assigneeId: null,
+    assigneeIds: [],
+  });
+  expect(taskAssignees(applyTaskFields(shared, { assigneeId: "diogo" }, "2026-11-13"))).toEqual(["diogo"]);
+});
 
 describe("repeating tasks", () => {
   test("the next due date is a period after the last, skipping the ones already past", () => {

@@ -169,6 +169,10 @@ export function createInvite(userId: string, spaceId: string): Promise<Invite> {
 // stop working).
 async function leave(db: PoolClient, userId: string, space: Space) {
   await db.query(
+    "DELETE FROM task_assignees WHERE user_id = $1 AND task_id IN (SELECT t.id FROM tasks t JOIN task_lists l ON l.id = t.list_id WHERE l.space_id = $2)",
+    [userId, space.id],
+  );
+  await db.query(
     "DELETE FROM event_assignees WHERE user_id = $1 AND event_id IN (SELECT id FROM events WHERE space_id = $2)",
     [userId, space.id],
   );

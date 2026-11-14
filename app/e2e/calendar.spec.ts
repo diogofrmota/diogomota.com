@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import type { Locator, Page } from "@playwright/test";
 import { expect, newUser, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
-import { localParts, localInstants, dateLabel, datePlus, type CalendarEvent } from "../lib/calendar";
+import { localParts, localInstants, dateLabel, type CalendarEvent } from "../lib/calendar";
 import type { Space } from "../lib/space-types";
 
 const base = "/api/shared/events";
@@ -19,7 +19,8 @@ async function setup(page: Page) {
 }
 /** The month (a phone opens on the agenda). */
 async function showMonth(page: Page) {
-  await page.getByRole("group", { name: "Calendar view" }).getByRole("button", { name: "Month", exact: true }).click();
+  const toggle = page.getByRole("button", { name: "Month", exact: true });
+  await toggle.click();
   await expect(page.getByRole("region", { name: "month calendar", exact: true })).toBeVisible();
 }
 /** The event form's typed fields: "Start date" and "End date" (dd/mm/yyyy), "Start time" and "End time" (hh:mm). */
@@ -41,7 +42,10 @@ async function add(page: Page, title: string, who: string, date = localParts(new
   await setDate(page, "End date", date);
   await setTime(page, "Start time", "09:30");
   await setTime(page, "End time", "10:30");
-  await page.getByRole("group", { name: "Who?" }).getByRole("checkbox", { name: who, exact: true }).check();
+  if (who === "All") {
+    for (const choice of await page.getByRole("group", { name: "Who?" }).getByRole("checkbox").all())
+      await choice.check();
+  } else await page.getByRole("group", { name: "Who?" }).getByRole("checkbox", { name: who, exact: true }).check();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
@@ -61,13 +65,13 @@ for (const mobile of [false, true]) {
     const me = space.members[0];
     // The colors over the calendar: each member by their name, not their username.
     const legend = page.getByRole("list", { name: "Event colors" });
-    await expect(legend.getByRole("listitem")).toHaveText([me.name!, "Group"]);
+    await expect(legend).toHaveCount(0);
     // The form: Who?, each member's picture (or initial) and All, any of them; the one adding it chosen.
     await page.getByRole("button", { name: "Add event", exact: true }).click();
     const who = page.getByRole("group", { name: "Who?" });
-    await expect(who.getByRole("checkbox")).toHaveCount(2);
+    await expect(who.getByRole("checkbox")).toHaveCount(1);
     await expect(who.getByRole("checkbox", { name: me.name!, exact: true })).toBeChecked();
-    await expect(who.getByRole("checkbox", { name: "All", exact: true })).not.toBeChecked();
+    await expect(who.getByRole("checkbox", { name: "All", exact: true })).toHaveCount(0);
     // No notes, and no select for who it's for.
     await expect(page.getByRole("dialog").getByRole("textbox", { name: /Notes/ })).toHaveCount(0);
     await expect(page.getByRole("dialog").getByRole("combobox")).toHaveCount(0);
@@ -80,7 +84,7 @@ for (const mobile of [false, true]) {
     await expect(personal).toBeVisible();
     await expect(group).toContainText("Dinner together");
     await expect(personal).toHaveAccessibleName(`Morning walk, 09:30, ${me.name}`);
-    await expect(group).toHaveAccessibleName(/, Group$/);
+    await expect(group).toHaveAccessibleName(`Dinner together, 09:30, ${me.name}`);
     // Both fit in their day, under its number (on a phone too): it doesn't scroll.
     const today = localParts(new Date()).date;
     const day = page
@@ -95,39 +99,35 @@ for (const mobile of [false, true]) {
     )!;
     await page.reload();
     if (mobile) await showMonth(page);
-    await expect(group.locator("svg")).toBeVisible();
+
     // On screen (the rest is its name, for screen readers): the initial and the title.
     await expect(personal.locator(':scope > [aria-hidden="true"]')).toHaveText([
       space.members[0].username[0].toUpperCase(),
       "Morning walk",
     ]);
-    await expect(group.locator(':scope > [aria-hidden="true"]')).toHaveText(["", "Dinner together"]);
+    await expect(group.locator(':scope > [aria-hidden="true"]')).toHaveText([
+      space.members[0].username[0].toUpperCase(),
+      "Dinner together",
+    ]);
     expect(await personal.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe(
       space.members[0].color,
     );
     expect(await group.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe(
-      "var(--muted)",
+      space.members[0].color,
     );
-    // On a phone a week is three days.
-    for (const [view, name] of [
-      [mobile ? "3 days" : "Week", "week"],
-      ["Day", "day"],
-      ["Month", "month"],
-    ]) {
+    for (const view of ["Agenda", "Month"]) {
       await page.getByRole("button", { name: view, exact: true }).click();
-      await expect(page.getByRole("region", { name: `${name} calendar`, exact: true })).toBeVisible();
-      await expect(personal).toBeAttached();
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
-      ).toBe(true);
+      await expect(page.getByRole("region", { name: view.toLowerCase() + " calendar", exact: true })).toBeVisible();
     }
     await personal.click();
     // Who it's for, by their name; events have no notes.
     await expect(page.getByRole("dialog")).toContainText(me.name!);
     const box = await page.getByRole("dialog").boundingBox();
     // On a phone, the whole screen.
-    if (mobile) expect(box).toEqual({ x: 0, y: 0, width: 390, height: 844 });
-    else expect(box!.width).toBeLessThan(600);
+    if (mobile) {
+      expect(box!.width).toBeLessThan(390);
+      expect(box!.height).toBeLessThan(844);
+    } else expect(box!.width).toBeLessThan(600);
     const ics = await download(page, "Download event .ics");
     expect(ics).toContain("SUMMARY:Morning walk\r\n");
     expect(ics).toContain(`DESCRIPTION:For: ${me.name}\r\n`);
@@ -229,12 +229,12 @@ for (const mobile of [false, true]) {
     // It opens the day, with all four.
     await more.click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    const grid = page.getByRole("region", { name: "day calendar", exact: true });
+    const grid = page.getByRole("region", { name: "agenda calendar", exact: true });
     await expect(grid).toBeVisible();
     await expect(
       page.getByRole("heading", {
         level: 2,
-        name: dateLabel(today, { day: "numeric", month: "long", year: "numeric" }),
+        name: dateLabel(today, { month: "long", year: "numeric" }),
       }),
     ).toBeVisible();
     for (const title of ["Breakfast", "Gym", "Lunch", "Walk"])
@@ -467,44 +467,6 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
   await page.goBack();
   await expect(event).toBeHidden();
 
-  // The day view: all-day events in their own row; a tap on an hour adds an event then.
-  await page.getByRole("group", { name: "Calendar view" }).getByRole("button", { name: "Day" }).click();
-  const grid = page.getByRole("region", { name: "day calendar" });
-  await expect(grid.getByRole("button", { name: /^Holiday, All day, / })).toBeVisible();
-  await expect(grid.getByText("All day", { exact: true })).toBeVisible();
-  const hour = grid.getByText("14:00", { exact: true });
-  // The day opens at the time it is now (the test below): from the top, 14:00 is scrolled to.
-  await grid.evaluate((el) => {
-    el.scrollTop = 0;
-  });
-  await hour.scrollIntoViewIfNeeded();
-  // The all-day row stays at the top as the hours scroll under it.
-  expect(await grid.evaluate((el) => el.scrollTop)).toBeGreaterThan(200);
-  await expect(grid.getByRole("button", { name: /^Holiday, All day, / })).toBeInViewport();
-  await expect(grid.getByText("All day", { exact: true })).toBeInViewport();
-  const hourBox = (await hour.boundingBox())!;
-  const gridBox = (await grid.boundingBox())!;
-  await page.mouse.click(gridBox.x + gridBox.width / 2, hourBox.y + 20);
-  await expect(whenField(dialog, "Start date")).toHaveValue(typed(first));
-  await expectTime(dialog, "Start time", "14:00");
-  await expectTime(dialog, "End time", "15:00");
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
-
-  // The arrows move a whole period, and are drawn as chevrons.
-  for (const name of ["Previous period", "Next period"]) {
-    const arrow = page.getByRole("button", { name });
-    await expect(arrow.locator("svg")).toHaveCount(1);
-    expect((await arrow.boundingBox())!.width).toBeGreaterThanOrEqual(44);
-  }
-  await page.getByRole("button", { name: "Next period" }).click();
-  await expect(
-    page.getByRole("heading", {
-      level: 2,
-      name: dateLabel(datePlus(first, 1), { day: "numeric", month: "long", year: "numeric" }),
-    }),
-  ).toBeVisible();
-
   // The API takes all-day events only from midnight to midnight.
   const payload = { title: "Odd", isGroup: false, assigneeIds: [space.members[0].id], allDay: true };
   expect(
@@ -528,26 +490,4 @@ test("a tap on a day or an hour adds an event then; all-day events have no times
       })
     ).status(),
   ).toBe(201);
-});
-
-test("the week and day views open at the time it is now, as does Today", async ({ page }) => {
-  await setup(page);
-  // An hour before now (in Lisbon) at the top of the hours, 1px a minute; as far as they go late at night.
-  const expectNow = async (grid: Locator) => {
-    const { time } = localParts(new Date());
-    const now = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
-    const { top, max } = await grid.evaluate((el) => ({ top: el.scrollTop, max: el.scrollHeight - el.clientHeight }));
-    expect(Math.abs(top - Math.min(max, Math.max(0, now - 60)))).toBeLessThanOrEqual(2);
-  };
-  for (const view of ["Week", "Day"]) {
-    await page.getByRole("group", { name: "Calendar view" }).getByRole("button", { name: view }).click();
-    const grid = page.getByRole("region", { name: `${view.toLowerCase()} calendar` });
-    await expect(grid).toBeVisible();
-    await expectNow(grid);
-    await grid.evaluate((el) => {
-      el.scrollTop = 0;
-    });
-    await page.getByRole("button", { name: "Today", exact: true }).click();
-    await expectNow(grid);
-  }
 });

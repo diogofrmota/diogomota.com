@@ -27,7 +27,7 @@ test("/apps shows a card for Shared and for Shows, with the version under them",
   }
 });
 
-test("/apps top bar has Log in and Sign up", async ({ page }) => {
+test("/apps bottom bar has Log in and Sign up", async ({ page }) => {
   await page.goto("/apps");
   const account = page.getByRole("navigation", { name: "Account" });
 
@@ -38,9 +38,10 @@ test("/apps top bar has Log in and Sign up", async ({ page }) => {
   await page.getByRole("link", { name: "Back to apps" }).click();
   await expect(page).toHaveURL("/apps");
 
-  // Sign up is the call to action: filled with the accent.
+  // Both actions use the same icon and label layout as the app tabs.
   const signUp = account.getByRole("link", { name: "Sign up" });
-  await expect(signUp.locator("span").first()).toHaveCSS("background-color", "rgb(48, 80, 122)");
+  await expect(signUp.locator("svg")).toHaveCount(1);
+  await expect(page.getByRole("banner")).toHaveCount(0);
   await signUp.click();
   await expect(page).toHaveURL("/signup");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Create your account");

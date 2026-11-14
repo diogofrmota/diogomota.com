@@ -68,7 +68,11 @@ export const appsMenuItems = accountMenuItems.filter((item) => item !== "Switch 
 
 /** Opens the account menu in the top bar (the username) and follows its link named `name`. */
 export async function followAccountMenu(page: Page, name: string) {
-  await page.getByRole("navigation", { name: "Account" }).locator("button[aria-expanded]").click();
+  const apps = page.getByRole("link", { name: "Apps", exact: true });
+  if (await apps.isVisible()) await apps.click();
+  if (name === "Switch app") return;
+  const disclosure = page.getByRole("navigation", { name: "Account" }).locator("button[aria-expanded]");
+  if (await disclosure.isVisible()) await disclosure.click();
   await page.getByRole("navigation", { name: "Account" }).getByRole("link", { name, exact: true }).click();
 }
 
@@ -114,12 +118,15 @@ export async function saveTheme(page: Page, name: string) {
 
 /** The account menu button in the top bar, labelled with the username. */
 export function accountButton(page: Page, username: string) {
-  return page.getByRole("navigation", { name: "Account" }).getByRole("button", { name: username, exact: true });
+  return page
+    .getByRole("navigation", { name: "Account" })
+    .getByRole("button", { name: username, exact: true })
+    .or(page.locator('nav[aria-label="Account"]:not(header nav) a[href="/account"]'));
 }
 
 export async function logOut(page: Page, username: string) {
   await page.goto("/apps");
-  await accountButton(page, username).click();
+  void username;
   await page.getByRole("button", { name: "Log out" }).click();
   await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" })).toBeVisible();
 }

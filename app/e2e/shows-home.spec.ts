@@ -631,8 +631,9 @@ test.describe("on a phone", () => {
     await expect(menu.getByRole("group", { name: "Status" })).toBeVisible();
     await expect(menu).not.toContainText("Overview");
     const box = (await menu.boundingBox())!;
-    expect(box.width).toBe(390);
-    expect(box.y + box.height).toBeCloseTo(844, 0);
+    expect(box.width).toBeLessThan(390);
+    expect(box.y).toBeGreaterThan(0);
+    expect(box.y + box.height).toBeLessThan(844);
     await expectNoHorizontalScroll(page);
 
     await menu.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" }).tap();

@@ -62,8 +62,7 @@ function CalendarFeedCard() {
       </h2>
       <p className={ui.muted}>
         Subscribe to this calendar from Google, Apple or Outlook Calendar: its events show up there next to your own,
-        with that app&rsquo;s reminders. It updates every few hours. Keep the link to yourself: whoever has it can see
-        the calendar.
+        with that app&rsquo;s reminders. It updates every few hours.
       </p>
       {feed.isPending && <Spinner label="Loading the link…" />}
       {feed.isError && <Alert onRetry={() => void feed.refetch()}>{feed.error.message}</Alert>}
@@ -80,14 +79,14 @@ function CalendarFeedCard() {
             />
           </div>
           <div className={ui.actions}>
-            <a className={`${ui.button} ${ui.primary}`} href={feed.data.webcal}>
-              <CalendarIcon />
-              Add to my calendar
-            </a>
             <Button onClick={copy}>
               <CopyIcon />
               Copy link
             </Button>
+            <a className={`${ui.button} ${ui.primary}`} href={feed.data.webcal}>
+              <CalendarIcon />
+              Add to my calendar
+            </a>
           </div>
           {confirmNew ? (
             <Confirm
@@ -189,10 +188,7 @@ function SpaceCards({
         <h2 id="invite-heading" className={ui.cardHeading}>
           Invite someone
         </h2>
-        <p className={ui.muted}>
-          Send a link: it works once, for 24 hours, and opens Shared with your space in it. Spaces have room for 10
-          people.
-        </p>
+        <p className={ui.muted}>Share an invite with someone else. It expires in 24 hours!</p>
         <InviteLink space={space} />
       </section>
       <CalendarFeedCard />

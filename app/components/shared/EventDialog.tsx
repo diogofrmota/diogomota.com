@@ -42,12 +42,10 @@ function Select({ children, ...props }: React.ComponentProps<"select">) {
   );
 }
 
-const group = "group";
-
 /**
  * An event's dialog: what it is (who it's for, when), its exports, Edit event
  * and Delete event; or the form, Create a new event (Event title, when, Who?).
- * Who? is any of the members, or All, the whole group. Events have no notes.
+ * Who? selects one or more members. Events have no notes.
  * Delete event closes it and leaves the Undo to the calendar (onDelete).
  */
 export function EventDialog({
@@ -90,11 +88,11 @@ export function EventDialog({
   const [endDate, setEndDate] = useState(end.date);
   const [startTime, setStartTime] = useState(start.time);
   const [endTime, setEndTime] = useState(end.time);
-  // The members it's for, or [group]; a new one is the user's own. A former
+  // Existing group events start with every current member selected. A former
   // member's event has to be given to someone again.
   const savedWho = event
     ? event.isGroup
-      ? [group]
+      ? space.members.map((member) => member.id)
       : event.assigneeIds.filter((id) => space.members.some((m) => m.id === id))
     : [userId];
   const [who, setWho] = useState<string[]>(savedWho);
@@ -144,12 +142,12 @@ export function EventDialog({
       return;
     }
     if (!who.length) {
-      setError("Choose who it's for: one or more of you, or All.");
+      setError("Choose who it's for: one or more people.");
       return;
     }
     setPending(true);
     try {
-      const isGroup = who.includes(group);
+      const isGroup = false;
       const saved = await eventRequest<CalendarEvent>(event ? `/${event.id}` : "", event ? "PATCH" : "POST", {
         title: String(form.get("title") ?? ""),
         startsAt,
@@ -300,8 +298,6 @@ export function EventDialog({
                 members={space.members}
                 multiple
                 values={who}
-                allValue={group}
-                allName="Whole group"
                 onChangeMany={setWho}
               />
               <div className={ui.actions}>

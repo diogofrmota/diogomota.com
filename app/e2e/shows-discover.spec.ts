@@ -36,7 +36,6 @@ async function cachedShow(type: "tv" | "movie", tmdbId: number) {
 test("Discover shows TMDB's lists, three genres and Added by Friends, for TV shows and for movies", async ({
   page,
   context,
-  isMobile,
 }) => {
   const browserHosts = new Set<string>();
   context.on("request", (request) => browserHosts.add(new URL(request.url()).host));
@@ -79,16 +78,13 @@ test("Discover shows TMDB's lists, three genres and Added by Friends, for TV sho
   // A 9.9 from 12 votes isn't Top Rated: the next page fills its place.
   await expect(card(topList, "Obscure Gem")).toHaveCount(0);
   await expect(card(topList, "Top Rated Series 21")).toHaveCount(1);
-  if (!isMobile) {
-    // With a mouse: › and ‹ page through the row, each only where there's more.
-    const back = topRated.getByRole("button", { name: "Scroll left" });
-    const forward = topRated.getByRole("button", { name: "Scroll right" });
-    await expect(back).toBeDisabled();
-    await topList.hover();
-    await forward.click();
-    await expect.poll(() => topList.evaluate((list) => list.scrollLeft)).toBeGreaterThan(0);
-    await expect(back).toBeEnabled();
-  }
+  await expect(topRated.getByRole("button", { name: "Scroll right" })).toHaveCount(0);
+  await expect(topList).toHaveCSS("scrollbar-width", "thin");
+  await topList.evaluate((list) => {
+    list.scrollLeft = 300;
+  });
+  await expect.poll(() => topList.evaluate((list) => list.scrollLeft)).toBeGreaterThan(0);
+  await loadSections(page);
 
   // Each title in one section only, the first it would be in: Glass Meridian
   // is trending and popular, Harbor Lights popular and a comedy (lib/tmdb-mock.ts).
@@ -290,11 +286,11 @@ test.describe("on a phone", () => {
       /^Season 1\s*10 episodes$/,
       /^Season 2\s*8 episodes$/,
     ]);
-    // The whole screen.
+    // A centered popup with visible space around it.
     const box = (await detail.boundingBox())!;
-    expect(box.width).toBe(390);
-    expect(box.y).toBe(0);
-    expect(box.height).toBeCloseTo(844, 0);
+    expect(box.width).toBeLessThan(390);
+    expect(box.y).toBeGreaterThan(0);
+    expect(box.height).toBeLessThan(844);
     await expectNoHorizontalScroll(page);
 
     // Opening it cached the title, with its seasons (no specials, no empty
@@ -358,7 +354,7 @@ test.describe("on a phone", () => {
     await expectNoHorizontalScroll(page);
   });
 
-  test("the search panel fills the screen", async ({ page }) => {
+  test("the search panel keeps visible margins", async ({ page }) => {
     await openShows(page);
     await tab(page, "Discover").tap();
     await page.getByRole("main").getByRole("button", { name: "Search TV shows and movies" }).tap();
@@ -366,7 +362,11 @@ test.describe("on a phone", () => {
     // Popular Series 2 to 20 but 6 (the first popular TV show is Harbor Lights, the sixth Glass Meridian).
     await dialog.getByRole("searchbox").fill("Popular Series");
     await expect(cardButtons(grid(dialog, "Search results"))).toHaveCount(18);
-    expect(await dialog.boundingBox()).toEqual({ x: 0, y: 0, width: 390, height: 844 });
+    const box = (await dialog.boundingBox())!;
+    expect(box.x).toBeGreaterThan(0);
+    expect(box.y).toBeGreaterThan(0);
+    expect(box.width).toBeLessThan(390);
+    expect(box.height).toBeLessThan(844);
     // At least 16px, so iOS doesn't zoom in on it.
     await expect(dialog.getByRole("searchbox")).toHaveCSS("font-size", "16px");
     await expectNoHorizontalScroll(page);

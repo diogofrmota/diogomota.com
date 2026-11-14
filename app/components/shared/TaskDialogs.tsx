@@ -6,7 +6,15 @@ import { Alert, Button } from "@/components/common/ui";
 import { undoSeconds } from "@/components/common/Undo";
 import ui from "@/components/common/ui.module.css";
 import type { Space } from "@/lib/space-types";
-import { repeatNames, repeats, type Repeat, type Task, type TaskFields, type TaskList } from "@/lib/task-types";
+import {
+  taskAssignees,
+  repeatNames,
+  repeats,
+  type Repeat,
+  type Task,
+  type TaskFields,
+  type TaskList,
+} from "@/lib/task-types";
 import { MaskedField } from "./MaskedField";
 import { MemberPicker } from "./MemberPicker";
 import { SortableList, useSortableItem } from "./Sortable";
@@ -46,8 +54,7 @@ export function TaskDialog({
   onDelete: () => void;
 }) {
   const [dueDate, setDueDate] = useState(task.dueDate ?? "");
-  // A member's id, or "" for nobody in particular (All).
-  const [assignee, setAssignee] = useState(task.assigneeId ?? "");
+  const [assignees, setAssignees] = useState(() => taskAssignees(task));
   const [error, setError] = useState("");
   function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -64,7 +71,7 @@ export function TaskDialog({
       title,
       notes: String(form.get("notes")),
       dueDate: dueDate || null,
-      assigneeId: assignee || null,
+      assigneeIds: assignees,
       repeat,
     };
     const fields: TaskFields = Object.fromEntries(
@@ -82,25 +89,24 @@ export function TaskDialog({
           Title
           <input name="title" required maxLength={200} defaultValue={task.title} autoComplete="off" />
         </label>
-        {/* Who it's for on the left, when it's due (and how often it comes back) on the right. */}
+        <p className={styles.extraOptions}>Extra options:</p>
         <div className={styles.fields}>
           <MemberPicker
-            legend="Assignee"
+            multiple
+            legend="Who?"
             name="assignee"
             members={space.members}
-            value={assignee}
-            allValue=""
-            allName="Anyone"
-            onChange={setAssignee}
+            values={assignees}
+            onChangeMany={setAssignees}
           />
           <div className={styles.when}>
             {/* dd/mm/yyyy, typed (not the browser's date field, which can be mm/dd/yyyy). */}
             <label>
-              Due date (optional)
+              Due date
               <span className={styles.inputRow}>
                 <MaskedField
                   kind="date"
-                  label="Due date (optional)"
+                  label="Due date"
                   value={dueDate}
                   onChange={setDueDate}
                   required={false}
@@ -115,7 +121,7 @@ export function TaskDialog({
             </label>
             {/* Ticked off, a repeating task comes back with its next due date (lib/task-types.ts, nextDue). */}
             <label>
-              Repeat
+              Repeat?
               <span className={styles.select}>
                 <select name="repeat" defaultValue={task.repeat ?? ""}>
                   <option value="">Never</option>
@@ -131,7 +137,7 @@ export function TaskDialog({
           </div>
         </div>
         <label>
-          Notes (optional)
+          Notes
           <textarea name="notes" rows={4} maxLength={10000} defaultValue={task.notes} />
         </label>
         {/* No Cancel: the × at the top closes it without saving. Delete offers Undo. */}

@@ -40,9 +40,69 @@ async function partner(page: Page, space: Space, browser: import("@playwright/te
 const today = () => localParts(new Date()).date;
 const at = (date: string, time: string) => localInstants(date, time)[0];
 
-test("a phone opens on the agenda, of the coming days with something planned; its week is three days", async ({
+test("task Who? saves multiple people, keeps pictures after reload, and removes departing members", async ({
   page,
+  browser,
 }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const { space, user } = await setup(page);
+  const other = await partner(page, space, browser);
+  try {
+    const listResponse = await page.request.post("/api/shared/tasks/lists", { data: { name: "Together" } });
+    expect(listResponse.ok(), await listResponse.text()).toBe(true);
+    const list = (await listResponse.json()).data;
+    const taskResponse = await page.request.post(`/api/shared/tasks/lists/${list.id}/tasks`, {
+      data: { title: "Plan a trip" },
+    });
+    expect(taskResponse.ok(), await taskResponse.text()).toBe(true);
+    const task = (await taskResponse.json()).data;
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/shared/tasks");
+    const add = page.getByLabel("Write a task");
+    const row = page.getByRole("list", { name: "To do", exact: true }).getByRole("listitem");
+    expect((await add.boundingBox())!.y).toBeLessThan((await row.boundingBox())!.y);
+    await row.getByRole("button", { name: "Plan a trip", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit task" });
+    const box = (await dialog.boundingBox())!;
+    expect(box.width).toBeLessThan(390);
+    expect(box.height).toBeLessThan(844);
+    await expect(dialog).toHaveCSS("animation-name", "none");
+    await expect(dialog.getByText("Extra options:", { exact: true })).toBeVisible();
+    const picker = dialog.getByRole("group", { name: "Who?" });
+    await expect(picker.getByRole("checkbox")).toHaveCount(2);
+    await picker.getByRole("checkbox", { name: user.name, exact: true }).check();
+    await picker.getByRole("checkbox", { name: other.user.name, exact: true }).check();
+    const saved = page.waitForResponse(
+      (response) => response.request().method() === "PATCH" && response.url().endsWith(`/tasks/${task.id}`),
+    );
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+    expect((await saved).ok()).toBe(true);
+    await page.reload();
+    await expect(row.locator("[title]")).toHaveCount(2);
+    await row.getByRole("button", { name: /^Plan a trip/ }).click();
+    await expect(picker.getByRole("checkbox", { checked: true })).toHaveCount(2);
+    await page.keyboard.press("Escape");
+    const lists = (await (await page.request.get("/api/shared/tasks")).json()).data as TaskList[];
+    expect(lists[0].tasks[0].assigneeIds).toEqual(
+      expect.arrayContaining([space.ownerId, other.space.members.find((member) => member.id !== space.ownerId)!.id]),
+    );
+    // Reject a person outside this space, without losing the existing assignment.
+    expect(
+      (
+        await page.request.patch(`/api/shared/tasks/${task.id}`, {
+          data: { assigneeIds: ["00000000-0000-4000-8000-000000000000"] },
+        })
+      ).status(),
+    ).toBe(400);
+    expect((await other.page.request.post(`/api/shared/spaces/${space.id}/leave`, { data: {} })).ok()).toBe(true);
+    const remaining = (await (await page.request.get("/api/shared/tasks")).json()).data as TaskList[];
+    expect(remaining[0].tasks[0].assigneeIds).toEqual([space.ownerId]);
+  } finally {
+    await other.context.close();
+  }
+});
+
+test("a phone opens on the agenda and can switch to month", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const { space } = await setup(page);
   for (const [title, day, time] of [
@@ -57,9 +117,7 @@ test("a phone opens on the agenda, of the coming days with something planned; it
   await page.reload();
   const agenda = page.getByRole("region", { name: "agenda calendar" });
   await expect(agenda).toBeVisible();
-  await expect(
-    page.getByRole("group", { name: "Calendar view" }).getByRole("button", { name: "Agenda" }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Month", exact: true })).toBeVisible();
   // Today and the day after tomorrow, each with its events and times; nothing for the empty day between.
   await expect(agenda.getByRole("heading", { level: 3 })).toHaveCount(2);
   await expect(agenda.getByRole("heading", { level: 3 }).first()).toHaveText("Today");
@@ -67,10 +125,8 @@ test("a phone opens on the agenda, of the coming days with something planned; it
   await expect(agenda.getByRole("button", { name: /^Cinema, 21:00/ })).toBeVisible();
   await expect(agenda.getByRole("heading", { name: "Tomorrow" })).toHaveCount(0);
 
-  // A week on a phone is three days, from the day shown.
-  await page.getByRole("group", { name: "Calendar view" }).getByRole("button", { name: "3 days" }).click();
-  const grid = page.getByRole("region", { name: "week calendar" });
-  await expect(grid.getByRole("button", { name: /^(Dinner|Cinema),/ })).toHaveCount(2);
+  await page.getByRole("button", { name: "Month", exact: true }).click();
+  await expect(page.getByRole("region", { name: "month calendar" })).toBeVisible();
 });
 
 test("an event can be for two people: both pictures on it, and both in its name", async ({ page, browser }) => {
@@ -93,15 +149,14 @@ test("an event can be for two people: both pictures on it, and both in its name"
     );
     const saved: CalendarEvent[] = (await (await page.request.get(events)).json()).data;
     expect(saved[0].assigneeIds).toHaveLength(2);
-    // All instead: the group.
+    // Everyone is selected individually; there is no All shortcut.
     await event.click();
     await page.getByRole("button", { name: "Edit event" }).click();
-    await page.getByRole("group", { name: "Who?" }).getByRole("checkbox", { name: "All", exact: true }).check();
-    await expect(
-      page.getByRole("group", { name: "Who?" }).getByRole("checkbox", { name: user.name, exact: true }),
-    ).not.toBeChecked();
+    const picker = page.getByRole("group", { name: "Who?" });
+    await expect(picker.getByRole("checkbox", { name: "All", exact: true })).toHaveCount(0);
+    await picker.getByRole("checkbox", { name: user.name, exact: true }).uncheck();
     await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByRole("button", { name: /^Dinner out, .*, Group$/ })).toBeVisible();
+    await expect(event).toHaveAccessibleName(new RegExp(ana.user.name + "$"));
   } finally {
     await ana.context.close();
   }
@@ -127,62 +182,6 @@ test("the calendar loads a period at a time: the API takes a range", async ({ pa
   expect((await range("2026-07-01", "2026-08-01")).status()).toBe(400);
   expect((await range(at("2026-01-01", "00:00"), at("2027-06-01", "00:00"))).status()).toBe(400);
   expect((await (await page.request.get(events)).json()).data).toHaveLength(2);
-});
-
-test("the week and day views show now as a line; an event dragged with the mouse moves, and its edge changes its end", async ({
-  page,
-}) => {
-  const { space } = await setup(page);
-  const day = today();
-  const created = await page.request.post(events, {
-    data: {
-      title: "Call",
-      startsAt: at(day, "02:00"),
-      endsAt: at(day, "03:00"),
-      isGroup: false,
-      assigneeIds: [space.ownerId],
-    },
-  });
-  const { id } = (await created.json()).data as CalendarEvent;
-  await page.reload();
-  await page.getByRole("group", { name: "Calendar view" }).getByRole("button", { name: "Day" }).click();
-  const grid = page.getByRole("region", { name: "day calendar" });
-  await grid.evaluate((el) => (el.scrollTop = 0));
-  const event = grid.getByRole("button", { name: /^Call,/ });
-  await expect(event).toBeVisible();
-
-  // Down 60px is an hour later (1px a minute).
-  const box = (await event.boundingBox())!;
-  const moved = page.waitForResponse(
-    (r) => r.url().endsWith(`/api/shared/events/${id}`) && r.request().method() === "PATCH",
-  );
-  await page.mouse.move(box.x + box.width / 2, box.y + 20);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width / 2, box.y + 50, { steps: 5 });
-  await page.mouse.move(box.x + box.width / 2, box.y + 80, { steps: 5 });
-  await page.mouse.up();
-  expect((await moved).ok()).toBe(true);
-  // Moving didn't open it.
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  let saved: CalendarEvent = (await (await page.request.get(`${events}/${id}`)).json()).data;
-  expect(localParts(saved.startsAt).time).toBe("03:00");
-  expect(localParts(saved.endsAt).time).toBe("04:00");
-
-  // The bottom edge: half an hour longer.
-  const after = (await event.boundingBox())!;
-  const resized = page.waitForResponse(
-    (r) => r.url().endsWith(`/api/shared/events/${id}`) && r.request().method() === "PATCH",
-  );
-  await page.mouse.move(after.x + after.width / 2, after.y + after.height - 2);
-  await page.mouse.down();
-  await page.mouse.move(after.x + after.width / 2, after.y + after.height + 30, { steps: 6 });
-  await page.mouse.up();
-  expect((await resized).ok()).toBe(true);
-  saved = (await (await page.request.get(`${events}/${id}`)).json()).data;
-  expect(localParts(saved.endsAt).time).toBe("04:30");
-
-  // Now: a line across today, at the time it is.
-  await expect(grid.locator('[aria-hidden="true"][style*="top"]').first()).toBeAttached();
 });
 
 test("Settings has a calendar link that calendar apps subscribe to; a new link stops the old one", async ({
@@ -256,9 +255,9 @@ test("a repeating task comes back with its next due date when ticked off", async
   const dialog = page.getByRole("dialog", { name: "Edit task" });
   const due = today();
   await dialog
-    .getByLabel("Due date (optional)", { exact: true })
+    .getByLabel("Due date", { exact: true })
     .fill(`${due.slice(8, 10)}/${due.slice(5, 7)}/${due.slice(0, 4)}`);
-  await dialog.getByLabel("Repeat").selectOption("weekly");
+  await dialog.getByLabel("Repeat?").selectOption("weekly");
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("button", { name: /^Bins out/ })).toContainText("Every week");

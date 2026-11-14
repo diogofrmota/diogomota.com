@@ -15,7 +15,7 @@ import { applyTaskFields, moveBefore, type Task, type TaskList } from "./task-ty
 // with it before the response arrives (optimistic updates).
 
 const columns = `id, list_id AS "listId", title, coalesce(notes, '') AS notes, due_date::text AS "dueDate",
-  assignee_id AS "assigneeId", is_complete AS "isComplete", repeat`;
+  assignee_id AS "assigneeId", ARRAY(SELECT user_id FROM task_assignees WHERE task_id = tasks.id ORDER BY user_id) AS "assigneeIds", is_complete AS "isComplete", repeat`;
 
 /** Today in the calendar's time zone, for due dates. */
 const today = () => localParts(new Date()).date;
@@ -48,9 +48,18 @@ async function findTask(db: PoolClient, space: Space, id: string): Promise<Task 
   return rows[0];
 }
 
-function checkAssignee(space: Space, assigneeId: string | null | undefined) {
-  if (assigneeId != null && !space.members.some((member) => member.id === assigneeId))
+function checkAssignees(space: Space, ids: readonly string[]) {
+  if (!ids.every((id) => space.members.some((member) => member.id === id)))
     throw new HttpError("Assign the task to a current member, or to nobody.");
+}
+
+async function saveAssignees(db: PoolClient, taskId: string, ids: string[]) {
+  await db.query("DELETE FROM task_assignees WHERE task_id = $1", [taskId]);
+  if (ids.length)
+    await db.query(
+      "INSERT INTO task_assignees (task_id, user_id) SELECT $1, unnest($2::uuid[]) ON CONFLICT DO NOTHING",
+      [taskId, ids],
+    );
 }
 
 // Puts `id` before `before` (null: at the end) and renumbers the rows 0, 1, 2...
@@ -121,7 +130,8 @@ export async function addTask(
   input: z.output<typeof taskCreate>,
 ): Promise<Task> {
   const list = await findList(db, space, listId);
-  checkAssignee(space, input.assigneeId);
+  const assigneeIds = input.assigneeIds ?? (input.assigneeId ? [input.assigneeId] : []);
+  checkAssignees(space, assigneeIds);
   const { rows } = await db.query<Task>(
     `INSERT INTO tasks (id, list_id, title, notes, due_date, assignee_id, is_complete, repeat, position)
      SELECT $1::uuid, $2::uuid, $3::text, nullif($4::text, ''), $5::date, $6::uuid, $7::boolean, $8::text,
@@ -133,12 +143,13 @@ export async function addTask(
       input.title,
       input.notes,
       input.dueDate,
-      input.assigneeId,
+      assigneeIds[0] ?? null,
       input.isComplete,
       input.repeat,
     ],
   );
   if (!rows[0]) throw new HttpError("Could not create the task. Try again.", 409);
+  await saveAssignees(db, rows[0].id, assigneeIds);
   await recordActivity(db, {
     userId,
     spaceId: space.id,
@@ -146,7 +157,7 @@ export async function addTask(
     key: `task:${rows[0].id}`,
     data: { title: input.title, list: list.name },
   });
-  return rows[0];
+  return { ...rows[0], assigneeIds };
 }
 
 /**
@@ -162,8 +173,9 @@ export async function updateTask(
   fields: z.output<typeof taskPatch>,
 ): Promise<Task> {
   const current = await findTask(db, space, id);
-  checkAssignee(space, fields.assigneeId);
   const task = applyTaskFields(current, fields, today());
+  const assigneeIds = task.assigneeIds ?? [];
+  checkAssignees(space, assigneeIds);
   const reopened = current.isComplete && !task.isComplete;
   const { rows } = await db.query<Task>(
     `UPDATE tasks SET title = $2, notes = nullif($3, ''), due_date = $4, assignee_id = $5, is_complete = $6, repeat = $7,
@@ -171,6 +183,7 @@ export async function updateTask(
      WHERE id = $1 RETURNING ${columns}`,
     [id, task.title, task.notes, task.dueDate, task.assigneeId, task.isComplete, task.repeat, reopened, current.listId],
   );
+  if (fields.assigneeIds !== undefined || fields.assigneeId !== undefined) await saveAssignees(db, id, assigneeIds);
   if (fields.isComplete && !current.isComplete) {
     await recordActivity(db, {
       userId,
@@ -180,7 +193,7 @@ export async function updateTask(
       data: { title: task.title, list: current.list },
     });
   }
-  return rows[0];
+  return { ...rows[0], assigneeIds };
 }
 
 export async function deleteTask(db: PoolClient, space: Space, userId: string, id: string): Promise<null> {

@@ -21,6 +21,36 @@ async function befriend(page: Page, other: { user: { username: string } }) {
   );
 }
 
+test("title sections put recommendations before similar titles and removal, with a visible scrollbar", async ({
+  page,
+}) => {
+  await openShows(page);
+  await add(page, harbor, "watching");
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(`/shows?p=title:tv:${harbor.tmdbId}`);
+    const panel = page.getByRole("dialog", { name: "Harbor Lights" });
+    const similar = panel.getByRole("list", { name: "More like this", exact: true });
+    await expect(similar.getByRole("listitem").first()).toBeVisible();
+    expect(
+      await panel.evaluate((element) =>
+        [...element.querySelectorAll("h3, button")]
+          .map((node) => node.textContent?.trim())
+          .filter((text) =>
+            ["Seasons", "Recommend to a friend", "More like this", "Remove from library"].includes(text ?? ""),
+          ),
+      ),
+    ).toEqual(["Seasons", "Recommend to a friend", "More like this", "Remove from library"]);
+    await expect(similar).toHaveCSS("scrollbar-width", "thin");
+    await expect(panel.getByRole("button", { name: /^Scroll (left|right)$/ })).toHaveCount(0);
+    await expect(panel.getByRole("button", { name: "Remove from library" }).locator("..")).toHaveCSS(
+      "border-top-width",
+      "0px",
+    );
+    await page.keyboard.press("Escape");
+  }
+});
+
 test("a title's panel: its genres, the friends who have it, More like this, Recommend to a friend and TMDB's notice", async ({
   page,
   browser,

@@ -152,7 +152,7 @@ test("lists: empty state, create, rename, reorder with the keyboard and delete, 
   expect((await readLists(page)).map((l) => l.name)).toEqual(["Groceries", "Trip planning"]);
 
   // Back closes the dialog without leaving the app.
-  await page.getByRole("button", { name: "Edit lists" }).click();
+  await page.getByRole("button", { name: "Edit" }).click();
   await expect(dialog).toBeVisible();
   await page.goBack();
   await expect(dialog).toHaveCount(0);
@@ -262,28 +262,26 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
     .click();
   const dialog = page.getByRole("dialog", { name: "Edit task" });
   // Who it's for on the left, when it's due on the right; Save and Delete (its × closes it).
-  const assigneePicker = dialog.getByRole("group", { name: "Assignee" });
+  const assigneePicker = dialog.getByRole("group", { name: "Who?" });
   const assigneeBox = (await assigneePicker.boundingBox())!;
-  const dueBox = (await dialog.getByLabel("Due date (optional)").boundingBox())!;
-  expect(assigneeBox.x).toBeLessThan(dueBox.x);
+  const dueBox = (await dialog.getByLabel("Due date").boundingBox())!;
+  expect(assigneeBox.y).toBeLessThan(dueBox.y);
   await expect(dialog.getByRole("button", { name: /^(Save|Cancel|Delete)/ })).toHaveText(["Save", "Delete"]);
   // Each member's picture (or initial), by their name, then All, for nobody in particular: the one
   // select is how often it repeats.
   await expect(dialog.getByRole("combobox")).toHaveCount(1);
-  await expect(dialog.getByRole("combobox", { name: "Repeat" })).toHaveValue("");
-  await expect(assigneePicker.getByRole("radio")).toHaveCount(members.length + 1);
-  await expect(assigneePicker.getByRole("radio", { name: "All", exact: true })).toBeChecked();
-  await assigneePicker.getByRole("radio", { name: friend.name, exact: true }).check();
+  await expect(dialog.getByRole("combobox", { name: "Repeat?" })).toHaveValue("");
+  await expect(assigneePicker.getByRole("checkbox")).toHaveCount(members.length);
+  await expect(assigneePicker.getByRole("checkbox", { name: "All", exact: true })).toHaveCount(0);
+  await assigneePicker.getByRole("checkbox", { name: friend.name, exact: true }).check();
   // Typed day first: dd/mm/yyyy.
-  await dialog
-    .getByLabel("Due date (optional)")
-    .fill(`${tomorrow.slice(8, 10)}/${tomorrow.slice(5, 7)}/${tomorrow.slice(0, 4)}`);
-  await dialog.getByLabel("Notes (optional)").fill("Two litres, semi-skimmed");
+  await dialog.getByLabel("Due date").fill(`${tomorrow.slice(8, 10)}/${tomorrow.slice(5, 7)}/${tomorrow.slice(0, 4)}`);
+  await dialog.getByLabel("Notes").fill("Two litres, semi-skimmed");
   changed = saved(page, /\/tasks\/[^/]+$/, "PATCH");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await changed;
-  const assignee = row(page, "Buy milk").getByText(friend.username);
+  const assignee = row(page, "Buy milk").locator(`[title="${friend.name}"]`);
   await expect(row(page, "Buy milk")).toContainText("Due tomorrow");
   await expect(row(page, "Buy milk")).toContainText("Two litres, semi-skimmed");
   await page.reload();
@@ -296,11 +294,11 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await row(page, "Buy milk")
     .getByRole("button", { name: /^Buy milk/ })
     .click();
-  await expect(assigneePicker.getByRole("radio", { name: friend.name, exact: true })).toBeChecked();
-  await expect(dialog.getByLabel("Due date (optional)")).toHaveValue(
+  await expect(assigneePicker.getByRole("checkbox", { name: friend.name, exact: true })).toBeChecked();
+  await expect(dialog.getByLabel("Due date")).toHaveValue(
     `${tomorrow.slice(8, 10)}/${tomorrow.slice(5, 7)}/${tomorrow.slice(0, 4)}`,
   );
-  await assigneePicker.getByRole("radio", { name: "All", exact: true }).check();
+  await assigneePicker.getByRole("checkbox", { name: friend.name, exact: true }).uncheck();
   await dialog.getByRole("button", { name: "Clear" }).click();
   changed = saved(page, /\/tasks\/[^/]+$/, "PATCH");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
@@ -409,7 +407,8 @@ test.describe("on a phone", () => {
       .getByRole("button", { name: /^Apples/ })
       .tap();
     const sheet = await page.getByRole("dialog", { name: "Edit task" }).boundingBox();
-    expect(Math.abs(sheet!.y + sheet!.height - 844)).toBeLessThan(2);
+    expect(sheet!.y).toBeGreaterThan(0);
+    expect(sheet!.y + sheet!.height).toBeLessThan(844);
   });
 });
 

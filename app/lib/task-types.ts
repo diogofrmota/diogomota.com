@@ -16,13 +16,21 @@ export type Task = {
   /** YYYY-MM-DD, a calendar date without a time zone. */
   dueDate: string | null;
   assigneeId: string | null;
+  /** Optional for tasks cached by a previous release. */
+  assigneeIds?: string[];
   isComplete: boolean;
   /** Ticked off, a repeating task comes back with its next due date (nextDue) instead of moving to Done. */
   repeat: Repeat | null;
 };
 /** Tasks in position order, done ones included (the view splits them off). */
 export type TaskList = { id: string; name: string; tasks: Task[] };
-export type TaskFields = Partial<Pick<Task, "title" | "notes" | "dueDate" | "assigneeId" | "isComplete" | "repeat">>;
+export type TaskFields = Partial<
+  Pick<Task, "title" | "notes" | "dueDate" | "assigneeId" | "assigneeIds" | "isComplete" | "repeat">
+>;
+
+export function taskAssignees(task: Pick<Task, "assigneeId" | "assigneeIds">): string[] {
+  return task.assigneeIds ?? (task.assigneeId ? [task.assigneeId] : []);
+}
 
 function addPeriod(date: string, repeat: Repeat): string {
   const value = new Date(`${date}T12:00:00Z`);
@@ -57,6 +65,12 @@ export function nextDue(repeat: Repeat, dueDate: string | null, today: string): 
  */
 export function applyTaskFields(task: Task, fields: TaskFields, today: string): Task {
   const next = { ...task, ...fields };
+  if (fields.assigneeIds !== undefined) {
+    next.assigneeIds = [...new Set(fields.assigneeIds)];
+    next.assigneeId = next.assigneeIds[0] ?? null;
+  } else if (fields.assigneeId !== undefined) {
+    next.assigneeIds = fields.assigneeId ? [fields.assigneeId] : [];
+  }
   if (next.repeat && next.isComplete && !task.isComplete) {
     return { ...next, isComplete: false, dueDate: nextDue(next.repeat, next.dueDate, today) };
   }

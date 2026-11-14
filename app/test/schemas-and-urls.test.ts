@@ -37,6 +37,11 @@ describe("the APIs' schemas", () => {
     expect(taskPatch.parse({ repeat: "weekly", rating: 5 })).toEqual({ repeat: "weekly" });
     expect(taskPatch.safeParse({ repeat: "hourly" }).success).toBe(false);
     expect(taskPatch.safeParse({ dueDate: "2026-02-30" }).success).toBe(false);
+    const person = event.assigneeIds[0];
+    expect(taskPatch.parse({ assigneeIds: [person, person] })).toEqual({ assigneeIds: [person] });
+    expect(taskPatch.parse({ assigneeIds: [] })).toEqual({ assigneeIds: [] });
+    expect(taskPatch.safeParse({ assigneeIds: ["not-a-person-id"] }).success).toBe(false);
+    expect(taskPatch.safeParse({ assigneeIds: Array(11).fill(person) }).success).toBe(false);
   });
 
   test("an invite code is read in any case and with spaces around it", () => {

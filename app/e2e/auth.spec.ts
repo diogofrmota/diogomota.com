@@ -13,12 +13,12 @@ test("sign up logs the new user in, and the cards go straight into the apps", as
   await expect(page).toHaveURL("/apps");
   const account = page.getByRole("navigation", { name: "Account" });
   await expect(accountButton(page, user.username)).toBeVisible();
-  await expect(account.getByRole("link")).toHaveCount(0);
+  await expect(account.getByRole("link", { name: "Account", exact: true })).toBeVisible();
   await expect(page.getByRole("region", { name: "One account for all apps" })).toHaveCount(0);
 
   await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
-  await expect(accountButton(page, user.username)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
 });
 
 test("sign up explains what is wrong with each field", async ({ page }) => {
@@ -55,7 +55,6 @@ test("log out from the account menu", async ({ page }) => {
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
 
-  await accountButton(page, user.username).click();
   await page.getByRole("button", { name: "Log out" }).click();
 
   await expect(page).toHaveURL("/apps");
@@ -122,7 +121,7 @@ test("logged out, the apps redirect to /apps, which logs in and goes back", asyn
   await page.getByLabel("Password", { exact: true }).fill(user.password);
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL("/shows");
-  await expect(accountButton(page, user.username)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
 });
 
 test("logged out, the apps' API routes answer 401", async ({ page }) => {

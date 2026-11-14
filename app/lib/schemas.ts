@@ -110,6 +110,11 @@ const taskFields = {
     .refine(isDate, { error: "Enter a valid due date, or none." })
     .nullable(),
   assigneeId: z.string({ error: "Assign the task to a current member, or to nobody." }).nullable(),
+  assigneeIds: z
+    .array(uuid)
+    .max(10)
+    .transform((ids) => [...new Set(ids)])
+    .optional(),
   isComplete: z.boolean({ error: "isComplete must be true or false." }),
   repeat: z.enum(repeats, { error: "Repeat it daily, weekly, monthly or yearly, or not at all." }).nullable(),
 };
@@ -121,6 +126,7 @@ export const taskCreate = z.object({
   notes: taskFields.notes.default(""),
   dueDate: taskFields.dueDate.default(null),
   assigneeId: taskFields.assigneeId.default(null),
+  assigneeIds: taskFields.assigneeIds,
   isComplete: taskFields.isComplete.default(false),
   repeat: taskFields.repeat.default(null),
 });

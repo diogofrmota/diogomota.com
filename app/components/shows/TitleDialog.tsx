@@ -372,8 +372,8 @@ export function TitleDialog({ title, onClose }: { title: Pick<TitleSummary, "typ
                 {detail.type === "tv" && !!detail.episodesPerSeason?.length && (
                   <Seasons seasons={detail.episodesPerSeason} item={item} />
                 )}
-                <MoreLikeThis title={title} />
                 <RecommendToFriend title={detail} />
+                <MoreLikeThis title={title} />
                 {item && <RemoveFromLibrary item={item} onRemoved={setRemoved} />}
                 <TmdbAttribution />
               </>

@@ -24,16 +24,16 @@ export function StatsSection({ stats }: { stats: LibraryStats | null }) {
       ) : (
         <dl className={styles.stats}>
           <div>
-            <dt>Hours watched</dt>
-            <dd>{formatHours(stats.minutesWatched)}</dd>
-          </div>
-          <div>
             <dt>TV shows completed</dt>
             <dd>{stats.tvCompleted.toLocaleString("en-GB")}</dd>
           </div>
           <div>
             <dt>Movies completed</dt>
             <dd>{stats.moviesCompleted.toLocaleString("en-GB")}</dd>
+          </div>
+          <div>
+            <dt>Hours watched</dt>
+            <dd>{formatHours(stats.minutesWatched)}</dd>
           </div>
         </dl>
       )}

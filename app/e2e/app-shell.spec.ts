@@ -1,15 +1,5 @@
 import { type Page } from "@playwright/test";
-import {
-  accountButton,
-  accountMenuItems,
-  appsMenuItems,
-  expect,
-  followAccountMenu,
-  newUser,
-  saveTheme,
-  signUp,
-  test,
-} from "./fixtures";
+import { expect, followAccountMenu, newUser, saveTheme, signUp, test } from "./fixtures";
 
 // The tabs. Shared's settings are one of them; Shows has none.
 const appViews = [
@@ -99,6 +89,8 @@ test("back and forward move between views, and out of the app to /apps", async (
 
   // Back from Account, a page of its own, to the view it was opened on.
   await page.goBack();
+  await expect(page).toHaveURL("/apps");
+  await page.goBack();
   await expect(viewHeading(page)).toHaveText("Tasks");
   await expect(tab(page, "Shared", "Tasks")).toHaveAttribute("aria-current", "page");
   await expect(page).toHaveURL("/shared/tasks");
@@ -171,117 +163,39 @@ test("back pressed while the page is still loading still goes to the previous vi
   await expect(viewHeading(page)).toHaveText("Library");
 });
 
-test("Switch app, in the account menu, goes to /apps, the way to the other app and to the site; /apps itself has no Switch app", async ({
-  page,
-}) => {
-  const user = await openApp(page, "/shared");
-  await accountButton(page, user.username).click();
-  await expect(page.getByRole("link", { name: "Account", exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("link", { name: "Account", exact: true })).toBeHidden();
-
-  await followAccountMenu(page, "Switch app");
-  await expect(page).toHaveURL("/apps");
-  // Not on /apps itself, where the apps already are.
-  await accountButton(page, user.username).click();
-  const menu = page.getByRole("navigation", { name: "Account" }).getByRole("list");
-  await expect(menu.getByRole("listitem")).toHaveText(appsMenuItems);
-  await expect(menu.getByRole("link", { name: "Switch app" })).toHaveCount(0);
-  await page.keyboard.press("Escape");
-  await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
-  await expect(page).toHaveURL("/shows");
-  await expect(viewHeading(page)).toHaveText("Library");
-  await followAccountMenu(page, "Switch app");
-  await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
-  await expect(page).toHaveURL("/shared");
-  await expect(viewHeading(page)).toHaveText("Calendar");
-
-  // diogomota.com is on /apps, not in the apps.
-  await expect(page.getByRole("banner").getByRole("link", { name: "diogomota.com" })).toHaveCount(0);
-  await followAccountMenu(page, "Switch app");
-  await page.getByRole("banner").getByRole("link", { name: "diogomota.com", exact: true }).click();
-  await expect(page).toHaveURL("/");
-});
-
-test("the top bar: in an app, its tabs in the middle and the account menu; elsewhere, diogomota.com and the account menu", async ({
-  page,
-}) => {
-  const user = await openApp(page, "/shared");
-  const header = page.getByRole("banner");
-  const account = accountButton(page, user.username);
+test("Apps returns to the launcher; Account and Log out are in its bottom bar", async ({ page }) => {
+  await openApp(page, "/shared");
   for (const app of appViews) {
     await page.goto(app.path);
-    // Nothing but the tabs and the account menu: no diogomota.com, no apps, no search.
-    await expect(header.getByRole("link")).toHaveCount(0);
-    await expect(header.getByRole("navigation")).toHaveCount(2);
-    await expect(header.getByRole("button")).toHaveCount(app.views.length + 1);
-    // By name: each label's text is there twice (NavLabel's hidden bold copy).
-    for (const [i, view] of app.views.entries())
-      await expect(tabBar(page, app.name).getByRole("button").nth(i)).toHaveAccessibleName(view);
-    // The tabs in the middle of the bar, the account menu on the right.
-    const tabs = (await tabBar(page, app.name).boundingBox())!;
-    const bar = (await header.boundingBox())!;
-    const menu = (await account.boundingBox())!;
-    expect(Math.abs(tabs.x + tabs.width / 2 - (bar.x + bar.width / 2))).toBeLessThanOrEqual(1);
-    expect(tabs.x + tabs.width).toBeLessThanOrEqual(menu.x);
-    expect(menu.x + menu.width).toBeGreaterThan(bar.x + bar.width - 32);
-    // The view has the whole width.
-    const main = (await page.getByRole("main").boundingBox())!;
-    expect(main.x).toBe(0);
-    expect(main.width).toBe(bar.width);
-
-    // NavLabel's visible text (its first span; the second is the hidden bold copy).
-    const text = (view: string) => tab(page, app.name, view).locator("span > span").first();
-    const widths = async () =>
-      Promise.all(
-        app.views.map((view) => tab(page, app.name, view).evaluate((el) => el.getBoundingClientRect().width)),
-      );
-    const before = await widths();
-    for (const current of [app.views[1], app.views[0]]) {
-      await tab(page, app.name, current).click();
-      for (const view of app.views) {
-        await expect(text(view)).toHaveCSS("font-weight", view === current ? "600" : "400");
-        await expect(text(view)).toHaveCSS("text-decoration-line", view === current ? "underline" : "none");
-      }
-      // Bold or not, each tab keeps its width, so nothing in the bar moves.
-      expect(await widths()).toEqual(before);
-    }
-  }
-
-  for (const path of ["/apps", "/account"]) {
-    await page.goto(path);
-    await expect(header.getByRole("link")).toHaveCount(1);
-    await expect(header.getByRole("link", { name: "diogomota.com", exact: true })).toHaveAttribute("href", "/");
-    await expect(header.getByRole("navigation")).toHaveCount(1);
-    await expect(account).toBeVisible();
-    // The theme is chosen in Account, not in the top bar.
-    await expect(header.getByRole("button", { name: /theme/i })).toHaveCount(0);
+    await expect(page.getByRole("banner")).toHaveCount(0);
+    const navigation = tabBar(page, app.name);
+    await expect(navigation.getByRole("button")).toHaveText([...app.views]);
+    await navigation.getByRole("link", { name: "Apps", exact: true }).click();
+    await expect(page).toHaveURL("/apps");
+    await expect(page.getByRole("banner")).toHaveCount(0);
+    const account = page.getByRole("navigation", { name: "Account", exact: true });
+    await expect(account.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
+    await expect(account.getByRole("button", { name: "Log out" })).toBeVisible();
   }
 });
 
-test("the account menu: a button that shows it opens, with Account, Switch app and Log out, each with an icon; no Settings", async ({
-  page,
-}) => {
-  const user = await openApp(page, "/shows");
-  const button = accountButton(page, user.username);
-  // The username's initial and a chevron, both hidden: the button is named by the username alone.
-  await expect(button).toContainText(user.username);
-  await expect(button.locator('[aria-hidden="true"]')).toHaveCount(2);
-  // Looks like a button: bordered all round.
-  await expect(button.locator("span").first()).toHaveCSS("border-top-style", "solid");
-  await expect(button).toHaveAttribute("aria-expanded", "false");
-
-  await button.click();
-  await expect(button).toHaveAttribute("aria-expanded", "true");
-  const menu = page.getByRole("navigation", { name: "Account" }).getByRole("list");
-  await expect(menu.getByRole("listitem")).toHaveText(accountMenuItems);
-  for (const item of await menu.getByRole("listitem").all()) await expect(item.locator("svg")).toHaveCount(1);
-  await expect(menu.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
-  await expect(menu.getByRole("link", { name: "Switch app" })).toHaveAttribute("href", "/apps");
-  await expect(menu.getByRole("link", { name: "Settings" })).toHaveCount(0);
-
-  // There is no Settings page: Shared's settings are its Settings tab, and the theme is in Account.
-  expect((await page.goto("/settings"))!.status()).toBe(404);
+test("the bottom navigation stays fixed on desktop and keeps equal tab widths", async ({ page }) => {
+  await openApp(page, "/shared");
+  for (const app of appViews) {
+    await page.goto(app.path);
+    const nav = tabBar(page, app.name);
+    const box = (await nav.boundingBox())!;
+    expect(box.y + box.height).toBe(page.viewportSize()!.height);
+    const before = await nav
+      .locator("li")
+      .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().width));
+    await tab(page, app.name, app.views[1]).click();
+    const after = await nav
+      .locator("li")
+      .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().width));
+    expect(after).toEqual(before);
+    await expect(tab(page, app.name, app.views[1])).toHaveAttribute("aria-current", "page");
+  }
 });
 
 test("Shared's Settings tab: only once there is a space, and leaving there goes back to creating or joining one", async ({
@@ -290,7 +204,7 @@ test("Shared's Settings tab: only once there is a space, and leaving there goes 
   await signUp(page, newUser(), "/signup?next=%2Fshared");
   await expect(viewHeading(page)).toHaveText("Your shared calendar");
   // No tabs yet: the top bar has only the account menu.
-  await expect(page.getByRole("banner").getByRole("button")).toHaveCount(1);
+  await expect(page.getByRole("banner")).toHaveCount(0);
   await expect(page.getByRole("banner").getByRole("link")).toHaveCount(0);
   await page.getByRole("button", { name: "Create space" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
@@ -307,7 +221,7 @@ test("Shared's Settings tab: only once there is a space, and leaving there goes 
   await page.getByRole("button", { name: "Leave this group", exact: true }).click();
   await page.getByRole("button", { name: "Leave and delete" }).click();
   await expect(viewHeading(page)).toHaveText("Your shared calendar");
-  await expect(tabBar(page, "Shared")).toHaveCount(0);
+  await expect(tabBar(page, "Shared").getByRole("button")).toHaveCount(0);
 
   // Back to /shared from another page shows it as it is now (SharedApp checks its space once shown): no space.
   await followAccountMenu(page, "Switch app");
@@ -360,15 +274,20 @@ test("theme changes show on pages reached with the back button, and keep the vie
 
   // Back in the app: in the new theme, on the view Account was opened from.
   await page.goBack();
+  await expect(page).toHaveURL("/apps");
+  await page.goBack();
   await expect(page).toHaveURL("/shows/discover");
   await expect(viewHeading(page)).toHaveText("Discover");
   await expect(shell).toHaveAttribute("data-theme", "graphite");
 
   // The same for a change in Account reached with forward.
   await page.goForward();
+  await page.goForward();
   await expect(page).toHaveURL("/account");
   await saveTheme(page, "Light");
   await expect(shell).toHaveAttribute("data-theme", "minimal-neutrals");
+  await page.goBack();
+  await expect(page).toHaveURL("/apps");
   await page.goBack();
   await expect(page).toHaveURL("/shows/discover");
   await expect(viewHeading(page)).toHaveText("Discover");
@@ -378,7 +297,7 @@ test("theme changes show on pages reached with the back button, and keep the vie
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
-  test("at 320px, the tabs are along the bottom (each its icon and name), and the top bar has the app's name", async ({
+  test("at 320px, the tabs are along the bottom (each its icon and name), with an Apps link and no top bar", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 320, height: 740 });
@@ -386,13 +305,13 @@ test.describe("on a phone", () => {
     await signUp(page, user, "/signup?next=%2Fshows");
     await expect(page).toHaveURL("/shows");
     expect((await page.request.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
-    const account = accountButton(page, user.username);
+
     for (const app of appViews) {
       await page.goto(app.path);
       await expect(viewHeading(page)).toHaveText(app.views[0]);
-      await expect(account).toBeInViewport({ ratio: 1 });
+
       // The app's name in the top bar (the tabs say it to screen readers).
-      await expect(page.getByRole("banner")).toContainText(app.name);
+      await expect(page.getByRole("banner")).toHaveCount(0);
       // The tabs at the bottom of the screen, side by side, each at least 44px to tap, with an icon.
       const bar = (await tabBar(page, app.name).boundingBox())!;
       expect(Math.abs(bar.y + bar.height - 740)).toBeLessThanOrEqual(1);
@@ -409,13 +328,8 @@ test.describe("on a phone", () => {
       expect(main.y + main.height).toBeLessThanOrEqual(bar.y + bar.height + 1);
       await tab(page, app.name, app.views[1]).click();
       await expect(viewHeading(page)).toHaveText(app.views[1]);
-      expect((await account.boundingBox())!.width).toBeGreaterThanOrEqual(44);
       await expectNoHorizontalScroll(page);
-      await account.click();
-      for (const name of ["Account", "Switch app"])
-        await expect(page.getByRole("link", { name, exact: true })).toBeInViewport({ ratio: 1 });
-      await expectNoHorizontalScroll(page);
-      await page.keyboard.press("Escape");
+      await expect(tabBar(page, app.name).getByRole("link", { name: "Apps", exact: true })).toBeInViewport();
     }
   });
 });

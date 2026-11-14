@@ -617,10 +617,19 @@
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
   scroll-padding-inline: 0.25rem;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) var(--hover);
 }
 .rowList::-webkit-scrollbar {
-  display: none;
+  height: 8px;
+}
+.rowList::-webkit-scrollbar-track {
+  background: var(--hover);
+  border-radius: var(--radius-full);
+}
+.rowList::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: var(--radius-full);
 }
 .rowList > li {
   flex: none;
@@ -645,61 +654,6 @@
 .rowList[data-dragging] .card {
   cursor: grabbing;
 }
-/* The end with more to see fades out. */
-.row[data-end="false"] .rowList {
-  mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
-}
-.row[data-start="false"] .rowList {
-  mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent);
-}
-.row[data-start="false"][data-end="false"] .rowList {
-  mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
-}
-/* ‹ › over the middle of the posters, where there's a mouse; only towards more. */
-.view .rowArrow {
-  position: absolute;
-  top: calc(var(--card-w) * 0.75 + 0.25rem - 22px);
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow-md);
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.rowArrow svg {
-  width: var(--icon-md);
-  height: var(--icon-md);
-}
-.rowBack {
-  left: 0.25rem;
-}
-.rowForward {
-  right: 0.25rem;
-}
-.row:hover .rowArrow {
-  opacity: 1;
-}
-.view .rowArrow:disabled {
-  opacity: 0;
-  pointer-events: none;
-}
-@media (hover: none), (pointer: coarse) {
-  .view .rowArrow {
-    display: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .view .rowArrow {
-    transition: none;
-  }
-}
-
 /* A library card: its status on the poster (as on Discover's, AddToLibrary.tsx
    StatusBadge), a heart if it is a favourite, and a quick actions button that
    shows on hover (or focus) where there is a mouse. Touch screens open the same
@@ -1446,8 +1400,7 @@
 }
 /* Remove from library, apart at the end of the panel. */
 .removeArea {
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
 }
 
 /* Profile: friend requests, stats, favourites and friends. */
@@ -1468,16 +1421,8 @@
   border-radius: var(--radius-lg);
   background: var(--hover);
 }
-.stats > :first-child {
+.stats > :last-child {
   grid-column: 1 / -1;
-}
-@media (min-width: 48rem) {
-  .stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .stats > :first-child {
-    grid-column: auto;
-  }
 }
 /* The number first, then what it counts. */
 .stats dt {
@@ -1494,7 +1439,7 @@
   overflow-wrap: anywhere;
 }
 /* Hours watched, the number the stats are about: the biggest, in the accent. */
-.stats > :first-child dd {
+.stats > :last-child dd {
   font-size: var(--text-3xl);
   line-height: 1.1;
   color: var(--accent);
@@ -2221,8 +2166,14 @@ div.people {
   }
   /* A friend: their picture, then the name and @username on one line, and
      under them Check profile, with the bin at the row's end. */
+  .people > li {
+    padding-inline: 0.75rem;
+  }
   .personRow {
     position: relative;
+  }
+  .personRow:has(> .personLink) {
+    display: block;
   }
   .view .personLink {
     display: grid;
@@ -2230,13 +2181,17 @@ div.people {
     align-items: center;
     gap: 0.4rem 0.75rem;
     padding-right: 0;
+    width: 100%;
   }
   .personLink .avatar {
-    grid-row: 1 / span 2;
+    grid-row: 1;
   }
   .personLink .checkProfile {
-    grid-column: 2;
-    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    grid-column: 1 / -1;
+    justify-self: center;
   }
   .view .personRow > .removeIcon {
     position: absolute;

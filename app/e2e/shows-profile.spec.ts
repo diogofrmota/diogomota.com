@@ -95,7 +95,7 @@ test("Profile shows the user's favourites and stats, and the stats add up", asyn
   // 676 + 810 + 128 + 92 = 1,706 minutes: 28.4 hours.
   await page.reload();
   await tab(page, "Profile").click();
-  await expect(statValues(page)).toHaveText(["28.4", "1", "2"]);
+  await expect(statValues(page)).toHaveText(["1", "2", "28.4"]);
 
   // Favourites: TV shows and movies together, the latest changed first.
   const favourites = grid(section(page, "Favourites"), "Your favourites");
@@ -128,7 +128,7 @@ test("Profile shows the user's favourites and stats, and the stats add up", asyn
   await expect(detail.getByText("S2 E4", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(detail).toBeHidden();
-  await expect(statValues(page)).toHaveText(["29.3", "1", "2"]);
+  await expect(statValues(page)).toHaveText(["1", "2", "29.3"]);
   await expect.poll(lineShare).toBe(Math.round((14 / 18) * 100) / 100);
 
   // Completed from its card's quick actions: all 18 episodes (1,966 minutes).
@@ -137,7 +137,7 @@ test("Profile shows the user's favourites and stats, and the stats add up", asyn
   const menu = page.getByRole("dialog", { name: "Harbor Lights" });
   await menu.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" }).click();
   await page.keyboard.press("Escape");
-  await expect(statValues(page)).toHaveText(["32.8", "2", "2"]);
+  await expect(statValues(page)).toHaveText(["2", "2", "32.8"]);
   await expect(card(favourites, "Harbor Lights")).toHaveAccessibleName("Harbor Lights, 2021, Completed, favourite");
   // Completed: all the way across, in the color of the Completed badge.
   await expect(line).toHaveCSS("background-color", "rgb(21, 128, 61)");
@@ -223,7 +223,7 @@ test("two people become friends: a request, accepting it, each other's libraries
   await tab(page, "Profile").click();
   await friendButton(page, bobName).click();
   const profile = page.getByRole("dialog", { name: bobName });
-  await expect(statValues(profile)).toHaveText(["26.5", "1", "0"]);
+  await expect(statValues(profile)).toHaveText(["1", "0", "26.5"]);
   const cards = (heading: string) => grid(section(profile, heading), heading).getByRole("button");
   await expect(cards("Watching")).toHaveCount(1);
   await expect(cards("Watching")).toHaveAccessibleName("Harbor Lights, 2021, Watching, season 2 episode 5, favourite");
@@ -672,7 +672,7 @@ test.describe("on a phone", () => {
     await page.reload();
 
     await tab(page, "Profile").tap();
-    await expect(statValues(page)).toHaveText(["2.1", "0", "1"]);
+    await expect(statValues(page)).toHaveText(["0", "1", "2.1"]);
     await expect(friendButton(page, friend.user.username)).toBeVisible();
     // A friend's row: their picture, their name and @username on one line (cut off when as long as a test user's), and under it Check profile and the bin.
     const friendRow = friendsList(page).getByRole("listitem");
@@ -686,7 +686,8 @@ test.describe("on a phone", () => {
     );
     expect(nameBox.height).toBeLessThan(30);
     expect(checkBox.y).toBeGreaterThanOrEqual(nameBox.y + nameBox.height);
-    expect(Math.abs(checkBox.x - nameBox.x)).toBeLessThanOrEqual(1);
+    const rowBox = (await friendRow.boundingBox())!;
+    expect(Math.abs(checkBox.x + checkBox.width / 2 - (rowBox.x + rowBox.width / 2))).toBeLessThanOrEqual(1);
     expect(binBox.y + binBox.height).toBeGreaterThan(checkBox.y);
     expect(binBox.x).toBeGreaterThan(checkBox.x + checkBox.width);
     expect(pictureBox.x + pictureBox.width).toBeLessThanOrEqual(nameBox.x);
@@ -696,11 +697,13 @@ test.describe("on a phone", () => {
 
     await friendButton(page, friend.user.username).tap();
     const profile = page.getByRole("dialog", { name: friend.user.username });
-    await expect(statValues(profile)).toHaveText(["3.5", "0", "0"]);
+    await expect(statValues(profile)).toHaveText(["0", "0", "3.5"]);
     await expect(grid(section(profile, "Watching"), "Watching").getByRole("button")).toHaveAccessibleName(
       "Harbor Lights, 2021, Watching, season 1 episode 4, favourite",
     );
-    expect(await profile.boundingBox()).toEqual({ x: 0, y: 0, width: 390, height: 844 });
+    const popupBox = (await profile.boundingBox())!;
+    expect(popupBox.width).toBeLessThan(390);
+    expect(popupBox.height).toBeLessThan(844);
     await expectNoHorizontalScroll(page);
     await page.goBack();
     await expect(profile).toBeHidden();

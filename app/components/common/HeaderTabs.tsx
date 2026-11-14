@@ -1,36 +1,65 @@
+import Link from "next/link";
+import { logOut } from "@/app/account/actions";
+import { LogoutButton } from "@/components/account/LogoutButton";
+import { authHref } from "@/lib/next-path";
+import { Avatar } from "./Avatar";
+import { AppsIcon, LogoutIcon, UserIcon } from "./icons";
+import { LinkPending } from "./LinkPending";
+
 import type { TabNavProps } from "./AppShell";
-import { NavLabel } from "./AppHeader";
-import styles from "./AppHeader.module.css";
 import shell from "./AppShell.module.css";
 
-// The app's tabs. Buttons rather than links: switching views never loads a page
-// (useAppView puts each in the URL). One set is shown at a time: the top bar's
-// on a wide screen, the bottom bar's on a phone; the other is display: none,
-// out of the accessibility tree.
-
-/** In the middle of the top bar, on a wide screen. */
-export function HeaderTabs({ label, tabs, current, onSelect }: TabNavProps) {
+export function AppsAccountTabs({
+  username,
+  avatarUrl,
+  next,
+}: {
+  username: string | null;
+  avatarUrl?: string | null;
+  next?: string | null;
+}) {
   return (
-    <nav aria-label={label} className={styles.headerTabs}>
-      <ul className={styles.tabList}>
-        {tabs.map((tab) => (
-          <li key={tab.id}>
-            <button
-              type="button"
-              className={styles.link}
-              aria-current={tab.id === current ? "page" : undefined}
-              onClick={() => onSelect(tab.id)}
-            >
-              <NavLabel>{tab.label}</NavLabel>
-            </button>
-          </li>
-        ))}
+    <nav aria-label="Account" className={shell.bottomTabs}>
+      <ul>
+        {username ? (
+          <>
+            <li>
+              <Link href="/account">
+                <Avatar username={username} url={avatarUrl} className={shell.navAvatar} />
+                Account
+                <LinkPending />
+              </Link>
+            </li>
+            <li>
+              <form action={logOut}>
+                <LogoutButton className="" icon={<LogoutIcon />} />
+              </form>
+            </li>
+          </>
+        ) : (
+          <>
+            <li>
+              <Link href={authHref("/login", next)}>
+                <UserIcon />
+                Log in
+                <LinkPending />
+              </Link>
+            </li>
+            <li>
+              <Link href={authHref("/signup", next)}>
+                <UserIcon />
+                Sign up
+                <LinkPending />
+              </Link>
+            </li>
+          </>
+        )}
       </ul>
     </nav>
   );
 }
 
-/** Along the bottom of a phone's screen, within reach of a thumb: each tab its icon over its name. */
+/** Bottom navigation at every width: each tab's icon over its name. */
 export function BottomTabs({ label, tabs, current, onSelect }: TabNavProps) {
   return (
     <nav aria-label={label} className={shell.bottomTabs}>
@@ -47,6 +76,12 @@ export function BottomTabs({ label, tabs, current, onSelect }: TabNavProps) {
             </button>
           </li>
         ))}
+        <li>
+          <Link href="/apps">
+            <LinkPending icon={<AppsIcon />} />
+            Apps
+          </Link>
+        </li>
       </ul>
     </nav>
   );

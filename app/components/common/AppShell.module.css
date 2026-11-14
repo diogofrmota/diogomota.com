@@ -178,10 +178,10 @@
   }
 }
 
-/* An app's tabs along the bottom of a phone's screen (HeaderTabs, BottomTabs),
+/* The app and launcher tabs along the bottom at every screen width,
    within reach of a thumb, each its icon over its name; clear of the home
    indicator. --bottom-bar is their height, for what sits at the bottom of the
-   screen too (the Undo message). On a wide screen the tabs are in the top bar. */
+   screen too (the Undo message). */
 .withNav {
   --bottom-bar: 3.75rem;
 }
@@ -211,7 +211,8 @@
   list-style: none;
 }
 
-.bottomTabs button {
+.bottomTabs button,
+.bottomTabs a {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -238,21 +239,34 @@
   height: 1.5rem;
 }
 
-.bottomTabs button[aria-current="page"] {
+.bottomTabs :is(button, a)[aria-current="page"] {
   color: var(--accent);
   font-weight: var(--weight-semibold);
 }
 
-@media (min-width: 48rem) {
-  .withNav {
-    --bottom-bar: 0px;
-  }
-
-  .withNav .main {
-    --main-padding-bottom: 3rem;
-  }
-
-  .bottomTabs {
-    display: none;
-  }
+.withoutHeader {
+  --top-bar-height: 0px;
+}
+.bottomTabs a {
+  text-decoration: none;
+  position: relative;
+}
+.bottomTabs form {
+  height: 100%;
+}
+.bottomTabs ul {
+  max-width: 48rem;
+  margin-inline: auto;
+}
+.bottomTabs .navAvatar {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.main.calendarMain {
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
 }

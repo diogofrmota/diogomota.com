@@ -650,3 +650,31 @@
   background: var(--accent-soft);
   font-size: var(--text-sm);
 }
+
+.taskAvatar {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--member-color) 22%, var(--surface));
+  box-shadow: 0 0 0 1px var(--member-color);
+  font-size: var(--text-2xs);
+}
+.assigneeName {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.extraOptions {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+}
+.form .fields {
+  display: grid;
+  grid-template-columns: 1fr;
+}

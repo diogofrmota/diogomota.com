@@ -37,31 +37,12 @@ async function expectNoHorizontalScroll(page: Page) {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
-test("the account menu opens settings, and closes with Escape or a click outside", async ({ page }) => {
+test("the bottom Account link opens settings", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
 
-  const button = accountButton(page, user.username);
-  const settings = page.getByRole("link", { name: "Account", exact: true });
-  await expect(button).toHaveAttribute("aria-expanded", "false");
-  await expect(settings).toBeHidden();
-
-  await button.click();
-  await expect(button).toHaveAttribute("aria-expanded", "true");
-  await expect(settings).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(settings).toBeHidden();
-  await expect(button).toBeFocused();
-
-  await button.click();
-  await expect(settings).toBeVisible();
-  // Its left end: on a phone, the open menu covers the rest of the heading.
-  await page.getByRole("heading", { level: 1, name: "apps" }).click({ position: { x: 5, y: 5 } });
-  await expect(settings).toBeHidden();
-
-  await button.click();
-  await settings.click();
+  await page.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await expect(page.getByRole("heading", { level: 1, name: "account" })).toBeVisible();
 
@@ -163,7 +144,7 @@ test("change username", async ({ page }) => {
   // The session has the new name too.
   await expect(accountButton(page, renamed)).toBeVisible();
   await page.goto("/shows");
-  await expect(accountButton(page, renamed)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
 
   await logOut(page, renamed);
   await logIn(page, user.username, user.password);
@@ -591,7 +572,6 @@ test.describe("at 320px wide", () => {
     await expect(page).toHaveURL("/apps");
     await expectNoHorizontalScroll(page);
 
-    await accountButton(page, user.username).click();
     await expect(page.getByRole("link", { name: "Account", exact: true })).toBeInViewport({ ratio: 1 });
     await expectNoHorizontalScroll(page);
 

@@ -2,6 +2,16 @@
 
 Each deploy publishes a GitHub Release (`vX.Y.Z`) listing its commits (`.github/workflows/deploy.yml`); this file says what each minor version brought, in words. The detail is in [plan.md](plan.md)'s Build log, the decisions in [docs/decisions/](docs/decisions/).
 
+## Unreleased
+
+- Launcher: Account with the profile picture and Log out in a bottom bar. Both apps lose the top bar and gain Apps in their bottom navigation on mobile and desktop.
+- Shared: Month and Agenda only, compact controls, full-width calendar, smaller event text, and no color legend or Today button. Events and tasks select individual people without an All shortcut.
+- Tasks: multiple assignees with profile pictures; Extra options groups Who?, Due date, Repeat?, and Notes. Edit replaces Edit lists, and task entry stays above existing tasks.
+- Settings: shorter invite copy and Copy link before Add to my calendar.
+- Popups retain visible margins and no longer slide up on phones.
+- Shows: Recommend to a friend, More like this, then Remove from library without a divider. Poster rows use visible scrollbars instead of arrows. Mobile friends have a centered Check profile; completion counts appear above hours watched.
+- Migration 021 adds task assignments while keeping the legacy single-assignee column compatible with older clients and rollbacks.
+
 ## v1.2.0 — 2026-11-13
 
 From the review in [report.md](report.md).

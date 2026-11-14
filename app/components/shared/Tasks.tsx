@@ -119,7 +119,7 @@ export function Tasks({ space }: { space: Space }) {
               </button>
             </div>
             <button type="button" className={styles.editLists} onClick={() => openPanel("lists")}>
-              Edit lists
+              Edit
             </button>
           </div>
           <section className={styles.list} aria-labelledby="task-list-name">
@@ -130,23 +130,6 @@ export function Tasks({ space }: { space: Space }) {
               </h2>
               {saving && !offline && <span className={styles.saving}>Saving…</span>}
             </div>
-            {active.length > 0 ? (
-              <SortableList
-                id="task-order"
-                items={active.map((t) => ({ id: t.id, label: t.title }))}
-                onMove={(id, beforeId) => actions.moveTask(list.id, id, beforeId)}
-              >
-                <ul className={styles.items} aria-label="To do">
-                  {active.map((task) => (
-                    <SortableTask key={task.id} {...rowProps(task)} />
-                  ))}
-                </ul>
-              </SortableList>
-            ) : (
-              <p className={styles.empty}>
-                {done.length ? "All done — nice work!" : "Nothing to do yet — add your first task!"}
-              </p>
-            )}
             <form
               className={styles.add}
               onSubmit={(e) => {
@@ -164,6 +147,24 @@ export function Tasks({ space }: { space: Space }) {
               />
               <button type="submit">Add</button>
             </form>
+            {active.length > 0 ? (
+              <SortableList
+                id="task-order"
+                items={active.map((t) => ({ id: t.id, label: t.title }))}
+                onMove={(id, beforeId) => actions.moveTask(list.id, id, beforeId)}
+              >
+                <ul className={styles.items} aria-label="To do">
+                  {active.map((task) => (
+                    <SortableTask key={task.id} {...rowProps(task)} />
+                  ))}
+                </ul>
+              </SortableList>
+            ) : (
+              <p className={styles.empty}>
+                {done.length ? "All done — nice work!" : "Nothing to do yet — add your first task!"}
+              </p>
+            )}
+
             {done.length > 0 && (
               <details className={styles.done} open={doneOpen} onToggle={(e) => setDoneOpen(e.currentTarget.open)}>
                 <summary>

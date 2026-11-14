@@ -1,0 +1,20 @@
+/* Keep every popup inside the viewport without moving it on open. */
+.popup.popup[open] {
+  animation: none;
+  max-height: min(90dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem));
+}
+
+@media (max-width: 47.99rem) {
+  .popup.popup[open] {
+    margin: auto;
+    width: calc(100% - 1.5rem);
+    max-width: 36rem;
+    height: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+  }
+
+  .popup.popup > div {
+    padding: 1rem;
+  }
+}

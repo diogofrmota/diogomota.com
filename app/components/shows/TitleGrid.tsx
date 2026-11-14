@@ -2,8 +2,7 @@
 import { Alert } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
 import Image, { type ImageLoader } from "next/image";
-import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
-import { ChevronLeftIcon, ChevronRightIcon } from "@/components/common/icons";
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { statusNames, titleKey, tmdbImageUrl, type TitleSummary } from "@/lib/show-types";
 import { AddMark, ProgressLine, StatusBadge, StatusChooser, useTitleStatus } from "./AddToLibrary";
 import { useOpenActions } from "./QuickActions";
@@ -225,56 +224,15 @@ export function TitleRow({
   label: string;
   onOpen: (title: TitleSummary) => void;
 }) {
-  const list = useRef<HTMLUListElement>(null);
-  // Whether it's scrolled to its start and to its end, as it scrolls and resizes.
-  const [edges, setEdges] = useState({ start: true, end: true });
-  const update = useCallback(() => {
-    const el = list.current;
-    if (!el) return;
-    const start = el.scrollLeft <= 2;
-    const end = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
-    setEdges((now) => (now.start === start && now.end === end ? now : { start, end }));
-  }, []);
-  useEffect(() => {
-    const observer = new ResizeObserver(update);
-    observer.observe(list.current!);
-    return () => observer.disconnect();
-  }, [update, titles]);
   const drag = useDragScroll();
-  function scrollPage(direction: 1 | -1) {
-    const el = list.current!;
-    const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el.scrollBy({ left: direction * el.clientWidth * 0.85, behavior: smooth ? "smooth" : "auto" });
-  }
-  // Out of the tab order: the cards are in it, and focusing one scrolls it into view.
   return (
-    <div className={styles.row} data-start={edges.start} data-end={edges.end}>
+    <div className={styles.row}>
       {/* data-scrolls-sideways: on purpose, in a panel too (e2e/checks.ts). */}
-      <ul ref={list} className={styles.rowList} aria-label={label} onScroll={update} data-scrolls-sideways {...drag}>
+      <ul className={styles.rowList} aria-label={label} data-scrolls-sideways {...drag}>
         {titles.map((title, i) => (
           <TitleCard key={titleKey(title)} title={title} withType={false} onOpen={onOpen} index={i} />
         ))}
       </ul>
-      <button
-        type="button"
-        className={`${styles.rowArrow} ${styles.rowBack}`}
-        tabIndex={-1}
-        aria-label="Scroll left"
-        disabled={edges.start}
-        onClick={() => scrollPage(-1)}
-      >
-        <ChevronLeftIcon />
-      </button>
-      <button
-        type="button"
-        className={`${styles.rowArrow} ${styles.rowForward}`}
-        tabIndex={-1}
-        aria-label="Scroll right"
-        disabled={edges.end}
-        onClick={() => scrollPage(1)}
-      >
-        <ChevronRightIcon />
-      </button>
     </div>
   );
 }

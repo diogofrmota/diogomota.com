@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import styles from "./Dialog.module.css";
 
 /**
  * Whether a popup can start with its text field focused: with a mouse, yes; on
@@ -48,7 +49,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      className={className}
+      className={`${className} ${styles.popup}`}
       style={style}
       {...labelling}
       onCancel={(e) => {

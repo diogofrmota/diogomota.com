@@ -1,9 +1,11 @@
 "use client";
 import { useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from "react";
+import { Avatar } from "@/components/common/Avatar";
+import { memberName } from "@/lib/names";
 import { GripIcon, RepeatIcon, TrashIcon } from "@/components/common/icons";
 import { dateLabel, datePlus } from "@/lib/calendar";
 import type { Space } from "@/lib/space-types";
-import { repeatNames, type Task } from "@/lib/task-types";
+import { taskAssignees, repeatNames, type Task } from "@/lib/task-types";
 import { useSortableItem } from "./Sortable";
 import styles from "./Tasks.module.css";
 
@@ -99,7 +101,7 @@ export function TaskRow({
   sortable,
 }: RowProps & { sortable?: ReturnType<typeof useSortableItem> }) {
   const swipe = useSwipe(onDelete);
-  const member = space.members.find((m) => m.id === task.assigneeId);
+  const members = space.members.filter((m) => taskAssignees(task).includes(m.id));
   const due = task.dueDate && dueText(task.dueDate, today, task.isComplete);
   return (
     <li
@@ -135,7 +137,7 @@ export function TaskRow({
         </label>
         <button type="button" className={styles.open} onClick={onOpen}>
           <span className={styles.title}>{task.title}</span>
-          {(due || member || task.repeat) && (
+          {(due || members.length > 0 || task.repeat) && (
             <span className={styles.meta}>
               {due && <span className={due.startsWith("Overdue") ? styles.overdue : undefined}>{due}</span>}
               {task.repeat && (
@@ -144,12 +146,17 @@ export function TaskRow({
                   {repeatNames[task.repeat]}
                 </span>
               )}
-              {member && (
-                <span className={styles.assignee} style={{ "--member-color": member.color } as CSSProperties}>
-                  <span className={styles.assigneeDot} aria-hidden="true" />
-                  {member.username}
+              {members.map((member) => (
+                <span
+                  key={member.id}
+                  className={styles.assignee}
+                  title={memberName(member)}
+                  style={{ "--member-color": member.color } as CSSProperties}
+                >
+                  <Avatar username={member.username} url={member.avatarUrl} className={styles.taskAvatar} />
+                  <span className={styles.assigneeName}>{memberName(member)}</span>
                 </span>
-              )}
+              ))}
             </span>
           )}
           {task.notes && <span className={styles.notes}>{task.notes}</span>}
