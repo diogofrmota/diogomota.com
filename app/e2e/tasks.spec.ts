@@ -141,13 +141,13 @@ test("lists: empty state, create, rename, reorder with the keyboard and delete, 
   await deleted;
   await dialog.getByRole("button", { name: "Done", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(chips(page).getByRole("button")).toHaveText(["Today", "Groceries", "Trip planning", "New list"]);
+  await expect(chips(page).getByRole("button")).toHaveText(["Groceries", "Trip planning", "New list"]);
 
   // The open list is remembered on this device.
   await chips(page).getByRole("button", { name: "Trip planning" }).click();
   await page.reload();
   await openTasks(page);
-  await expect(chips(page).getByRole("button")).toHaveText(["Today", "Groceries", "Trip planning", "New list"]);
+  await expect(chips(page).getByRole("button")).toHaveText(["Groceries", "Trip planning", "New list"]);
   await expect(chips(page).getByRole("button", { name: "Trip planning" })).toHaveAttribute("aria-pressed", "true");
   expect((await readLists(page)).map((l) => l.name)).toEqual(["Groceries", "Trip planning"]);
 
@@ -593,7 +593,7 @@ test("the tasks API is scoped to the caller's current space and validates what i
   expect((await readLists(page)).map((l) => l.name)).toEqual(["Other"]);
 });
 
-test("Today lists what is due from every list, for you or nobody; quick dates and List move a task", async ({
+test("only the lists to pick from, no Today; due dates stand out, and quick dates and List move a task", async ({
   page,
 }) => {
   const space = await setup(page);
@@ -613,29 +613,22 @@ test("Today lists what is due from every list, for you or nobody; quick dates an
   await create(`/lists/${shop.id}/tasks`, { title: "Eggs" });
   await openTasks(page);
 
-  // Today first, with how many are due; Due today in the accent, Overdue in red.
-  const todayChip = chips(page).getByRole("button", { name: /^Today/ });
-  await expect(chips(page).getByRole("button")).toHaveText(["Today3", "Home", "Groceries", "New list"]);
-  await chips(page).getByRole("button", { name: "Home", exact: true }).click();
+  // The lists, then New list: no Today chip; the first list opens.
+  await expect(chips(page).getByRole("button")).toHaveText(["Home", "Groceries", "New list"]);
+  await expect(chips(page).getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "true");
+  // Due today in the accent, Overdue in red.
   const accent = await page
     .locator("[data-theme]")
     .evaluate((shell) => getComputedStyle(shell).getPropertyValue("--accent"));
   await expect(row(page, "Pay rent").getByText("Due today")).toHaveCSS("color", hexToRgb(accent.trim()));
   await expect(row(page, "Fix the shelf").getByText(/^Overdue/)).toBeVisible();
 
-  // Today: the three due today or before, from both lists, under each list's name; not the one due later.
-  await todayChip.click();
-  await expect(page.getByRole("heading", { level: 2, name: "Today (3)" })).toBeVisible();
-  const titlesIn = (name: string) =>
-    page
-      .getByRole("list", { name, exact: true })
-      .getByRole("checkbox")
-      .evaluateAll((boxes) => boxes.map((box) => box.getAttribute("aria-label")));
-  await expect.poll(() => titlesIn("Home")).toEqual(["Pay rent", "Fix the shelf"]);
-  await expect.poll(() => titlesIn("Groceries")).toEqual(["Olive oil"]);
-  await expect(page.getByRole("checkbox", { name: "Book flights" })).toHaveCount(0);
-  // There is no adding to Today: it isn't a list.
-  await expect(page.getByLabel("Write a task")).toHaveCount(0);
+  // A list kept as open from when there was a Today opens the first list instead.
+  await page.evaluate(() => localStorage.setItem("shared-tasks-list", "today"));
+  await page.reload();
+  await openTasks(page);
+  await expect(chips(page).getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("Write a task")).toBeVisible();
 
   // A task's popup: Today, Tomorrow, Next week set its due date; List moves it to the end of another.
   await chips(page).getByRole("button", { name: "Groceries", exact: true }).click();

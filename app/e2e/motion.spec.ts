@@ -81,7 +81,7 @@ test.describe("with motion", () => {
       const thumbs = element.querySelectorAll("button > span[aria-hidden=true]:empty");
       const animation = [...thumbs].flatMap((span) => span.getAnimations()).find((a) => a.id === "layout");
       const keyframes = (animation?.effect as KeyframeEffect | undefined)?.getKeyframes() ?? [];
-      // Half way, it is in its track, though Agenda's toolbar is laid out elsewhere than Month's.
+      // Half way, it is in its track.
       if (animation) animation.currentTime = 130;
       const [track, at] = [element.getBoundingClientRect(), thumbs[0].getBoundingClientRect()];
       return {

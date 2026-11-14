@@ -34,7 +34,8 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
 // is waiting in it (lib/badges.ts) and going back to the view last used in it
 // (lib/app-views.ts). Logged out, the front page: what the site is, Log in and
 // Sign up, and a card for each app, which opens its login prompt. The build's
-// version, Privacy and About are at the bottom.
+// version, Privacy and About are at the bottom of the page, however little is
+// above them.
 //
 // `next` is set when a logged-out user was sent here from a protected page
 // (proxy.ts): Log in and Sign up return there, and for an app its prompt opens.
@@ -81,7 +82,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         {user ? (
           <>
             {!user.emailVerified && <VerifyNote email={user.email} />}
-            <h1 className={ui.heading}>Apps</h1>
+            <h1 className={`${ui.heading} ${styles.title}`}>List of apps</h1>
             <AppGrid apps={grid} />
           </>
         ) : (
@@ -92,9 +93,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </>
         )}
         {/* Which build is live (for whoever deploys it, so out of the way), and the pages about the site. */}
-        <p className={styles.footer}>
+        <footer className={styles.footer}>
           Version {version} · <Link href="/privacy">Privacy</Link> · <Link href="/about">About</Link>
-        </p>
+        </footer>
       </div>
     </AppFrame>
   );

@@ -1,30 +1,40 @@
 /* Home's apps, logged in (AppGrid): their icons in a grid, like a phone's home
-   screen, left-aligned in the page's column: four to a row on a phone, six
-   from 40rem, each its icon with its name under it. */
+   screen, each its icon with its name under it: two to a row on a phone, four
+   from 40rem, in the middle of the page under its heading (a row that isn't
+   full is in the middle too). */
 .grid {
-  --icon-size: 4rem;
+  --icon-size: 6rem;
+  --columns: 2;
+  --column-gap: var(--space-4);
 
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-5) var(--space-3);
-  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-6) var(--column-gap);
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
   padding: 0;
   list-style: none;
 }
 
 @media (min-width: 40rem) {
   .grid {
-    --icon-size: 4.5rem;
+    --icon-size: 7rem;
+    --columns: 4;
+    --column-gap: var(--space-6);
 
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: var(--space-6) var(--space-4);
+    row-gap: var(--space-8);
   }
 }
 
-/* Each comes in from just below, one after another (--i), 30ms apart. */
+/* Each a column's width, and comes in from just below, one after another
+   (--i), 30ms apart. */
 .grid li {
   display: flex;
+  flex: none;
   justify-content: center;
+  width: calc((100% - (var(--columns) - 1) * var(--column-gap)) / var(--columns));
   min-width: 0;
   animation: app-in var(--duration) var(--ease-out) backwards;
   animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
@@ -94,7 +104,7 @@
 .name {
   max-width: 100%;
   overflow: hidden;
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   font-weight: var(--weight-medium);
   text-overflow: ellipsis;
   white-space: nowrap;

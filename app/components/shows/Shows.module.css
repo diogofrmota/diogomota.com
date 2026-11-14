@@ -2545,7 +2545,12 @@ div.people {
   font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  transition: scale var(--duration-fast) var(--ease-out);
+  /* Back from green to how it was, as the next episode comes in. */
+  transition:
+    scale var(--duration-fast) var(--ease-out),
+    background-color var(--duration) var(--ease-out),
+    border-color var(--duration) var(--ease-out),
+    color var(--duration) var(--ease-out);
 }
 .nextEpisodeButton svg {
   width: 0.875rem;
@@ -2560,8 +2565,64 @@ div.people {
     background: var(--hover);
   }
 }
+/* Just ticked (LibraryGrid, NextEpisodeButton): green at once, the tick drawn
+   in from its start and a ring of green spreading from the button once, for
+   the episode just watched. */
+.nextEpisodeButton[data-watched],
+.nextEpisodeButton[data-watched]:hover {
+  border-color: var(--success);
+  background: var(--success);
+  color: var(--bg);
+  cursor: default;
+  transition: scale var(--duration-fast) var(--ease-out);
+  animation: watched-pulse 0.6s var(--ease-out);
+}
+.nextEpisodeButton[data-watched] svg {
+  color: inherit;
+  stroke-dasharray: 24;
+  animation:
+    watched-tick var(--duration) var(--ease-out),
+    watched-draw var(--duration-move) var(--ease-out) both;
+}
+@keyframes watched-pulse {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--success) 45%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 0.5rem transparent;
+  }
+}
+@keyframes watched-tick {
+  from {
+    transform: scale(0.6);
+  }
+}
+@keyframes watched-draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+/* Then the next episode: its label comes in from just below. */
+.episodeIn {
+  display: inline-block;
+  animation: episode-in var(--duration) var(--ease-out) backwards;
+}
+@keyframes episode-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5em);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .nextEpisodeButton:active {
     scale: none;
+  }
+  .nextEpisodeButton[data-watched],
+  .nextEpisodeButton[data-watched] svg,
+  .episodeIn {
+    animation: none;
   }
 }

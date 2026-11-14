@@ -156,20 +156,28 @@
   display: contents;
 }
 
-/* Log out, on its own under the settings. */
+/* Log out, on its own under the settings: as wide as their rows, with its
+   icon, in the accent on its soft tint, so it is found at a glance (it is
+   neither a setting nor destructive). */
 .logout {
+  display: grid;
   margin-top: var(--space-6);
 }
 
-/* About and Privacy: the pages about the site, small and grey under Log out. */
-.siteLinks {
-  margin: var(--space-4) 0 0;
-  color: var(--muted);
-  font-size: var(--text-sm);
+.logout .logoutButton {
+  --spinner-color: var(--accent);
+
+  justify-self: stretch;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
 }
 
-.siteLinks a {
-  color: inherit;
+@media (hover: hover) {
+  .logout .logoutButton:hover {
+    background: color-mix(in oklch, var(--accent-soft), var(--accent) 12%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -30,10 +30,13 @@ test("logged out, home is the front page: what the site is, Log in and Sign up, 
   // Logged out, in Light.
   await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
   const main = page.getByRole("main");
-  await expect(main.getByRole("heading", { level: 1 })).toHaveText("Small apps for friends");
-  await expect(main.getByText(/^A shared calendar and task lists for couples/)).toBeVisible();
+  await expect(main.getByRole("heading", { level: 1 })).toHaveText("Personal apps for friends");
+  const description = main.getByText(/^A shared calendar and task lists for couples/);
+  await expect(description).toBeVisible();
   // As everywhere, Log in first and plain, then Sign up, the call to action.
-  const hero = main.getByRole("region", { name: "Small apps for friends" });
+  const hero = main.getByRole("region", { name: "Personal apps for friends" });
+  // The line under the headline has the column's whole width, not only its left side.
+  expect((await description.boundingBox())!.width).toBeGreaterThanOrEqual((await hero.boundingBox())!.width - 1);
   const login = (await hero.getByRole("link", { name: "Log in" }).boundingBox())!;
   const signup = (await hero.getByRole("link", { name: "Sign up" }).boundingBox())!;
   expect(login.y).toBe(signup.y);
@@ -57,7 +60,7 @@ test("logged out, home is the front page: what the site is, Log in and Sign up, 
 
   // The site's description and preview are the apps'.
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
-  await expect(meta("name", "description")).toHaveAttribute("content", "Small apps for friends: Shared and Shows.");
+  await expect(meta("name", "description")).toHaveAttribute("content", "Personal apps for friends: Shared and Shows.");
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com");
   const image = await page.request.get("/opengraph-image");
   expect(image.ok()).toBe(true);
@@ -67,9 +70,9 @@ test("logged out, home is the front page: what the site is, Log in and Sign up, 
 test("the tab bar: Log in, Sign up (each its own icon) and Home, here and on the login pages", async ({ page }) => {
   await page.goto("/");
   const bar = tabBar(page);
-  // On a wide screen, the site's name on the header's left, to home.
-  expect(await linkNames(bar)).toEqual(["diogomota.com", "Log in", "Sign up", "Home"]);
-  await expect(bar.getByRole("link", { name: "diogomota.com" })).toHaveAttribute("href", "/");
+  // Only the tabs: no site name on the header's left.
+  expect(await linkNames(bar)).toEqual(["Log in", "Sign up", "Home"]);
+  await expect(bar).not.toContainText("diogomota.com");
   await expect(bar.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
   const icons = await bar
     .getByRole("link")
@@ -105,7 +108,7 @@ test("sent home from a protected page, Log in and Sign up return there, and an a
 }) => {
   await page.goto("/account");
   await expect(page).toHaveURL("/?next=%2Faccount");
-  const hero = page.getByRole("main").getByRole("region", { name: "Small apps for friends" });
+  const hero = page.getByRole("main").getByRole("region", { name: "Personal apps for friends" });
   await expect(hero.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login?next=%2Faccount");
   await expect(hero.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup?next=%2Faccount");
   await expect(tabBar(page).getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login?next=%2Faccount");
@@ -162,17 +165,39 @@ test("logged in, home is the apps' icons, and the email note sends its link from
   await signUp(page, user);
   // Signing up with nowhere to go next lands home.
   await expect(page).toHaveURL("/");
-  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Apps");
-  expect(await linkNames(tabBar(page))).toEqual(["diogomota.com", "Account", "Home"]);
+  const main = page.getByRole("main");
+  const heading = main.getByRole("heading", { level: 1 });
+  await expect(heading).toHaveText("List of apps");
+  await expect(heading).toHaveCSS("text-align", "center");
+  expect(await linkNames(tabBar(page))).toEqual(["Account", "Home"]);
   await expect(tabBar(page).getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
 
   // An icon for each app, straight into it, with what it is for read out with it.
   for (const app of apps) {
-    const link = page.getByRole("main").getByRole("link", { name: app.name, exact: true });
+    const link = main.getByRole("link", { name: app.name, exact: true });
     await expect(link).toHaveAttribute("href", app.href);
     await expect(link).toHaveAccessibleDescription(app.description);
     await expect(link.locator("img")).toHaveAttribute("src", app.logo);
   }
+  // Big icons, side by side in the middle of the page, under the heading (four to a row on a wide screen).
+  // Once they have come in (anything that turns for as long as it waits aside).
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity),
+  );
+  const icons = await Promise.all(
+    apps.map(
+      async (app) => (await main.getByRole("link", { name: app.name, exact: true }).locator("img").boundingBox())!,
+    ),
+  );
+  const width = await page.evaluate(() => document.documentElement.clientWidth);
+  for (const icon of icons) expect(icon.width).toBeGreaterThanOrEqual(112);
+  expect(icons[1].y).toBe(icons[0].y);
+  expect(Math.abs((icons[0].x + icons.at(-1)!.x + icons.at(-1)!.width) / 2 - width / 2)).toBeLessThanOrEqual(2);
+  // Version, Privacy and About at the bottom of the page, well under the icons.
+  const footer = (await main.getByText(/^Version (dev|v\d+\.\d+\.\d+) · Privacy · About$/).boundingBox())!;
+  const height = await page.evaluate(() => innerHeight);
+  expect(footer.y).toBeGreaterThan(height - 100);
+  expect(footer.y + footer.height).toBeLessThanOrEqual(height);
   // Nothing waiting yet: no badges.
   await expect(page.getByRole("main").locator("[class*='badge']")).toHaveCount(0);
 

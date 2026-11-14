@@ -16,7 +16,7 @@ export const viewport = appViewport;
 // around the apps. Like home, in the apps' frame and the user's theme, which is
 // set here (and only here), with the same tab bar (Account current, Home the
 // way back). The title, then the settings, each opening a popup
-// (AccountSettings), Log out, About and Privacy, and the user's data.
+// (AccountSettings), Log out, and the user's data.
 // What an emailed link did, when it comes back here (auth.ts, app/account/actions.ts).
 const messages: Record<string, string> = {
   changed: "Your email is changed.",

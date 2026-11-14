@@ -1,6 +1,7 @@
 import { type Locator, type Page } from "@playwright/test";
 import sharp from "sharp";
 import { initials } from "../lib/names";
+import { rgb } from "./checks";
 import { withDatabase } from "./db";
 import {
   accountButton,
@@ -44,14 +45,16 @@ test("Account and Home in the tab bar go between home and the settings; /account
   await signUp(page, user);
   await expect(page).toHaveURL("/");
   const bar = page.getByRole("navigation", { name: "Account", exact: true });
-  // On a wide screen, the site's name on the left, then the tabs.
-  expect(await linkNames(bar)).toEqual(["diogomota.com", "Account", "Home"]);
-  await expect(bar.getByRole("link", { name: "diogomota.com" })).toHaveAttribute("href", "/");
+  // Only the tabs: no site name on the left.
+  expect(await linkNames(bar)).toEqual(["Account", "Home"]);
   await expect(bar.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
 
   await bar.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
-  await expect(page.getByRole("heading", { level: 1, name: "account" })).toBeVisible();
+  // The title in the middle of the page.
+  const title = page.getByRole("heading", { level: 1, name: "account" });
+  await expect(title).toBeVisible();
+  await expect(title).toHaveCSS("text-align", "center");
   await expect(page.getByRole("banner")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Back to apps" })).toHaveCount(0);
   await expect(bar.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("aria-current", "page");
@@ -63,7 +66,7 @@ test("Account and Home in the tab bar go between home and the settings; /account
   await expect(page).toHaveURL("/");
 });
 
-test("Account: the profile picture in the middle, a row per setting with its value, then Log out, About and Privacy", async ({
+test("Account: the profile picture in the middle, a row per setting with its value, then Log out and Your data", async ({
   page,
 }) => {
   const user = newUser();
@@ -89,21 +92,22 @@ test("Account: the profile picture in the middle, a row per setting with its val
   ]);
   // Nothing else to open on the page: no dropdowns.
   await expect(main.locator("details")).toHaveCount(0);
-  // Log out on its own under the rows, then About and Privacy under it.
+  // Log out on its own under the rows, as wide as they are, with its icon, in the accent; no About or Privacy under it.
   const update = accountSetting(page, "Password");
   const logOutButton = main.getByRole("button", { name: "Log out", exact: true });
   const logOutBox = (await logOutButton.boundingBox())!;
   expect(logOutBox.y).toBeGreaterThan(listBox.y + listBox.height);
-  for (const [name, href] of [
-    ["About", "/about"],
-    ["Privacy", "/privacy"],
-  ]) {
-    const link = main.getByRole("link", { name, exact: true }).first();
-    await expect(link).toHaveAttribute("href", href);
-  }
-  expect((await main.getByRole("link", { name: "About", exact: true }).boundingBox())!.y).toBeGreaterThan(
-    logOutBox.y + logOutBox.height,
-  );
+  expect(Math.abs(logOutBox.width - listBox.width)).toBeLessThanOrEqual(1);
+  await expect(logOutButton.locator("svg")).toHaveCount(1);
+  const accent = await page
+    .locator("[data-theme]")
+    .evaluate((shell) => getComputedStyle(shell).getPropertyValue("--accent"));
+  await expect(logOutButton).toHaveCSS("color", rgb(accent.trim()));
+  // Your data points to the Privacy page, for what is kept and why.
+  const data = main.getByRole("region", { name: "Your data" });
+  await expect(data.getByRole("paragraph")).toHaveText("Check our Privacy page.");
+  await expect(data.getByRole("link", { name: "Privacy page" })).toHaveAttribute("href", "/privacy");
+  await expect(main.getByRole("link", { name: /privacy/i })).toHaveCount(1);
 
   // Each opens a popup, which Escape, a click outside or its × closes, back on the button that opened it.
   for (const name of ["Name", "Username", "Email", "Theme"]) {

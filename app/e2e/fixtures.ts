@@ -170,8 +170,7 @@ export async function confirmEmail(page: Page, address: string, expected = "Your
 
 /**
  * The names of a tab bar's links, as screen readers read them (a picture or an
- * icon in one is hidden from them): ["diogomota.com", "Account", "Home"] on a
- * wide screen, where the site's name is on the header's left.
+ * icon in one is hidden from them): ["Account", "Home"] logged in.
  */
 export async function linkNames(nav: Locator): Promise<string[]> {
   return nav.getByRole("link").evaluateAll((links) =>

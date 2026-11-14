@@ -18,7 +18,7 @@ import { LogoutButton } from "@/components/account/LogoutButton";
 import { Avatar } from "@/components/common/Avatar";
 import { clearOfflineData } from "@/components/common/QueryProvider";
 import { Dialog } from "@/components/common/Dialog";
-import { ChevronRightIcon, CloseIcon, PencilIcon, PhotoIcon } from "@/components/common/icons";
+import { ChevronRightIcon, CloseIcon, LogoutIcon, PencilIcon, PhotoIcon } from "@/components/common/icons";
 import { InlineSpinner, PendingOverlay } from "@/components/common/Spinner";
 import { ThemeOptions } from "@/components/common/ThemePicker";
 import ui from "@/components/common/ui.module.css";
@@ -499,8 +499,8 @@ const titles: Record<Setting, string> = {
 /**
  * Account's settings: the profile picture, in the middle; then a row each for
  * the name, username, email and theme, with what they are now, and for the
- * password (Update password); then Log out on its own, About and Privacy small
- * under it; then Your data: Download my data and Delete my account. Each opens a popup with its form (Escape, a click outside or its ×
+ * password (Update password); then Log out on its own, as wide as the rows;
+ * then Your data: Download my data and Delete my account. Each opens a popup with its form (Escape, a click outside or its ×
  * close it), which closes once saved, saying so under the rows; the page then
  * shows the new value. An email not confirmed yet says so, with a way to send
  * the link again; `message` is what an emailed link did (it came back here).
@@ -583,19 +583,16 @@ export function AccountSettings({
         {notice}
       </p>
 
-      {/* Log out on its own, then the pages about the site, small. */}
+      {/* Log out on its own, easy to find. */}
       <form action={logOut} className={styles.logout}>
-        <LogoutButton className={ui.button} />
+        <LogoutButton className={`${ui.button} ${styles.logoutButton}`} icon={<LogoutIcon />} />
       </form>
-      <p className={styles.siteLinks}>
-        <Link href="/about">About</Link> · <Link href="/privacy">Privacy</Link>
-      </p>
 
       {/* Your data (privacy): a copy of it all, or deleting it all. */}
       <section className={styles.data} aria-labelledby="your-data">
         <h2 id="your-data">Your data</h2>
         <p className={ui.muted}>
-          What we keep and why is in <Link href="/privacy">Privacy</Link>.
+          Check our <Link href="/privacy">Privacy page</Link>.
         </p>
         <div className={styles.buttons}>
           <a href="/api/account/export" download className={ui.button}>

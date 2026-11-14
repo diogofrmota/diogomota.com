@@ -42,7 +42,7 @@ export const apps: readonly AppInfo[] = [
 /** "Shared and Shows". */
 export const appNames = new Intl.ListFormat("en", { type: "conjunction" }).format(apps.map((app) => app.name));
 /** What the site is, for home's description and the web app manifest. */
-export const appsDescription = `Small apps for friends: ${appNames}.`;
+export const appsDescription = `Personal apps for friends: ${appNames}.`;
 
 /** The app a path is in (its page, or a page under it), if any: where `next` goes. */
 export function appAt(path: string | null | undefined): AppInfo | undefined {

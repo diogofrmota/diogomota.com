@@ -7,6 +7,7 @@ import {
   progressOf,
   statusNames,
   titleKey,
+  type Episode,
   type SharedEntry,
   type TitleLengths,
   type TitleSummary,
@@ -102,6 +103,53 @@ function libraryFacts(item: CardItem) {
 
 const cardSizes = "(min-width: 48rem) 160px, 34vw";
 
+/** How long a ticked episode stays on its button, in green, before the next one comes in. */
+const watchedMs = 900;
+
+// A TV show's next episode, ticked off as watched in one tap. Tapped, the
+// button turns green, its tick draws itself and a ring of green spreads from
+// it, for the episode just watched (saved at once); then the next episode
+// comes in from below, and the button is as it was. It takes no second tap
+// until then. Past the show's last episode, it goes.
+function NextEpisodeButton({ item, next }: { item: CardItem; next: Episode | null }) {
+  const { change } = useLibrary();
+  // The episode just ticked off, while the button says so.
+  const [watched, setWatched] = useState<Episode | null>(null);
+  // Whether an episode has been ticked off here: from then on, a new label comes in.
+  const [advanced, setAdvanced] = useState(false);
+  useEffect(() => {
+    if (!watched) return;
+    const timer = setTimeout(() => {
+      setWatched(null);
+      setAdvanced(true);
+    }, watchedMs);
+    return () => clearTimeout(timer);
+  }, [watched]);
+  const shown = watched ?? next;
+  if (!shown) return null;
+  const label = formatEpisode(shown);
+  return (
+    <button
+      type="button"
+      className={styles.nextEpisodeButton}
+      data-watched={watched ? "" : undefined}
+      aria-disabled={watched ? true : undefined}
+      onClick={() => {
+        if (watched || !next) return;
+        setWatched(next);
+        change(item, { currentSeason: next.season, currentEpisode: next.episode });
+      }}
+    >
+      <CheckIcon />
+      {/* Its key is the episode: the next one's label is a new one, which comes in. */}
+      <span key={label} className={advanced ? styles.episodeIn : undefined}>
+        {label}
+      </span>
+      <span className={ui.srOnly}> of {item.title} watched</span>
+    </button>
+  );
+}
+
 // A friend's titles are read-only: a card opens the detail panel, which is
 // about the user's own library, and has no quick actions. As in TitleGrid, the
 // button is the poster and the title, and covers the status badge and the facts.
@@ -122,11 +170,9 @@ function LibraryCard({
 }) {
   const openTitle = useOpenTitle();
   const openActions = useOpenActions();
-  const { change } = useLibrary();
-  const next =
-    !readOnly && item.type === "tv" && item.library.status === "watching" && item.episodesPerSeason?.length
-      ? nextEpisode(item.episodesPerSeason, progressOf(item.library))
-      : null;
+  const ticks =
+    !readOnly && item.type === "tv" && item.library.status === "watching" && !!item.episodesPerSeason?.length;
+  const next = ticks ? nextEpisode(item.episodesPerSeason!, progressOf(item.library)) : null;
   const longPress = useLongPress((x, y) => openActions(item, { left: x, right: x, top: y, bottom: y }));
   const facts = libraryFacts(item);
   const { status, isFavourite } = item.library;
@@ -152,17 +198,8 @@ function LibraryCard({
       </button>
       {statusBadges && (status !== "planned" || plannedBadge) && <StatusBadge status={status} />}
       <span className={styles.cardMeta}>{[item.year, facts.meta].filter(Boolean).join(" · ")}</span>
-      {next && (
-        <button
-          type="button"
-          className={styles.nextEpisodeButton}
-          onClick={() => change(item, { currentSeason: next.season, currentEpisode: next.episode })}
-        >
-          <CheckIcon />
-          {formatEpisode(next)}
-          <span className={ui.srOnly}> of {item.title} watched</span>
-        </button>
-      )}
+      {/* Kept while the show is being watched, so a tick on its last episode still shows it was ticked. */}
+      {ticks && <NextEpisodeButton item={item} next={next} />}
       {!readOnly && (
         <button
           type="button"

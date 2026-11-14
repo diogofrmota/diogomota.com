@@ -46,7 +46,7 @@ export function AppGrid({ apps }: { apps: readonly GridApp[] }) {
             aria-describedby={`${id}-${i}`}
           >
             <span className={styles.icon}>
-              <Image src={app.logo} alt="" width={72} height={72} className={styles.logo} />
+              <Image src={app.logo} alt="" width={112} height={112} className={styles.logo} />
               {badge > 0 && (
                 <span className={styles.badge} aria-hidden="true">
                   {badgeText(badge)}

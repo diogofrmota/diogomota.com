@@ -4,7 +4,9 @@
   max-width: 32rem;
 }
 
-/* Two classes, to win over ui.module.css's margin whatever the order. */
+/* In the middle, over the profile picture. Two classes, to win over
+   ui.module.css's margin whatever the order. */
 .title.title {
   margin: 0 0 var(--space-5);
+  text-align: center;
 }

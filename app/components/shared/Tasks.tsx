@@ -9,7 +9,7 @@ import { UndoToast } from "@/components/common/Undo";
 import { useAppView } from "@/hooks/useAppView";
 import { localParts } from "@/lib/calendar";
 import type { Space } from "@/lib/space-types";
-import { taskAssignees, type Task } from "@/lib/task-types";
+import type { Task } from "@/lib/task-types";
 import { SortableList } from "./Sortable";
 import { ListsDialog, TaskDialog } from "./TaskDialogs";
 import { SortableTask, TaskRow } from "./TaskItem";
@@ -26,10 +26,7 @@ function storedList() {
   }
 }
 
-// Today's chip: not a list, but what is due from all of them (todayGroups).
-const todayId = "today";
-
-export function Tasks({ space, userId }: { space: Space; userId: string }) {
+export function Tasks({ space }: { space: Space }) {
   // Loaded when Tasks is shown (Activity runs its effects again), every few
   // seconds while it is (what the others change shows up), and when the browser
   // tab comes back into view: useTasks.
@@ -41,18 +38,8 @@ export function Tasks({ space, userId }: { space: Space; userId: string }) {
   const settled = useSettled(!!lists);
 
   const today = localParts(new Date()).date;
-  // Today: open tasks due today or before, for the user or for nobody (what home's Shared badge counts, lib/badges.ts).
-  const dueNow = (task: Task) => {
-    const who = taskAssignees(task);
-    return !task.isComplete && !!task.dueDate && task.dueDate <= today && (!who.length || who.includes(userId));
-  };
-  const showingToday = selectedId === todayId;
-  // A task ticked off in Today stays there, ticked, until it goes, as in a list.
-  const todayGroups = (lists ?? [])
-    .map((l) => ({ list: l, tasks: l.tasks.filter((t) => dueNow(t) || (ticking.has(t.id) && !!t.dueDate)) }))
-    .filter((group) => group.tasks.length > 0);
-  const dueCount = (lists ?? []).flatMap((l) => l.tasks).filter((t) => dueNow(t) && !ticking.has(t.id)).length;
-  const list = showingToday ? undefined : (lists?.find((l) => l.id === selectedId) ?? lists?.[0]);
+  // The list picked, or the first (also when the one stored is gone).
+  const list = lists?.find((l) => l.id === selectedId) ?? lists?.[0];
   // A task just ticked off stays here, ticked, until it moves to Done; it no
   // longer counts as one to do.
   const active = list?.tasks.filter((t) => !t.isComplete) ?? [];
@@ -124,27 +111,13 @@ export function Tasks({ space, userId }: { space: Space; userId: string }) {
         </form>
       )}
       {lists && lists.length > 0 && (
-        // The lists to pick from (Today first, then each list, then New list and Edit): chips in a row that
-        // scrolls sideways, or a column beside the tasks on a wide screen. Then the tasks of the one picked.
+        // The lists to pick from (each list, then New list and Edit): chips in a row that scrolls sideways,
+        // or a column beside the tasks on a wide screen. Then the tasks of the one picked.
         <div className={styles.layout}>
           <div className={styles.toolbar}>
             <div className={styles.chips} role="group" aria-label="Task lists">
-              <button
-                type="button"
-                className={styles.todayChip}
-                aria-pressed={showingToday}
-                onClick={() => select(todayId)}
-              >
-                Today
-                {dueCount > 0 && <span className={styles.chipCount}>{dueCount}</span>}
-              </button>
               {lists.map((l) => (
-                <button
-                  key={l.id}
-                  type="button"
-                  aria-pressed={!showingToday && l.id === list?.id}
-                  onClick={() => select(l.id)}
-                >
+                <button key={l.id} type="button" aria-pressed={l.id === list?.id} onClick={() => select(l.id)}>
                   {l.name}
                 </button>
               ))}
@@ -157,91 +130,64 @@ export function Tasks({ space, userId }: { space: Space; userId: string }) {
               Edit
             </button>
           </div>
-          {showingToday ? (
-            // Today: what is due today or before, for the user or for nobody, from every list, under each list's name.
+          {list && (
             <section className={styles.list} aria-labelledby="task-list-name">
+              {/* The list's name with how many tasks are left to do: "Groceries (3)". */}
               <div className={styles.listHeader}>
                 <h2 id="task-list-name">
-                  Today <span className={styles.count}>({dueCount})</span>
+                  {list.name} <span className={styles.count}>({toDo})</span>
                 </h2>
                 {saving && !offline && <span className={styles.saving}>Saving…</span>}
               </div>
-              <p className={styles.todayNote}>Due today or before, for you or for nobody, from every list.</p>
-              {todayGroups.length > 0 ? (
-                todayGroups.map(({ list: group, tasks }) => (
-                  <div key={group.id} className={styles.todayGroup}>
-                    <h3>{group.name}</h3>
-                    <ul className={styles.items} aria-label={group.name}>
-                      {tasks.map((task, index) => (
-                        <TaskRow key={task.id} {...rowProps(task, index)} />
-                      ))}
-                    </ul>
-                  </div>
-                ))
+              <form
+                className={styles.add}
+                onSubmit={(e) => {
+                  const title = submitted(e, "title");
+                  if (title) actions.addTask(list.id, title);
+                }}
+              >
+                <input
+                  name="title"
+                  aria-label="Write a task"
+                  placeholder="Write a task"
+                  required
+                  maxLength={200}
+                  autoComplete="off"
+                />
+                <button type="submit">Add</button>
+              </form>
+              {active.length > 0 ? (
+                <SortableList
+                  id="task-order"
+                  items={active.map((t) => ({ id: t.id, label: t.title }))}
+                  onMove={(id, beforeId) => actions.moveTask(list.id, id, beforeId)}
+                >
+                  <ul className={styles.items} aria-label="To do">
+                    {active.map((task, index) => (
+                      <SortableTask key={task.id} {...rowProps(task, index)} />
+                    ))}
+                  </ul>
+                </SortableList>
               ) : (
-                <p className={styles.empty}>Nothing due today — nice!</p>
+                <p className={styles.empty}>
+                  {done.length ? "All done — nice work!" : "Nothing to do yet — add your first task!"}
+                </p>
+              )}
+
+              {done.length > 0 && (
+                <details className={styles.done} open={doneOpen} onToggle={(e) => setDoneOpen(e.currentTarget.open)}>
+                  <summary>
+                    <ChevronDownIcon />
+                    Done ({done.length})
+                  </summary>
+                  <ul className={styles.items} aria-label="Done">
+                    {done.map((task, index) => (
+                      <TaskRow key={task.id} {...rowProps(task, index)} />
+                    ))}
+                  </ul>
+                </details>
               )}
             </section>
-          ) : (
-            list && (
-              <section className={styles.list} aria-labelledby="task-list-name">
-                {/* The list's name with how many tasks are left to do: "Groceries (3)". */}
-                <div className={styles.listHeader}>
-                  <h2 id="task-list-name">
-                    {list.name} <span className={styles.count}>({toDo})</span>
-                  </h2>
-                  {saving && !offline && <span className={styles.saving}>Saving…</span>}
-                </div>
-                <form
-                  className={styles.add}
-                  onSubmit={(e) => {
-                    const title = submitted(e, "title");
-                    if (title) actions.addTask(list.id, title);
-                  }}
-                >
-                  <input
-                    name="title"
-                    aria-label="Write a task"
-                    placeholder="Write a task"
-                    required
-                    maxLength={200}
-                    autoComplete="off"
-                  />
-                  <button type="submit">Add</button>
-                </form>
-                {active.length > 0 ? (
-                  <SortableList
-                    id="task-order"
-                    items={active.map((t) => ({ id: t.id, label: t.title }))}
-                    onMove={(id, beforeId) => actions.moveTask(list.id, id, beforeId)}
-                  >
-                    <ul className={styles.items} aria-label="To do">
-                      {active.map((task, index) => (
-                        <SortableTask key={task.id} {...rowProps(task, index)} />
-                      ))}
-                    </ul>
-                  </SortableList>
-                ) : (
-                  <p className={styles.empty}>
-                    {done.length ? "All done — nice work!" : "Nothing to do yet — add your first task!"}
-                  </p>
-                )}
-
-                {done.length > 0 && (
-                  <details className={styles.done} open={doneOpen} onToggle={(e) => setDoneOpen(e.currentTarget.open)}>
-                    <summary>
-                      <ChevronDownIcon />
-                      Done ({done.length})
-                    </summary>
-                    <ul className={styles.items} aria-label="Done">
-                      {done.map((task, index) => (
-                        <TaskRow key={task.id} {...rowProps(task, index)} />
-                      ))}
-                    </ul>
-                  </details>
-                )}
-              </section>
-            )
           )}
         </div>
       )}

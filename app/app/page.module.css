@@ -1,8 +1,20 @@
 /* Home: a wider column than the other pages, for the front page's cards side
-   by side on a wide screen, each with a picture of its app. */
+   by side on a wide screen, each with a picture of its app. At least as tall
+   as the room under (or over) the tab bar, so the footer is at the bottom of
+   the page however little is above it. */
 .view {
+  display: flex;
+  flex-direction: column;
   max-width: 56rem;
+  min-height: var(--app-view-height);
   margin-inline: auto;
+}
+
+/* List of apps, over the icons: in the middle, as the icons are. Two classes,
+   to win over ui.module.css's heading whatever the order. */
+.title.title {
+  margin-bottom: var(--space-6);
+  text-align: center;
 }
 
 /* The cards' heading on the front page, under the headline's buttons. */
@@ -12,9 +24,11 @@
   font-weight: var(--weight-semibold);
 }
 
-/* Version, Privacy and About: for whoever deploys it, and for the curious. */
+/* Version, Privacy and About: for whoever deploys it, and for the curious. At
+   the bottom of the page, after whatever is above it. */
 .footer {
-  margin: var(--space-8) 0 0;
+  margin-top: auto;
+  padding-top: var(--space-8);
   color: var(--muted);
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;

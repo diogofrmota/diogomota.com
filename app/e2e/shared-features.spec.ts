@@ -157,6 +157,12 @@ test("a phone opens on the agenda and can switch to month", async ({ page }) => 
   await expect(page.getByRole("region", { name: "month calendar" })).toBeVisible();
   await expect(view.getByRole("button", { name: "Month", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(view.getByRole("button", { name: "Agenda", exact: true })).toBeVisible();
+  // The toolbar stays where it is: ‹, the month, ›, Agenda | Month and Add event where they were in the agenda.
+  const monthBoxes = await Promise.all(controls.map(async (control) => (await control.boundingBox())!));
+  for (const [i, box] of monthBoxes.entries()) {
+    expect(Math.abs(box.x - boxes[i].x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(box.y - boxes[i].y)).toBeLessThanOrEqual(1);
+  }
 });
 
 test("the agenda lists every event from today on, 20 at a time with Show more, in a centered column; the month has the whole width", async ({
@@ -175,17 +181,33 @@ test("the agenda lists every event from today on, 20 at a time with Show more, i
     expect(created.status()).toBe(201);
   }
   await page.reload();
-  // The month, on a wide screen: from the window's one edge to the other.
+  // The month, on a wide screen: from the window's one edge to the other (or to the room kept for its scrollbar).
   const month = page.getByRole("region", { name: "month calendar", exact: true });
   await expect(month).toBeVisible();
-  const width = await page.evaluate(() => document.documentElement.clientWidth);
+  // The page's width less the room its scrollbar keeps in Shared (the root's clientWidth counts that room in).
+  const width = await page.evaluate(() => document.body.clientWidth);
   const monthBox = (await month.boundingBox())!;
   expect(monthBox.x).toBeLessThanOrEqual(1);
   expect(monthBox.width).toBeGreaterThanOrEqual(width - 2);
+  const toolbar = () =>
+    Promise.all(
+      [
+        page.getByRole("button", { name: "Previous month" }),
+        page.getByRole("button", { name: "Next month" }),
+        page.getByRole("group", { name: "Calendar view" }),
+        page.getByRole("button", { name: "Add event", exact: true }),
+      ].map(async (control) => (await control.boundingBox())!),
+    );
+  const inMonth = await toolbar();
 
   await page.getByRole("button", { name: "Agenda", exact: true }).click();
   const agenda = page.getByRole("region", { name: "agenda calendar", exact: true });
   await expect(agenda.getByRole("button", { name: /^Plan 01,/ })).toBeVisible();
+  // The toolbar stays where it was over the month, though the agenda is a column and the page now scrolls.
+  for (const [i, box] of (await toolbar()).entries()) {
+    expect(Math.abs(box.x - inMonth[i].x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(box.y - inMonth[i].y)).toBeLessThanOrEqual(1);
+  }
   // Centered, with room on both sides.
   const agendaBox = (await agenda.boundingBox())!;
   expect(agendaBox.x).toBeGreaterThan(20);

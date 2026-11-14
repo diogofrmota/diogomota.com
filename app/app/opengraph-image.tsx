@@ -7,7 +7,7 @@ import { defaultTheme, themeBackground } from "@/lib/themes";
 // Link preview of home and every page without its own (/about has the intro),
 // rendered once at build time: the >_ mark and the site's name, what it is,
 // and the apps' icons, on the Light theme's gray, as home opens logged out.
-export const alt = "diogomota.com: small apps for friends, Shared and Shows";
+export const alt = "diogomota.com: personal apps for friends, Shared and Shows";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -40,7 +40,7 @@ export default function OpenGraphImage() {
         <span>diogomota.com</span>
       </div>
       <div style={{ marginTop: 28, fontSize: 84, fontWeight: 700, letterSpacing: -2, lineHeight: 1.05 }}>
-        Small apps for friends
+        Personal apps for friends
       </div>
       <div style={{ display: "flex", gap: 36, marginTop: 56 }}>
         {logos.map((logo) => (

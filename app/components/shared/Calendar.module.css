@@ -1204,30 +1204,39 @@
   }
 }
 
-/* The agenda: a centered column with the page's margins, the toolbar in it
-   (the month has the whole width). As long as its events: the page scrolls,
+/* The agenda: its days in a centered column with the page's margins (at most
+   43rem wide), under the same toolbar as the month's: the toolbar has the
+   whole width in both views, so ‹ ›, Agenda | Month and Add event stay where
+   they are whichever is showing. As long as its events: the page scrolls,
    Show more at the end. */
 .calendar.agendaView {
+  --agenda-margin: max(1rem, (100% - 43rem) / 2);
+
   height: auto;
   min-height: var(--app-view-height);
-  max-width: 48rem;
-  margin-inline: auto;
-  padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right));
-}
-.agendaView .toolbar {
-  padding-inline: 0;
 }
 @media (min-width: 48rem) {
   .calendar.agendaView {
-    padding-inline: 2.5rem;
+    --agenda-margin: max(2.5rem, (100% - 43rem) / 2);
   }
+}
+.agendaView > :is(.agendaScroller, [role="alert"], p[role="status"]) {
+  margin-inline: max(var(--agenda-margin), env(safe-area-inset-left))
+    max(var(--agenda-margin), env(safe-area-inset-right));
 }
 .agenda .showMore {
   justify-self: center;
 }
-/* Inviting a partner, over the month: inset as the toolbar is. */
-.calendar:not(.agendaView) > .invitePrompt {
+/* Inviting a partner, over either view: inset as the toolbar is, so the
+   toolbar under it doesn't move either. */
+.calendar > .invitePrompt {
   margin-inline: max(var(--space-2), env(safe-area-inset-left)) max(var(--space-2), env(safe-area-inset-right));
+}
+/* The page's scrollbar keeps its room while Shared is open: the agenda
+   scrolls with the page and the month doesn't, and the toolbar's right end
+   would move by the scrollbar's width between them (where scrollbars take room). */
+:global(html):has(.calendar) {
+  scrollbar-gutter: stable;
 }
 .scroller {
   border-inline: 0;

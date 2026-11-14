@@ -12,7 +12,7 @@ export function Hero({ next }: { next?: string | null }) {
   return (
     <section aria-labelledby="hero-title" className={styles.hero}>
       <h1 id="hero-title" className={styles.title}>
-        Small apps for friends
+        Personal apps for friends
       </h1>
       <p className={styles.description}>
         A shared calendar and task lists for couples, and a way to keep track of what you watch with your friends.

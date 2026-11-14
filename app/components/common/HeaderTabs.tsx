@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { authHref } from "@/lib/next-path";
-import { siteDomain } from "@/lib/site";
 import { Avatar } from "./Avatar";
 import { HomeIcon, LoginIcon, UserPlusIcon } from "./icons";
 import { LinkPending } from "./LinkPending";
@@ -15,22 +14,6 @@ export type LauncherTab = "home" | "account" | "login" | "signup";
 /** The current tab's underline: one per tab bar (its layoutId), sliding from tab to tab. */
 function Underline({ bar }: { bar: string }) {
   return <SegmentThumb layoutId={`tab-underline:${bar}`} className={shell.underline} />;
-}
-
-/**
- * The site's name on the left of the header, on a wide screen (where the tab
- * bar is the header, and says where you are): to /. A phone's tab bar is along
- * the bottom, with Home in it.
- */
-function Brand() {
-  return (
-    <Link href="/" className={shell.brand}>
-      <span aria-hidden="true" className={shell.brandMark}>
-        &gt;_
-      </span>
-      {siteDomain}
-    </Link>
-  );
 }
 
 /** Home, at the end of every tab bar: /, the apps, and the way from one app to another. */
@@ -68,7 +51,6 @@ export function LauncherTabs({
 }) {
   return (
     <nav aria-label="Account" className={shell.tabBar}>
-      <Brand />
       <ul>
         {username ? (
           <li>
@@ -110,7 +92,6 @@ export function LauncherTabs({
 export function TabBar({ label, tabs, current, onSelect }: TabNavProps) {
   return (
     <nav aria-label={label} className={shell.tabBar}>
-      <Brand />
       <ul>
         {tabs.map((tab) => (
           <li key={tab.id}>

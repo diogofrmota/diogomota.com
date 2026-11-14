@@ -1,5 +1,6 @@
 import { randomBytes, randomInt } from "node:crypto";
 import type { Locator, Page } from "@playwright/test";
+import { rgb } from "./checks";
 import { expect, newUser, signUp, test } from "./fixtures";
 import { withDatabase } from "./db";
 import {
@@ -362,9 +363,19 @@ test("the Library starts with a welcome, fills up from Discover, and the TV Show
   // Not "Watching" on the poster: the section says it. Its next episode, a tap away.
   await expect(wholeCard(harborCard).getByText("Watching", { exact: true })).toHaveCount(0);
   await expect(wholeCard(harborCard)).toContainText("2021 · Next: S1 E1");
-  await wholeCard(harborCard).getByRole("button", { name: "S1 E1 of Harbor Lights watched" }).click();
+  const tick = wholeCard(harborCard).getByRole("button", { name: "S1 E1 of Harbor Lights watched" });
+  const success = await page
+    .locator("[data-theme]")
+    .evaluate((shell) => getComputedStyle(shell).getPropertyValue("--success"));
+  await tick.click();
+  // Ticked: it turns green for the episode just watched, and takes no second tap; then the next episode comes in.
+  await expect(tick).toHaveCSS("background-color", rgb(success.trim()));
+  await expect(tick).toHaveAttribute("aria-disabled", "true");
   await expect(wholeCard(harborCard)).toContainText("2021 · S1 E1");
-  await expect(wholeCard(harborCard).getByRole("button", { name: "S1 E2 of Harbor Lights watched" })).toBeVisible();
+  const next = wholeCard(harborCard).getByRole("button", { name: "S1 E2 of Harbor Lights watched" });
+  await expect(next).toBeVisible();
+  await expect(next).not.toHaveAttribute("aria-disabled");
+  await expect(next).not.toHaveCSS("background-color", rgb(success.trim()));
   await expect
     .poll(async () => (await libraryRows(user.username)).find((entry) => entry.tmdb_id === harbor.tmdbId))
     .toMatchObject({ current_season: 1, current_episode: 1 });

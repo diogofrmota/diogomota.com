@@ -46,12 +46,7 @@ test("unknown URLs get a 404 page in the apps' look, with the tab bar and Go hom
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(
     "rgb(230, 230, 230)",
   );
-  expect(await linkNames(page.getByRole("navigation", { name: "Account" }))).toEqual([
-    "diogomota.com",
-    "Log in",
-    "Sign up",
-    "Home",
-  ]);
+  expect(await linkNames(page.getByRole("navigation", { name: "Account" }))).toEqual(["Log in", "Sign up", "Home"]);
 
   await page.getByRole("main").getByRole("link", { name: "Go home" }).click();
   await expect(page).toHaveURL("/");
@@ -128,9 +123,9 @@ test("keyboard focus is visible", async ({ page }) => {
   await expect(richemont).toHaveCSS("outline-color", "rgb(255, 255, 255)");
 
   await page.goto("/");
-  // The tab bar first (a header on a wide screen): the site's name, Log in, Sign up
+  // The tab bar first (a header on a wide screen): Log in, Sign up
   // and Home; then Log in and Sign up at the top of the page, then Shared.
-  for (let i = 0; i < 7; i++) await page.keyboard.press("Tab");
+  for (let i = 0; i < 6; i++) await page.keyboard.press("Tab");
   const card = page
     .getByRole("main")
     .getByRole("listitem")
