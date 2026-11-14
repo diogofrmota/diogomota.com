@@ -4,10 +4,10 @@ Each deploy publishes a GitHub Release (`vX.Y.Z`) listing its commits (`.github/
 
 ## Unreleased
 
-- Launcher: Account with the profile picture and Log out in a bottom bar. Both apps lose the top bar and gain Apps in their bottom navigation on mobile and desktop.
-- Shared: Month and Agenda only, compact controls, full-width calendar, smaller event text, and no color legend or Today button. Events and tasks select individual people without an All shortcut.
-- Tasks: multiple assignees with profile pictures; Extra options groups Who?, Due date, Repeat?, and Notes. Edit replaces Edit lists, and task entry stays above existing tasks.
-- Settings: shorter invite copy and Copy link before Add to my calendar.
+- Launcher and Account: one tab bar with Account (the profile picture) and Apps, the current one marked; Log out is on Account, which has no top bar or Back to apps. Both apps lose the top bar and gain Apps in their tab bar. On a phone the tab bar is along the bottom; on a wider screen it is the header, at the top.
+- Shared: Month and Agenda only, compact controls, full-width calendar, smaller event text, and no color legend or Today button. The toolbar has ‹ the month and year › together, then Agenda | Month (both shown) and Add event. The agenda lists every event from today on, 20 at a time with Show more, in a centered column with margins; the month keeps the whole width. Events and tasks select individual people without an All shortcut.
+- Tasks: multiple assignees with profile pictures; a task's row is the title, the pictures, the due date and the rest in one line that wraps; Extra options groups Who?, Due date, Repeat?, and Notes. Edit replaces Edit lists, and task entry stays above existing tasks.
+- Settings: shorter invite copy and Copy link before Add to my calendar. The calendar link is blurred until Show.
 - Popups retain visible margins and no longer slide up on phones.
 - Shows: Recommend to a friend, More like this, then Remove from library without a divider. Poster rows use visible scrollbars instead of arrows. Mobile friends have a centered Check profile; completion counts appear above hours watched.
 - Migration 021 adds task assignments while keeping the legacy single-assignee column compatible with older clients and rollbacks.

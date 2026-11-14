@@ -94,6 +94,16 @@ export const eventRange = z
     error: "Ask for at most 400 days at a time.",
   });
 
+/** The agenda's events: the first `limit` that haven't ended by `from` (the start of its first day). */
+export const upcomingEvents = z.object({
+  from: instant,
+  limit: z.coerce
+    .number({ error: "Ask for a number of events." })
+    .int({ error: "Ask for a whole number of events." })
+    .min(1, { error: "Ask for at least one event." })
+    .max(500, { error: "Ask for at most 500 events at a time." }),
+});
+
 // --- Shared: tasks -----------------------------------------------------------
 
 export const listInput = z.object({ id: uuid.optional(), name: title(80, "a list name") });

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { Page } from "@playwright/test";
-import { datePlus, localInstants, localParts, type CalendarEvent } from "../lib/calendar";
+import { dateLabel, datePlus, localInstants, localParts, type CalendarEvent } from "../lib/calendar";
 import type { Space } from "../lib/space-types";
 import type { TaskList } from "../lib/task-types";
 import { expect, newUser, openSpaceSettings, sharedTab, signUp, test } from "./fixtures";
@@ -125,8 +125,80 @@ test("a phone opens on the agenda and can switch to month", async ({ page }) => 
   await expect(agenda.getByRole("button", { name: /^Cinema, 21:00/ })).toBeVisible();
   await expect(agenda.getByRole("heading", { name: "Tomorrow" })).toHaveCount(0);
 
+  // The toolbar in one row: ‹ Nov 2026 › together, then Agenda | Month (both there, Agenda pressed) and Add event.
+  const view = page.getByRole("group", { name: "Calendar view" });
+  await expect(view.getByRole("button")).toHaveCount(2);
+  await expect(view.getByRole("button").first()).toHaveAccessibleName("Agenda");
+  await expect(view.getByRole("button").last()).toHaveAccessibleName("Month");
+  await expect(view.getByRole("button", { name: "Agenda", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const controls = [
+    page.getByRole("button", { name: "Previous month" }),
+    page.getByRole("heading", { level: 2, name: dateLabel(today(), { month: "long", year: "numeric" }) }),
+    page.getByRole("button", { name: "Next month" }),
+    view,
+    page.getByRole("button", { name: "Add event", exact: true }),
+  ];
+  const boxes = await Promise.all(controls.map(async (control) => (await control.boundingBox())!));
+  for (const box of boxes)
+    expect(Math.abs(box.y + box.height / 2 - (boxes[0].y + boxes[0].height / 2))).toBeLessThan(3);
+  expect(boxes[1].x - (boxes[0].x + boxes[0].width)).toBeLessThan(12);
+  expect(boxes[2].x - (boxes[1].x + boxes[1].width)).toBeLessThan(12);
+  // The agenda has the page's margins.
+  expect((await agenda.boundingBox())!.x).toBeGreaterThanOrEqual(15);
+
   await page.getByRole("button", { name: "Month", exact: true }).click();
   await expect(page.getByRole("region", { name: "month calendar" })).toBeVisible();
+  await expect(view.getByRole("button", { name: "Month", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(view.getByRole("button", { name: "Agenda", exact: true })).toBeVisible();
+});
+
+test("the agenda lists every event from today on, 20 at a time with Show more, in a centered column; the month has the whole width", async ({
+  page,
+}) => {
+  await setup(page);
+  // Yesterday's is over by today. The rest one every three days, from today: past the four weeks the agenda once had.
+  const plans = Array.from({ length: 25 }, (_, i) => [
+    `Plan ${String(i + 1).padStart(2, "0")}`,
+    datePlus(today(), i * 3),
+  ]);
+  for (const [title, day] of [["Yesterday's", datePlus(today(), -1)], ...plans]) {
+    const created = await page.request.post(events, {
+      data: { title, startsAt: at(day, "09:00"), endsAt: at(day, "10:00"), isGroup: true },
+    });
+    expect(created.status()).toBe(201);
+  }
+  await page.reload();
+  // The month, on a wide screen: from the window's one edge to the other.
+  const month = page.getByRole("region", { name: "month calendar", exact: true });
+  await expect(month).toBeVisible();
+  const width = await page.evaluate(() => document.documentElement.clientWidth);
+  const monthBox = (await month.boundingBox())!;
+  expect(monthBox.x).toBeLessThanOrEqual(1);
+  expect(monthBox.width).toBeGreaterThanOrEqual(width - 2);
+
+  await page.getByRole("button", { name: "Agenda", exact: true }).click();
+  const agenda = page.getByRole("region", { name: "agenda calendar", exact: true });
+  await expect(agenda.getByRole("button", { name: /^Plan 01,/ })).toBeVisible();
+  // Centered, with room on both sides.
+  const agendaBox = (await agenda.boundingBox())!;
+  expect(agendaBox.x).toBeGreaterThan(20);
+  expect(Math.abs(agendaBox.x - (width - agendaBox.x - agendaBox.width))).toBeLessThanOrEqual(2);
+  await expect(agenda.getByRole("button", { name: /^Yesterday's,/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /next 4 weeks/ })).toHaveCount(0);
+  for (const [title] of plans.slice(0, 20))
+    await expect(agenda.getByRole("button", { name: new RegExp(`^${title},`) })).toBeAttached();
+  await expect(agenda.getByRole("button", { name: /^Plan 21,/ })).toHaveCount(0);
+  // Show more adds the next ones under them, and goes once there are no more.
+  const more = agenda.getByRole("button", { name: "Show more", exact: true });
+  await more.click();
+  for (const [title] of plans.slice(20))
+    await expect(agenda.getByRole("button", { name: new RegExp(`^${title},`) })).toBeAttached();
+  await expect(more).toHaveCount(0);
+  await agenda.getByRole("button", { name: /^Plan 25,/ }).scrollIntoViewIfNeeded();
+  await expect(agenda.getByRole("button", { name: /^Plan 25,/ })).toBeInViewport();
+  const days = await agenda.getByRole("heading", { level: 3 }).allTextContents();
+  expect(days).toHaveLength(25);
+  expect(days[0]).toBe("Today");
 });
 
 test("an event can be for two people: both pictures on it, and both in its name", async ({ page, browser }) => {
@@ -195,7 +267,14 @@ test("Settings has a calendar link that calendar apps subscribe to; a new link s
   });
   await openSpaceSettings(page);
   const card = page.getByRole("region", { name: "Calendar in your phone" });
-  const url = await card.getByLabel("Calendar link").inputValue();
+  // Hidden at first: blurred, its secret as dots, until Show, which goes once pressed.
+  const link = card.getByLabel("Calendar link");
+  await expect(link).toHaveValue(/\/api\/calendar\/•+$/);
+  await card.getByRole("button", { name: "Show the link", exact: true }).click();
+  await expect(card.getByRole("button", { name: "Show the link", exact: true })).toHaveCount(0);
+  await expect(link).toBeFocused();
+  const url = await link.inputValue();
+  expect(url).toMatch(/\/api\/calendar\/[\w-]+$/);
   await expect(card.getByRole("link", { name: "Add to my calendar" })).toHaveAttribute(
     "href",
     url.replace(/^http/, "webcal"),

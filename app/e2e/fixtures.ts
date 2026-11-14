@@ -124,10 +124,11 @@ export function accountButton(page: Page, username: string) {
     .or(page.locator('nav[aria-label="Account"]:not(header nav) a[href="/account"]'));
 }
 
+/** Logs out with Log out on /account (the tab bar of /apps has Account and Apps). */
 export async function logOut(page: Page, username: string) {
-  await page.goto("/apps");
+  await page.goto("/account");
   void username;
-  await page.getByRole("button", { name: "Log out" }).click();
+  await page.getByRole("main").getByRole("button", { name: "Log out", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" })).toBeVisible();
 }
 

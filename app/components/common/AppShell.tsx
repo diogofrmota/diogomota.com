@@ -5,7 +5,7 @@ import { Activity, useCallback, useMemo, useState } from "react";
 import { AppViewContext, useAppViewHistory, type AppViewState } from "@/hooks/useAppView";
 import { themeBackground, type Theme } from "@/lib/themes";
 import { AppHeader } from "./AppHeader";
-import { AppsAccountTabs, BottomTabs } from "./HeaderTabs";
+import { LauncherTabs, TabBar } from "./HeaderTabs";
 import { OfflineSupport } from "./OfflineSupport";
 import styles from "./AppShell.module.css";
 import themeStyles from "./themes.module.css";
@@ -14,7 +14,7 @@ export type AppTab = {
   /** Unique within the app; the path of its view (/shows/discover) and saved in history entries (useAppView). */
   id: string;
   label: string;
-  /** Over its label in the tab bar at the bottom of a phone's screen. */
+  /** With its label in the tab bar: over it on a phone, beside it on a wider screen. */
   icon: React.ReactNode;
   view: React.ReactNode;
 };
@@ -30,9 +30,12 @@ export type TabNavProps = {
 
 /**
  * The frame of the apps and the pages around them (/apps, /account,
- * the login pages), in the user's theme, with bottom navigation in the apps and launcher. With tabs,
- * the page has the whole width; without (/apps and the rest, Shared before
- * there is a space) it is a centered column.
+ * the login pages), in the user's theme. The apps, /apps and /account have a
+ * tab bar (HeaderTabs): along the bottom of a phone's screen, within reach of a
+ * thumb, and across the top of a wider one, as its header. The other pages
+ * (the login pages, /privacy) have the top bar (AppHeader). With an app's
+ * tabs, the page has the whole width; without (/apps and the rest, Shared
+ * before there is a space) it is a centered column.
  */
 export function AppFrame({
   theme,
@@ -41,21 +44,24 @@ export function AppFrame({
   next,
   brand,
   account,
+  launcher,
   nav,
   children,
   overlay,
 }: {
   theme: Theme;
-  /** Null when logged out: the top bar has Log in and Sign up. */
+  /** Null when logged out: the bar has Log in and Sign up. */
   username: string | null;
-  /** The user's profile picture, in the account menu (lib/users.ts). */
+  /** The user's profile picture, in the account menu and the tab bar's Account (lib/users.ts). */
   avatarUrl?: string | null;
   /** Where Log in and Sign up return to. */
   next?: string | null;
-  /** diogomota.com on the left of the top bar (AppHeader). */
+  /** diogomota.com on the left of the top bar (AppHeader). False in an app, which has its tab bar instead. */
   brand?: boolean;
   /** The account menu, or Log in and Sign up (AppHeader). */
   account?: boolean;
+  /** /apps or /account: their tab bar, Account and Apps, with this one current. */
+  launcher?: "apps" | "account";
   nav?: TabNavProps;
   /** The page, in <main>. */
   children: React.ReactNode;
@@ -63,17 +69,22 @@ export function AppFrame({
   overlay?: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const appHome = pathname === "/apps";
   const inApp = !!nav || brand === false;
-  const bottomNavigation = appHome || inApp;
+  const tabBar = !!launcher || inApp;
   return (
     <div
-      className={`${themeStyles.theme} ${styles.shell} ${nav ? "" : styles.withoutNav} ${bottomNavigation ? styles.withNav : ""} ${appHome || inApp ? styles.withoutHeader : ""}`}
+      className={`${themeStyles.theme} ${styles.shell} ${nav ? "" : styles.withoutNav} ${tabBar ? styles.withNav : ""}`}
       data-theme={theme}
     >
       {/* Browser UI color on mobile. React moves it into <head>. */}
       <meta name="theme-color" content={themeBackground(theme)} />
-      {!appHome && !inApp && (
+      {/* Before the page: the header on a wide screen (sticky), fixed to the bottom on a phone. */}
+      {launcher ? (
+        <LauncherTabs current={launcher} username={username} avatarUrl={avatarUrl} next={next} />
+      ) : inApp ? (
+        // Shared before there is a space: no tabs yet, only Apps.
+        <TabBar {...(nav ?? { label: "Shared", tabs: [], current: "", onSelect: () => {} })} />
+      ) : (
         <AppHeader
           pathname={pathname}
           username={username}
@@ -88,16 +99,13 @@ export function AppFrame({
       >
         {children}
       </main>
-      {nav && <BottomTabs {...nav} />}
-      {appHome && <AppsAccountTabs username={username} avatarUrl={avatarUrl} next={next} />}
-      {inApp && !nav && <BottomTabs label="Shared" tabs={[]} current="" onSelect={() => {}} />}
       {overlay}
     </div>
   );
 }
 
-// An app in the frame: the current view and bottom navigation, including Apps.
-// Account and logout are reached through the Apps launcher. The view and the open panels
+// An app in the frame: the current view and its tab bar, including Apps, the
+// way to the launcher, where Account is. The view and the open panels
 // are in the URL (useAppView), so Back, reload and links work.
 //
 // Views that are switched away from stay mounted but hidden (<Activity>), so

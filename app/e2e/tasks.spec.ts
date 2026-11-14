@@ -284,6 +284,18 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   const assignee = row(page, "Buy milk").locator(`[title="${friend.name}"]`);
   await expect(row(page, "Buy milk")).toContainText("Due tomorrow");
   await expect(row(page, "Buy milk")).toContainText("Two litres, semi-skimmed");
+  // In one line: the title, then their picture, then when it's due (the notes after, or under where they don't fit).
+  const [titleBox, pictureBox, dueLineBox] = await Promise.all(
+    [
+      row(page, "Buy milk").getByText("Buy milk", { exact: true }),
+      assignee,
+      row(page, "Buy milk").getByText("Due tomorrow"),
+    ].map(async (part) => (await part.boundingBox())!),
+  );
+  expect(pictureBox.x).toBeGreaterThan(titleBox.x + titleBox.width);
+  expect(dueLineBox.x).toBeGreaterThan(pictureBox.x + pictureBox.width);
+  for (const box of [pictureBox, dueLineBox])
+    expect(Math.abs(box.y + box.height / 2 - (titleBox.y + titleBox.height / 2))).toBeLessThan(4);
   await page.reload();
   await openTasks(page);
   expect(await assignee.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--member-color"))).toBe(

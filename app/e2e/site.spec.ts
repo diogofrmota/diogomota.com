@@ -112,8 +112,9 @@ test("keyboard focus is visible", async ({ page }) => {
   await expect(richemont).toHaveCSS("outline-color", "rgb(255, 255, 255)");
 
   await page.goto("/apps");
-  // Log in and Sign up in the callout, then Shared; bottom navigation follows the page.
-  for (let i = 0; i < 3; i++) await page.keyboard.press("Tab");
+  // The tab bar first (a header on a wide screen): Log in, Sign up and Apps; then
+  // Log in and Sign up in the callout, then Shared.
+  for (let i = 0; i < 6; i++) await page.keyboard.press("Tab");
   const card = page
     .getByRole("main")
     .getByRole("listitem")

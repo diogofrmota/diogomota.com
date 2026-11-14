@@ -37,18 +37,27 @@ async function expectNoHorizontalScroll(page: Page) {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
-test("the bottom Account link opens settings", async ({ page }) => {
+test("Account and Apps in the tab bar go between /apps and the settings; /account has no top bar", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
+  const bar = page.getByRole("navigation", { name: "Account", exact: true });
+  await expect(bar.getByRole("link")).toHaveCount(2);
+  await expect(bar.getByRole("link").first()).toHaveAccessibleName("Account");
+  await expect(bar.getByRole("link").last()).toHaveAccessibleName("Apps");
+  await expect(bar.getByRole("link", { name: "Apps", exact: true })).toHaveAttribute("aria-current", "page");
 
-  await page.getByRole("link", { name: "Account", exact: true }).click();
+  await bar.getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await expect(page.getByRole("heading", { level: 1, name: "account" })).toBeVisible();
+  await expect(page.getByRole("banner")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Back to apps" })).toHaveCount(0);
+  await expect(bar.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(bar.getByRole("link", { name: "Apps", exact: true })).not.toHaveAttribute("aria-current");
 
   // Who is logged in: their settings, each with what it is now.
   await expect(page.getByRole("main")).toContainText(user.email);
-  await page.getByRole("link", { name: "Back to apps" }).click();
+  await bar.getByRole("link", { name: "Apps", exact: true }).click();
   await expect(page).toHaveURL("/apps");
 });
 

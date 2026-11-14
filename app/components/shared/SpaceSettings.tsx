@@ -1,6 +1,7 @@
 "use client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { flushSync } from "react-dom";
 import { ActivityFeed } from "@/components/common/ActivityFeed";
 import { Avatar } from "@/components/common/Avatar";
 import { CalendarIcon, CopyIcon } from "@/components/common/icons";
@@ -17,6 +18,9 @@ import styles from "./Spaces.module.css";
 
 type Feed = { url: string; webcal: string };
 
+/** The link with its secret (the last part) as dots, for under the blur: the page never shows it until asked. */
+const hiddenLink = (url: string) => url.replace(/[^/]+$/, (secret) => "•".repeat(secret.length));
+
 /**
  * Subscribing to the calendar from another app (Google, Apple, Outlook): its
  * own secret link, which those apps check every few hours, with the events'
@@ -32,6 +36,8 @@ function CalendarFeedCard() {
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
   const [confirmNew, setConfirmNew] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [shown, setShown] = useState(false);
+  const field = useRef<HTMLInputElement>(null);
 
   async function copy() {
     if (!feed.data) return;
@@ -68,15 +74,33 @@ function CalendarFeedCard() {
       {feed.isError && <Alert onRetry={() => void feed.refetch()}>{feed.error.message}</Alert>}
       {feed.data && (
         <>
+          {/* Secret, so hidden at first: blurred, with Show over it, which takes the blur away (and itself). */}
           <div className={ui.field}>
             <label htmlFor="feed-url">Calendar link</label>
-            <input
-              id="feed-url"
-              className={ui.input}
-              readOnly
-              value={feed.data.url}
-              onFocus={(e) => e.target.select()}
-            />
+            <div className={styles.secret}>
+              <input
+                ref={field}
+                id="feed-url"
+                className={`${ui.input} ${shown ? "" : styles.hidden}`}
+                readOnly
+                value={shown ? feed.data.url : hiddenLink(feed.data.url)}
+                tabIndex={shown ? undefined : -1}
+                onFocus={(e) => e.target.select()}
+              />
+              {!shown && (
+                <button
+                  type="button"
+                  className={styles.show}
+                  aria-label="Show the link"
+                  onClick={() => {
+                    flushSync(() => setShown(true));
+                    field.current?.focus();
+                  }}
+                >
+                  Show
+                </button>
+              )}
+            </div>
           </div>
           <div className={ui.actions}>
             <Button onClick={copy}>

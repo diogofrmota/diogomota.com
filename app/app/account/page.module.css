@@ -1,16 +1,10 @@
-/* One column (ui.view), narrower than the apps' views: the way back and the
-   title, then the settings (components/account/AccountSettings). */
+/* One column (ui.view), narrower than the apps' views: the title, then the
+   settings (components/account/AccountSettings). */
 .page {
   max-width: 32rem;
 }
 
-/* Back to apps: a quiet link, its chevron lined up with the column's edge,
-   as close under the top bar as the title would be. */
-.back {
-  margin: calc(-1 * var(--space-2)) 0 0 calc(-1 * var(--space-1));
-}
-
 /* Two classes, to win over ui.module.css's margin whatever the order. */
 .title.title {
-  margin: var(--space-2) 0 var(--space-5);
+  margin: 0 0 var(--space-5);
 }

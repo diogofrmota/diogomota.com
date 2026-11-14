@@ -50,12 +50,18 @@ test("a taken username or email gets one message that doesn't say which", async 
   await expect(formAlert(page)).toHaveText(signUpConflict);
 });
 
-test("log out from the account menu", async ({ page }) => {
+test("log out from Account, opened from the tab bar of /apps", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/apps");
+  // Not in the tab bar: Account and Apps.
+  await expect(page.getByRole("navigation", { name: "Account" }).getByRole("button", { name: "Log out" })).toHaveCount(
+    0,
+  );
 
-  await page.getByRole("button", { name: "Log out" }).click();
+  await page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Account", exact: true }).click();
+  await expect(page).toHaveURL("/account");
+  await page.getByRole("main").getByRole("button", { name: "Log out", exact: true }).click();
 
   await expect(page).toHaveURL("/apps");
   const account = page.getByRole("navigation", { name: "Account" });

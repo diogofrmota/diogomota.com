@@ -1,5 +1,5 @@
 "use client";
-import type { QueryClient } from "@tanstack/react-query";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { ApiError, apiRequest } from "@/lib/api-request";
 import type { CalendarEvent } from "@/lib/calendar";
 import type { EventInput } from "@/lib/schemas";
@@ -33,6 +33,9 @@ export const sharedKeys = {
   tasks: ["shared", "tasks"] as const,
   events: ["shared", "events"] as const,
   eventRange: (from: string, to: string) => ["shared", "events", from, to] as const,
+  /** The agenda's: the first `count` events that end after `from`. */
+  upcoming: ["shared", "events", "upcoming"] as const,
+  upcomingFrom: (from: string, count: number) => ["shared", "events", "upcoming", from, count] as const,
   activity: ["shared", "activity"] as const,
   feed: ["shared", "calendar-feed"] as const,
 };
@@ -170,26 +173,40 @@ export function eventRequest<T>(path = "", method = "GET", body?: EventInput, si
   });
 }
 
-/** Puts a saved event into every loaded range of the calendar, and takes it out of the ones it left. */
+/**
+ * What a loaded list of events covers, from its key: a range of the month
+ * (from..to), or the agenda's events from an instant on (sharedKeys.upcomingFrom).
+ */
+function eventsWindow(key: QueryKey): { from: string; to?: string } | null {
+  if (key.length === 4) return { from: String(key[2]), to: String(key[3]) };
+  if (key.length === 5 && key[2] === "upcoming") return { from: String(key[3]) };
+  return null;
+}
+
+/**
+ * Puts a saved event into every loaded list of the calendar it belongs in, in
+ * order, and takes it out of the ones it left. The agenda's ask for one more
+ * than they show, so one saved after the last shown goes past the end, out of sight.
+ */
 export function storeEvent(client: QueryClient, saved: CalendarEvent) {
   for (const [key, events] of client.getQueriesData<CalendarEvent[]>({ queryKey: sharedKeys.events })) {
-    if (!events || key.length !== 4) continue;
-    const [, , from, to] = key as readonly string[];
-    const overlaps = saved.endsAt > from && saved.startsAt < to;
+    const window = eventsWindow(key);
+    if (!events || !window) continue;
+    const belongs = saved.endsAt > window.from && (window.to === undefined || saved.startsAt < window.to);
     const rest = events.filter((event) => event.id !== saved.id);
     client.setQueryData(
       key,
-      overlaps
+      belongs
         ? [...rest, saved].sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.id.localeCompare(b.id))
         : rest,
     );
   }
 }
 
-/** Takes a deleted event out of every loaded range. */
+/** Takes a deleted event out of every loaded list. */
 export function forgetEvent(client: QueryClient, id: string) {
   for (const [key, events] of client.getQueriesData<CalendarEvent[]>({ queryKey: sharedKeys.events })) {
-    if (events && key.length === 4)
+    if (events && eventsWindow(key))
       client.setQueryData(
         key,
         events.filter((event) => event.id !== id),

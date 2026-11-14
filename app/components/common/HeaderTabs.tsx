@@ -1,68 +1,80 @@
 import Link from "next/link";
-import { logOut } from "@/app/account/actions";
-import { LogoutButton } from "@/components/account/LogoutButton";
 import { authHref } from "@/lib/next-path";
 import { Avatar } from "./Avatar";
-import { AppsIcon, LogoutIcon, UserIcon } from "./icons";
+import { AppsIcon, UserIcon } from "./icons";
 import { LinkPending } from "./LinkPending";
 
 import type { TabNavProps } from "./AppShell";
 import shell from "./AppShell.module.css";
 
-export function AppsAccountTabs({
+/** Apps, at the end of every tab bar: the launcher, the way from one app to another. */
+function AppsTab({ current = false }: { current?: boolean }) {
+  return (
+    <li>
+      <Link href="/apps" aria-current={current ? "page" : undefined}>
+        <LinkPending icon={<AppsIcon />} />
+        Apps
+      </Link>
+    </li>
+  );
+}
+
+/**
+ * The tab bar of /apps and /account: Account (with the profile picture) and
+ * Apps, the current one marked; Log out is on /account. Logged out, Log in and
+ * Sign up in Account's place.
+ */
+export function LauncherTabs({
+  current,
   username,
   avatarUrl,
   next,
 }: {
+  current: "apps" | "account";
   username: string | null;
   avatarUrl?: string | null;
   next?: string | null;
 }) {
   return (
-    <nav aria-label="Account" className={shell.bottomTabs}>
+    <nav aria-label="Account" className={shell.tabBar}>
       <ul>
         {username ? (
-          <>
-            <li>
-              <Link href="/account">
-                <Avatar username={username} url={avatarUrl} className={shell.navAvatar} />
-                Account
-                <LinkPending />
-              </Link>
-            </li>
-            <li>
-              <form action={logOut}>
-                <LogoutButton className="" icon={<LogoutIcon />} />
-              </form>
-            </li>
-          </>
+          <li>
+            <Link href="/account" aria-current={current === "account" ? "page" : undefined}>
+              <Avatar username={username} url={avatarUrl} className={shell.navAvatar} />
+              Account
+              <LinkPending />
+            </Link>
+          </li>
         ) : (
           <>
             <li>
               <Link href={authHref("/login", next)}>
-                <UserIcon />
+                <LinkPending icon={<UserIcon />} />
                 Log in
-                <LinkPending />
               </Link>
             </li>
             <li>
               <Link href={authHref("/signup", next)}>
-                <UserIcon />
+                <LinkPending icon={<UserIcon />} />
                 Sign up
-                <LinkPending />
               </Link>
             </li>
           </>
         )}
+        <AppsTab current={current === "apps"} />
       </ul>
     </nav>
   );
 }
 
-/** Bottom navigation at every width: each tab's icon over its name. */
-export function BottomTabs({ label, tabs, current, onSelect }: TabNavProps) {
+/**
+ * An app's tab bar: its tabs, each its icon and name, then Apps. Along the
+ * bottom of a phone's screen, across the top of a wider one (AppShell.module.css).
+ */
+export function TabBar({ label, tabs, current, onSelect }: TabNavProps) {
   return (
-    <nav aria-label={label} className={shell.bottomTabs}>
+    <nav aria-label={label} className={shell.tabBar}>
       <ul>
         {tabs.map((tab) => (
           <li key={tab.id}>
@@ -76,12 +88,7 @@ export function BottomTabs({ label, tabs, current, onSelect }: TabNavProps) {
             </button>
           </li>
         ))}
-        <li>
-          <Link href="/apps">
-            <LinkPending icon={<AppsIcon />} />
-            Apps
-          </Link>
-        </li>
+        <AppsTab />
       </ul>
     </nav>
   );

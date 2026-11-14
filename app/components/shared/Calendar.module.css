@@ -24,13 +24,8 @@
 .dialogHeader {
   justify-content: space-between;
 }
-/* ‹ Today ›, the period, the colors, Month | Week | Day and Add event in one row. */
 .toolbar {
-  gap: 0.5rem 1rem;
   margin-bottom: 0.75rem;
-}
-.toolbar h2 {
-  white-space: nowrap;
 }
 .calendar button,
 .dialog button,
@@ -963,24 +958,173 @@
   }
 }
 
-/* A single compact row leaves the calendar as much room as possible. */
+/* The toolbar, one row: the month between ‹ and ›, together on the left, then
+   Agenda | Month and Add event on the right. Where they can't all fit (320px),
+   the right end goes under. Over the month, which has the whole width, it is
+   inset a little from the screen's edges; the agenda has margins of its own. */
 .toolbar {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 44px auto 44px;
-  gap: 0.25rem;
-  padding-inline: 0.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: max(var(--space-2), env(safe-area-inset-left)) max(var(--space-2), env(safe-area-inset-right));
 }
-.toolbar h2 {
-  text-align: center;
-  font-size: clamp(0.75rem, 3.5vw, 1.25rem);
+.period {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.period h2 {
+  padding-inline: var(--space-1);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.shortPeriod {
+  display: none;
+}
+/* ‹ and ›: only their chevrons, close to the month they change. */
+.calendar .arrow {
+  border-color: transparent;
+  background: transparent;
+}
+.toolbarEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+/* Agenda | Month: both always there, the one showing raised and in the accent
+   (as Shows' TV Shows | Movies), each a whole 44px to tap. Its corners: its
+   buttons' (--radius-md), plus the 3px around them. */
+.viewSwitch {
+  display: flex;
+  border-radius: calc(var(--radius-md) + 3px);
+  background: var(--hover);
+}
+.calendar .viewSwitch button {
+  position: relative;
+  z-index: 0;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: calc(var(--radius-md) + 3px);
+  background: none;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.calendar .viewSwitch button::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 3px;
+  border-radius: var(--radius-md);
+  transition:
+    background-color var(--duration-fast),
+    box-shadow var(--duration-fast);
+}
+.calendar .viewSwitch button[aria-pressed="true"] {
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+.calendar .viewSwitch button[aria-pressed="true"]::before {
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+@media (hover: hover) {
+  .calendar .viewSwitch button:hover {
+    background: none;
+    color: var(--text);
+  }
+  .calendar .viewSwitch button[aria-pressed="true"]:hover {
+    color: var(--accent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .calendar .viewSwitch button::before {
+    transition: none;
+  }
+}
+/* Each label over a hidden bold copy, as wide as the wider of the two: the
+   switch keeps its width whichever is showing. */
+.switchLabel {
+  display: inline-grid;
+}
+.switchLabel > * {
+  grid-area: 1 / 1;
+}
+.switchLabel > :last-child {
+  font-weight: var(--weight-semibold);
+  visibility: hidden;
 }
 .calendar .add {
   width: 44px;
   padding: 0;
 }
-.calendar .viewToggle {
-  padding-inline: 0.5rem;
-  font-size: var(--text-sm);
+@media (min-width: 48rem) {
+  .toolbar {
+    padding-inline: var(--space-4);
+  }
+}
+/* A phone: the month short ("Nov 2026"; the long one stays its name), and the
+   switch smaller, so the row fits from 360px (in the agenda's margins, 375px). */
+@media (max-width: 30rem) {
+  .longPeriod {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .shortPeriod {
+    display: inline;
+  }
+  .period h2 {
+    font-size: var(--text-md);
+  }
+  .toolbar,
+  .toolbarEnd {
+    gap: 0.375rem;
+  }
+  .calendar .viewSwitch button {
+    padding-inline: var(--space-2);
+    font-size: var(--text-xs);
+  }
+}
+@media (max-width: 24rem) {
+  .toolbar,
+  .toolbarEnd {
+    gap: var(--space-1);
+  }
+  .period h2 {
+    padding-inline: 2px;
+  }
+}
+
+/* The agenda: a centered column with the page's margins, the toolbar in it
+   (the month has the whole width). As long as its events: the page scrolls,
+   Show more at the end. */
+.calendar.agendaView {
+  height: auto;
+  min-height: var(--app-view-height);
+  max-width: 48rem;
+  margin-inline: auto;
+  padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right));
+}
+.agendaView .toolbar {
+  padding-inline: 0;
+}
+@media (min-width: 48rem) {
+  .calendar.agendaView {
+    padding-inline: 2.5rem;
+  }
+}
+.agenda .showMore {
+  justify-self: center;
+}
+/* Inviting a partner, over the month: inset as the toolbar is. */
+.calendar:not(.agendaView) > .invitePrompt {
+  margin-inline: max(var(--space-2), env(safe-area-inset-left)) max(var(--space-2), env(safe-area-inset-right));
 }
 .scroller {
   border-inline: 0;

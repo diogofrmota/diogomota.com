@@ -163,7 +163,7 @@ test("back pressed while the page is still loading still goes to the previous vi
   await expect(viewHeading(page)).toHaveText("Library");
 });
 
-test("Apps returns to the launcher; Account and Log out are in its bottom bar", async ({ page }) => {
+test("Apps returns to the launcher; its tab bar has Account and Apps", async ({ page }) => {
   await openApp(page, "/shared");
   for (const app of appViews) {
     await page.goto(app.path);
@@ -175,17 +175,23 @@ test("Apps returns to the launcher; Account and Log out are in its bottom bar", 
     await expect(page.getByRole("banner")).toHaveCount(0);
     const account = page.getByRole("navigation", { name: "Account", exact: true });
     await expect(account.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
-    await expect(account.getByRole("button", { name: "Log out" })).toBeVisible();
+    await expect(account.getByRole("link", { name: "Apps", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(account.getByRole("button", { name: "Log out" })).toHaveCount(0);
   }
 });
 
-test("the bottom navigation stays fixed on desktop and keeps equal tab widths", async ({ page }) => {
+test("on desktop the tab bar is the header, at the top as the page scrolls, its tabs keeping their widths", async ({
+  page,
+}) => {
   await openApp(page, "/shared");
   for (const app of appViews) {
     await page.goto(app.path);
     const nav = tabBar(page, app.name);
     const box = (await nav.boundingBox())!;
-    expect(box.y + box.height).toBe(page.viewportSize()!.height);
+    expect(box.y).toBe(0);
+    expect(box.height).toBeLessThan(80);
+    await page.mouse.wheel(0, 2000);
+    expect((await nav.boundingBox())!.y).toBe(0);
     const before = await nav
       .locator("li")
       .evaluateAll((items) => items.map((item) => item.getBoundingClientRect().width));

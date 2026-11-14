@@ -25,10 +25,16 @@ import { eventRequest, forgetEvent, sharedKeys, storeEvent } from "./shared-data
 import styles from "./Calendar.module.css";
 
 type Mode = "agenda" | "month";
+const modes: readonly { id: Mode; label: string }[] = [
+  { id: "agenda", label: "Agenda" },
+  { id: "month", label: "Month" },
+];
 /** The events a day of the month shows; past them, "+1 more" (and so on). */
 const monthEvents = 2;
-/** The agenda shows this many days at a time, and Show more adds as many. */
-const agendaDays = 28;
+/** The agenda shows this many events at first, and Show more adds as many. */
+const agendaPage = 20;
+/** The most days the agenda lists an event of several days under (a long one's first year). */
+const agendaSpan = 366;
 
 function monday(date: string) {
   return datePlus(date, -((new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7));
@@ -67,6 +73,28 @@ function agendaDay(day: string, now: string) {
     month: "short",
     ...(day.slice(0, 4) !== now.slice(0, 4) && { year: "numeric" }),
   });
+}
+
+/**
+ * The agenda's days, from `first` on, each with its events: an event of
+ * several days under each of them. While there are more events to load, it
+ * stops at the day the last one shown starts, so a long event doesn't list
+ * days past events that aren't loaded yet.
+ */
+function agendaByDay(events: CalendarEvent[], first: string, more: boolean) {
+  const until = more && events.length ? eventDates(events[events.length - 1]).start.date : null;
+  const days = new Map<string, CalendarEvent[]>();
+  for (const event of events) {
+    const { start, end } = eventDates(event);
+    const last = until && end.date > until ? until : end.date;
+    let day = start.date < first ? first : start.date;
+    for (let i = 0; day <= last && i < agendaSpan; i++, day = datePlus(day, 1)) {
+      const list = days.get(day);
+      if (list) list.push(event);
+      else days.set(day, [event]);
+    }
+  }
+  return [...days].sort(([a], [b]) => a.localeCompare(b));
 }
 
 // Invite your partner, dismissed (Not now) on this device, for this space: kept
@@ -111,11 +139,12 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
   const client = useQueryClient();
   const phone = usePhone();
   const now = today();
+  // The month shown, by one of its days; the agenda starts on it (today at first).
   const [date, setDate] = useState(now);
   // Null: the device's own, the agenda on a phone and the month otherwise.
   const [mode, setMode] = useState<Mode | null>(null);
   const view: Mode = mode ?? (phone ? "agenda" : "month");
-  const [agendaLength, setAgendaLength] = useState(agendaDays);
+  const [agendaCount, setAgendaCount] = useState(agendaPage);
   // Which way the grid last moved: it comes in from that side.
   const [slide, setSlide] = useState<"forward" | "back" | "fade">("fade");
   const [error, setError] = useState("");
@@ -125,24 +154,49 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
   const inviteHidden = useInviteDismissed(space.id);
   const swipe = useRef<{ x: number; y: number; done: boolean } | null>(null);
 
-  const first = view === "month" ? monday(`${date.slice(0, 7)}-01`) : date;
-  const length = view === "month" ? 42 : agendaLength;
-  const days = useMemo(() => Array.from({ length }, (_, i) => datePlus(first, i)), [first, length]);
+  // The month: its six weeks, from the Monday of its first.
+  const first = monday(`${date.slice(0, 7)}-01`);
+  const days = useMemo(() => Array.from({ length: 42 }, (_, i) => datePlus(first, i)), [first]);
   const last = days[days.length - 1];
 
   // Only the events of the days shown are loaded (and kept while the next ones
   // load); each period's stay in memory, and in this browser for offline use.
   const from = localInstants(first, "00:00")[0];
   const to = localInstants(datePlus(last, 1), "00:00")[0];
-  const query = useQuery({
+  const monthQuery = useQuery({
     queryKey: sharedKeys.eventRange(from, to),
     queryFn: ({ signal }) =>
       eventRequest<CalendarEvent[]>(`?${new URLSearchParams({ from, to })}`, "GET", undefined, signal),
     placeholderData: keepPreviousData,
+    enabled: view === "month",
     meta: { persist: true },
   });
+  // The agenda: every event from the start of its first day on, agendaCount at
+  // a time, and one more, which says whether there are more to show.
+  const agendaFrom = localInstants(date, "00:00")[0];
+  const agendaQuery = useQuery({
+    queryKey: sharedKeys.upcomingFrom(agendaFrom, agendaCount),
+    queryFn: ({ signal }) =>
+      eventRequest<CalendarEvent[]>(
+        `?${new URLSearchParams({ from: agendaFrom, limit: String(agendaCount + 1) })}`,
+        "GET",
+        undefined,
+        signal,
+      ),
+    // Showing more: the ones shown stay while the next ones load. Not for another first day.
+    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[3] === agendaFrom ? previous : undefined),
+    enabled: view === "agenda",
+    meta: { persist: true },
+  });
+  const query = view === "month" ? monthQuery : agendaQuery;
   const deletingId = undo.pending?.id;
   const events = useMemo(() => (query.data ?? []).filter((event) => event.id !== deletingId), [query.data, deletingId]);
+  const loadingMore = view === "agenda" && agendaQuery.isPlaceholderData;
+  const moreEvents = view === "agenda" && (loadingMore || events.length > agendaCount);
+  const agenda = useMemo(
+    () => (view === "agenda" ? agendaByDay(events.slice(0, agendaCount), date, moreEvents) : []),
+    [view, events, agendaCount, date, moreEvents],
+  );
 
   const names = useMemo(() => new Map(space.members.map((m) => [m.id, memberName(m)])), [space.members]);
   const eventsOn = (day: string) =>
@@ -170,12 +224,14 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
     setSlide(next < date ? "back" : next > date ? "forward" : "fade");
     setDate(next);
     setMode(nextView);
-    if (nextView === "agenda") setAgendaLength(agendaDays);
+    if (next !== date || nextView !== view) setAgendaCount(agendaPage);
   }
+  // A month on: its first day, or today for this month (where the agenda starts).
   function navigate(direction: number) {
     const next = new Date(`${date.slice(0, 7)}-01T12:00:00Z`);
     next.setUTCMonth(next.getUTCMonth() + direction);
-    move(next.toISOString().slice(0, 10));
+    const day = next.toISOString().slice(0, 10);
+    move(day.slice(0, 7) === now.slice(0, 7) ? now : day);
   }
   const addOn = (day: string, time?: string) => openPanel(`new-event:${day}${time ? `T${time}` : ""}`);
 
@@ -242,10 +298,14 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
 
   const heading = dateLabel(date, { month: "long", year: "numeric" });
 
-  // One toolbar over the grid, so the grid gets the rest of the screen. The
-  // top bar's Calendar tab names the view; the h1 is for screen readers.
+  // One toolbar over the grid, so the grid gets the rest of the screen: the
+  // month with ‹ and › on either side of it, then Agenda | Month and Add event.
+  // The tab bar's Calendar names the view; the h1 is for screen readers.
   return (
-    <section className={styles.calendar} aria-label="Shared calendar">
+    <section
+      className={`${styles.calendar} ${view === "agenda" ? styles.agendaView : ""}`}
+      aria-label="Shared calendar"
+    >
       <h1 className={ui.srOnly}>Calendar</h1>
       {space.members.length === 1 && !inviteHidden && (
         // Shared is for two: right after creating a space, the next step is asking the other person in.
@@ -260,28 +320,49 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
           </button>
         </section>
       )}
-      <div className={styles.toolbar} role="group" aria-label="Calendar view">
-        <button className={styles.arrow} aria-label="Previous period" onClick={() => navigate(-1)}>
-          <ChevronLeftIcon />
-        </button>
-        <h2 aria-live="polite">{heading}</h2>
-        <button className={styles.arrow} aria-label="Next period" onClick={() => navigate(1)}>
-          <ChevronRightIcon />
-        </button>
-        <button
-          className={styles.viewToggle}
-          aria-label={view === "month" ? "Agenda" : "Month"}
-          onClick={() => move(date, view === "month" ? "agenda" : "month")}
-        >
-          {view === "month" ? "Agenda" : "Month"}
-        </button>
-        <button
-          className={ui.button + " " + ui.primary + " " + styles.add}
-          aria-label="Add event"
-          onClick={() => addOn(date)}
-        >
-          <PlusIcon />
-        </button>
+      <div className={styles.toolbar}>
+        <div className={styles.period}>
+          <button type="button" className={styles.arrow} aria-label="Previous month" onClick={() => navigate(-1)}>
+            <ChevronLeftIcon />
+          </button>
+          {/* "November 2026", or "Nov 2026" where the toolbar is narrow (the long one is still its name). */}
+          <h2 aria-live="polite">
+            <span className={styles.longPeriod}>{heading}</span>
+            <span className={styles.shortPeriod} aria-hidden="true">
+              {dateLabel(date, { month: "short", year: "numeric" })}
+            </span>
+          </h2>
+          <button type="button" className={styles.arrow} aria-label="Next month" onClick={() => navigate(1)}>
+            <ChevronRightIcon />
+          </button>
+        </div>
+        <div className={styles.toolbarEnd}>
+          <div className={styles.viewSwitch} role="group" aria-label="Calendar view">
+            {modes.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={view === option.id}
+                onClick={() => {
+                  if (view !== option.id) move(date, option.id);
+                }}
+              >
+                <span className={styles.switchLabel}>
+                  <span>{option.label}</span>
+                  <span aria-hidden="true">{option.label}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className={`${ui.button} ${ui.primary} ${styles.add}`}
+            aria-label="Add event"
+            onClick={() => addOn(date)}
+          >
+            <PlusIcon />
+          </button>
+        </div>
       </div>
       {query.isPending && <Spinner label="Loading calendar…" />}
       {/* Also over events kept from before: they may be out of date. */}
@@ -290,7 +371,8 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
       <div
         ref={scroller}
         className={`${styles.scroller} ${view === "agenda" ? styles.agendaScroller : ""}`}
-        tabIndex={0}
+        // The month scrolls in its box, so it takes the focus for the keyboard; the agenda scrolls with the page.
+        tabIndex={view === "month" ? 0 : undefined}
         role="region"
         aria-label={`${view} calendar`}
         onPointerDown={swipeStart}
@@ -306,36 +388,44 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
         }}
       >
         {view === "agenda" ? (
-          // The coming days that have something planned, each with its events.
-          <div key={`agenda:${first}`} className={styles.agenda} data-slide={slide}>
-            {days
-              .filter((day) => eventsOn(day).length)
-              .map((day) => (
-                <section key={day} className={styles.agendaDay} aria-labelledby={`agenda-${day}`}>
-                  <h3 id={`agenda-${day}`} className={day === now ? styles.today : undefined}>
-                    <time dateTime={day}>{agendaDay(day, now)}</time>
-                  </h3>
-                  <ul>
-                    {eventsOn(day).map((event) => {
-                      const { start, end } = eventDates(event);
-                      const time = event.allDay
-                        ? "All day"
-                        : `${start.date === day ? localParts(event.startsAt).time : "…"} – ${end.date === day ? localParts(event.endsAt).time : "…"}`;
-                      return (
-                        <li key={event.id}>
-                          <span className={styles.agendaTime}>{time}</span>
-                          {eventButton(event)}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))}
-            {query.data && !days.some((day) => eventsOn(day).length) && (
-              <p className={ui.muted}>Nothing planned in these {agendaLength / 7} weeks.</p>
+          // Every event from its first day (today, at first) on, by day; Show more adds the next ones under them.
+          <div key={`agenda:${date}`} className={styles.agenda} data-slide={slide}>
+            {agenda.map(([day, onDay]) => (
+              <section key={day} className={styles.agendaDay} aria-labelledby={`agenda-${day}`}>
+                <h3 id={`agenda-${day}`} className={day === now ? styles.today : undefined}>
+                  <time dateTime={day}>{agendaDay(day, now)}</time>
+                </h3>
+                <ul>
+                  {onDay.map((event) => {
+                    const { start, end } = eventDates(event);
+                    const time = event.allDay
+                      ? "All day"
+                      : `${start.date === day ? localParts(event.startsAt).time : "…"} – ${end.date === day ? localParts(event.endsAt).time : "…"}`;
+                    return (
+                      <li key={event.id}>
+                        <span className={styles.agendaTime}>{time}</span>
+                        {eventButton(event)}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+            {query.data && !agenda.length && (
+              <p className={ui.muted}>
+                {date === now
+                  ? "Nothing planned from today on."
+                  : `Nothing planned from ${dateLabel(date, { day: "numeric", month: "long", year: "numeric" })} on.`}
+              </p>
             )}
-            {query.data && (
-              <Button onClick={() => setAgendaLength((n) => n + agendaDays)}>Show the next 4 weeks</Button>
+            {moreEvents && (
+              <Button
+                className={styles.showMore}
+                busy={loadingMore}
+                onClick={() => setAgendaCount((n) => n + agendaPage)}
+              >
+                Show more
+              </Button>
             )}
           </div>
         ) : (
@@ -397,7 +487,8 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
           onSaved={(saved) => {
             storeEvent(client, saved);
             void client.invalidateQueries({ queryKey: sharedKeys.activity });
-            setDate(localParts(saved.startsAt).date);
+            // The month goes to the event's; the agenda stays, unless the event is over before it starts.
+            if (view === "month" || saved.endsAt <= agendaFrom) setDate(localParts(saved.startsAt).date);
           }}
           onDelete={(event) => {
             closePanel();
@@ -407,10 +498,13 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
               label: `Deleted “${event.title}”`,
               commit: () => {
                 forgetEvent(client, event.id);
-                eventRequest(`/${event.id}`, "DELETE").catch((err: Error) => {
-                  setError(err.message);
-                  void client.invalidateQueries({ queryKey: sharedKeys.events });
-                });
+                eventRequest(`/${event.id}`, "DELETE")
+                  // The agenda's next event takes its place.
+                  .then(() => client.invalidateQueries({ queryKey: sharedKeys.upcoming }))
+                  .catch((err: Error) => {
+                    setError(err.message);
+                    void client.invalidateQueries({ queryKey: sharedKeys.events });
+                  });
               },
             });
           }}

@@ -41,6 +41,19 @@ export async function listEvents(
   return rows.map(toEvent);
 }
 
+/** The agenda's: the space's first `limit` events that end after `from` (a UTC instant), by when they start. */
+export async function listUpcomingEvents(
+  db: PoolClient,
+  space: Space,
+  { from, limit }: { from: string; limit: number },
+): Promise<CalendarEvent[]> {
+  const { rows } = await db.query<Row>(
+    `${select} WHERE e.space_id = $1 AND e.ends_at > $2 GROUP BY e.id ORDER BY e.starts_at, e.id LIMIT $3`,
+    [space.id, from, limit],
+  );
+  return rows.map(toEvent);
+}
+
 /** One of the space's events; 404 for anything else (another space's, a malformed id). */
 export async function getEvent(db: PoolClient, space: Space, id: string): Promise<CalendarEvent> {
   if (!isUuid(id)) throw new HttpError("Event not found.", 404);

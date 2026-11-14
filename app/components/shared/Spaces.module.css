@@ -97,3 +97,51 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   letter-spacing: 0.08em;
 }
+
+/* The calendar link (Settings), hidden until Show: its text blurred (only the
+   text: the field's edge stays sharp), and the whole field the Show button,
+   its pill in the middle. Once shown, both go and the link is there to select. */
+.secret {
+  position: relative;
+}
+.secret .hidden {
+  color: transparent;
+  text-shadow: 0 0 0.5rem var(--text);
+  user-select: none;
+  pointer-events: none;
+}
+.secret .show {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  z-index: 0;
+}
+.secret .show::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  width: 5rem;
+  height: 2rem;
+  margin: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+@media (hover: hover) {
+  .secret .show:hover::before {
+    border-color: var(--muted);
+  }
+}

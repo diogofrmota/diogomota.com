@@ -135,17 +135,12 @@ export function TaskRow({
             onChange={(e) => onToggle(e.target.checked)}
           />
         </label>
+        {/* In one line, as far as it goes: the title, who it's for (their pictures),
+            when it's due, how often it repeats and the notes; what doesn't fit goes under. */}
         <button type="button" className={styles.open} onClick={onOpen}>
           <span className={styles.title}>{task.title}</span>
-          {(due || members.length > 0 || task.repeat) && (
-            <span className={styles.meta}>
-              {due && <span className={due.startsWith("Overdue") ? styles.overdue : undefined}>{due}</span>}
-              {task.repeat && (
-                <span className={styles.repeat}>
-                  <RepeatIcon />
-                  {repeatNames[task.repeat]}
-                </span>
-              )}
+          {members.length > 0 && (
+            <span className={styles.assignees}>
               {members.map((member) => (
                 <span
                   key={member.id}
@@ -157,6 +152,13 @@ export function TaskRow({
                   <span className={styles.assigneeName}>{memberName(member)}</span>
                 </span>
               ))}
+            </span>
+          )}
+          {due && <span className={`${styles.meta} ${due.startsWith("Overdue") ? styles.overdue : ""}`}>{due}</span>}
+          {task.repeat && (
+            <span className={`${styles.meta} ${styles.repeat}`}>
+              <RepeatIcon />
+              {repeatNames[task.repeat]}
             </span>
           )}
           {task.notes && <span className={styles.notes}>{task.notes}</span>}

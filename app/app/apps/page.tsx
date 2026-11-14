@@ -21,9 +21,9 @@ export const metadata: Metadata = {
 
 export const viewport = appViewport;
 
-// The way into the apps, and between them (Switch app in the apps' account menu).
-// In the apps' frame and the user's theme (Light mode when logged out); the top bar
-// has diogomota.com and the account menu, or Log in and Sign up. Logged out, a
+// The way into the apps, and between them (Apps in each app's tab bar).
+// In the apps' frame and the user's theme (Light mode when logged out); its tab
+// bar has Account and Apps (this page), or Log in, Sign up and Apps. Logged out, a
 // call to action over the cards has them too (LoginCallout). Each card shows
 // what its app looks like (AppPreview); the build's version is at the bottom.
 //
@@ -42,7 +42,13 @@ export default async function AppsPage({ searchParams }: PageProps<"/apps">) {
   const version = process.env.APP_VERSION ?? "dev";
 
   return (
-    <AppFrame theme={user?.themePreference ?? defaultTheme} username={username} avatarUrl={user?.avatarUrl} next={next}>
+    <AppFrame
+      theme={user?.themePreference ?? defaultTheme}
+      username={username}
+      avatarUrl={user?.avatarUrl}
+      next={next}
+      launcher="apps"
+    >
       <div className={styles.view}>
         {deleted && (
           <p role="status" className={ui.success}>
