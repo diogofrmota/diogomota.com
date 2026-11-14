@@ -11,6 +11,9 @@ Each deploy publishes a GitHub Release (`vX.Y.Z`) listing its commits (`.github/
 - Popups retain visible margins and no longer slide up on phones.
 - Shows: Recommend to a friend, More like this, then Remove from library without a divider. Poster rows use visible scrollbars instead of arrows. Mobile friends have a centered Check profile; completion counts appear above hours watched.
 - Migration 021 adds task assignments while keeping the legacy single-assignee column compatible with older clients and rollbacks.
+- Motion, one system ([docs/decisions/0013](docs/decisions/0013-motion-system.md)): popups grow in from what opened them and go back into it; Agenda | Month, TV Shows | Movies, a title's status and the tab bar's underline slide (and stretch) between options; list rows come in one after another; icons crossfade; a ticked task leaves on an arc; a title added flies into Library; the All day switch's knob stretches and its color fills from it; dragging past an edge rubber-bands. No bounce on everyday parts, exits quicker than entrances, nothing with reduced motion.
+- Type and layout: tighter headings, readable line lengths, no widows, tabular numbers in counts, and no sideways jump when a dialog opens.
+- Invite codes are shown in two groups of four, and read with spaces, dashes or as the whole pasted link.
 
 ## v1.2.0 — 2026-11-13
 

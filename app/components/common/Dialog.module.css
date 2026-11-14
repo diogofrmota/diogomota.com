@@ -1,7 +1,49 @@
-/* Keep every popup inside the viewport without moving it on open. */
+/* Every popup of the apps (components/common/Dialog), on top of its module's
+   look: inside the viewport (and clear of the notch and the home indicator),
+   scrolling inside itself rather than growing past it.
+
+   Optical centre: centered in the screen less --lift at the bottom, so a
+   little above the middle, where a box looks centered.
+
+   Origin-aware: it grows from 0.95 of its size (never from nothing) and fades
+   in, easing out, from what opened it (--origin, set by Dialog.tsx; its own
+   middle when nothing did). A menu takes a dropdown's time. Its backdrop dims
+   the page behind to stage it. Leaving, a copy plays the same in reverse,
+   20% quicker (Dialog.tsx, leavingCopy). */
+.popup {
+  --lift: 4dvh;
+}
+
+/* At no specificity, so a menu placed by its trigger (Shows' .anchored) wins. */
+:where(.popup[open]) {
+  inset-block: 0 var(--lift);
+}
+
 .popup.popup[open] {
-  animation: none;
-  max-height: min(90dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem));
+  max-height: min(90dvh, calc(100dvh - var(--lift) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem));
+  transform-origin: var(--origin, 50% 50%);
+  animation: popup-in var(--duration) var(--ease-out);
+}
+
+.popup.popup[data-kind="menu"][open] {
+  animation-duration: var(--duration-dropdown);
+}
+
+.popup::backdrop {
+  animation: backdrop-in var(--duration) var(--ease-out);
+}
+
+@keyframes popup-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
 }
 
 @media (max-width: 47.99rem) {
@@ -16,5 +58,13 @@
 
   .popup.popup > div {
     padding: 1rem;
+  }
+}
+
+/* Last, so it wins over the rules above. */
+@media (prefers-reduced-motion: reduce) {
+  .popup.popup[open],
+  .popup::backdrop {
+    animation: none;
   }
 }

@@ -550,7 +550,13 @@ export function AccountSettings({
       <ul className={styles.list}>
         {rows.map(({ id, value }) => (
           <li key={id}>
-            <button type="button" className={styles.row} aria-haspopup="dialog" onClick={() => show(id)}>
+            <button
+              type="button"
+              className={styles.row}
+              data-press="wide"
+              aria-haspopup="dialog"
+              onClick={() => show(id)}
+            >
               <span className={styles.rowTitle}>{titles[id]}</span>
               <span className={ui.srOnly}>: </span>
               <span className={value ? styles.rowValue : `${styles.rowValue} ${styles.rowEmpty}`}>

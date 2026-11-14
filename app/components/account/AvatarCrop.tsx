@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Dialog } from "@/components/common/Dialog";
 import { CloseIcon, MinusIcon, PlusIcon } from "@/components/common/icons";
 import ui from "@/components/common/ui.module.css";
+import { elastic } from "@/lib/motion";
 import styles from "./AccountSettings.module.css";
 
 // What is sent: the square in the circle, at most this many pixels a side. The
@@ -20,6 +21,8 @@ const zoomStep = 0.25;
 type Crop = { x: number; y: number; zoom: number };
 type Size = { width: number; height: number };
 type Point = { x: number; y: number };
+/** A move of the photo, in pixels of the square on screen (AvatarCrop, moved). */
+type Move = { dx?: number; dy?: number; px?: number; py?: number; zoom?: (current: number) => number };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -28,6 +31,21 @@ function within(crop: Crop, size: Size): Crop {
   const zoom = clamp(crop.zoom, 1, maxZoom);
   const half = Math.min(size.width, size.height) / zoom / 2;
   return { zoom, x: clamp(crop.x, half, size.width - half), y: clamp(crop.y, half, size.height - half) };
+}
+
+/**
+ * The crop as a drag has taken it, maybe past the photo's edge: there it
+ * rubber-bands, going less and less far the further the finger goes, never
+ * more than the circle's width; let go, it eases back inside (within).
+ */
+function stretched(crop: Crop, size: Size): Crop {
+  const zoom = clamp(crop.zoom, 1, maxZoom);
+  const half = Math.min(size.width, size.height) / zoom / 2;
+  return {
+    zoom,
+    x: elastic(crop.x, half, size.width - half, half * 2),
+    y: elastic(crop.y, half, size.height - half, half * 2),
+  };
 }
 
 const middle = (points: Point[]): Point => ({
@@ -63,42 +81,53 @@ export function AvatarCrop({
   const image = useRef<HTMLImageElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, Point>());
+  // While dragged: where the fingers have taken the crop, before rubber-banding.
+  const dragged = useRef<Crop | null>(null);
   const [size, setSize] = useState<Size | null>(null);
   const [crop, setCrop] = useState<Crop>({ x: 0, y: 0, zoom: 1 });
+  // Whether a change eases in (a button, a key, letting go) rather than
+  // following what moves it (a finger, the wheel, the slider): nothing tweens
+  // while it's held, or it would lag behind.
+  const [tween, setTween] = useState(false);
 
-  // Moves the photo by (dx, dy) and zooms it around (px, py), all in pixels of
-  // the square on screen, (px, py) from its middle: the point of the photo
-  // under (px, py) stays there as it zooms.
-  function adjust({
-    dx = 0,
-    dy = 0,
-    px = 0,
-    py = 0,
-    zoom = (current: number) => current,
-  }: {
-    dx?: number;
-    dy?: number;
-    px?: number;
-    py?: number;
-    zoom?: (current: number) => number;
-  }) {
+  // The crop moved by (dx, dy) and zoomed around (px, py), all in pixels of the
+  // square on screen (`side` wide), (px, py) from its middle: the point of the
+  // photo under (px, py) stays there as it zooms. Not yet kept inside the photo.
+  function moved(current: Crop, photo: Size, side: number, { dx = 0, dy = 0, px = 0, py = 0, zoom }: Move): Crop {
+    const base = Math.min(photo.width, photo.height);
+    const next = clamp(zoom ? zoom(current.zoom) : current.zoom, 1, maxZoom);
+    // Photo pixels per pixel on screen, before and after.
+    const before = base / current.zoom / side;
+    const after = base / next / side;
+    return {
+      zoom: next,
+      x: current.x + px * (before - after) - dx * after,
+      y: current.y + py * (before - after) - dy * after,
+    };
+  }
+
+  function adjust(move: Move, { eased = false } = {}) {
     const side = stage.current?.clientWidth;
     if (!size || !side) return;
-    setCrop((current) => {
-      const base = Math.min(size.width, size.height);
-      const next = clamp(zoom(current.zoom), 1, maxZoom);
-      // Photo pixels per pixel on screen, before and after.
-      const before = base / current.zoom / side;
-      const after = base / next / side;
-      return within(
-        {
-          zoom: next,
-          x: current.x + px * (before - after) - dx * after,
-          y: current.y + py * (before - after) - dy * after,
-        },
-        size,
-      );
-    });
+    setTween(eased);
+    setCrop((current) => within(moved(current, size, side, move), size));
+  }
+
+  // Fingers or the mouse dragging: the crop follows them, rubber-banding past the photo's edges.
+  function drag(move: Move) {
+    const side = stage.current?.clientWidth;
+    if (!size || !side || !dragged.current) return;
+    dragged.current = moved(dragged.current, size, side, move);
+    setTween(false);
+    setCrop(stretched(dragged.current, size));
+  }
+
+  // The last finger lifted: back inside the photo, easing there.
+  function release() {
+    if (pointers.current.size || !dragged.current || !size) return;
+    dragged.current = null;
+    setTween(true);
+    setCrop((current) => within(current, size));
   }
 
   // The wheel zooms (React's wheel listeners can't stop the page scrolling).
@@ -125,11 +154,13 @@ export function AvatarCrop({
     const photo = image.current;
     const context = document.createElement("canvas").getContext("2d");
     if (!photo || !size || !context) return onUnreadable();
-    const side = Math.min(size.width, size.height) / crop.zoom;
+    // Inside the photo, even if Save is pressed as a drag is let go.
+    const kept = within(crop, size);
+    const side = Math.min(size.width, size.height) / kept.zoom;
     const out = Math.max(1, Math.min(outputSide, Math.round(side)));
     context.canvas.width = context.canvas.height = out;
     context.imageSmoothingQuality = "high";
-    context.drawImage(photo, crop.x - side / 2, crop.y - side / 2, side, side, 0, 0, out, out);
+    context.drawImage(photo, kept.x - side / 2, kept.y - side / 2, side, side, 0, 0, out, out);
     // WebP where the browser makes it, PNG (its fallback) elsewhere.
     context.canvas.toBlob(
       (blob) => {
@@ -180,6 +211,7 @@ export function AvatarCrop({
             if (event.pointerType === "mouse" && event.button !== 0) return;
             event.currentTarget.setPointerCapture(event.pointerId);
             pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+            dragged.current ??= crop;
           }}
           onPointerMove={(event) => {
             const map = pointers.current;
@@ -192,7 +224,7 @@ export function AvatarCrop({
             const to = middle(now);
             // One finger moves it; two also zoom, as far as they spread.
             const factor = spread(before) > 0 ? spread(now) / spread(before) : 1;
-            adjust({
+            drag({
               dx: to.x - from.x,
               dy: to.y - from.y,
               zoom: (current) => current * factor,
@@ -200,14 +232,22 @@ export function AvatarCrop({
               py: from.y - box.top - box.height / 2,
             });
           }}
-          onPointerUp={(event) => pointers.current.delete(event.pointerId)}
-          onPointerCancel={(event) => pointers.current.delete(event.pointerId)}
+          onPointerUp={(event) => {
+            pointers.current.delete(event.pointerId);
+            release();
+          }}
+          onPointerCancel={(event) => {
+            pointers.current.delete(event.pointerId);
+            release();
+          }}
           onKeyDown={(event) => {
             const move = moveKeys[event.key];
             const step = event.shiftKey ? 40 : 10;
-            if (move) adjust({ dx: move.x * step, dy: move.y * step });
-            else if (event.key === "+" || event.key === "=") adjust({ zoom: (current) => current + zoomStep });
-            else if (event.key === "-" || event.key === "_") adjust({ zoom: (current) => current - zoomStep });
+            // A key held down repeats: those follow it, the first eases.
+            const eased = { eased: !event.repeat };
+            if (move) adjust({ dx: move.x * step, dy: move.y * step }, eased);
+            else if (event.key === "+" || event.key === "=") adjust({ zoom: (current) => current + zoomStep }, eased);
+            else if (event.key === "-" || event.key === "_") adjust({ zoom: (current) => current - zoomStep }, eased);
             else return;
             event.preventDefault();
           }}
@@ -218,7 +258,9 @@ export function AvatarCrop({
             src={src}
             alt=""
             draggable={false}
+            className={tween ? styles.cropEase : undefined}
             style={placed}
+            onTransitionEnd={() => setTween(false)}
             onLoad={(event) => {
               const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
               if (!width || !height) return onUnreadable();
@@ -238,7 +280,7 @@ export function AvatarCrop({
             className={styles.zoomButton}
             aria-label="Zoom out"
             disabled={!size || crop.zoom <= 1}
-            onClick={() => adjust({ zoom: (current) => current - zoomStep })}
+            onClick={() => adjust({ zoom: (current) => current - zoomStep }, { eased: true })}
           >
             <MinusIcon />
           </button>
@@ -258,7 +300,7 @@ export function AvatarCrop({
             className={styles.zoomButton}
             aria-label="Zoom in"
             disabled={!size || crop.zoom >= maxZoom}
-            onClick={() => adjust({ zoom: (current) => current + zoomStep })}
+            onClick={() => adjust({ zoom: (current) => current + zoomStep }, { eased: true })}
           >
             <PlusIcon />
           </button>

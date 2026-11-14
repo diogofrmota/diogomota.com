@@ -31,7 +31,18 @@
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
+  /* Tracking: large headings drawn a little tighter, small capitals and badges
+     a little looser, so each reads as evenly spaced at its size. */
   --tracking-tight: -0.025em;
+  --tracking-wide: 0.05em;
+  /* Leading: tight for headings (short, large lines), the body's for reading,
+     in between for small UI text. The system fonts' tall x-height wants this
+     much room between lines. */
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+  /* Line length: a paragraph's lines at most about 65 characters. */
+  --measure: 65ch;
 
   /* Room between things: 4px steps. */
   --space-1: 0.25rem;
@@ -47,15 +58,48 @@
   --icon-sm: 1rem;
   --icon-md: 1.25rem;
 
-  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.2);
-  --shadow-md: 0 12px 40px rgb(0 0 0 / 0.27);
-  --shadow-lg: 0 24px 90px rgb(0 0 0 / 0.4);
+  /* Elevation, lit from above (one light for the whole app): each shadow a
+     tight one where the surface meets the page and a soft one around it, the
+     higher the surface the further down and softer. In OKLCH, as the colors
+     derived from the theme's are. */
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.14), 0 1px 3px oklch(0 0 0 / 0.1);
+  --shadow-md: 0 2px 4px oklch(0 0 0 / 0.08), 0 12px 40px oklch(0 0 0 / 0.24);
+  --shadow-lg: 0 4px 10px oklch(0 0 0 / 0.1), 0 24px 90px oklch(0 0 0 / 0.36);
 
-  /* Motion: quick, and only for what tells the user something. */
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-spring: cubic-bezier(0.3, 1.5, 0.6, 1);
+  /* Motion (lib/motion.ts has the same numbers, for what moves from script:
+     change both together). Only for what tells the user something, and the
+     more often it's seen the quicker and quieter (a tick, a tab: frequency of
+     use); a press or an icon 150ms, a dropdown 180ms (150-200), a dialog or
+     a message 220ms, something crossing the screen 260ms, all well under the
+     400ms where a wait starts to be felt (the Doherty threshold).
+     - Entrances ease out: they start at once, and settle.
+     - What moves from one place on screen to another eases in and out.
+     - An exit is 20% shorter than its entrance (--exit): asked to go, it goes.
+     - A list's rows come in --stagger apart, ten deep at most.
+     - A press gives a little (--press); a popup grows from --popover-scale,
+       from what opened it, never from nothing.
+     - A knob stretches as it moves (--stretch), and as it's pressed.
+     - No bounce (overshoot) on everyday parts: --ease-celebrate is only for a
+       celebration (the end of the Shows guide).
+     - Nothing tweens while it's held: what's dragged follows the finger, and
+       past where it can go, it rubber-bands (lib/motion.ts).
+     All of it stops with reduced motion. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --ease-celebrate: cubic-bezier(0.3, 1.5, 0.6, 1);
   --duration-fast: 150ms;
+  --duration-dropdown: 180ms;
   --duration: 220ms;
+  --duration-move: 260ms;
+  --exit: 0.8;
+  --stagger: 30ms;
+  --press: 0.97;
+  --popover-scale: 0.95;
+  --stretch: 1.12;
+
+  /* A success, said with a ring that spreads from it and fades (ui.module.css,
+     success-pulse): the accent, half see-through, in OKLCH. */
+  --pulse: color-mix(in oklch, var(--accent) 45%, transparent);
 
   min-height: 100vh;
   min-height: 100dvh;
@@ -70,7 +114,13 @@
     Arial,
     sans-serif;
   font-size: 1rem;
-  line-height: 1.5;
+  line-height: var(--leading-normal);
+  /* Kerning on everywhere (some browsers leave it to the size), and the
+     font's optical sizes where it has them. */
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  /* Sizes of auto can be animated to (Done unfolding to its height). */
+  interpolate-size: allow-keywords;
   overflow-wrap: break-word;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -96,19 +146,54 @@
   outline-offset: 2px;
 }
 
-/* Headings break into lines of even length, not one long line and an orphan;
-   paragraphs avoid a lone last word. */
+/* Headings break into lines of even length, not one long line and an orphan,
+   on tight leading; a page's heading also tracks a little tighter. */
 :where(.shell) :is(h1, h2, h3) {
+  line-height: var(--leading-snug);
   text-wrap: balance;
 }
 
-:where(.shell) p {
+:where(.shell) h1 {
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+
+/* Text avoids widows: no lone last word on a line of its own. */
+:where(.shell) :is(p, dd, figcaption, blockquote) {
   text-wrap: pretty;
 }
 
-/* Numbers that sit in columns or change in place keep their width. */
-:where(.shell) time {
+/* A paragraph of prose (one without a look of its own) keeps a readable line length. */
+:where(.shell) p:not([class]) {
+  max-inline-size: var(--measure);
+}
+
+/* Numbers that sit in columns or change in place keep their width (tabular
+   figures), so a count going from 9 to 10 or a clock ticking doesn't shift
+   what's beside it. */
+:where(.shell) :is(time, data, output, [data-numeric]) {
   font-variant-numeric: tabular-nums;
+}
+
+/* Pressed, a button gives a little (the wind-up before what it does), and
+   lets go as quickly. The scale property, so it adds to a transform of its
+   own. A wide row asks for less (data-press="wide"). */
+:where(.shell) button {
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+
+:where(.shell) button:active:not(:disabled) {
+  scale: var(--press);
+}
+
+:where(.shell) [data-press="wide"] {
+  --press: 0.99;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.shell) button:active:not(:disabled) {
+    scale: none;
+  }
 }
 
 /* Placeholders in the theme's secondary text color, which passes AA on every
@@ -119,9 +204,10 @@
 }
 
 /* The page under the top bar or the tab bar (a header on a wide screen, along
-   the bottom on a phone: .withNav), clear of the home indicator. */
+   the bottom on a phone: .withNav), clear of the notch or status bar (the safe
+   area, on a phone with nothing over the page) and of the home indicator. */
 .main {
-  --main-padding-top: 1.5rem;
+  --main-padding-top: calc(1.5rem + env(safe-area-inset-top));
   --main-padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem);
   --app-view-height: calc(100dvh - var(--top-bar-height) - var(--main-padding-top) - var(--main-padding-bottom));
   min-width: 0;
@@ -145,13 +231,14 @@
 
 /* The app's views, one shown at a time (AppShell). Hidden ones are display:
    none, so the one shown starts its animation again: it slides in from the side
-   of its tab. */
+   of its tab, easing out. Switching tabs is among the most frequent things
+   done, so it is quick and short (frequency of use). */
 .views {
   min-width: 0;
 }
 
 .views > * {
-  animation: view-from-end 0.28s var(--ease-out) backwards;
+  animation: view-from-end var(--duration) var(--ease-out) backwards;
 }
 
 .views[data-direction="back"] > * {
@@ -161,14 +248,14 @@
 @keyframes view-from-end {
   from {
     opacity: 0;
-    transform: translateX(1.25rem);
+    transform: translateX(0.75rem);
   }
 }
 
 @keyframes view-from-start {
   from {
     opacity: 0;
-    transform: translateX(-1.25rem);
+    transform: translateX(-0.75rem);
   }
 }
 
@@ -269,6 +356,13 @@
   }
 }
 
+/* The current tab's underline (HeaderTabs, a SegmentThumb): one object, which
+   slides (and stretches) from the tab that was current to the one chosen. Only
+   on a wide screen; a phone's tabs say it with their color. */
+.tabBar .underline {
+  display: none;
+}
+
 /* On a wider screen, the same tabs across the top, as the page's header: in
    the middle, each its icon beside its name, all as wide, the current one in
    the accent and underlined along the bar's edge (not bold: nothing moves).
@@ -323,15 +417,28 @@
     font-weight: var(--weight-medium);
   }
 
-  .tabBar :is(button, a)[aria-current="page"]::after {
-    content: "";
-    position: absolute;
-    right: var(--space-3);
-    bottom: -1px;
-    left: var(--space-3);
+  .tabBar .underline {
+    display: block;
+    z-index: 0;
+    inset: auto var(--space-3) -1px;
     height: 2px;
     border-radius: 2px 2px 0 0;
     background: var(--accent);
+  }
+}
+
+/* A link in the tab bar gives a little when pressed, as its buttons do. */
+.tabBar a {
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+
+.tabBar a:active {
+  scale: var(--press);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabBar a:active {
+    scale: none;
   }
 }
 

@@ -1,6 +1,7 @@
 "use client";
 import { useId, useState } from "react";
 import { HeartIcon } from "@/components/common/icons";
+import { IconSwap, SegmentThumb, successPulse } from "@/components/common/motion";
 import { Button } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
 import {
@@ -20,7 +21,11 @@ import { EpisodePicker } from "./EpisodePicker";
 import { ChangeError, useLibrary } from "./library";
 import styles from "./Shows.module.css";
 
-/** Planned | Watching | Completed, the current one pressed; with each one's icon in the detail panel. */
+/**
+ * Planned | Watching | Completed, the current one pressed; with each one's icon
+ * in the detail panel. Its thumb is one object that slides to the status
+ * chosen (a SegmentThumb, its layoutId this picker's own).
+ */
 export function StatusPicker({
   status,
   onChange,
@@ -30,6 +35,7 @@ export function StatusPicker({
   onChange: (status: LibraryStatus) => void;
   icons?: boolean;
 }) {
+  const layoutId = `status-picker:${useId()}`;
   return (
     <div className={styles.statusPicker} role="group" aria-label="Status">
       {libraryStatuses.map((s) => {
@@ -46,6 +52,7 @@ export function StatusPicker({
           >
             {icons && <Icon />}
             {statusNames[s]}
+            {s === status && <SegmentThumb layoutId={layoutId} className={styles.thumb} />}
           </button>
         );
       })}
@@ -83,7 +90,7 @@ function Progress({ item, seasons }: { item: LibraryItem; seasons: readonly numb
         <span className={styles.progressValue}>{progress ? formatEpisode(progress) : "Not started"}</span>
       </div>
       <div className={styles.progressTrack} aria-hidden="true">
-        <span style={{ width: `${total ? (watched / total) * 100 : 0}%` }} />
+        <span style={{ "--share": total ? watched / total : 0 } as React.CSSProperties} />
       </div>
       <p className={styles.progressNote}>
         {watched} of {total} episodes watched
@@ -133,9 +140,15 @@ export function StatusControls({ item }: { item: LibraryItem }) {
         type="button"
         className={styles.favourite}
         aria-pressed={entry.isFavourite}
-        onClick={() => change(item, { isFavourite: !entry.isFavourite })}
+        onClick={(event) => {
+          // Made one: said with a ring from the button, as the heart fills.
+          if (!entry.isFavourite) successPulse(event.currentTarget);
+          change(item, { isFavourite: !entry.isFavourite });
+        }}
       >
-        <HeartIcon filled={entry.isFavourite} />
+        <IconSwap swapKey={entry.isFavourite ? "full" : "empty"}>
+          <HeartIcon filled={entry.isFavourite} />
+        </IconSwap>
         Favourite
       </button>
     </section>

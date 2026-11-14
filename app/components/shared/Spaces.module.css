@@ -97,6 +97,45 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   letter-spacing: 0.08em;
 }
+/* Its eight characters in two groups of four, easier to hold in mind while
+   typing them (Miller's law): a gap only, the code itself unbroken, so it
+   copies whole. Any spaces typed are read away (lib/schemas.ts, inviteCodeOf). */
+.codeGroup + .codeGroup {
+  margin-left: 0.5em;
+}
+
+/* Shown, the link is unveiled: the blurred dots over it (a copy, .veil) are
+   wiped away from left to right by a mask, the sharp link under them as they
+   go, old and new at once (InviteLink's sibling, CalendarFeedCard). */
+.veil {
+  position: absolute;
+  inset: 1px;
+  display: flex;
+  align-items: center;
+  padding: 0 calc(var(--space-3) - 1px);
+  overflow: hidden;
+  border-radius: calc(var(--radius-md) - 1px);
+  background: var(--bg);
+  color: transparent;
+  font-size: var(--text-md);
+  text-shadow: 0 0 0.5rem var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  mask-image: linear-gradient(90deg, transparent 40%, #000 60%);
+  mask-size: 250% 100%;
+  mask-position: 0 0;
+  animation: unveil 0.36s var(--ease-in-out) backwards;
+}
+@keyframes unveil {
+  from {
+    mask-position: 100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .veil {
+    display: none;
+  }
+}
 
 /* The calendar link (Settings), hidden until Show: its text blurred (only the
    text: the field's edge stays sharp), and the whole field the Show button,

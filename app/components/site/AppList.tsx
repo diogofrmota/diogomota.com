@@ -40,7 +40,7 @@ export function AppList({
     <>
       <ul className={styles.grid}>
         {apps.map((app, i) => (
-          <li key={app.href} className={styles.card}>
+          <li key={app.href} className={styles.card} style={{ "--i": i } as React.CSSProperties}>
             <AppPreview href={app.href} />
             <div className={styles.info}>
               <Image src={app.logo} alt="" width={56} height={56} className={styles.logo} />

@@ -50,10 +50,21 @@ export type MoveInput = z.input<typeof moveInput>;
 
 // --- Shared: spaces ----------------------------------------------------------
 
+/**
+ * An invite code as it was typed or pasted, read generously (Postel's law):
+ * in any case, with spaces or dashes in it (as it is shown, in two groups of
+ * four: "ABCD 2345"), or as the whole invite link. Whether it is a code at all
+ * is the schema's to say.
+ */
+export function inviteCodeOf(text: string): string {
+  const fromLink = /\/join\/([^/?#\s]+)/i.exec(text)?.[1] ?? text;
+  return fromLink.replace(/[^a-z0-9]/gi, "").toUpperCase();
+}
+
 export const joinInput = z.object({
   code: z
     .string({ error: "Invalid invite code. Check the code and try again." })
-    .transform((code) => code.trim().toUpperCase())
+    .transform(inviteCodeOf)
     .pipe(z.string().regex(/^[A-HJ-NP-Z2-9]{8}$/, { error: "Invalid invite code. Check the code and try again." })),
 });
 export type JoinInput = z.input<typeof joinInput>;

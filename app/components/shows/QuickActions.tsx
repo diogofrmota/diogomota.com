@@ -51,11 +51,22 @@ export function QuickActions({ title }: { title: { type: MediaType; tmdbId: numb
   const library = useLibrary();
   const headingId = useId();
   const item = library.find(title);
-  const [style] = useState(() => placement(anchors.get(titleKey(title))));
+  const [anchor] = useState(() => anchors.get(titleKey(title)));
+  const [style] = useState(() => placement(anchor));
+  // A menu: as quick as a dropdown, and out of where it was opened (the ⋯, or the point of a right click).
   return (
     <Dialog
       className={`${styles.dialog} ${styles.menuDialog} ${style ? styles.anchored : ""}`}
       style={style}
+      kind="menu"
+      origin={
+        anchor && {
+          left: anchor.left,
+          top: anchor.top,
+          width: anchor.right - anchor.left,
+          height: anchor.bottom - anchor.top,
+        }
+      }
       aria-labelledby={headingId}
       onClose={closePanel}
     >

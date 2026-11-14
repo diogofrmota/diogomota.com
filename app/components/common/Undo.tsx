@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { exitMs, motion } from "@/lib/motion";
+import { usePresence } from "./motion";
 import ui from "./ui.module.css";
 
 export const undoSeconds = 5;
@@ -71,19 +73,26 @@ export function useUndo() {
   );
 }
 
-/** The message with Undo, at the bottom of the screen (over the tab bar on a phone). */
+/**
+ * The message with Undo, at the bottom of the screen (over the tab bar on a
+ * phone). Once it's done with, it sinks away (20% quicker than it rose),
+ * taking no taps meanwhile.
+ */
 export function UndoToast({ undo }: { undo: ReturnType<typeof useUndo> }) {
-  if (!undo.pending) return null;
+  const { shown, leaving } = usePresence(undo.pending, exitMs(motion.base));
+  if (!shown) return null;
   return (
     <div
       className={ui.toast}
       role="status"
+      data-leaving={leaving || undefined}
+      inert={leaving}
       onPointerEnter={undo.pause}
       onPointerLeave={undo.resume}
       onFocus={undo.pause}
       onBlur={undo.resume}
     >
-      <span>{undo.pending.label}</span>
+      <span>{shown.label}</span>
       <button type="button" className={ui.toastUndo} onClick={undo.undo}>
         Undo
       </button>

@@ -2,6 +2,7 @@
 import ui from "@/components/common/ui.module.css";
 import { useEffect, useId, useRef, useState } from "react";
 import { BookmarkIcon, CheckIcon, DoneIcon, PlayIcon, PlusIcon } from "@/components/common/icons";
+import { flyTo, IconSwap, successPulse } from "@/components/common/motion";
 import {
   addStatuses,
   nextEpisode,
@@ -40,8 +41,11 @@ export type TitleStatus = {
   busy: boolean;
   /** Why the last add failed. */
   error: string;
-  /** Adds the title with this status, or changes its status (or, with `toggle`, the same status again takes it out). */
-  choose: (status: LibraryStatus) => void;
+  /**
+   * Adds the title with this status, or changes its status (or, with `toggle`,
+   * the same status again takes it out). Resolves to whether it was just added.
+   */
+  choose: (status: LibraryStatus) => Promise<boolean>;
 };
 
 /** A title's place in the library, and adding it with a status from a card. */
@@ -55,13 +59,15 @@ export function useTitleStatus(title: TitleSummary, { toggle = false } = {}): Ti
     if (item) {
       if (item.library.status !== status) library.change(item, { status });
       else if (toggle) library.remove(item);
-      return;
+      return false;
     }
     setBusy(true);
     try {
       await library.add(title, status);
+      return true;
     } catch (err) {
       setError((err as Error).message);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -108,13 +114,33 @@ export function ProgressLine({
   );
 }
 
-/** The mark at a poster's bottom right: + to add, a tick once in the library, a ring while adding. Decorative. */
+/**
+ * The mark at a poster's bottom right: + to add, a tick once in the library, a
+ * ring while adding, each crossfading into the next (IconSwap); added, the
+ * accent fills it from the middle (Shows.module.css). Decorative.
+ */
 export function AddMark({ added, busy }: { added: boolean; busy: boolean }) {
+  const state = busy ? "busy" : added ? "added" : "add";
   return (
     <span className={styles.addMark} data-added={added} aria-hidden="true">
-      {busy ? <span className={styles.addRing} /> : added ? <CheckIcon /> : <PlusIcon />}
+      <IconSwap swapKey={state}>
+        {busy ? <span className={styles.addRing} /> : added ? <CheckIcon /> : <PlusIcon />}
+      </IconSwap>
     </span>
   );
+}
+
+/**
+ * A title just added from its card: its mark says so with a pulse, and (where
+ * the tab bar is in view, not from inside a panel) its poster flies along an
+ * arc into the Library tab, where it now is, which pulses as it lands.
+ */
+function celebrateAdding(card: Element | null) {
+  if (!card) return;
+  successPulse(card.querySelector(`.${styles.addMark}`));
+  const poster = card.querySelector("img");
+  const library = document.querySelector('nav [data-tab="library"]');
+  if (poster && library && !card.closest("dialog")) flyTo(poster, library);
 }
 
 // Over the poster, once a TV show is Watching: the last episode watched (its
@@ -236,7 +262,9 @@ export function StatusChooser({
                 style={{ "--i": i } as React.CSSProperties}
                 onClick={() => {
                   const ask = value === "watching" && title.type === "tv" && current !== "watching";
-                  status.choose(value);
+                  // The card stays when the chooser goes: what to celebrate on, once it's added.
+                  const card = group.current?.closest("li") ?? null;
+                  void status.choose(value).then((added) => added && celebrateAdding(card));
                   if (ask) setAskProgress(true);
                   else close();
                 }}

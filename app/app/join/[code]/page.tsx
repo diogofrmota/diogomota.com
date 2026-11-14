@@ -6,6 +6,7 @@ import ui from "@/components/common/ui.module.css";
 import { appViewport } from "@/lib/apps";
 import { memberName } from "@/lib/names";
 import { authHref } from "@/lib/next-path";
+import { inviteCodeOf } from "@/lib/schemas";
 import { readSpace, previewInvite } from "@/lib/spaces";
 import { themeOf } from "@/lib/users";
 import { JoinForm } from "./JoinForm";
@@ -23,7 +24,7 @@ export const viewport = appViewport;
 // or Sign up (which come back here), or, logged in, Join. Opening it never joins
 // by itself (a link preview or a prefetch would). Codes work once, for 24 hours.
 export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
-  const code = (await params).code.trim().toUpperCase();
+  const code = inviteCodeOf((await params).code);
   const valid = /^[A-HJ-NP-Z2-9]{8}$/.test(code);
   const [preview, session] = await Promise.all([valid ? previewInvite(code) : null, getSession()]);
   const theme = await themeOf(session?.user.id);

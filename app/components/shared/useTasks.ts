@@ -9,9 +9,10 @@ import { applyTaskChange, sharedKeys, sharedRequest, taskMutationKey, type TaskC
 /**
  * How long a task just ticked off stays in its list, ticked and crossed out,
  * before it moves to Done (or, repeating, comes back with its next due date).
- * Its row fades out over the end of it (Tasks.module.css, .ticking): change both together.
+ * Its row leaves over the end of it (Tasks.module.css, .ticking: 350ms, then an
+ * exit of 176ms, 20% shorter than an entrance): change both together.
  */
-export const tickedMs = 650;
+export const tickedMs = 530;
 /** While Tasks is open, it asks the server this often for what the others changed. */
 const liveMs = 5000;
 

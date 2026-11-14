@@ -16,3 +16,4 @@ One short record per decision that shapes the site: what was chosen, why, and wh
 | [0010](0010-open-sign-up-confirmed-email.md) | Open sign-up, with the email confirmed after | v1.2.0 |
 | [0011](0011-no-ratings.md) | No ratings in Shows: TMDB's only | v1.1.0 |
 | [0012](0012-calendar-subscription.md) | The whole calendar as a subscription, not a download | v1.2.0 |
+| [0013](0013-motion-system.md) | One motion system, with rules | unreleased |

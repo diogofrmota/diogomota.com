@@ -66,7 +66,8 @@ test("task Who? saves multiple people, keeps pictures after reload, and removes 
     const box = (await dialog.boundingBox())!;
     expect(box.width).toBeLessThan(390);
     expect(box.height).toBeLessThan(844);
-    await expect(dialog).toHaveCSS("animation-name", "none");
+    // It grows in from 0.95 of its size, out of the row pressed; it doesn't slide up (motion.spec.ts).
+    await expect(dialog).toHaveCSS("animation-name", /popup-in/);
     await expect(dialog.getByText("Extra options:", { exact: true })).toBeVisible();
     const picker = dialog.getByRole("group", { name: "Who?" });
     await expect(picker.getByRole("checkbox")).toHaveCount(2);

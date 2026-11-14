@@ -20,6 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useRef } from "react";
+import { motion } from "@/lib/motion";
 
 const verticalOnly: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 const instructions =
@@ -92,15 +93,20 @@ export function SortableList({
   );
 }
 
-/** For an item of a SortableList: its ref and style, and the props of its drag handle. */
+/**
+ * For an item of a SortableList: its ref and style, and the props of its drag
+ * handle. The others make room for it easing in and out (a move); the one held
+ * follows the pointer with no transition, so it never lags behind it.
+ */
 export function useSortableItem(id: string) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id,
+    transition: { duration: motion.move, easing: motion.easeInOut },
   });
   return {
     ref: setNodeRef,
     isDragging,
-    style: { transform: CSS.Translate.toString(transform), transition },
+    style: { transform: CSS.Translate.toString(transform), transition: isDragging ? undefined : transition },
     handle: { ref: setActivatorNodeRef, ...attributes, ...listeners, "data-drag-handle": "" },
   };
 }

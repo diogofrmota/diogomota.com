@@ -67,8 +67,14 @@
   height: var(--icon-md);
 }
 
-/* Its corners: its buttons' (--radius-md), plus the 3px around them. */
+/* Its corners: its buttons' (--radius-md), plus the 3px around them. The
+   raised thumb is one object (a SegmentThumb, Discover.tsx) that slides from
+   one option to the other, stretching on the way, as their colors cross over;
+   each label keeps the width of its bold self, so nothing shifts. */
 .switcher {
+  /* Its own stacking context: the thumb (z-index -1) goes over its background
+     and under both labels, whichever button it is in. */
+  isolation: isolate;
   display: flex;
   width: fit-content;
   padding: 3px;
@@ -76,20 +82,44 @@
   background: var(--hover);
 }
 .view .switcher button {
+  position: relative;
   border: 0;
   background: transparent;
   padding-inline: 1.1rem;
-}
-.view .switcher button {
   transition:
-    background-color var(--duration-fast),
-    color var(--duration-fast);
+    color var(--duration-move) var(--ease-in-out),
+    scale var(--duration-fast) var(--ease-out);
 }
 .view .switcher button[aria-pressed="true"] {
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
   color: var(--accent);
   font-weight: var(--weight-semibold);
+}
+.switcher .thumb {
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+@media (hover: hover) {
+  .view .switcher button:hover,
+  .dialog .statusPicker button:hover {
+    background: transparent;
+    color: var(--text);
+  }
+  .view .switcher button[aria-pressed="true"]:hover,
+  .dialog .statusPicker button[aria-pressed="true"]:hover {
+    color: var(--accent);
+  }
+}
+/* A label over a hidden bold copy of itself, as wide as the wider of the two. */
+.switchLabel {
+  display: inline-grid;
+}
+.switchLabel > * {
+  grid-area: 1 / 1;
+}
+.switchLabel > :last-child {
+  font-weight: var(--weight-semibold);
+  visibility: hidden;
 }
 
 .section {
@@ -288,10 +318,11 @@
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
 }
-/* Cards fade up into place one after another (--i: their place in the list). */
+/* Cards fade up into place one after another (--i: their place in the list),
+   30ms apart, ten deep at most, easing out. */
 .cardItem {
-  animation: card-in 0.3s ease-out both;
-  animation-delay: calc(min(var(--i, 0), 10) * 25ms);
+  animation: card-in var(--duration) var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
 }
 @keyframes card-in {
   from {
@@ -336,7 +367,7 @@
     background: none;
   }
   .addButton:hover .addMark {
-    transform: scale(1.1);
+    scale: 1.1;
   }
 }
 .addButton:focus-visible {
@@ -346,8 +377,12 @@
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
-/* + or a tick, centered in a circle. */
+/* + or a tick, centered in a circle; one crossfades into the other (IconSwap).
+   Added, the accent fills it from its middle out, a circle that grows (a mask:
+   clip-path), rather than the color fading. */
 .addMark {
+  position: relative;
+  isolation: isolate;
   display: grid;
   place-items: center;
   width: 2rem;
@@ -359,8 +394,21 @@
     0 0 0 1.5px rgb(255 255 255 / 0.55),
     0 1px 4px #0006;
   transition:
-    transform 0.15s,
-    background-color 0.2s;
+    scale var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+.addMark::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  clip-path: circle(0);
+  transition: clip-path var(--duration) var(--ease-out);
+}
+.addMark[data-added="true"]::before {
+  clip-path: circle(50%);
 }
 .posterSpot > .addMark {
   position: absolute;
@@ -374,12 +422,9 @@
   stroke-width: 2.5;
 }
 .addMark[data-added="true"] {
-  background: var(--accent);
   color: var(--bg);
 }
-.addMark[data-added="true"] svg {
-  animation: mark-pop 0.35s cubic-bezier(0.3, 1.6, 0.6, 1);
-}
+/* The tick at the end of the guide pops in (a celebration: the one bounce). */
 @keyframes mark-pop {
   from {
     transform: scale(0.3) rotate(-45deg);
@@ -413,11 +458,15 @@
   background: rgb(12 12 16 / 0.8);
   backdrop-filter: blur(3px);
   pointer-events: auto;
-  animation: chooser-in 0.18s ease-out;
+  /* A dropdown out of the + (its trigger, at the bottom right): from 0.95,
+     fading in, in 180ms, easing out. */
+  transform-origin: calc(100% - 1.375rem) calc(100% - 1.375rem);
+  animation: chooser-in var(--duration-dropdown) var(--ease-out);
 }
 @keyframes chooser-in {
   from {
     opacity: 0;
+    scale: var(--popover-scale);
   }
 }
 .chooserHeading {
@@ -445,8 +494,8 @@
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   text-align: center;
-  animation: option-in 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
-  animation-delay: calc(var(--i, 0) * 45ms);
+  animation: option-in var(--duration) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
 }
 .chooserOption svg {
   flex: none;
@@ -484,10 +533,11 @@
   outline: 2px solid #fff;
   outline-offset: 1px;
 }
+/* Each option rises into place after the one before: no bounce, an everyday part. */
 @keyframes option-in {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.94);
+    transform: translateY(4px);
   }
 }
 /* Watching a TV show, then the last episode watched (AddToLibrary.tsx,
@@ -516,7 +566,7 @@
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
-  animation: option-in 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation: option-in var(--duration) var(--ease-out) both;
 }
 .chooser option {
   background: #fff;
@@ -584,11 +634,11 @@
   .chooser,
   .view .chooserOption,
   .dialog .chooserOption,
-  .chooser select,
-  .addMark[data-added="true"] svg {
+  .chooser select {
     animation: none;
   }
-  .addMark {
+  .addMark,
+  .addMark::before {
     transition: none;
   }
   .addRing {
@@ -714,10 +764,12 @@
   height: 4px;
   transform: scaleX(var(--share));
   transform-origin: left;
+  /* Growing as episodes are watched: a move, easing in and out; drawn in from
+     the left the first time, easing out. */
   transition:
-    transform 0.45s var(--ease-out),
+    transform var(--duration-move) var(--ease-in-out),
     background-color 0.3s;
-  animation: poster-progress-in 0.6s var(--ease-out) backwards;
+  animation: poster-progress-in 0.45s var(--ease-out) backwards;
 }
 .posterProgressLine.watching {
   background: #1d4ed8;
@@ -767,7 +819,16 @@
   background: #000c;
   color: #fff;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition:
+    opacity 0.15s,
+    scale var(--duration-fast) var(--ease-out);
+}
+/* 36px drawn, but 44px to aim at (Fitts's law): its hit area reaches past it. */
+.view .cardMenu::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
 }
 .cardMenu svg {
   width: var(--icon-md);
@@ -846,28 +907,9 @@
   display: flex;
   flex-direction: column;
 }
+/* It grows in from what opened it, and its backdrop fades in (components/common/Dialog). */
 .dialog::backdrop {
   background: #0008;
-  animation: backdrop-in 0.2s ease-out;
-}
-.dialog[open] {
-  animation: dialog-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1);
-}
-@keyframes dialog-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.97);
-  }
-}
-@keyframes backdrop-in {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes sheet-in {
-  from {
-    transform: translateY(100%);
-  }
 }
 .dialogBody {
   flex: 1;
@@ -1159,16 +1201,13 @@
   color: var(--accent);
   font-weight: var(--weight-semibold);
   transition:
-    transform var(--duration-fast) var(--ease-out),
+    scale var(--duration-fast) var(--ease-out),
     background-color var(--duration-fast),
     color var(--duration-fast);
 }
 .addOption svg {
   width: 1.5rem;
   height: 1.5rem;
-}
-.dialog .addOption:active:not(:disabled) {
-  transform: scale(0.97);
 }
 @media (hover: hover) {
   .dialog .addOption:hover {
@@ -1261,17 +1300,11 @@
   color: var(--danger);
   font-weight: var(--weight-semibold);
 }
-/* Made a favourite: the heart beats once. */
-.favourite[aria-pressed="true"] svg {
-  animation: pop 0.35s var(--ease-spring);
-}
-@keyframes pop {
-  from {
-    transform: scale(0.6);
-  }
-}
+/* Made a favourite: the empty heart crossfades into the full one (IconSwap),
+   and a ring spreads from the button (LibraryControls.tsx, successPulse). */
 /* Its corners: its buttons' (--radius-md), plus the 3px around them. */
 .statusPicker {
+  isolation: isolate;
   display: flex;
   margin-bottom: 1rem;
   padding: 3px;
@@ -1286,12 +1319,19 @@
   gap: 0.4rem;
   min-width: 0;
   padding-inline: 0.6rem;
+  position: relative;
   border: 0;
   background: transparent;
   white-space: nowrap;
   transition:
-    background-color var(--duration-fast),
-    color var(--duration-fast);
+    color var(--duration-move) var(--ease-in-out),
+    scale var(--duration-fast) var(--ease-out);
+}
+/* The status's thumb: one object sliding to the status chosen (LibraryControls.tsx). */
+.statusPicker .thumb {
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  box-shadow: var(--shadow-sm);
 }
 .statusPicker svg {
   flex: none;
@@ -1304,10 +1344,8 @@
   }
 }
 .dialog .statusPicker button[aria-pressed="true"] {
-  background: var(--accent-soft);
   color: var(--accent);
   font-weight: var(--weight-semibold);
-  box-shadow: var(--shadow-sm);
 }
 .progress {
   display: grid;
@@ -1326,7 +1364,10 @@
   font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
 }
-/* How far through the show: a bar, and the episodes in words under it. */
+/* How far through the show: a bar, and the episodes in words under it. The
+   bar is revealed by a mask (clip-path) as far as the share watched (--share,
+   0 to 1), its end rounded, and moves there easing in and out: nothing is laid
+   out again as it grows. */
 .progressTrack {
   height: 0.5rem;
   overflow: hidden;
@@ -1336,9 +1377,9 @@
 .progressTrack span {
   display: block;
   height: 100%;
-  border-radius: inherit;
   background: var(--accent);
-  transition: width var(--duration) var(--ease-out);
+  clip-path: inset(0 calc((1 - var(--share, 0)) * 100%) 0 0 round var(--radius-full));
+  transition: clip-path var(--duration-move) var(--ease-in-out);
 }
 .progressNote {
   margin: -0.4rem 0 0;
@@ -1656,9 +1697,40 @@ div.people {
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-md);
+  /* The combobox's list, a dropdown under its field: it grows from 0.95 out
+     of the field above it and fades in, in 180ms, easing out; it goes the
+     same way, 20% quicker. Transitions (from @starting-style, display kept
+     until they end), so a list reopened as it closes turns back. */
+  transform-origin: top center;
+  transition:
+    opacity var(--duration-dropdown) var(--ease-out),
+    scale var(--duration-dropdown) var(--ease-out),
+    display var(--duration-dropdown) allow-discrete;
+}
+@starting-style {
+  .suggestions:not([hidden]) {
+    opacity: 0;
+    scale: var(--popover-scale);
+  }
 }
 .suggestions[hidden] {
   display: none;
+  opacity: 0;
+  scale: var(--popover-scale);
+  transition-duration: calc(var(--duration-dropdown) * var(--exit));
+}
+/* Its people come in one after another, 30ms apart. */
+.suggestion {
+  animation: card-in var(--duration-dropdown) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
+}
+@media (prefers-reduced-motion: reduce) {
+  .suggestions {
+    transition: none;
+  }
+  .suggestion {
+    animation: none;
+  }
 }
 .suggestion {
   display: flex;
@@ -1894,7 +1966,7 @@ div.people {
 }
 /* A new step slides in from its side (not the first, which the page opens on). */
 .onboardingStep[data-direction] {
-  animation: step-from-end 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation: step-from-end var(--duration-move) var(--ease-out) backwards;
 }
 .onboardingStep[data-direction="back"] {
   animation-name: step-from-start;
@@ -2004,14 +2076,24 @@ div.people {
   border-radius: 50%;
   background: var(--accent);
   color: var(--bg);
-  animation: mark-pop 0.5s var(--ease-spring) both;
+  animation:
+    mark-pop 0.5s var(--ease-celebrate) both,
+    success-pulse 0.7s 0.45s var(--ease-out);
 }
 .allSetMark svg {
   width: 2.25rem;
   height: 2.25rem;
   stroke-width: 2.75;
   stroke-dasharray: 24;
-  animation: draw 0.45s 0.3s ease-out both;
+  animation: draw 0.45s 0.3s var(--ease-out) both;
+}
+@keyframes success-pulse {
+  from {
+    box-shadow: 0 0 0 0 var(--pulse);
+  }
+  to {
+    box-shadow: 0 0 0 1.25rem transparent;
+  }
 }
 @keyframes draw {
   from {
@@ -2037,13 +2119,25 @@ div.people {
   padding: 0 0 0 1rem;
   list-style: none;
 }
+/* The fan: each poster flies out of one pile in the middle to its place,
+   along an arc (across, easing in and out, on `translate`; up and over with a
+   celebration's overshoot, on `transform`: two curves, so the path bends),
+   one after another. The end of the guide is a celebration, seen once: the
+   one place with a bounce. */
 .collage li {
   width: clamp(3.5rem, 15vw, 5rem);
   margin-left: -1rem;
   border-radius: var(--radius-md);
   transform: rotate(calc((var(--i) - 2.5) * 4deg));
-  animation: collage-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation:
+    collage-across 0.5s var(--ease-in-out) both,
+    collage-in 0.5s var(--ease-celebrate) both;
   animation-delay: calc(var(--i) * 70ms + 0.25s);
+}
+@keyframes collage-across {
+  from {
+    translate: calc((2.5 - var(--i)) * 2.25rem) 0;
+  }
 }
 .collage .poster {
   border: 2px solid var(--surface);
@@ -2052,7 +2146,7 @@ div.people {
 @keyframes collage-in {
   from {
     opacity: 0;
-    transform: translateY(18px) scale(0.85);
+    transform: translateY(1.5rem) scale(0.85);
   }
 }
 .view .allSetButton {
@@ -2062,8 +2156,7 @@ div.people {
 @media (prefers-reduced-motion: reduce) {
   .allSetMark,
   .allSetMark svg,
-  .collage li,
-  .favourite[aria-pressed="true"] svg {
+  .collage li {
     animation: none;
   }
   .view .switcher button,
@@ -2071,9 +2164,6 @@ div.people {
   .progressTrack span,
   .dialog .addOption {
     transition: none;
-  }
-  .dialog .addOption:active:not(:disabled) {
-    transform: none;
   }
   .stepper li + li::before,
   .stepNumber {
@@ -2217,11 +2307,6 @@ div.people {
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     border-bottom: 0;
   }
-  .titleDialog[open],
-  .menuDialog[open] {
-    animation-name: sheet-in;
-    animation-duration: 0.28s;
-  }
   .menuDialog .dialogBody {
     padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom));
   }
@@ -2249,14 +2334,6 @@ div.people {
     top: -1rem;
     margin: -1rem -1rem 1rem;
     padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0.75rem;
-  }
-}
-
-/* Last, so it wins over the phone sheets' slide (in the media query above). */
-@media (prefers-reduced-motion: reduce) {
-  .dialog[open],
-  .dialog::backdrop {
-    animation: none;
   }
 }
 

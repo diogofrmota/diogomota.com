@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from "react";
 import { Avatar } from "@/components/common/Avatar";
+import { rubberBand } from "@/lib/motion";
 import { memberName } from "@/lib/names";
 import { GripIcon, RepeatIcon, TrashIcon } from "@/components/common/icons";
 import { dateLabel, datePlus } from "@/lib/calendar";
@@ -14,6 +15,8 @@ type RowProps = {
   space: Space;
   /** YYYY-MM-DD in the calendar's time zone. */ today: string;
   /** Just ticked off: shown ticked and crossed out, fading out, until it moves to Done. */ ticking?: boolean;
+  /** When it comes in: its --delay, one row after another the first time the list shows (stagger). */
+  enter?: CSSProperties;
   onToggle: (isComplete: boolean) => void;
   onOpen: () => void;
   onDelete: () => void;
@@ -32,6 +35,8 @@ function dueText(date: string, today: string, isComplete: boolean) {
 
 // Swipe left with a finger (or pen) to delete; a mouse uses the delete button.
 // The row has touch-action: pan-y, so vertical moves still scroll the page.
+// It follows the finger (no transition while held); taken back past where it
+// started, it rubber-bands; let go short of deleting, it eases back.
 function useSwipe(onSwipe: () => void) {
   const [offset, setOffset] = useState<number | null>(null);
   const start = useRef<{ x: number; y: number; pointer: number; swiping: boolean } | null>(null);
@@ -63,7 +68,7 @@ function useSwipe(onSwipe: () => void) {
           s.swiping = true;
           e.currentTarget.setPointerCapture(e.pointerId);
         }
-        setOffset(Math.min(0, dx));
+        setOffset(dx <= 0 ? dx : rubberBand(dx, e.currentTarget.offsetWidth));
       },
       onPointerUp(e: PointerEvent<HTMLElement>) {
         const s = start.current;
@@ -95,6 +100,7 @@ export function TaskRow({
   space,
   today,
   ticking = false,
+  enter,
   onToggle,
   onOpen,
   onDelete,
@@ -106,10 +112,10 @@ export function TaskRow({
   return (
     <li
       ref={sortable?.ref}
-      style={sortable?.style}
+      style={{ ...enter, ...sortable?.style }}
       className={`${styles.task} ${sortable?.isDragging ? styles.dragging : ""} ${task.isComplete || ticking ? styles.complete : ""} ${ticking ? styles.ticking : ""}`}
     >
-      {swipe.offset !== null && (
+      {swipe.offset !== null && swipe.offset < 0 && (
         <div className={styles.swipeBehind} aria-hidden="true">
           <TrashIcon />
           Delete
@@ -137,7 +143,7 @@ export function TaskRow({
         </label>
         {/* In one line, as far as it goes: the title, who it's for (their pictures),
             when it's due, how often it repeats and the notes; what doesn't fit goes under. */}
-        <button type="button" className={styles.open} onClick={onOpen}>
+        <button type="button" className={styles.open} data-press="wide" onClick={onOpen}>
           <span className={styles.title}>{task.title}</span>
           {members.length > 0 && (
             <span className={styles.assignees}>

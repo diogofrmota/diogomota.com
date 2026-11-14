@@ -78,7 +78,7 @@ export function ActivityFeed({
   if (!items.length) return <p className={styles.empty}>{empty}</p>;
   return (
     <ol className={styles.feed}>
-      {items.map((item) => {
+      {items.map((item, index) => {
         const title =
           item.title &&
           (onOpenTitle ? (
@@ -89,7 +89,7 @@ export function ActivityFeed({
             <strong>{item.title.title}</strong>
           ));
         return (
-          <li key={item.id}>
+          <li key={item.id} style={{ "--i": index } as React.CSSProperties}>
             <Avatar username={item.person.username} url={item.person.avatarUrl} className={styles.avatar} />
             <p>
               <strong>{memberName(item.person)}</strong> {sentence(item, title)}

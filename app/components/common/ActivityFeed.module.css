@@ -8,10 +8,27 @@
   list-style: none;
 }
 
+/* Each line comes in from just below, one after another (--i, 30ms apart,
+   ten deep at most), easing out; a new one at the top, at once. */
 .feed li {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
+  animation: feed-in var(--duration) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
+}
+
+@keyframes feed-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed li {
+    animation: none;
+  }
 }
 
 .feed p {

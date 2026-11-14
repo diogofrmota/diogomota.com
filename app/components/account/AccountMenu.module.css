@@ -81,12 +81,12 @@
   white-space: nowrap;
 }
 
-/* Turns over while the menu is open. */
+/* Turns over while the menu is open: a move, so easing in and out. */
 .chevron {
   display: inline-flex;
   flex-shrink: 0;
   color: var(--menu-muted);
-  transition: transform 150ms ease;
+  transition: transform var(--duration-dropdown) var(--ease-in-out);
 }
 
 .chevron svg {
@@ -148,25 +148,36 @@
   border-radius: var(--radius-lg);
   background: var(--menu-bg);
   box-shadow: var(--shadow-md);
+  /* A dropdown: it grows from 0.95 of its size out of the corner by its
+     button (origin-aware) and fades in, in 180ms, easing out; closing, the
+     same back, 20% quicker. Transitions (from @starting-style, with display
+     kept until it ends), not keyframes, so they're interruptible: reopened
+     while closing, it turns back from where it got to. */
   transform-origin: top right;
-  animation: menu-in 140ms ease-out;
+  transition:
+    opacity var(--duration-dropdown) var(--ease-out),
+    scale var(--duration-dropdown) var(--ease-out),
+    display var(--duration-dropdown) allow-discrete;
 }
 
-@keyframes menu-in {
-  from {
+@starting-style {
+  .list:not([hidden]) {
     opacity: 0;
-    transform: translateY(-4px) scale(0.97);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .list {
-    animation: none;
+    scale: var(--popover-scale);
   }
 }
 
 .list[hidden] {
   display: none;
+  opacity: 0;
+  scale: var(--popover-scale);
+  transition-duration: calc(var(--duration-dropdown) * var(--exit));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list {
+    transition: none;
+  }
 }
 
 .items {

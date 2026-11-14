@@ -117,6 +117,7 @@
 /* Fit all six weeks below the controls; only busy days and time views scroll.
    Keep dates usable on unusually short screens, where page scrolling is needed. */
 .scroller {
+  position: relative;
   flex: 1;
   min-height: 20rem;
   border: 1px solid var(--border);
@@ -291,10 +292,13 @@
 .calendar .allDayEvent {
   background: color-mix(in srgb, var(--event-color) 26%, var(--surface));
 }
-/* Another period or view: the new grid slides in from the side of its dates, or fades in. */
+/* Another period or view: the new grid slides in from the side of its dates,
+   or fades in, easing out; the old one, a copy over it (Calendar.tsx, leaveGrid),
+   slides out the other way meanwhile, 20% quicker: the two overlap rather than
+   one replacing the other. */
 .month[data-slide],
 .timeGrid[data-slide] {
-  animation: grid-from-end 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation: grid-from-end var(--duration-move) var(--ease-out) backwards;
 }
 .month[data-slide="back"],
 .timeGrid[data-slide="back"] {
@@ -303,7 +307,38 @@
 .month[data-slide="fade"],
 .timeGrid[data-slide="fade"] {
   animation-name: grid-fade;
-  animation-duration: 0.2s;
+  animation-duration: var(--duration);
+}
+/* The grid going: over the new one, taking no taps. */
+.scroller > [data-slide][data-leaving] {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  animation: grid-to-start calc(var(--duration-move) * var(--exit)) var(--ease-out) forwards;
+}
+.scroller > [data-slide][data-leaving="back"] {
+  animation-name: grid-to-end;
+}
+.scroller > [data-slide][data-leaving="fade"] {
+  animation-name: grid-fade-out;
+  animation-duration: calc(var(--duration) * var(--exit));
+}
+@keyframes grid-to-start {
+  to {
+    opacity: 0;
+    transform: translateX(-1.5rem);
+  }
+}
+@keyframes grid-to-end {
+  to {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+}
+@keyframes grid-fade-out {
+  to {
+    opacity: 0;
+  }
 }
 @keyframes grid-from-end {
   from {
@@ -328,9 +363,9 @@
     animation: none;
   }
 }
-/* Events fade in as they show (a new one, or another period's). */
+/* Events fade in as they show (a new one, or another period's), easing out. */
 .calendar .event {
-  animation: event-in 0.25s ease-out both;
+  animation: event-in var(--duration) var(--ease-out) both;
 }
 @keyframes event-in {
   from {
@@ -356,27 +391,13 @@
   color: var(--text);
   box-shadow: var(--shadow-lg);
 }
+/* It grows in from what opened it, and its backdrop fades in (components/common/Dialog). */
 .dialog[open] {
   display: flex;
   flex-direction: column;
 }
 .dialog::backdrop {
   background: #0008;
-  animation: backdrop-in 0.2s ease-out;
-}
-.dialog[open] {
-  animation: dialog-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1);
-}
-@keyframes dialog-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.97);
-  }
-}
-@keyframes backdrop-in {
-  from {
-    opacity: 0;
-  }
 }
 .dialogBody {
   flex: 1;
@@ -491,7 +512,12 @@
   gap: 0.4rem;
   margin-left: auto;
 }
-/* A switch, from a checkbox: the knob slides over when it's on. */
+/* A switch, from a checkbox: the knob slides over when it's on, easing in and
+   out (a move; no bounce), and the accent fills the track from under it, a
+   circle that grows from where the knob was (a mask: clip-path) as it goes.
+   Pressed, the knob stretches 12% towards where it will go (the wind-up), and
+   lets go as it moves, so it's stretched at the start of the move (squash and
+   stretch). Its own scale, so it adds to its slide. */
 .form .switch {
   position: relative;
   flex: none;
@@ -506,7 +532,20 @@
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  /* The track itself doesn't give when pressed: the knob does. */
+  scale: none;
+}
+.switch::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  clip-path: circle(0 at 0.875rem 50%);
+  transition: clip-path var(--duration-move) var(--ease-in-out);
+}
+.switch:checked::before {
+  clip-path: circle(150% at 2.125rem 50%);
 }
 .switch::after {
   content: "";
@@ -515,16 +554,20 @@
   left: 0.1875rem;
   width: 1.375rem;
   height: 1.375rem;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: #fff;
   box-shadow: 0 1px 3px #0005;
-  transition: transform 0.2s cubic-bezier(0.3, 1.4, 0.6, 1);
-}
-.form .switch:checked {
-  background: var(--accent);
+  transform-origin: left center;
+  transition:
+    translate var(--duration-move) var(--ease-in-out),
+    scale var(--duration-fast) var(--ease-out);
 }
 .switch:checked::after {
-  transform: translateX(1.25rem);
+  translate: 1.25rem 0;
+  transform-origin: right center;
+}
+.form .switch:active::after {
+  scale: var(--stretch) 1;
 }
 .form .switch:focus-visible {
   outline: 2px solid var(--accent);
@@ -570,10 +613,13 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .form .switch,
+  .switch::before,
   .switch::after,
   .form .masked {
     transition: none;
+  }
+  .form .switch:active::after {
+    scale: none;
   }
 }
 .whenDetails {
@@ -653,6 +699,7 @@
   color: var(--muted);
   font-size: 0.625rem;
   font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
   line-height: 14px;
   text-align: left;
   white-space: nowrap;
@@ -753,10 +800,6 @@
     border: 0;
     border-radius: 0;
   }
-  .dialog[open] {
-    animation-name: sheet-in;
-    animation-duration: 0.28s;
-  }
   .dialogBody {
     padding: calc(1rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
       calc(1.25rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
@@ -775,17 +818,6 @@
   .calendar .add {
     min-width: 44px;
     padding-inline: 0;
-  }
-}
-@keyframes sheet-in {
-  from {
-    transform: translateY(100%);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .dialog[open],
-  .dialog::backdrop {
-    animation: none;
   }
 }
 @media (max-width: 47.99rem) and (max-height: 50rem) {
@@ -817,10 +849,20 @@
   justify-items: start;
 }
 .agenda[data-slide] {
-  animation: grid-fade 0.2s var(--ease-out) backwards;
+  animation: grid-fade var(--duration) var(--ease-out) backwards;
+}
+/* Its rows come in one after another, 30ms apart (--delay, Calendar.tsx), the
+   first time they show; each row as a whole, its time with its event. */
+.agendaDay li {
+  animation: event-in var(--duration) var(--ease-out) backwards;
+  animation-delay: var(--delay, 0ms);
+}
+.calendar .agendaDay .event {
+  animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .agenda[data-slide] {
+  .agenda[data-slide],
+  .agendaDay li {
     animation: none;
   }
 }
@@ -995,15 +1037,19 @@
 }
 /* Agenda | Month: both always there, the one showing raised and in the accent
    (as Shows' TV Shows | Movies), each a whole 44px to tap. Its corners: its
-   buttons' (--radius-md), plus the 3px around them. */
+   buttons' (--radius-md), plus the 3px around them. The raised thumb is one
+   object (a SegmentThumb, Calendar.tsx) that slides from one to the other,
+   stretching on the way, as the labels' colors cross over. */
 .viewSwitch {
+  /* Its own stacking context: the thumb (z-index -1) goes over its background
+     and under both labels, whichever button it is in. */
+  isolation: isolate;
   display: flex;
   border-radius: calc(var(--radius-md) + 3px);
   background: var(--hover);
 }
 .calendar .viewSwitch button {
   position: relative;
-  z-index: 0;
   padding: 0 var(--space-3);
   border: 0;
   border-radius: calc(var(--radius-md) + 3px);
@@ -1011,24 +1057,19 @@
   color: var(--muted);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
+  transition:
+    color var(--duration-move) var(--ease-in-out),
+    scale var(--duration-fast) var(--ease-out);
 }
-.calendar .viewSwitch button::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
+.calendar .viewSwitch .thumb {
   inset: 3px;
   border-radius: var(--radius-md);
-  transition:
-    background-color var(--duration-fast),
-    box-shadow var(--duration-fast);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 .calendar .viewSwitch button[aria-pressed="true"] {
   color: var(--accent);
   font-weight: var(--weight-semibold);
-}
-.calendar .viewSwitch button[aria-pressed="true"]::before {
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
 }
 @media (hover: hover) {
   .calendar .viewSwitch button:hover {
@@ -1040,7 +1081,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .calendar .viewSwitch button::before {
+  .calendar .viewSwitch button {
     transition: none;
   }
 }

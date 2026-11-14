@@ -80,13 +80,26 @@
   accent-color: var(--accent);
   cursor: pointer;
 }
-/* Ticked: it pops, so the tap is seen to have done it (the task then moves to Done). */
-.tasks input[type="checkbox"]:checked {
-  animation: tick 0.3s var(--ease-spring);
+/* Just ticked: it pops (from small, easing out: no bounce, it's done many times
+   a day) and a ring of the accent spreads from it once, to confirm it
+   (success-pulse); the task then moves to Done. */
+.ticking input[type="checkbox"]:checked {
+  border-radius: var(--radius-xs);
+  animation:
+    tick var(--duration) var(--ease-out),
+    success-pulse 0.6s var(--ease-out);
 }
 @keyframes tick {
   from {
     transform: scale(0.6);
+  }
+}
+@keyframes success-pulse {
+  from {
+    box-shadow: 0 0 0 0 var(--pulse);
+  }
+  to {
+    box-shadow: 0 0 0 0.5rem transparent;
   }
 }
 .tasks textarea {
@@ -197,11 +210,21 @@
   margin: 0;
   padding: 0;
 }
-/* The list's corners less the room beside its rows (concentric). */
+/* The list's corners less the room beside its rows (concentric). A row comes
+   in from just below, easing out: the first time the list shows, one after
+   another (--delay, 30ms apart: Tasks.tsx); a task added later, at once. */
 .task {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-xs);
+  animation: row-in var(--duration) var(--ease-out) backwards;
+  animation-delay: var(--delay, 0ms);
+}
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 .task + .task {
   box-shadow: 0 -1px 0 var(--border);
@@ -222,8 +245,10 @@
   display: flex;
   background: var(--surface);
   touch-action: pan-y;
-  transition: transform 0.2s ease;
+  /* Let go short of deleting: back into place, easing out. */
+  transition: transform var(--duration) var(--ease-out);
 }
+/* Under the finger: no transition, so it doesn't lag behind it. */
 .swiping {
   transition: none;
 }
@@ -302,15 +327,20 @@
   color: var(--muted);
   text-decoration: line-through;
 }
-/* Just ticked off: the tick pops and the title is crossed out, then the row
-   fades out, sliding away, and moves to Done (useTasks.ts, tickedMs: 650ms in
-   all, change both together). Where the browser can animate a height, the row
-   closes up too, so the rows under it slide up rather than jump. */
+/* Just ticked off: the tick pops and the title is crossed out (a secondary
+   action), then the row leaves for Done, below: along an arc, across easing in
+   and out while it rises a little and drops (two animations, each its own
+   curve), fading, in an exit's time (--duration less 20%). It then moves to
+   Done (useTasks.ts, tickedMs: 350ms + 176ms, 530ms in all, change both
+   together). Where the browser can animate a height, the row closes up too,
+   so the rows under it slide up rather than jump. */
 .ticking .title {
   transition: color var(--duration) ease;
 }
 .ticking {
-  animation: task-out 0.3s 0.35s var(--ease-out) forwards;
+  animation:
+    task-out calc(var(--duration) * var(--exit)) 0.35s var(--ease-in-out) forwards,
+    task-drop calc(var(--duration) * var(--exit)) 0.35s cubic-bezier(0.45, -0.6, 0.75, 0.6) forwards;
   pointer-events: none;
 }
 .ticking .check {
@@ -322,10 +352,15 @@
     transform: translateX(1rem);
   }
 }
+@keyframes task-drop {
+  to {
+    translate: 0 0.5rem;
+  }
+}
 @supports (interpolate-size: allow-keywords) {
   .ticking {
     interpolate-size: allow-keywords;
-    animation-name: task-out-closing;
+    animation-name: task-out-closing, task-drop;
   }
   @keyframes task-out-closing {
     to {
@@ -411,17 +446,25 @@
   width: 1.125rem;
   height: 1.125rem;
   transform: rotate(-90deg);
-  transition: transform var(--duration) var(--ease-out);
+  transition: transform var(--duration-move) var(--ease-in-out);
 }
 .done[open] summary svg {
   transform: none;
 }
-/* Rises into place, so the Undo it offers is noticed. */
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 0.75rem);
-  }
+/* Done's tasks are there on demand (progressive disclosure): opening it, they
+   unfold, the list growing to their height as the chevron turns (both moves,
+   easing in and out); closing, they fold away 20% quicker. Where the browser
+   can animate to a height of auto (else at once). */
+.done::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    block-size calc(var(--duration-move) * var(--exit)) var(--ease-in-out),
+    content-visibility calc(var(--duration-move) * var(--exit)) allow-discrete;
+}
+.done[open]::details-content {
+  block-size: auto;
+  transition-duration: var(--duration-move);
 }
 
 /* The content fills the dialog, so a click on the dialog itself is on the backdrop (components/common/Dialog). */
@@ -437,32 +480,13 @@
   color: var(--text);
   box-shadow: var(--shadow-lg);
 }
+/* It grows in from what opened it, and its backdrop fades in (components/common/Dialog). */
 .dialog[open] {
   display: flex;
   flex-direction: column;
 }
 .dialog::backdrop {
   background: #0008;
-  animation: backdrop-in 0.2s ease-out;
-}
-.dialog[open] {
-  animation: dialog-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1);
-}
-@keyframes dialog-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.97);
-  }
-}
-@keyframes backdrop-in {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes sheet-in {
-  from {
-    transform: translateY(100%);
-  }
 }
 .dialogBody {
   flex: 1;
@@ -520,11 +544,14 @@
   border-color: var(--danger);
 }
 @media (prefers-reduced-motion: reduce) {
-  .tasks input[type="checkbox"]:checked,
-  .ticking {
+  .ticking input[type="checkbox"]:checked,
+  .ticking,
+  .task {
     animation: none;
   }
-  .done summary svg {
+  .done summary svg,
+  .row,
+  .done::details-content {
     transition: none;
   }
 }
@@ -568,24 +595,12 @@
     border: 0;
     border-radius: 0;
   }
-  .dialog[open] {
-    animation-name: sheet-in;
-    animation-duration: 0.28s;
-  }
   .dialogBody {
     padding: calc(1rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
       calc(1.25rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   }
   .fields {
     grid-template-columns: 1fr;
-  }
-}
-
-/* Last, so it wins over the phone sheets' slide (in the media query above). */
-@media (prefers-reduced-motion: reduce) {
-  .dialog[open],
-  .dialog::backdrop {
-    animation: none;
   }
 }
 

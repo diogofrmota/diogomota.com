@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { CopyIcon, ShareIcon } from "@/components/common/icons";
+import { ShareIcon } from "@/components/common/icons";
+import { CopiedIcon, useBriefly } from "@/components/common/motion";
 import { Button, Notice } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
 import { dateTimeLabel } from "@/lib/calendar";
@@ -21,6 +22,7 @@ export function InviteLink({ space, label = "Share invite link" }: { space: Spac
   const [invite, setInvite] = useState<Invite | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
+  const [copied, showCopied] = useBriefly();
 
   async function share() {
     setBusy(true);
@@ -54,6 +56,7 @@ export function InviteLink({ space, label = "Share invite link" }: { space: Spac
     try {
       await navigator.clipboard.writeText(inviteUrl(invite.code));
       setNotice({ text: "Link copied." });
+      showCopied();
     } catch {
       setNotice({ text: "Couldn't copy the link. Select it and copy it instead.", error: true });
     }
@@ -78,11 +81,16 @@ export function InviteLink({ space, label = "Share invite link" }: { space: Spac
             />
           </div>
           <Button onClick={copy}>
-            <CopyIcon />
+            <CopiedIcon copied={copied} />
             Copy link
           </Button>
           <p className={ui.muted}>
-            Or the code <strong className={styles.code}>{invite.code}</strong>, in Join with a code. Works once, until{" "}
+            Or the code{" "}
+            <strong className={styles.code}>
+              <span className={styles.codeGroup}>{invite.code.slice(0, 4)}</span>
+              <span className={styles.codeGroup}>{invite.code.slice(4)}</span>
+            </strong>
+            , in Join with a code. Works once, until{" "}
             <time dateTime={invite.expiresAt}>{dateTimeLabel(invite.expiresAt)}</time>.
           </p>
         </div>

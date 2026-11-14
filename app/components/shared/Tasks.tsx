@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { ChevronDownIcon, PlusIcon } from "@/components/common/icons";
+import { stagger, useSettled } from "@/components/common/motion";
 import { Spinner } from "@/components/common/Spinner";
 import { Alert, Button } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
@@ -33,6 +34,8 @@ export function Tasks({ space }: { space: Space }) {
   const { panels, openPanel, closePanel } = useAppView();
   const [selectedId, setSelectedId] = useState(storedList);
   const [doneOpen, setDoneOpen] = useState(false);
+  // The rows come in one after another the first time the tasks show; later ones at once.
+  const settled = useSettled(!!lists);
 
   const list = lists?.find((l) => l.id === selectedId) ?? lists?.[0];
   // A task just ticked off stays here, ticked, until it moves to Done; it no
@@ -58,11 +61,12 @@ export function Tasks({ space }: { space: Space }) {
     input.value = "";
     return value;
   }
-  const rowProps = (task: Task) => ({
+  const rowProps = (task: Task, index: number) => ({
     task,
     space,
     today,
     ticking: ticking.has(task.id),
+    enter: stagger(index, settled),
     onToggle: (isComplete: boolean) =>
       task.isComplete
         ? actions.updateTask(task.id, { isComplete })
@@ -154,8 +158,8 @@ export function Tasks({ space }: { space: Space }) {
                 onMove={(id, beforeId) => actions.moveTask(list.id, id, beforeId)}
               >
                 <ul className={styles.items} aria-label="To do">
-                  {active.map((task) => (
-                    <SortableTask key={task.id} {...rowProps(task)} />
+                  {active.map((task, index) => (
+                    <SortableTask key={task.id} {...rowProps(task, index)} />
                   ))}
                 </ul>
               </SortableList>
@@ -172,8 +176,8 @@ export function Tasks({ space }: { space: Space }) {
                   Done ({done.length})
                 </summary>
                 <ul className={styles.items} aria-label="Done">
-                  {done.map((task) => (
-                    <TaskRow key={task.id} {...rowProps(task)} />
+                  {done.map((task, index) => (
+                    <TaskRow key={task.id} {...rowProps(task, index)} />
                   ))}
                 </ul>
               </details>

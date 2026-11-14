@@ -3,9 +3,15 @@ import { authHref } from "@/lib/next-path";
 import { Avatar } from "./Avatar";
 import { AppsIcon, UserIcon } from "./icons";
 import { LinkPending } from "./LinkPending";
+import { SegmentThumb } from "./motion";
 
 import type { TabNavProps } from "./AppShell";
 import shell from "./AppShell.module.css";
+
+/** The current tab's underline: one per tab bar (its layoutId), sliding from tab to tab. */
+function Underline({ bar }: { bar: string }) {
+  return <SegmentThumb layoutId={`tab-underline:${bar}`} className={shell.underline} />;
+}
 
 /** Apps, at the end of every tab bar: the launcher, the way from one app to another. */
 function AppsTab({ current = false }: { current?: boolean }) {
@@ -14,6 +20,7 @@ function AppsTab({ current = false }: { current?: boolean }) {
       <Link href="/apps" aria-current={current ? "page" : undefined}>
         <LinkPending icon={<AppsIcon />} />
         Apps
+        {current && <Underline bar="launcher" />}
       </Link>
     </li>
   );
@@ -44,6 +51,7 @@ export function LauncherTabs({
               <Avatar username={username} url={avatarUrl} className={shell.navAvatar} />
               Account
               <LinkPending />
+              {current === "account" && <Underline bar="launcher" />}
             </Link>
           </li>
         ) : (
@@ -81,10 +89,12 @@ export function TabBar({ label, tabs, current, onSelect }: TabNavProps) {
             <button
               type="button"
               aria-current={tab.id === current ? "page" : undefined}
+              data-tab={tab.id}
               onClick={() => onSelect(tab.id)}
             >
               <span aria-hidden="true">{tab.icon}</span>
               {tab.label}
+              {tab.id === current && <Underline bar={label} />}
             </button>
           </li>
         ))}

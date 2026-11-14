@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { SearchIcon } from "@/components/common/icons";
+import { SegmentThumb } from "@/components/common/motion";
 import ui from "@/components/common/ui.module.css";
 import { useAppView } from "@/hooks/useAppView";
 import { discoverSections, type DiscoverSection, type MediaType, type TitleSummary } from "@/lib/show-types";
@@ -95,23 +96,41 @@ function Section({ type, section, heading }: { type: MediaType; section: Discove
 export function SearchLauncher() {
   const { openPanel } = useAppView();
   return (
-    <button type="button" className={styles.launcher} onClick={() => openPanel("search")}>
+    <button type="button" className={styles.launcher} data-press="wide" onClick={() => openPanel("search")}>
       <SearchIcon />
       <span>Search TV shows and movies</span>
     </button>
   );
 }
 
-/** The TV Shows | Movies switch at the top of Discover and Library. */
+const typeOptions: readonly { type: MediaType; label: string }[] = [
+  { type: "tv", label: "TV Shows" },
+  { type: "movie", label: "Movies" },
+];
+
+/**
+ * The TV Shows | Movies switch at the top of Discover and Library: the raised
+ * thumb is one object that slides to the one chosen (a SegmentThumb, its
+ * layoutId this switch's own), and each label keeps its bold width.
+ */
 export function TypeSwitch({ type, onChange }: { type: MediaType; onChange: (type: MediaType) => void }) {
+  const layoutId = `type-switch:${useId()}`;
   return (
     <div className={styles.switcher} role="group" aria-label="Show">
-      <button type="button" aria-pressed={type === "tv"} onClick={() => onChange("tv")}>
-        TV Shows
-      </button>
-      <button type="button" aria-pressed={type === "movie"} onClick={() => onChange("movie")}>
-        Movies
-      </button>
+      {typeOptions.map((option) => (
+        <button
+          key={option.type}
+          type="button"
+          aria-pressed={type === option.type}
+          onClick={() => onChange(option.type)}
+        >
+          <span className={styles.switchLabel}>
+            <span>{option.label}</span>
+            <span aria-hidden="true">{option.label}</span>
+          </span>
+          {type === option.type && <SegmentThumb layoutId={layoutId} className={styles.thumb} />}
+        </button>
+      ))}
     </div>
   );
 }

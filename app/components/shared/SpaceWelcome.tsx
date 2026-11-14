@@ -58,11 +58,12 @@ export function SpaceWelcome({ onJoined }: { onJoined: (space: Space) => void })
               name="code"
               className={ui.input}
               required
-              maxLength={16}
+              // Room for the whole invite link pasted in: the server reads the code out of it (inviteCodeOf).
+              maxLength={300}
               autoCapitalize="characters"
               autoComplete="off"
               spellCheck={false}
-              placeholder="8-character code"
+              placeholder="8-character code, or the link"
               disabled={busy}
             />
           </div>

@@ -224,6 +224,7 @@ export function AddFriend({ busy, onAdd }: { busy: boolean; onAdd: (username: st
                 role="option"
                 aria-selected={index === active}
                 className={styles.suggestion}
+                style={{ "--i": index } as React.CSSProperties}
                 // Not blurring the field: the list would close before the click lands.
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(match)}

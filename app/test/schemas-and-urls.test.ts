@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { appViewFromUrl, appViewUrl } from "@/hooks/useAppView";
 import { viewFromParams } from "@/lib/app-views";
 import { safeNextPath } from "@/lib/next-path";
-import { eventInput, joinInput, libraryPatch, taskCreate, taskPatch } from "@/lib/schemas";
+import { eventInput, inviteCodeOf, joinInput, libraryPatch, taskCreate, taskPatch } from "@/lib/schemas";
 
 describe("the APIs' schemas", () => {
   const event = {
@@ -47,6 +47,16 @@ describe("the APIs' schemas", () => {
   test("an invite code is read in any case and with spaces around it", () => {
     expect(joinInput.parse({ code: " abcd2345 " })).toEqual({ code: "ABCD2345" });
     expect(joinInput.safeParse({ code: "ABCD1234" }).success).toBe(false);
+  });
+
+  test("an invite code is read as shown (two groups), with dashes, or as the whole link (Postel's law)", () => {
+    for (const typed of ["ABCD 2345", "abcd-2345", " AB CD 23 45 ", "https://diogomota.com/join/abcd2345"]) {
+      expect(joinInput.parse({ code: typed })).toEqual({ code: "ABCD2345" });
+    }
+    expect(inviteCodeOf("https://diogomota.com/join/ABCD2345?from=share#top")).toBe("ABCD2345");
+    // Generous, not careless: what isn't a code still isn't one.
+    expect(joinInput.safeParse({ code: "ABCD 234" }).success).toBe(false);
+    expect(joinInput.safeParse({ code: "https://diogomota.com/apps" }).success).toBe(false);
   });
 
   test("a library change ignores what it doesn't know (a rating from before)", () => {

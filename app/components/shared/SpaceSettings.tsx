@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { flushSync } from "react-dom";
 import { ActivityFeed } from "@/components/common/ActivityFeed";
 import { Avatar } from "@/components/common/Avatar";
-import { CalendarIcon, CopyIcon } from "@/components/common/icons";
+import { CalendarIcon } from "@/components/common/icons";
+import { CopiedIcon, reducedMotion, useBriefly } from "@/components/common/motion";
 import { PersonName } from "@/components/common/PersonName";
 import { Spinner } from "@/components/common/Spinner";
 import { Alert, Button, Confirm, Notice } from "@/components/common/ui";
@@ -37,6 +38,9 @@ function CalendarFeedCard() {
   const [confirmNew, setConfirmNew] = useState(false);
   const [busy, setBusy] = useState(false);
   const [shown, setShown] = useState(false);
+  // Just shown: the blurred dots, over the link, being wiped away (Spaces.module.css, .veil).
+  const [unveiling, setUnveiling] = useState(false);
+  const [copied, showCopied] = useBriefly();
   const field = useRef<HTMLInputElement>(null);
 
   async function copy() {
@@ -44,6 +48,7 @@ function CalendarFeedCard() {
     try {
       await navigator.clipboard.writeText(feed.data.url);
       setNotice({ text: "Link copied. In Google Calendar: Other calendars, +, From URL." });
+      showCopied();
     } catch {
       setNotice({ text: "Couldn't copy the link. Select it and copy it instead.", error: true });
     }
@@ -87,13 +92,21 @@ function CalendarFeedCard() {
                 tabIndex={shown ? undefined : -1}
                 onFocus={(e) => e.target.select()}
               />
+              {unveiling && (
+                <span className={styles.veil} aria-hidden="true" onAnimationEnd={() => setUnveiling(false)}>
+                  {hiddenLink(feed.data.url)}
+                </span>
+              )}
               {!shown && (
                 <button
                   type="button"
                   className={styles.show}
                   aria-label="Show the link"
                   onClick={() => {
-                    flushSync(() => setShown(true));
+                    flushSync(() => {
+                      setShown(true);
+                      setUnveiling(!reducedMotion());
+                    });
                     field.current?.focus();
                   }}
                 >
@@ -104,7 +117,7 @@ function CalendarFeedCard() {
           </div>
           <div className={ui.actions}>
             <Button onClick={copy}>
-              <CopyIcon />
+              <CopiedIcon copied={copied} />
               Copy link
             </Button>
             <a className={`${ui.button} ${ui.primary}`} href={feed.data.webcal}>

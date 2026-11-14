@@ -30,7 +30,34 @@
   border-radius: var(--radius-xl);
   background: var(--surface);
   /* Not the background: it changes with the theme, and would fade between them. */
-  transition: border-color var(--duration-fast);
+  transition:
+    border-color var(--duration-fast),
+    scale var(--duration-fast) var(--ease-out);
+  /* The cards come in one after another (--i), 30ms apart, easing out. */
+  animation: card-in var(--duration) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+/* Pressed (its link covers it), the card gives a little, as a button does. */
+.card:active {
+  scale: var(--press);
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+
+  .card:active {
+    scale: none;
+  }
 }
 
 .info {

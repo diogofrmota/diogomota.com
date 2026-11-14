@@ -135,7 +135,14 @@
   font-weight: var(--weight-medium);
   text-decoration: none;
   cursor: pointer;
-  transition: transform var(--duration-fast) var(--ease-out);
+  /* The label fades as the spinner comes in over it (Spinner, PendingOverlay):
+     the old state and the new overlap rather than cut. */
+  transition:
+    scale var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+  /* The label's capitals in the middle (where supported), not its line box:
+     centered by the eye, not by the descenders' room under it. */
+  text-box: trim-both cap alphabetic;
 }
 
 .button svg {
@@ -144,9 +151,10 @@
   height: var(--icon-md);
 }
 
-/* Pressed: it gives a little, so the tap is felt. */
+/* Pressed: it gives a little (the shell's --press), so the tap is felt; the
+   shell does it for every button, this for links drawn as one. */
 .button:active:not(:disabled) {
-  transform: scale(0.97);
+  scale: var(--press);
 }
 
 /* The main action of a card or dialog. On .button (two classes), so the
@@ -220,6 +228,20 @@
     filter: brightness(0.93);
   }
 
+  /* Where the browser has OKLCH's relative colors: a step darker by lightness
+     alone, the same step for every theme's accent, its hue and chroma kept. */
+  @supports (color: oklch(from red l c h)) {
+    .button.primary:hover {
+      background: oklch(from var(--accent) calc(l - 0.05) c h);
+      filter: none;
+    }
+
+    .button.danger:hover {
+      background: oklch(from var(--danger) calc(l - 0.05) c h);
+      filter: none;
+    }
+  }
+
   .button.remove:hover {
     background: none;
     text-decoration: underline;
@@ -237,7 +259,7 @@
   }
 
   .button:active:not(:disabled) {
-    transform: none;
+    scale: none;
   }
 }
 
@@ -289,7 +311,8 @@
   height: var(--icon-md);
 }
 
-/* What an action did. */
+/* What an action did: it comes in, and a ring spreads from it once, to
+   confirm it worked. */
 .success {
   margin: 0;
   padding: 0.625rem var(--space-4);
@@ -297,7 +320,9 @@
   background: var(--accent-soft);
   color: var(--accent);
   font-weight: var(--weight-semibold);
-  animation: feedback-in var(--duration) var(--ease-out);
+  animation:
+    feedback-in var(--duration) var(--ease-out),
+    success-pulse 0.6s 0.1s var(--ease-out);
 }
 
 /* "Are you sure?", with a .danger button and Cancel. */
@@ -322,6 +347,17 @@
   from {
     opacity: 0;
     transform: translateY(-4px);
+  }
+}
+
+/* Success: a ring of the accent (--pulse, in OKLCH) spreads out and fades. */
+@keyframes success-pulse {
+  from {
+    box-shadow: 0 0 0 0 var(--pulse);
+  }
+
+  to {
+    box-shadow: 0 0 0 0.625rem transparent;
   }
 }
 
@@ -365,9 +401,22 @@
   animation: toast-in var(--duration) var(--ease-out);
 }
 
-/* Rises into place, so the Undo it offers is noticed. */
+/* Rises into place, so the Undo it offers is noticed; leaving, it sinks back
+   20% quicker (Undo.tsx keeps it on screen meanwhile), and takes no taps. */
 @keyframes toast-in {
   from {
+    opacity: 0;
+    transform: translate(-50%, 0.75rem);
+  }
+}
+
+.toast[data-leaving] {
+  pointer-events: none;
+  animation: toast-out calc(var(--duration) * var(--exit)) var(--ease-out) forwards;
+}
+
+@keyframes toast-out {
+  to {
     opacity: 0;
     transform: translate(-50%, 0.75rem);
   }

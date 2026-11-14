@@ -2,6 +2,7 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent } from "react";
 import { Avatar } from "@/components/common/Avatar";
+import { reducedMotion, SegmentThumb, stagger, useSettled } from "@/components/common/motion";
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, UserIcon, UsersIcon } from "@/components/common/icons";
 import { Spinner } from "@/components/common/Spinner";
 import { Alert, Button } from "@/components/common/ui";
@@ -35,6 +36,33 @@ const monthEvents = 2;
 const agendaPage = 20;
 /** The most days the agenda lists an event of several days under (a long one's first year). */
 const agendaSpan = 366;
+
+/**
+ * The grid showing now, about to be replaced (another period or view): a copy
+ * of it stays over the new one and slides out the other way (or fades), 20%
+ * quicker than the new one comes in, so the old state and the new overlap
+ * (Calendar.module.css, [data-leaving]). Hidden from screen readers, no taps.
+ */
+function leaveGrid(scroller: HTMLElement | null, slide: "forward" | "back" | "fade") {
+  const grid = scroller?.querySelector<HTMLElement>(":scope > [data-slide]:not([data-leaving])");
+  if (!scroller || !grid || reducedMotion()) return;
+  const copy = grid.cloneNode(true) as HTMLElement;
+  copy.dataset.leaving = slide;
+  copy.removeAttribute("data-compact-targets");
+  copy.setAttribute("aria-hidden", "true");
+  copy.inert = true;
+  for (const element of copy.querySelectorAll("[id]")) element.removeAttribute("id");
+  Object.assign(copy.style, {
+    top: `${grid.offsetTop}px`,
+    left: `${grid.offsetLeft}px`,
+    width: `${grid.offsetWidth}px`,
+    height: `${grid.offsetHeight}px`,
+  });
+  scroller.append(copy);
+  copy.addEventListener("animationend", (event) => event.target === copy && copy.remove());
+  // In case it never ends (hidden meanwhile).
+  setTimeout(() => copy.remove(), 1000);
+}
 
 function monday(date: string) {
   return datePlus(date, -((new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7));
@@ -221,7 +249,9 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
   // new one, which slides in from the side of its dates (later from the right,
   // earlier from the left) or fades in (Calendar.module.css). Nothing waits on it.
   function move(next: string, nextView: Mode = view) {
-    setSlide(next < date ? "back" : next > date ? "forward" : "fade");
+    const direction = next < date ? "back" : next > date ? "forward" : "fade";
+    if (next !== date || nextView !== view) leaveGrid(scroller.current, nextView === view ? direction : "fade");
+    setSlide(direction);
     setDate(next);
     setMode(nextView);
     if (next !== date || nextView !== view) setAgendaCount(agendaPage);
@@ -297,6 +327,9 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
   }
 
   const heading = dateLabel(date, { month: "long", year: "numeric" });
+  // The agenda's rows come in one after another the first time they show.
+  const settled = useSettled(agenda.length > 0);
+  let row = 0;
 
   // One toolbar over the grid, so the grid gets the rest of the screen: the
   // month with ‹ and › on either side of it, then Agenda | Month and Add event.
@@ -351,6 +384,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
                   <span>{option.label}</span>
                   <span aria-hidden="true">{option.label}</span>
                 </span>
+                {view === option.id && <SegmentThumb layoutId="calendar-view" className={styles.thumb} />}
               </button>
             ))}
           </div>
@@ -402,7 +436,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
                       ? "All day"
                       : `${start.date === day ? localParts(event.startsAt).time : "…"} – ${end.date === day ? localParts(event.endsAt).time : "…"}`;
                     return (
-                      <li key={event.id}>
+                      <li key={event.id} style={stagger(row++, settled)}>
                         <span className={styles.agendaTime}>{time}</span>
                         {eventButton(event)}
                       </li>
