@@ -609,7 +609,9 @@ test.describe("at 320px wide", () => {
     await expect(page).toHaveURL("/");
     await expectNoHorizontalScroll(page);
 
-    await expect(page.getByRole("link", { name: "Account", exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(
+      page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Account", exact: true }),
+    ).toBeInViewport({ ratio: 1 });
     await expectNoHorizontalScroll(page);
 
     await page.goto("/account");

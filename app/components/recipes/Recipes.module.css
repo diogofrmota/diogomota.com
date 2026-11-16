@@ -940,10 +940,12 @@
 /* --- Shopping list ---------------------------------------------------------------- */
 
 .shopping {
+  grid-template-columns: minmax(0, 1fr);
   max-width: 44rem;
 }
 .list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--border);

@@ -69,7 +69,7 @@ test("the site's pages", async ({ page }) => {
   await signUp(page, user);
   await expect(page).toHaveURL("/");
   await checkView(page, "apps, logged in");
-  await page.getByRole("link", { name: "Account", exact: true }).click();
+  await page.getByRole("main").getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await checkView(page, "account");
 
