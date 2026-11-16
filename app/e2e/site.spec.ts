@@ -24,8 +24,13 @@ test.describe("at 320px wide", () => {
       await expectNoHorizontalScroll(page);
     }
     await page.goto("/");
-    await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
+    await page.getByRole("main").getByRole("link", { name: "Open Shows" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
+    await expectNoHorizontalScroll(page);
+    // Nor with the website's menu open.
+    await page.keyboard.press("Escape");
+    await page.getByRole("banner").getByRole("button", { name: "Menu" }).click();
+    await expect(page.getByRole("navigation", { name: "Menu" })).toBeVisible();
     await expectNoHorizontalScroll(page);
   });
 });
@@ -41,7 +46,7 @@ test("unknown URLs get a 404 page in the apps' look, with the tab bar and Go hom
   expect(response?.status()).toBe(404);
   await expect(page).toHaveTitle("page not found · diogo mota");
   await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
-  // Light, logged out: the theme's gray, not the black of /about.
+  // Light, logged out: the theme's gray.
   await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(
     "rgb(230, 230, 230)",
@@ -116,23 +121,20 @@ test("a page that fails to render shows the error page, whose Retry renders it a
 
 test("keyboard focus is visible", async ({ page }) => {
   await page.goto("/about");
+  // The website's header first: its mark, which goes home, ringed in the accent.
   await page.keyboard.press("Tab");
-  const richemont = page.getByRole("link", { name: "Richemont" });
-  await expect(richemont).toBeFocused();
-  await expect(richemont).toHaveCSS("outline-style", "solid");
-  await expect(richemont).toHaveCSS("outline-color", "rgb(255, 255, 255)");
+  const brand = page.getByRole("banner").getByRole("link", { name: "diogomota" });
+  await expect(brand).toBeFocused();
+  await expect(brand).toHaveCSS("outline-style", "solid");
+  await expect(brand).toHaveCSS("outline-color", "rgb(48, 80, 122)");
 
   await page.goto("/");
-  // The tab bar first (a header on a wide screen): Log in, Sign up
-  // and Home; then Log in and Sign up at the top of the page, then Shared.
-  for (let i = 0; i < 6; i++) await page.keyboard.press("Tab");
-  const card = page
-    .getByRole("main")
-    .getByRole("listitem")
-    .filter({ has: page.getByRole("link", { name: "Shared", exact: true }) });
-  await expect(card.getByRole("link")).toBeFocused();
-  // The link covers its card, so the ring is drawn around the card.
-  await expect(card).toHaveCSS("outline-style", "solid");
+  // The header (the mark, Apps, How it works, About, Log in and Sign up), then
+  // the hero's Sign up and See the apps, then Shared's Open.
+  for (let i = 0; i < 9; i++) await page.keyboard.press("Tab");
+  const open = page.getByRole("main").getByRole("link", { name: "Open Shared" });
+  await expect(open).toBeFocused();
+  await expect(open).toHaveCSS("outline-style", "solid");
 
   await page.keyboard.press("Enter");
   const login = page.getByRole("dialog").getByRole("link", { name: "Log in" });

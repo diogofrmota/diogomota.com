@@ -1,19 +1,21 @@
 import type { Page } from "@playwright/test";
 import { apps } from "../lib/apps";
+import { siteTagline } from "../lib/site";
 import { expect, linkNames, newUser, signUp, test } from "./fixtures";
 import { mockBase, otherPerson, userId } from "./shows";
 
-// Home: the apps (docs/decisions/0014). Logged out, the front page: what the
-// site is, Log in and Sign up, and a card for each app, which opens its login
-// prompt. Logged in, the apps' icons, with what is waiting in each and going
-// back to the view last used in it.
+// Home (docs/decisions/0014, 0016). Logged out, the website's front page: its
+// header, what the site is, Sign up, a section per app (Open opens its login
+// prompt), How it works, Questions, and its footer. Logged in, Home: the apps'
+// icons, with what is waiting in each and going back to the view last used in it.
 
-const card = (page: Page, name: string) =>
+const appSection = (page: Page, name: string) =>
   page
     .getByRole("main")
-    .getByRole("listitem")
+    .getByRole("article")
     .filter({ has: page.getByRole("heading", { name, exact: true }) });
 const tabBar = (page: Page) => page.getByRole("navigation", { name: "Account" });
+const siteNav = (page: Page) => page.getByRole("banner").getByRole("navigation", { name: "Site" });
 
 test("/apps is now home: it redirects there for good, with its query", async ({ page }) => {
   const response = await page.request.get("/apps?next=%2Fshows", { maxRedirects: 0 });
@@ -24,77 +26,187 @@ test("/apps is now home: it redirects there for good, with its query", async ({ 
   await expect(page.getByRole("status")).toHaveText("Your account and everything it had here were deleted.");
 });
 
-test("logged out, home is the front page: what the site is, Log in and Sign up, then the apps", async ({ page }) => {
+test("logged out, home is the website's front page: what the site is, the apps, How it works, Questions", async ({
+  page,
+}) => {
   await page.goto("/");
   await expect(page).toHaveTitle("diogo mota");
   // Logged out, in Light.
   await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
   const main = page.getByRole("main");
-  await expect(main.getByRole("heading", { level: 1 })).toHaveText("Personal apps for friends");
-  const description = main.getByText(/^A shared calendar and task lists for couples/);
-  await expect(description).toBeVisible();
-  // As everywhere, Log in first and plain, then Sign up, the call to action.
-  const hero = main.getByRole("region", { name: "Personal apps for friends" });
-  // The line under the headline has the column's whole width, not only its left side.
-  expect((await description.boundingBox())!.width).toBeGreaterThanOrEqual((await hero.boundingBox())!.width - 1);
-  const login = (await hero.getByRole("link", { name: "Log in" }).boundingBox())!;
-  const signup = (await hero.getByRole("link", { name: "Sign up" }).boundingBox())!;
-  expect(login.y).toBe(signup.y);
-  expect(signup.x).toBeGreaterThan(login.x + login.width);
+  const hero = main.getByRole("region", { name: siteTagline });
+  await expect(hero.getByRole("heading", { level: 1 })).toHaveText(siteTagline);
+  await expect(hero).toContainText("A calendar for two, a watchlist with your friends, and more on the way.");
+  await expect(hero.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup");
+  await expect(hero.getByRole("link", { name: "See the apps" })).toHaveAttribute("href", "#apps");
+  // Log in is the header's, on a wide screen (a phone has it under the buttons).
+  await expect(hero.getByRole("link", { name: "Log in" })).toBeHidden();
 
-  // A card for each app: its picture, icon, name and what it does.
+  // A section per app, by its name: its icon, headline, what it does, and Open.
   expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows"]);
   for (const app of apps) {
-    const item = card(page, app.name);
-    await expect(item).toBeVisible();
-    for (const feature of app.features) await expect(item).toContainText(feature);
-    const logo = item.locator("img");
+    const section = appSection(page, app.name);
+    await expect(section).toHaveAttribute("id", app.href.slice(1));
+    await expect(section).toContainText(app.tagline);
+    for (const feature of app.features) await expect(section).toContainText(feature);
+    const logo = section.getByRole("heading", { name: app.name }).locator("img");
     await expect(logo).toHaveAttribute("src", app.logo);
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    await expect(section.getByRole("link", { name: `Open ${app.name}` })).toBeVisible();
   }
+  // Side by side, by turns: Shared's picture on the left, Shows' on the right.
+  const pictureX = async (name: string) =>
+    (await appSection(page, name).locator("[aria-hidden='true']").first().boundingBox())!.x;
+  const wordsX = async (name: string) => (await appSection(page, name).getByRole("heading").boundingBox())!.x;
+  expect(await pictureX("Shared")).toBeLessThan(await wordsX("Shared"));
+  expect(await pictureX("Shows")).toBeGreaterThan(await wordsX("Shows"));
 
-  // "dev" unless APP_VERSION is set, as it is in the Docker image; then Privacy and About.
-  await expect(main.getByText(/^Version (dev|v\d+\.\d+\.\d+) · Privacy · About$/)).toBeVisible();
-  await expect(main.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
-  await expect(main.getByRole("link", { name: "About" })).toHaveAttribute("href", "/about");
+  // How it works, in three steps; Questions, with the way to About and Privacy.
+  await expect(main.getByRole("region", { name: "How it works" }).getByRole("listitem")).toHaveCount(3);
+  const questions = main.getByRole("region", { name: "Questions" });
+  await expect(questions.getByRole("heading", { level: 3 })).toHaveText([
+    "Who runs it?",
+    "Is my data private?",
+    "Can I use it on my phone?",
+    "Can I take my data with me?",
+  ]);
+  await expect(questions.getByRole("link", { name: "About" })).toHaveAttribute("href", "/about");
+  await expect(questions.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+  // And Sign up once more, at the end.
+  await expect(
+    main.getByRole("region", { name: "Try it with your people" }).getByRole("link", { name: "Sign up" }),
+  ).toHaveAttribute("href", "/signup");
 
-  // The site's description and preview are the apps'.
+  // The footer: the apps (each to its section), the site's pages and the account; the year and the version,
+  // "dev" unless APP_VERSION is set, as it is in the Docker image.
+  const footer = page.getByRole("contentinfo");
+  expect(await linkNames(footer.getByRole("navigation", { name: "Footer" }))).toEqual([
+    "Shared",
+    "Shows",
+    "How it works",
+    "About",
+    "Privacy",
+    "Log in",
+    "Sign up",
+  ]);
+  await expect(footer.getByRole("link", { name: "Shows" })).toHaveAttribute("href", "/#shows");
+  await expect(footer).toContainText(`© ${new Date().getFullYear()} Diogo Mota`);
+  await expect(footer.getByText(/^Version (dev|v\d+\.\d+\.\d+)$/)).toBeVisible();
+
+  // The site's description and preview say what it is.
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
-  await expect(meta("name", "description")).toHaveAttribute("content", "Personal apps for friends: Shared and Shows.");
+  await expect(meta("name", "description")).toHaveAttribute(
+    "content",
+    "Small apps for the things you share with people: Shared and Shows.",
+  );
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com");
   const image = await page.request.get("/opengraph-image");
   expect(image.ok()).toBe(true);
   expect(image.headers()["content-type"]).toBe("image/png");
 });
 
-test("the tab bar: Log in, Sign up (each its own icon) and Home, here and on the login pages", async ({ page }) => {
+test("the website's header: the mark goes home, Apps opens a menu of them, then About; Log in and Sign up", async ({
+  page,
+}) => {
   await page.goto("/");
+  // The website's header, not the apps' tab bar.
+  await expect(tabBar(page)).toHaveCount(0);
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("link", { name: "diogomota" })).toHaveAttribute("href", "/");
+  await expect(header.getByRole("button", { name: "Menu" })).toBeHidden();
+  const nav = siteNav(page);
+  const appsButton = nav.getByRole("button", { name: "Apps" });
+  await expect(appsButton).toHaveAttribute("aria-expanded", "false");
+  expect(await linkNames(nav)).toEqual(["How it works", "About"]);
+  await expect(nav.getByRole("link", { name: "How it works" })).toHaveAttribute("href", "/#how-it-works");
+  // As everywhere, Log in first and plain, then Sign up, the call to action.
+  const login = (await header.getByRole("link", { name: "Log in" }).boundingBox())!;
+  const signup = (await header.getByRole("link", { name: "Sign up" }).boundingBox())!;
+  expect(Math.abs(login.y + login.height / 2 - (signup.y + signup.height / 2))).toBeLessThan(2);
+  expect(signup.x).toBeGreaterThan(login.x + login.width);
+
+  // Apps: each app, its icon, name and what it is, to its section; Escape closes it, back on Apps.
+  await appsButton.click();
+  await expect(appsButton).toHaveAttribute("aria-expanded", "true");
+  for (const app of apps) {
+    const link = nav.getByRole("link", { name: `${app.name} ${app.description}` });
+    await expect(link).toHaveAttribute("href", `/#${app.href.slice(1)}`);
+  }
+  await page.keyboard.press("Escape");
+  await expect(nav.getByRole("link", { name: /^Shows/ })).toBeHidden();
+  await expect(appsButton).toBeFocused();
+  // A click outside closes it too; following one goes to its section, and closes it.
+  await appsButton.click();
+  await page.mouse.click(5, 300);
+  await expect(nav.getByRole("link", { name: /^Shows/ })).toBeHidden();
+  await appsButton.click();
+  await nav.getByRole("link", { name: /^Shows/ }).click();
+  await expect(page).toHaveURL("/#shows");
+  await expect(nav.getByRole("link", { name: /^Shows/ })).toBeHidden();
+  await expect(appSection(page, "Shows")).toBeInViewport();
+
+  await nav.getByRole("link", { name: "About" }).click();
+  await expect(page).toHaveURL("/about");
+  await expect(siteNav(page).getByRole("link", { name: "About" })).toHaveAttribute("aria-current", "page");
+
+  // Log in leaves the website for the login page, in the apps' frame, whose Home comes back.
+  await page.getByRole("banner").getByRole("link", { name: "Log in" }).click();
+  await expect(page).toHaveURL("/login");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Log in");
+  await tabBar(page).getByRole("link", { name: "Home" }).click();
+  await expect(page).toHaveURL("/");
+});
+
+test.describe("on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("the header is the mark, Sign up and Menu, which has the rest; Log in is under the hero's buttons", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const header = page.getByRole("banner");
+    await expect(siteNav(page)).toBeHidden();
+    await expect(header.getByRole("link", { name: "Log in" })).toBeHidden();
+    await expect(header.getByRole("link", { name: "Sign up" })).toBeVisible();
+    await expect(page.getByRole("main").getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
+
+    await header.getByRole("button", { name: "Menu" }).click();
+    const menu = header.getByRole("navigation", { name: "Menu" });
+    expect(await linkNames(menu)).toEqual([
+      ...apps.map((app) => `${app.name} ${app.description}`),
+      "How it works",
+      "About",
+      "Privacy",
+      "Log in",
+    ]);
+    // Nothing of it off the screen.
+    const box = (await menu.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    await menu.getByRole("link", { name: "Privacy" }).click();
+    await expect(page).toHaveURL("/privacy");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Privacy");
+  });
+});
+
+test("the login pages keep the apps' tab bar: Log in, Sign up (each its own icon) and Home", async ({ page }) => {
+  await page.goto("/login");
   const bar = tabBar(page);
-  // Only the tabs: no site name on the header's left.
   expect(await linkNames(bar)).toEqual(["Log in", "Sign up", "Home"]);
-  await expect(bar).not.toContainText("diogomota.com");
-  await expect(bar.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+  // No top bar and no Back to apps: the tab bar, with Log in current.
+  await expect(page.getByRole("banner")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Back to apps" })).toHaveCount(0);
+  await expect(bar.getByRole("link", { name: "Log in" })).toHaveAttribute("aria-current", "page");
   const icons = await bar
     .getByRole("link")
     .evaluateAll((links) => links.flatMap((link) => link.querySelector("svg")?.innerHTML ?? []));
   expect(icons).toHaveLength(3);
   expect(new Set(icons).size).toBe(3);
 
-  await bar.getByRole("link", { name: "Log in" }).click();
-  await expect(page).toHaveURL("/login");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Log in");
-  // No top bar and no Back to apps: the tab bar, with Log in current.
-  await expect(page.getByRole("banner")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Back to apps" })).toHaveCount(0);
-  await expect(bar.getByRole("link", { name: "Log in" })).toHaveAttribute("aria-current", "page");
-
   await bar.getByRole("link", { name: "Sign up" }).click();
   await expect(page).toHaveURL("/signup");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Create your account");
   await expect(bar.getByRole("link", { name: "Sign up" })).toHaveAttribute("aria-current", "page");
-
-  await bar.getByRole("link", { name: "Home" }).click();
-  await expect(page).toHaveURL("/");
 
   // From an app's login prompt, the title says which app.
   await page.goto("/signup?next=%2Fshows");
@@ -108,10 +220,15 @@ test("sent home from a protected page, Log in and Sign up return there, and an a
 }) => {
   await page.goto("/account");
   await expect(page).toHaveURL("/?next=%2Faccount");
-  const hero = page.getByRole("main").getByRole("region", { name: "Personal apps for friends" });
-  await expect(hero.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login?next=%2Faccount");
+  const hero = page.getByRole("main").getByRole("region", { name: siteTagline });
   await expect(hero.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup?next=%2Faccount");
-  await expect(tabBar(page).getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login?next=%2Faccount");
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login?next=%2Faccount");
+  await expect(header.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup?next=%2Faccount");
+  await expect(page.getByRole("contentinfo").getByRole("link", { name: "Log in" })).toHaveAttribute(
+    "href",
+    "/login?next=%2Faccount",
+  );
 
   await page.goto("/shows/discover");
   await expect(page).toHaveURL("/?next=%2Fshows%2Fdiscover");
@@ -119,10 +236,11 @@ test("sent home from a protected page, Log in and Sign up return there, and an a
 });
 
 for (const app of apps) {
-  test(`clicking the ${app.name} card while logged out opens the login prompt`, async ({ page }) => {
+  test(`Open ${app.name} on the front page opens its login prompt`, async ({ page }) => {
     await page.goto("/");
-    // A corner of the card, away from the name: the whole card is clickable.
-    await card(page, app.name).click({ position: { x: 8, y: 8 } });
+    await appSection(page, app.name)
+      .getByRole("link", { name: `Open ${app.name}` })
+      .click();
 
     const prompt = page.getByRole("dialog", { name: `Log in to open ${app.name}` });
     await expect(prompt).toBeVisible();
@@ -141,7 +259,7 @@ for (const app of apps) {
 
 test("the login prompt closes with Escape, its close button or the backdrop", async ({ page }) => {
   await page.goto("/");
-  const link = page.getByRole("main").getByRole("link", { name: "Shared", exact: true });
+  const link = page.getByRole("main").getByRole("link", { name: "Open Shared" });
   const prompt = page.getByRole("dialog");
 
   await link.click();
@@ -160,14 +278,14 @@ test("the login prompt closes with Escape, its close button or the backdrop", as
   await expect(page).toHaveURL("/");
 });
 
-test("logged in, home is the apps' icons, and the email note sends its link from here", async ({ page }) => {
+test("logged in, home is Home: the apps' icons, and the email note sends its link from here", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   // Signing up with nowhere to go next lands home.
   await expect(page).toHaveURL("/");
   const main = page.getByRole("main");
   const heading = main.getByRole("heading", { level: 1 });
-  await expect(heading).toHaveText("List of apps");
+  await expect(heading).toHaveText("Home");
   await expect(heading).toHaveCSS("text-align", "center");
   expect(await linkNames(tabBar(page))).toEqual(["Account", "Home"]);
   await expect(tabBar(page).getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");

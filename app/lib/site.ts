@@ -1,14 +1,20 @@
-import type { Metadata, Viewport } from "next";
-import { appsDescription } from "./apps";
+import type { Metadata } from "next";
+import { appNames, apps } from "./apps";
 
 export const siteUrl = new URL("https://diogomota.com");
 export const siteName = "diogo mota";
 /** "diogomota.com": the name on the left of every top bar. */
 export const siteDomain = siteUrl.hostname;
-/** What the site is: its apps (home, and every page without its own description). */
-export const siteDescription = appsDescription;
+/** What the site is, in a line: the front page's headline. */
+export const siteTagline = "Small apps for the things you share with people";
+/** "A calendar for two, a watchlist with your friends, and more on the way.": under the headline. */
+export const siteLead = `${apps.map((app) => app.summary).join(", ")}, and more on the way.`.replace(/^./, (c) =>
+  c.toUpperCase(),
+);
+/** What the site is, with its apps (home, the web app manifest, and every page without its own description). */
+export const siteDescription = `${siteTagline}: ${appNames}.`;
 /** Who runs it: /about. */
-export const aboutDescription = "diogo mota, devops engineer @ Richemont, currently based in Lisbon, PT.";
+export const aboutDescription = "Diogo Mota, DevOps engineer at Richemont, based in Lisbon, Portugal.";
 
 /**
  * Where to write to about the site (Privacy): CONTACT_EMAIL, set where it runs
@@ -23,9 +29,3 @@ export const baseOpenGraph = {
   type: "website",
   locale: "en_US",
 } satisfies Metadata["openGraph"];
-
-// /about is black, and so is the browser UI around it.
-export const siteViewport: Viewport = {
-  themeColor: "#000000",
-  colorScheme: "dark",
-};

@@ -1,7 +1,7 @@
-/* Home: a wider column than the other pages, for the front page's cards side
-   by side on a wide screen, each with a picture of its app. At least as tall
-   as the room under (or over) the tab bar, so the footer is at the bottom of
-   the page however little is above it. */
+/* Home, logged in: the apps' icons in a column (the front page, logged out,
+   is the website's: components/site/FrontPage). At least as tall as the room
+   under (or over) the tab bar, so the footer is at the bottom of the page
+   however little is above it. */
 .view {
   display: flex;
   flex-direction: column;
@@ -10,18 +10,11 @@
   margin-inline: auto;
 }
 
-/* List of apps, over the icons: in the middle, as the icons are. Two classes,
-   to win over ui.module.css's heading whatever the order. */
+/* Home, over the icons: in the middle, as the icons are. Two classes, to win
+   over ui.module.css's heading whatever the order. */
 .title.title {
   margin-bottom: var(--space-6);
   text-align: center;
-}
-
-/* The cards' heading on the front page, under the headline's buttons. */
-.appsHeading {
-  margin: 0 0 var(--space-4);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
 }
 
 /* Version, Privacy and About: for whoever deploys it, and for the curious. At

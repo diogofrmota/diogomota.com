@@ -5,7 +5,7 @@ import { readSpace, transaction } from "@/lib/spaces";
 import { readLists } from "@/lib/tasks";
 
 // GET /api/account/export: everything the site keeps about you, as a JSON file
-// (Account, Your data): your account, your Shows library, friends and
+// (Account, Data / Privacy page): your account, your Shows library, friends and
 // recommendations, what you did (the activity feeds), and your space's calendar
 // and tasks, which you share with its members. Not the password, sessions or
 // profile picture (that one is on your Account page to save).

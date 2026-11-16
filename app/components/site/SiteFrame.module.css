@@ -1,0 +1,130 @@
+/* The website (SiteFrame): the header, the page, and the footer at the bottom
+   however short the page is. Its content keeps to one column, --site-width:
+   at most 70rem, with the page's margins (--gutter) on either side, clear of
+   a phone's rounded corners and notch in landscape. */
+.frame {
+  --gutter: max(1.25rem, env(safe-area-inset-left), env(safe-area-inset-right));
+  --site-width: min(70rem, 100% - 2 * var(--gutter));
+
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 48rem) {
+  .frame {
+    --gutter: max(2rem, env(safe-area-inset-left), env(safe-area-inset-right));
+  }
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The footer: on the surface color, a line over it. The mark and what the
+   site is, then the columns of links (two to a row on a phone); under them,
+   small and muted, the year and the version. */
+.footer {
+  margin-top: 5rem;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.footerColumns,
+.footerBase {
+  width: var(--site-width);
+  margin-inline: auto;
+}
+
+.footerColumns {
+  display: grid;
+  gap: var(--space-6) var(--space-8);
+  padding-block: var(--space-8) var(--space-6);
+}
+
+.footerAbout p {
+  max-width: 20rem;
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.footerBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  color: var(--text);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+}
+
+.footerBrand img {
+  border-radius: var(--radius-xs);
+}
+
+.footerLinks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6) var(--space-4);
+}
+
+.footerLinks h2 {
+  margin: 0 0 var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.footerLinks ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each a whole row to tap on a phone; closer together where a pointer aims. */
+.footerLinks a {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
+  color: var(--text);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  .footerLinks a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+}
+
+.footerBase {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding-block: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+@media (min-width: 48rem) {
+  .footerColumns {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    padding-top: var(--space-8);
+  }
+
+  .footerLinks {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .footerLinks a {
+    min-height: 2rem;
+  }
+}

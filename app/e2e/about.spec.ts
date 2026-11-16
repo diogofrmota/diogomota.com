@@ -1,66 +1,39 @@
-import { expect, test } from "@playwright/test";
+import { expect, newUser, signUp, test } from "./fixtures";
 
-// /about: what was the site's front page until home became the apps
-// (docs/decisions/0014), as it was, with See the apps going home.
+// /about: who runs the site, in the website's frame (docs/decisions/0016), as
+// the front page is: its header, the intro, what the site is, and its footer.
 
-test("about shows the intro and no navbar or footer", async ({ page }) => {
+test("about is in the website's look: its header and footer, the intro, and what the site is", async ({ page }) => {
   await page.goto("/about");
+  // Light, logged out, as the front page: not black any more.
+  await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
+  await expect(page.locator("[data-theme]")).toHaveCSS("background-color", "rgb(230, 230, 230)");
   const main = page.getByRole("main");
-  await expect(main.getByRole("heading", { level: 1, name: "diogo mota" })).toBeVisible();
-  await expect(main).toContainText("devops engineer @ Richemont");
-  await expect(main).toContainText("currently based in Lisbon, PT");
-  await expect(main.getByRole("link", { name: "See the apps" })).toHaveText("See the apps");
+  await expect(main.getByRole("heading", { level: 1 })).toHaveText("Diogo Mota");
+  await expect(main).toContainText("DevOps engineer at Richemont, based in Lisbon, Portugal.");
+  // No button to the apps: the header and footer have them.
+  await expect(page.getByRole("link", { name: "See the apps" })).toHaveCount(0);
 
-  await expect(page.getByRole("banner")).toHaveCount(0);
-  await expect(page.getByRole("navigation")).toHaveCount(0);
-  await expect(page.getByRole("contentinfo")).toHaveCount(0);
+  // What the site is, with a link to each app's section and to Privacy.
+  const site = main.getByRole("region", { name: "This site" });
+  await expect(site).toContainText("Shared, a calendar for two, and Shows, a watchlist with your friends.");
+  await expect(site.getByRole("link", { name: "Shared", exact: true })).toHaveAttribute("href", "/#shared");
+  await expect(site.getByRole("link", { name: "Shows", exact: true })).toHaveAttribute("href", "/#shows");
+  await expect(site.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+
+  // The header, with About marked, and the footer.
+  const nav = page.getByRole("banner").getByRole("navigation", { name: "Site" });
+  await expect(nav.getByRole("link", { name: "About" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("contentinfo").getByRole("link", { name: "About" })).toBeVisible();
 });
 
-test("about's lines are one size and white, left-aligned in a centered block", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto("/about");
-  await page.evaluate(() => document.fonts.ready);
-  const main = page.getByRole("main");
-
-  const lines = await main.locator("h1, p, a").evaluateAll((elements) =>
-    elements.map((element) => {
-      const style = getComputedStyle(element);
-      return {
-        isButton: element.getAttribute("href") === "/",
-        fontSize: style.fontSize,
-        color: style.color,
-        background: style.backgroundColor,
-        textAlign: style.textAlign,
-      };
-    }),
-  );
-  expect(lines).toHaveLength(6); // 4 lines, 2 links
-  for (const { isButton, ...line } of lines) {
-    // White text on the page's black, except See the apps: a white button with black text.
-    expect(line).toEqual({
-      fontSize: "16px",
-      color: isButton ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)",
-      background: isButton ? "rgb(255, 255, 255)" : "rgba(0, 0, 0, 0)",
-      textAlign: "left",
-    });
-  }
-
-  // The block is as wide as its longest line and sits in the middle of the screen.
-  const box = (await main.boundingBox())!;
-  expect(box.width).toBeLessThan(400);
-  expect(Math.abs(box.x - (1280 - box.x - box.width))).toBeLessThanOrEqual(1);
-});
-
-test("about links to Richemont, and See the apps goes home", async ({ page }) => {
+test("about links to Richemont, in a new tab", async ({ page }) => {
   await page.goto("/about");
   const richemont = page.getByRole("link", { name: "Richemont" });
   await expect(richemont).toHaveAttribute("href", "https://www.richemont.com/");
   await expect(richemont).toHaveAttribute("target", "_blank");
   await expect(richemont).toHaveAttribute("rel", "noopener noreferrer");
   await expect(richemont).toHaveAccessibleName("Richemont (opens in a new tab)");
-
-  await page.getByRole("link", { name: "See the apps" }).click();
-  await expect(page).toHaveURL("/");
 });
 
 test("about has a title, the intro as its description and its own preview image", async ({ page }) => {
@@ -68,9 +41,9 @@ test("about has a title, the intro as its description and its own preview image"
   await expect(page).toHaveTitle("about · diogo mota");
 
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
-  await expect(meta("name", "description")).toHaveAttribute("content", /devops engineer @ Richemont/);
+  await expect(meta("name", "description")).toHaveAttribute("content", /DevOps engineer at Richemont/);
   await expect(meta("property", "og:title")).toHaveAttribute("content", "diogo mota");
-  await expect(meta("property", "og:description")).toHaveAttribute("content", /Lisbon, PT/);
+  await expect(meta("property", "og:description")).toHaveAttribute("content", /Lisbon, Portugal/);
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com/about");
   await expect(meta("property", "og:type")).toHaveAttribute("content", "website");
   // The dev server puts its own origin here; production builds use https://diogomota.com.
@@ -81,29 +54,34 @@ test("about has a title, the intro as its description and its own preview image"
   expect(image.headers()["content-type"]).toBe("image/png");
 });
 
-test("about uses the self-hosted IBM Plex Mono, with no third-party requests", async ({ page, baseURL }) => {
+test("about is in the system font, as the rest of the site, with nothing from other sites", async ({
+  page,
+  baseURL,
+}) => {
   const requests: URL[] = [];
   page.on("request", (request) => requests.push(new URL(request.url())));
   await page.goto("/about");
+  await page.evaluate(() => document.fonts.ready);
 
-  const { family, loaded, bodyFamily } = await page.evaluate(async () => {
-    await document.fonts.ready;
-    const h1 = document.querySelector("h1")!;
-    const family = getComputedStyle(h1).fontFamily.split(",")[0].trim().replace(/["']/g, "");
-    return {
-      family,
-      loaded: [...document.fonts].some(
-        (face) => face.family.replace(/["']/g, "") === family && face.status === "loaded",
-      ),
-      bodyFamily: getComputedStyle(document.body).fontFamily,
-    };
-  });
-  expect(loaded).toBe(true);
-  // Applied by the page frame, not the root layout, so the apps don't get it.
-  expect(bodyFamily).not.toContain(family);
-
-  const fontFiles = requests.filter((url) => url.pathname.endsWith(".woff2"));
-  expect(fontFiles.length).toBeGreaterThan(0);
+  const family = await page
+    .getByRole("heading", { level: 1 })
+    .evaluate((h1) => getComputedStyle(h1).fontFamily.split(",")[0].trim());
+  expect(family).toBe("system-ui");
+  expect(requests.filter((url) => /\.(woff2?|ttf|otf)$/.test(url.pathname)).map(String)).toEqual([]);
   const origin = new URL(baseURL!).origin;
   expect(requests.filter((url) => url.origin !== origin).map(String)).toEqual([]);
+});
+
+test("logged in, about's header has Account and Your apps, and the apps' links open them", async ({ page }) => {
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/");
+  await page.goto("/about");
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("link", { name: "Account" })).toHaveAttribute("href", "/account");
+  await expect(header.getByRole("link", { name: "Your apps" })).toHaveAttribute("href", "/");
+  await expect(header.getByRole("link", { name: "Log in" })).toHaveCount(0);
+  await expect(
+    page.getByRole("main").getByRole("region", { name: "This site" }).getByRole("link", { name: "Shows", exact: true }),
+  ).toHaveAttribute("href", "/shows");
 });

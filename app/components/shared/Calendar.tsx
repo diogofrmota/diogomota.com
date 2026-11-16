@@ -29,8 +29,8 @@ import styles from "./Calendar.module.css";
 
 type Mode = "agenda" | "month";
 const modes: readonly { id: Mode; label: string }[] = [
-  { id: "agenda", label: "Agenda" },
   { id: "month", label: "Month" },
+  { id: "agenda", label: "Agenda" },
 ];
 /** The events a day of the month shows; past them, "+1 more" (and so on). */
 const monthEvents = 2;
@@ -374,8 +374,9 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
   const settled = useSettled(agenda.length > 0);
   let row = 0;
 
-  // One toolbar over the grid, so the grid gets the rest of the screen: the
-  // month with ‹ and › on either side of it, then Agenda | Month and Add event.
+  // One toolbar over the grid, so the grid gets the rest of the screen, all of
+  // it together in the middle: the month with ‹ and › on either side of it,
+  // then Month | Agenda and Add event.
   // The tab bar's Calendar names the view; the h1 is for screen readers.
   return (
     <section

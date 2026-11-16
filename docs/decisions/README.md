@@ -19,3 +19,4 @@ One short record per decision that shapes the site: what was chosen, why, and wh
 | [0013](0013-motion-system.md) | One motion system, with rules | unreleased |
 | [0014](0014-home-is-the-apps.md) | Home is the apps; the intro is /about | unreleased |
 | [0015](0015-only-main.md) | Only main, no Dependabot: updates by hand | unreleased |
+| [0016](0016-the-front-page-is-a-website.md) | The front page is a website; /about joins it | unreleased |

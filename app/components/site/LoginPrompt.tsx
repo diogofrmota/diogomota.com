@@ -12,10 +12,10 @@ import { AppPreview } from "./AppPreview";
 import styles from "./LoginPrompt.module.css";
 
 // Shown instead of an app while logged out, in the apps' dialog look: a picture
-// of the app (as on its card), what it's for, then Log in and Sign up. A native
-// modal <dialog>: it keeps focus inside, closes on Escape and hands focus back
-// to the card on close. As the apps' popups: it grows in from the card that
-// opened it, from 0.95, and leaves back into it, 20% quicker
+// of the app (as in its section of the front page), what it's for, then Log in
+// and Sign up. A native modal <dialog>: it keeps focus inside, closes on Escape
+// and hands focus back to the app's Open on close. As the apps' popups: it
+// grows in from what opened it, from 0.95, and leaves back into it, 20% quicker
 // (components/common/Dialog: openPopup, leavingCopy).
 export function LoginPrompt({ app, onClose }: { app: AppInfo | null; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);

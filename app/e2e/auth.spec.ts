@@ -14,8 +14,9 @@ test("sign up logs the new user in, home, whose icons go straight into the apps"
   const account = page.getByRole("navigation", { name: "Account" });
   await expect(accountButton(page, user.username)).toBeVisible();
   await expect(account.getByRole("link", { name: "Account", exact: true })).toBeVisible();
-  // Logged in, no front page: the apps' icons.
-  await expect(page.getByRole("region", { name: "Personal apps for friends" })).toHaveCount(0);
+  // Logged in, no front page (the website's): the apps' icons.
+  await expect(page.getByRole("region", { name: "Small apps for the things you share with people" })).toHaveCount(0);
+  await expect(page.getByRole("banner")).toHaveCount(0);
 
   await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
@@ -64,10 +65,11 @@ test("log out from Account, opened from the tab bar of home", async ({ page }) =
   await expect(page).toHaveURL("/account");
   await page.getByRole("main").getByRole("button", { name: "Log out", exact: true }).click();
 
+  // Logged out, home is the website: Log in and Sign up in its header.
   await expect(page).toHaveURL("/");
-  const account = page.getByRole("navigation", { name: "Account" });
-  await expect(account.getByRole("link", { name: "Log in" })).toBeVisible();
-  await expect(account.getByRole("link", { name: "Sign Up" })).toBeVisible();
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("link", { name: "Log in" })).toBeVisible();
+  await expect(header.getByRole("link", { name: "Sign Up" })).toBeVisible();
   await page.goto("/shared");
   await expect(page).toHaveURL(`/?${next("/shared")}`);
 });

@@ -1,5 +1,6 @@
 /* Account (AccountSettings): the profile picture in the middle, the settings
-   in one card under it, then Update password and Log out. */
+   in one card under it (the last, Data / Privacy page, opens the data's own rows),
+   then Log out. */
 
 /* The picture is a button that opens its popup: a pencil at its bottom right
    says it can be changed. */
@@ -83,6 +84,7 @@
 
 .row {
   display: flex;
+  box-sizing: border-box;
   align-items: center;
   gap: var(--space-3);
   width: 100%;
@@ -93,6 +95,7 @@
   color: var(--text);
   font: inherit;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition:
     background-color var(--duration-fast) ease,
@@ -144,16 +147,15 @@
   margin-top: var(--space-4);
 }
 
-/* Update password and Log out, side by side under the card. */
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-top: var(--space-6);
+/* Data / Privacy page's popup: the same rows, on the page's color so they stand
+   off the popup's; Delete my account in red, as what starts it everywhere. */
+.dataList {
+  background: var(--bg);
 }
 
-.buttons > form {
-  display: contents;
+.dangerRow .rowTitle {
+  flex: 1;
+  color: var(--danger);
 }
 
 /* Log out, on its own under the settings: as wide as their rows, with its
@@ -495,28 +497,6 @@
   accent-color: var(--accent);
   font-size: var(--text-md);
   cursor: pointer;
-}
-
-/* Your data: Download my data and Delete my account, under a line. */
-.data {
-  display: grid;
-  gap: var(--space-3);
-  margin-top: var(--space-8);
-  padding-top: var(--space-6);
-  border-top: 1px solid var(--border);
-}
-
-.data h2 {
-  margin: 0;
-  font-size: var(--text-lg);
-}
-
-.data p {
-  margin: 0;
-}
-
-.data a {
-  color: inherit;
 }
 
 /* The email isn't confirmed yet: a note with Send the link again. */

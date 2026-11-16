@@ -1062,14 +1062,16 @@
   }
 }
 
-/* The toolbar, one row: the month between ‹ and ›, together on the left, then
-   Agenda | Month and Add event on the right. Where they can't all fit (320px),
-   the right end goes under. Over the month, which has the whole width, it is
-   inset a little from the screen's edges; the agenda has margins of its own. */
+/* The toolbar, one row, all of it together in the middle: the month between
+   ‹ and ›, then Month | Agenda and Add event. Where they can't all fit
+   (320px), Month | Agenda and Add event go under, in the middle too. Over the
+   month, which has the whole width, it is inset a little from the screen's
+   edges; the agenda has margins of its own. */
 .toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
   padding-inline: max(var(--space-2), env(safe-area-inset-left)) max(var(--space-2), env(safe-area-inset-right));
 }
@@ -1095,9 +1097,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-left: auto;
 }
-/* Agenda | Month: both always there, the one showing raised and in the accent
+/* Month | Agenda: both always there, the one showing raised and in the accent
    (as Shows' TV Shows | Movies), each a whole 44px to tap. Its corners: its
    buttons' (--radius-md), plus the 3px around them. The raised thumb is one
    object (a SegmentThumb, Calendar.tsx) that slides from one to the other,
@@ -1206,7 +1207,7 @@
 
 /* The agenda: its days in a centered column with the page's margins (at most
    43rem wide), under the same toolbar as the month's: the toolbar has the
-   whole width in both views, so ‹ ›, Agenda | Month and Add event stay where
+   whole width in both views, so ‹ ›, Month | Agenda and Add event stay where
    they are whichever is showing. As long as its events: the page scrolls,
    Show more at the end. */
 .calendar.agendaView {
@@ -1233,8 +1234,8 @@
   margin-inline: max(var(--space-2), env(safe-area-inset-left)) max(var(--space-2), env(safe-area-inset-right));
 }
 /* The page's scrollbar keeps its room while Shared is open: the agenda
-   scrolls with the page and the month doesn't, and the toolbar's right end
-   would move by the scrollbar's width between them (where scrollbars take room). */
+   scrolls with the page and the month doesn't, and the toolbar would move by
+   half the scrollbar's width between them (where scrollbars take room). */
 :global(html):has(.calendar) {
   scrollbar-gutter: stable;
 }

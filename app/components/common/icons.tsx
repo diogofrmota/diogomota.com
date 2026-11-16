@@ -346,3 +346,30 @@ export function SendIcon() {
     </Icon>
   );
 }
+
+/** Three lines: the website's menu on a phone (SiteHeader). */
+export function MenuIcon() {
+  return (
+    <Icon>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </Icon>
+  );
+}
+
+/** An arrow down onto a line: Download my data. */
+export function DownloadIcon() {
+  return (
+    <Icon>
+      <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />
+    </Icon>
+  );
+}
+
+/** An arrow to the right: a link that goes on (Open Shared). */
+export function ArrowRightIcon() {
+  return (
+    <Icon>
+      <path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5" />
+    </Icon>
+  );
+}

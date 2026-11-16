@@ -2,9 +2,10 @@ import { memberColors } from "@/lib/space-types";
 import styles from "./AppPreview.module.css";
 
 // A small picture of an app, drawn with the page's theme from the apps' own
-// parts, so it looks like the app does for this user: on its card on /apps
-// and in its login prompt. Decorative (the card's name and description say
-// what the app is): no text in it but the calendar's day numbers.
+// parts, so it looks like the app does for this user: in its window on the
+// front page (AppWindow, scaled up), in its login prompt and in Shared's
+// welcome. Decorative (the words beside it say what the app is): no text in it
+// but the calendar's day numbers.
 
 const [blue, rose, green, gold] = memberColors.map((color) => color.hex);
 

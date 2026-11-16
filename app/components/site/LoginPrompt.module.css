@@ -11,8 +11,8 @@
 }
 
 /* As the apps' popups (components/common/Dialog.module.css): from 0.95 of its
-   size, out of the card that opened it (--origin), easing out; its backdrop
-   fades in. Leaving, a copy goes back into the card, 20% quicker. */
+   size, out of what opened it (an app's Open: --origin), easing out; its
+   backdrop fades in. Leaving, a copy goes back into it, 20% quicker. */
 .prompt[open] {
   transform-origin: var(--origin, 50% 50%);
   animation: prompt-in var(--duration) var(--ease-out);

@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
-import { appsDescription } from "@/lib/apps";
-import { siteName } from "@/lib/site";
+import { siteDescription, siteName } from "@/lib/site";
 import { defaultTheme, themeBackground } from "@/lib/themes";
 
 // The web app manifest (/manifest.webmanifest, linked from every page): added to
@@ -16,7 +15,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/apps",
     name: siteName,
     short_name: siteName,
-    description: appsDescription,
+    description: siteDescription,
     start_url: "/",
     scope: "/",
     display: "standalone",

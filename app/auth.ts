@@ -131,6 +131,20 @@ function createAuth() {
         await sendEmail({ to: user.email, ...emailVerificationEmail(displayName(user), url) });
       },
     },
+    databaseHooks: {
+      user: {
+        update: {
+          // A new email is set when the link sent to it is opened, which proves
+          // the address: it is confirmed too. (Better Auth 1.7 keeps the account's
+          // earlier state, so an account that never confirmed its first email
+          // would stay "not confirmed" with the new one it has just proven.)
+          before: async (data, ctx) => {
+            if (ctx?.path !== "/verify-email" || typeof data.email !== "string") return;
+            return { data: { ...data, emailVerified: true } };
+          },
+        },
+      },
+    },
     advanced: {
       database: { generateId: "uuid" },
       // nginx sets X-Forwarded-For to exactly the client's address (nginx/nginx.conf).

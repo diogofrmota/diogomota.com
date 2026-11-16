@@ -28,7 +28,7 @@ export type TabNavProps = {
 };
 
 /**
- * The frame of the apps and every page around them (home, /account, the
+ * The frame of the apps and every page around them (home logged in, /account, the
  * login pages, /privacy, an invite, the 404), in the user's theme, with a tab
  * bar (HeaderTabs): an app's tabs, or Account (or Log in and Sign up) and
  * Home. Along the bottom of a phone's screen, within reach of a thumb, and

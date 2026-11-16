@@ -18,7 +18,14 @@ import { LogoutButton } from "@/components/account/LogoutButton";
 import { Avatar } from "@/components/common/Avatar";
 import { clearOfflineData } from "@/components/common/QueryProvider";
 import { Dialog } from "@/components/common/Dialog";
-import { ChevronRightIcon, CloseIcon, LogoutIcon, PencilIcon, PhotoIcon } from "@/components/common/icons";
+import {
+  ChevronRightIcon,
+  CloseIcon,
+  DownloadIcon,
+  LogoutIcon,
+  PencilIcon,
+  PhotoIcon,
+} from "@/components/common/icons";
 import { InlineSpinner, PendingOverlay } from "@/components/common/Spinner";
 import { ThemeOptions } from "@/components/common/ThemePicker";
 import ui from "@/components/common/ui.module.css";
@@ -468,6 +475,52 @@ function DeleteForm() {
   );
 }
 
+/**
+ * Data / Privacy page: the Privacy page (what is kept, and why), Download my data
+ * (everything, as a file) and Delete my account, which opens its own popup in
+ * this one's place. A row each, as on the page.
+ */
+function DataOptions({ onDelete }: { onDelete: () => void }) {
+  return (
+    <ul className={`${styles.list} ${styles.dataList}`}>
+      <li>
+        <Link href="/privacy" className={styles.row}>
+          <span className={styles.rowTitle}>Privacy page</span>
+          <span className={ui.srOnly}>: </span>
+          <span className={styles.rowValue}>What&rsquo;s kept, and why</span>
+          <span className={styles.rowChevron} aria-hidden="true">
+            <ChevronRightIcon />
+          </span>
+        </Link>
+      </li>
+      <li>
+        <a href="/api/account/export" download className={styles.row}>
+          <span className={styles.rowTitle}>Download my data</span>
+          <span className={ui.srOnly}>: </span>
+          <span className={styles.rowValue}>All of it, as a file</span>
+          <span className={styles.rowChevron} aria-hidden="true">
+            <DownloadIcon />
+          </span>
+        </a>
+      </li>
+      <li>
+        <button
+          type="button"
+          className={`${styles.row} ${styles.dangerRow}`}
+          data-press="wide"
+          aria-haspopup="dialog"
+          onClick={onDelete}
+        >
+          <span className={styles.rowTitle}>Delete my account</span>
+          <span className={styles.rowChevron} aria-hidden="true">
+            <ChevronRightIcon />
+          </span>
+        </button>
+      </li>
+    </ul>
+  );
+}
+
 /** Not confirmed yet: the link went to their email; this sends another. */
 function VerifyEmail({ email }: { email: string }) {
   const [state, action, pending] = useActionState(resendVerification, {});
@@ -483,7 +536,7 @@ function VerifyEmail({ email }: { email: string }) {
   );
 }
 
-type Setting = "avatar" | "name" | "username" | "email" | "theme" | "password" | "delete";
+type Setting = "avatar" | "name" | "username" | "email" | "theme" | "password" | "data" | "delete";
 
 /** Each setting's popup title. */
 const titles: Record<Setting, string> = {
@@ -493,17 +546,20 @@ const titles: Record<Setting, string> = {
   email: "Email",
   theme: "Theme",
   password: "Update password",
+  data: "Data / Privacy page",
   delete: "Delete my account",
 };
 
 /**
  * Account's settings: the profile picture, in the middle; then a row each for
- * the name, username, email and theme, with what they are now, and for the
- * password (Update password); then Log out on its own, as wide as the rows;
- * then Your data: Download my data and Delete my account. Each opens a popup with its form (Escape, a click outside or its ×
- * close it), which closes once saved, saying so under the rows; the page then
- * shows the new value. An email not confirmed yet says so, with a way to send
- * the link again; `message` is what an emailed link did (it came back here).
+ * the name, username, email and theme, with what they are now, for the
+ * password (Update password), and for Data / Privacy page (Manage: the Privacy
+ * page, Download my data and Delete my account); then Log out on its own, as
+ * wide as the rows. Each opens a popup with its form (Escape, a click outside
+ * or its × close it), which closes once saved, saying so under the rows; the
+ * page then shows the new value. An email not confirmed yet says so, with a
+ * way to send the link again; `message` is what an emailed link did (it came
+ * back here).
  */
 export function AccountSettings({
   user,
@@ -531,14 +587,15 @@ export function AccountSettings({
     setOpen(null);
     setNotice(message);
   };
-  // Each row: the setting, what it is now, and its popup. The password isn't
-  // shown: its row says what it does.
+  // Each row: the setting, what it is now, and its popup. The password and
+  // the data aren't shown: their rows say what they do.
   const rows: { id: Setting; label?: string; value: string | null }[] = [
     { id: "name", value: user.name },
     { id: "username", value: user.username },
     { id: "email", value: user.emailVerified ? user.email : `${user.email} (not confirmed)` },
     { id: "theme", value: themes.find((theme) => theme.id === user.themePreference)?.name ?? null },
     { id: "password", label: "Password", value: "Change" },
+    { id: "data", value: "Manage" },
   ];
 
   return (
@@ -588,27 +645,6 @@ export function AccountSettings({
         <LogoutButton className={`${ui.button} ${styles.logoutButton}`} icon={<LogoutIcon />} />
       </form>
 
-      {/* Your data (privacy): a copy of it all, or deleting it all. */}
-      <section className={styles.data} aria-labelledby="your-data">
-        <h2 id="your-data">Your data</h2>
-        <p className={ui.muted}>
-          Check our <Link href="/privacy">Privacy page</Link>.
-        </p>
-        <div className={styles.buttons}>
-          <a href="/api/account/export" download className={ui.button}>
-            Download my data
-          </a>
-          <button
-            type="button"
-            className={`${ui.button} ${ui.remove}`}
-            aria-haspopup="dialog"
-            onClick={() => show("delete")}
-          >
-            Delete my account
-          </button>
-        </div>
-      </section>
-
       {open && (
         <Dialog
           key={open}
@@ -633,6 +669,8 @@ export function AccountSettings({
               <EmailForm email={user.email} onSaved={saved} />
             ) : open === "theme" ? (
               <ThemeForm theme={user.themePreference} labelledBy={headingId} onSaved={saved} />
+            ) : open === "data" ? (
+              <DataOptions onDelete={() => show("delete")} />
             ) : open === "delete" ? (
               <DeleteForm />
             ) : (

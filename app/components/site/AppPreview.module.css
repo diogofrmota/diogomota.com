@@ -1,7 +1,7 @@
 /* A small picture of an app (AppPreview.tsx), in the page's theme: the app's
    page (--bg), with its cards (--surface) on it. Lines stand in for text.
    Its corners are the radius of what it sits in less the room around it:
-   --preview-radius, set by the card or prompt it is in. */
+   --preview-radius, set by the window or prompt it is in. */
 .preview {
   display: block;
   aspect-ratio: 2 / 1;

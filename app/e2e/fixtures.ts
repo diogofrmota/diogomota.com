@@ -131,12 +131,12 @@ export function accountButton(page: Page, username: string) {
     .or(page.locator('nav[aria-label="Account"]:not(header nav) a[href="/account"]'));
 }
 
-/** Logs out with Log out on /account (the tab bar of home has Account and Home). */
+/** Logs out with Log out on /account, which lands home: logged out, the website, Log in in its header. */
 export async function logOut(page: Page, username: string) {
   await page.goto("/account");
   void username;
   await page.getByRole("main").getByRole("button", { name: "Log out", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("link", { name: "Log in" })).toBeVisible();
 }
 
 /** A form's error message. Scoped to main: Next.js has a route announcer with role alert too. */

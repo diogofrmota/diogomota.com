@@ -66,7 +66,7 @@ test("Account and Home in the tab bar go between home and the settings; /account
   await expect(page).toHaveURL("/");
 });
 
-test("Account: the profile picture in the middle, a row per setting with its value, then Log out and Your data", async ({
+test("Account: the profile picture in the middle, a row per setting with its value (Data / Privacy page last), then Log out", async ({
   page,
 }) => {
   const user = newUser();
@@ -89,6 +89,7 @@ test("Account: the profile picture in the middle, a row per setting with its val
     new RegExp(`^Email.*${user.email}`),
     /^Theme.*Light/,
     /^Password.*Change/,
+    /^Data \/ Privacy page.*Manage/,
   ]);
   // Nothing else to open on the page: no dropdowns.
   await expect(main.locator("details")).toHaveCount(0);
@@ -103,11 +104,21 @@ test("Account: the profile picture in the middle, a row per setting with its val
     .locator("[data-theme]")
     .evaluate((shell) => getComputedStyle(shell).getPropertyValue("--accent"));
   await expect(logOutButton).toHaveCSS("color", rgb(accent.trim()));
-  // Your data points to the Privacy page, for what is kept and why.
-  const data = main.getByRole("region", { name: "Your data" });
-  await expect(data.getByRole("paragraph")).toHaveText("Check our Privacy page.");
-  await expect(data.getByRole("link", { name: "Privacy page" })).toHaveAttribute("href", "/privacy");
-  await expect(main.getByRole("link", { name: /privacy/i })).toHaveCount(1);
+  // No Your data under Log out: it is the Data / Privacy page row, whose popup has the Privacy page,
+  // Download my data and Delete my account.
+  await expect(main.getByRole("region", { name: "Your data" })).toHaveCount(0);
+  await expect(main.getByRole("link", { name: /privacy|download/i })).toHaveCount(0);
+  const data = await openSetting(page, "Data / Privacy page");
+  await expect(data.getByRole("listitem")).toHaveText([
+    /^Privacy page.*What’s kept, and why/,
+    /^Download my data.*All of it, as a file/,
+    /^Delete my account/,
+  ]);
+  await expect(data.getByRole("link", { name: /^Privacy page/ })).toHaveAttribute("href", "/privacy");
+  await expect(data.getByRole("link", { name: /^Download my data/ })).toHaveAttribute("href", "/api/account/export");
+  await page.keyboard.press("Escape");
+  await expect(data).toBeHidden();
+  await expect(accountSetting(page, "Data / Privacy page")).toBeFocused();
 
   // Each opens a popup, which Escape, a click outside or its × closes, back on the button that opened it.
   for (const name of ["Name", "Username", "Email", "Theme"]) {
@@ -124,8 +135,9 @@ test("Account: the profile picture in the middle, a row per setting with its val
   await expect(password).toBeHidden();
 
   await logOutButton.click();
+  // Home, logged out: the website, Log in in its header.
   await expect(page).toHaveURL("/");
-  await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("link", { name: "Log in" })).toBeVisible();
 });
 
 test("change username", async ({ page }) => {
@@ -582,7 +594,7 @@ test("logged out, /account redirects home and Log in comes back to it", async ({
   await page.goto("/account");
   await expect(page).toHaveURL("/?next=%2Faccount");
   await expect(page.getByRole("dialog")).toBeHidden();
-  await expect(page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Log in" })).toHaveAttribute(
+  await expect(page.getByRole("banner").getByRole("link", { name: "Log in" })).toHaveAttribute(
     "href",
     "/login?next=%2Faccount",
   );
@@ -661,9 +673,10 @@ test("Download my data has the account, library and space; Delete my account tak
   const { data: space } = await (await page.request.get("/api/shared/spaces")).json();
   await page.goto("/account");
 
-  // A file with what the site keeps about them.
+  // A file with what the site keeps about them, from Data / Privacy page.
+  const options = await openSetting(page, "Data / Privacy page");
   const downloading = page.waitForEvent("download");
-  await page.getByRole("link", { name: "Download my data" }).click();
+  await options.getByRole("link", { name: /^Download my data/ }).click();
   const file = await downloading;
   expect(file.suggestedFilename()).toMatch(/^diogomota-data-\d{4}-\d{2}-\d{2}\.json$/);
   const data = JSON.parse(await (await import("node:fs/promises")).readFile((await file.path())!, "utf8"));
@@ -672,9 +685,15 @@ test("Download my data has the account, library and space; Delete my account tak
   expect(data.shows.library).toEqual([]);
   expect(JSON.stringify(data)).not.toContain("password");
 
-  // Deleting: the password first.
-  await page.getByRole("button", { name: "Delete my account" }).click();
+  // Deleting: from Data / Privacy page, whose popup gives way to Delete my account's; Close goes back to the row.
+  await options.getByRole("button", { name: "Delete my account" }).click();
   const dialog = page.getByRole("dialog", { name: "Delete my account" });
+  await expect(options).toBeHidden();
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(accountSetting(page, "Data / Privacy page")).toBeFocused();
+  await (await openSetting(page, "Data / Privacy page")).getByRole("button", { name: "Delete my account" }).click();
+  // The password first.
   await dialog.getByLabel("Password").fill("not the password");
   await dialog.getByRole("button", { name: "Delete my account" }).click();
   await expect(dialog.getByText("That isn't your password.")).toBeVisible();

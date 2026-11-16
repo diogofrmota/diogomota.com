@@ -1,38 +1,86 @@
-/* Every line the same size and white, left-aligned in a block as wide as the
-   longest line. SitePage's grid centers that block on the screen. */
-.main {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  line-height: 1.625;
-  text-align: left;
+/* /about, in the website's frame: one centered column, narrower than the
+   front page's. The initials, About, the name and the line about work in the
+   middle; then a card for the site, and one for getting in touch. */
+.page {
+  display: grid;
+  gap: var(--space-4);
+  width: min(40rem, var(--site-width));
+  margin: var(--space-8) auto 0;
 }
 
-.main h1,
-.main p {
+.intro {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  margin-bottom: var(--space-2);
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+}
+
+.eyebrow {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 400;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
 }
 
-/* The text links; See the apps is a button with its own hover. */
-.main p:not(.checkApps) a {
-  transition: opacity 150ms ease;
+.intro h1 {
+  margin: 0;
+  font-size: var(--text-3xl);
+  font-weight: 800;
 }
 
-@media (hover: hover) {
-  .main p:not(.checkApps) a:hover {
-    opacity: 0.7;
-  }
+.lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-lg);
 }
 
-/* A little more room above the button than between the lines of text. */
-.main .checkApps {
-  margin-top: 0.5rem;
+.card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+
+.card h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.card p {
+  margin: 0;
+}
+
+.page a {
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+  text-underline-offset: 0.2em;
 }
 
 @media (min-width: 48rem) {
-  .main {
-    gap: 1rem;
+  .page {
+    margin-top: 4rem;
+  }
+
+  .intro h1 {
+    font-size: 3rem;
   }
 }

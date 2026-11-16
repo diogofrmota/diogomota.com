@@ -132,11 +132,12 @@ test("a phone opens on the agenda and can switch to month", async ({ page }) => 
   await expect(agenda.getByRole("button", { name: /^Cinema, 21:00/ })).toBeVisible();
   await expect(agenda.getByRole("heading", { name: "Tomorrow" })).toHaveCount(0);
 
-  // The toolbar in one row: ‹ Nov 2026 › together, then Agenda | Month (both there, Agenda pressed) and Add event.
+  // The toolbar in one row, all of it together in the middle: ‹ Nov 2026 ›, then Month | Agenda (both
+  // there, Agenda pressed) and Add event.
   const view = page.getByRole("group", { name: "Calendar view" });
   await expect(view.getByRole("button")).toHaveCount(2);
-  await expect(view.getByRole("button").first()).toHaveAccessibleName("Agenda");
-  await expect(view.getByRole("button").last()).toHaveAccessibleName("Month");
+  await expect(view.getByRole("button").first()).toHaveAccessibleName("Month");
+  await expect(view.getByRole("button").last()).toHaveAccessibleName("Agenda");
   await expect(view.getByRole("button", { name: "Agenda", exact: true })).toHaveAttribute("aria-pressed", "true");
   const controls = [
     page.getByRole("button", { name: "Previous month" }),
@@ -150,6 +151,11 @@ test("a phone opens on the agenda and can switch to month", async ({ page }) => 
     expect(Math.abs(box.y + box.height / 2 - (boxes[0].y + boxes[0].height / 2))).toBeLessThan(3);
   expect(boxes[1].x - (boxes[0].x + boxes[0].width)).toBeLessThan(12);
   expect(boxes[2].x - (boxes[1].x + boxes[1].width)).toBeLessThan(12);
+  for (let i = 3; i < boxes.length; i++) expect(boxes[i].x - (boxes[i - 1].x + boxes[i - 1].width)).toBeLessThan(12);
+  // In the middle of the page: as much room before ‹ as after Add event.
+  const pageWidth = await page.evaluate(() => document.body.clientWidth);
+  const end = boxes.at(-1)!;
+  expect(Math.abs(boxes[0].x - (pageWidth - end.x - end.width))).toBeLessThanOrEqual(2);
   // The agenda has the page's margins.
   expect((await agenda.boundingBox())!.x).toBeGreaterThanOrEqual(15);
 
@@ -157,7 +163,7 @@ test("a phone opens on the agenda and can switch to month", async ({ page }) => 
   await expect(page.getByRole("region", { name: "month calendar" })).toBeVisible();
   await expect(view.getByRole("button", { name: "Month", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(view.getByRole("button", { name: "Agenda", exact: true })).toBeVisible();
-  // The toolbar stays where it is: ‹, the month, ›, Agenda | Month and Add event where they were in the agenda.
+  // The toolbar stays where it is: ‹, the month, ›, Month | Agenda and Add event where they were in the agenda.
   const monthBoxes = await Promise.all(controls.map(async (control) => (await control.boundingBox())!));
   for (const [i, box] of monthBoxes.entries()) {
     expect(Math.abs(box.x - boxes[i].x)).toBeLessThanOrEqual(1);

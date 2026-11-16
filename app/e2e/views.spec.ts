@@ -50,9 +50,15 @@ test("the site's pages", async ({ page }) => {
   await checkView(page, "error page");
 
   await page.goto("/");
-  await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
+  await page.getByRole("main").getByRole("link", { name: "Open Shows" }).click();
   await expect(page.getByRole("dialog", { name: "Log in to open Shows" })).toBeVisible();
   await checkView(page, "login prompt");
+  await page.keyboard.press("Escape");
+  // The website's menu: Apps on a wide screen, the menu on a phone.
+  const header = page.getByRole("banner");
+  const menu = header.getByRole("button", { name: "Menu" });
+  await ((await menu.isVisible()) ? menu : header.getByRole("button", { name: "Apps" })).click();
+  await checkView(page, "the website's menu");
 
   await page.goto("/signup");
   await page.getByRole("button", { name: "Sign up" }).click();

@@ -8,7 +8,11 @@ export type AppInfo = {
   href: `/${string}`;
   /** One sentence: what it is, under its icon on home (for screen readers) and in its login prompt. */
   description: string;
-  /** What it does, a short line each, on its card on the front page (home, logged out). */
+  /** What it is in a few words, lowercase, for the front page's line: "a calendar for two". */
+  summary: string;
+  /** Its section's headline on the front page (home, logged out). */
+  tagline: string;
+  /** What it does, a short line each, in its section on the front page. */
   features: readonly string[];
   /** Square SVG in public/logos: an app icon with its own colored tile, shown at 56x56. */
   logo: `/logos/${string}.svg`;
@@ -19,6 +23,8 @@ export const apps: readonly AppInfo[] = [
     name: "Shared",
     href: "/shared",
     description: "Shared calendar for couples",
+    summary: "a calendar for two",
+    tagline: "One calendar for the two of you",
     features: [
       "A calendar for the two of you, by month or as an agenda",
       "Task lists you both tick off, with repeats and who's doing what",
@@ -30,6 +36,8 @@ export const apps: readonly AppInfo[] = [
     name: "Shows",
     href: "/shows",
     description: "Track TV shows and movies with your friends",
+    summary: "a watchlist with your friends",
+    tagline: "Know what your friends are watching",
     features: [
       "Your TV shows and movies, and where you are in each",
       "Discover what's popular and what friends recommend",
@@ -41,8 +49,9 @@ export const apps: readonly AppInfo[] = [
 
 /** "Shared and Shows". */
 export const appNames = new Intl.ListFormat("en", { type: "conjunction" }).format(apps.map((app) => app.name));
-/** What the site is, for home's description and the web app manifest. */
-export const appsDescription = `Personal apps for friends: ${appNames}.`;
+
+/** The id of an app's section on the front page, and of its link there: "shared" (/#shared). */
+export const appSlug = (app: AppInfo) => app.href.slice(1);
 
 /** The app a path is in (its page, or a page under it), if any: where `next` goes. */
 export function appAt(path: string | null | undefined): AppInfo | undefined {
