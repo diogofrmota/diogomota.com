@@ -373,3 +373,23 @@ export function ArrowRightIcon() {
     </Icon>
   );
 }
+
+// Recipes' tabs: Recipes and Shopping list (Favourites is HeartIcon).
+
+/** An open book: a recipe book. */
+export function BookIcon() {
+  return (
+    <Icon>
+      <path d="M12 6.5C10.3 5.2 7.9 4.5 4 4.5v13c3.9 0 6.3.7 8 2 1.7-1.3 4.1-2 8-2v-13c-3.9 0-6.3.7-8 2zM12 6.5v13" />
+    </Icon>
+  );
+}
+
+/** A basket: the shopping list. */
+export function BasketIcon() {
+  return (
+    <Icon>
+      <path d="M3.5 10h17l-1.8 8.4a2 2 0 0 1-2 1.6H7.3a2 2 0 0 1-2-1.6zM8 10l3-5.5M16 10l-3-5.5M9.5 13.5v3M14.5 13.5v3" />
+    </Icon>
+  );
+}

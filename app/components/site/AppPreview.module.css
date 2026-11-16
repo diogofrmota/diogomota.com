@@ -220,3 +220,52 @@
   border-width: 0 1.5px 1.5px 0;
   transform: rotate(45deg);
 }
+
+/* Recipes: a search over a row of recipes' photos (one a favourite, its heart
+   at the corner, as on a card), and the shopping list beside them, as Shared's
+   task list. */
+.recipes {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
+  gap: var(--space-2);
+  height: 100%;
+}
+
+.recipeCards {
+  display: grid;
+  align-content: start;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.searchBar {
+  display: block;
+  width: 70%;
+  height: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface)
+    linear-gradient(color-mix(in srgb, var(--text) 35%, transparent), color-mix(in srgb, var(--text) 35%, transparent))
+    0.5rem 50% / 35% 0.25rem no-repeat;
+}
+
+.dishes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* A photo of the dish, wider than a poster. */
+.dish {
+  aspect-ratio: 4 / 3;
+}
+
+.heart {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  fill: #fff;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.35));
+}

@@ -36,14 +36,16 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   const main = page.getByRole("main");
   const hero = main.getByRole("region", { name: siteTagline });
   await expect(hero.getByRole("heading", { level: 1 })).toHaveText(siteTagline);
-  await expect(hero).toContainText("A calendar for two, a watchlist with your friends, and more on the way.");
+  await expect(hero).toContainText(
+    "A calendar for two, a watchlist with your friends, a recipe box with a shopping list, and more on the way.",
+  );
   await expect(hero.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup");
   await expect(hero.getByRole("link", { name: "See the apps" })).toHaveAttribute("href", "#apps");
   // Log in is the header's, on a wide screen (a phone has it under the buttons).
   await expect(hero.getByRole("link", { name: "Log in" })).toBeHidden();
 
   // A section per app, by its name: its icon, headline, what it does, and Open.
-  expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows"]);
+  expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows", "Recipes"]);
   for (const app of apps) {
     const section = appSection(page, app.name);
     await expect(section).toHaveAttribute("id", app.href.slice(1));
@@ -54,12 +56,13 @@ test("logged out, home is the website's front page: what the site is, the apps, 
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     await expect(section.getByRole("link", { name: `Open ${app.name}` })).toBeVisible();
   }
-  // Side by side, by turns: Shared's picture on the left, Shows' on the right.
+  // Side by side, by turns: Shared's picture on the left, Shows' on the right, Recipes' on the left.
   const pictureX = async (name: string) =>
     (await appSection(page, name).locator("[aria-hidden='true']").first().boundingBox())!.x;
   const wordsX = async (name: string) => (await appSection(page, name).getByRole("heading").boundingBox())!.x;
   expect(await pictureX("Shared")).toBeLessThan(await wordsX("Shared"));
   expect(await pictureX("Shows")).toBeGreaterThan(await wordsX("Shows"));
+  expect(await pictureX("Recipes")).toBeLessThan(await wordsX("Recipes"));
 
   // How it works, in three steps; Questions, with the way to About and Privacy.
   await expect(main.getByRole("region", { name: "How it works" }).getByRole("listitem")).toHaveCount(3);
@@ -83,6 +86,7 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   expect(await linkNames(footer.getByRole("navigation", { name: "Footer" }))).toEqual([
     "Shared",
     "Shows",
+    "Recipes",
     "How it works",
     "About",
     "Privacy",
@@ -97,7 +101,7 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
   await expect(meta("name", "description")).toHaveAttribute(
     "content",
-    "Small apps for the things you share with people: Shared and Shows.",
+    "Small apps for the things you share with people: Shared, Shows, and Recipes.",
   );
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com");
   const image = await page.request.get("/opengraph-image");

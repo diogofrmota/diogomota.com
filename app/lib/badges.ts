@@ -10,6 +10,8 @@ export type HomeBadges = {
   shared: number;
   /** Shows: friend requests waiting for an answer, and recommendations not seen yet in Discover. */
   shows: number;
+  /** Recipes: what is on the shopping list, not ticked off yet. */
+  recipes: number;
   /** Whether the user is in a space: without one, Shared opens on its welcome. */
   inSpace: boolean;
 };
@@ -26,9 +28,10 @@ export async function homeBadges(userId: string): Promise<HomeBadges> {
        ((SELECT count(*) FROM friendships f WHERE f.friend_id = me.id AND f.status = 'pending')
         + (SELECT count(*) FROM recommendations r
            WHERE r.to_user = me.id AND r.seen_at IS NULL
-             AND NOT EXISTS (SELECT 1 FROM user_shows us WHERE us.user_id = me.id AND us.show_id = r.show_id)))::int AS shows
+             AND NOT EXISTS (SELECT 1 FROM user_shows us WHERE us.user_id = me.id AND us.show_id = r.show_id)))::int AS shows,
+       (SELECT count(*) FROM shopping_items s WHERE s.user_id = me.id AND NOT s.is_checked)::int AS recipes
      FROM users me WHERE me.id = $1`,
     [userId, calendarZone],
   );
-  return rows[0] ?? { shared: 0, shows: 0, inSpace: false };
+  return rows[0] ?? { shared: 0, shows: 0, recipes: 0, inSpace: false };
 }

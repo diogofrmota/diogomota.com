@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#ea580c"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".3"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="heart" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#dc2626"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="27" fill="url(#bg)"/>
+  <rect width="120" height="120" rx="27" fill="url(#shine)"/>
+  <path d="M47 33c-3-3.5 3-6.5 0-10M60 33c-3-3.5 3-6.5 0-10M73 33c-3-3.5 3-6.5 0-10" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" opacity=".9"/>
+  <path d="M27 58h66v20a18 18 0 0 1-18 18H45a18 18 0 0 1-18-18z" fill="#7c2d12" opacity=".22"/>
+  <rect x="14" y="56" width="16" height="9" rx="4.5" fill="#ffedd5"/>
+  <rect x="90" y="56" width="16" height="9" rx="4.5" fill="#ffedd5"/>
+  <path d="M27 54h66v20a18 18 0 0 1-18 18H45a18 18 0 0 1-18-18z" fill="#fff"/>
+  <rect x="53" y="38" width="14" height="9" rx="4.5" fill="#9a3412"/>
+  <rect x="21" y="44" width="78" height="11" rx="5.5" fill="#ffedd5"/>
+  <path d="M60 83c-8.5-6-13-10.4-13-15.6a6.5 6.5 0 0 1 13-1.6 6.5 6.5 0 0 1 13 1.6C73 72.6 68.5 77 60 83z" fill="url(#heart)"/>
+</svg>

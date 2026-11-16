@@ -1,6 +1,6 @@
 # diogomota.com — Plan
 
-The spec of the site and its two apps as built, the decisions behind them, and the full build log. Local setup, commands, the features in detail and the JSON APIs are in [README.md](README.md); running the server is in [docs/operations.md](docs/operations.md); the decisions, one short record each, in [docs/decisions/](docs/decisions/); what each version changed in [CHANGELOG.md](CHANGELOG.md) and the GitHub Releases.
+The spec of the site and its three apps as built, the decisions behind them, and the full build log. Local setup, commands, the features in detail and the JSON APIs are in [README.md](README.md); running the server is in [docs/operations.md](docs/operations.md); the decisions, one short record each, in [docs/decisions/](docs/decisions/); what each version changed in [CHANGELOG.md](CHANGELOG.md) and the GitHub Releases.
 
 **Status:** live at https://diogomota.com since `v1.0.0` (commit `3150734`, 2026-11-02); `v1.2.0` brought Better Auth, the apps in the URL, the tab bar on phones, offline use and the features in the [Build log](#build-log)'s last entry. New work gets an entry at the end of the Build log, in the same detail as the ones there, and a new version (README.md, Versions); every deploy publishes a GitHub Release with its commits.
 
@@ -74,7 +74,7 @@ Single shared account across all apps. Auth lives at home (`/`).
 - **Sign-up:** open to anyone, no sign-up code (decided). Name (1–50 characters), username 3–20 characters of `[a-z0-9_]`, saved lowercase (the database enforces it too); email; password of at least 10 characters and at most 72 bytes. Signing up logs straight in, and sends a link to confirm the email (24 hours): until it is opened the account works, home and `/account` say so (with Send it again, which sends it from where it is), and password resets don't go to it. Accounts from before email confirmation count as confirmed (`016`).
 - **Login:** by username or email, in any case. One message for a wrong password or an unknown account, and one for a taken username or email (sign-up can't hide which one exists without email confirmation first).
 - **Rate limits** (in memory): login 10 per 15 minutes per IP, sign-up 5 per hour per IP, current-password checks 10 per 15 minutes per user, password reset requests 5 per hour per IP (with a message), reset emails 3 per hour per address (silently: same answer, nothing sent), confirmation emails sent again 3 per hour per user. nginx also limits the form submissions of the login, sign-up, reset and join pages and `/api/auth/*` to 20 a minute per client address (bursts of 20), which holds across restarts. The IP is the first `X-Forwarded-For` entry, which nginx overwrites with the client address.
-- **Protected routes:** `proxy.ts` (Next 16's name for middleware) guards `/shared`, `/shows` and `/account` (and everything under them), which redirect to `/?next=...` (opening that app's login prompt), and `/api/shared/*` and `/api/shows/*`, which answer 401. `next` only accepts same-site paths.
+- **Protected routes:** `proxy.ts` (Next 16's name for middleware) guards `/shared`, `/shows`, `/recipes` and `/account` (and everything under them), which redirect to `/?next=...` (opening that app's login prompt), and `/api/shared/*` and `/api/shows/*`, which answer 401. `next` only accepts same-site paths.
 - **Password reset:** "Forgot password?" on `/login` and "Reset by email" in Account settings open `/forgot-password`. The answer is the same whether or not an account has the email; the request runs after the response (`after()`), so the timing doesn't tell either. The link only goes to a confirmed email. Better Auth's token, of which `verifications` keeps only the SHA-256 (`storeIdentifier: "hashed"`), is valid for 1 hour and single use; a new link makes the account's earlier ones stop working. The link is built on `AUTH_URL`, never the Host header. `/reset-password` shows "Choose a new password for <username>" (new + confirm, sign-up rules) or "link expired".
 - **Password changes end sessions:** a reset or a change ends every session of the account, this device's too, and sends it to `/login?password=changed` (a change in Account settings returns to `/account` after logging in). Decided: a change in Account settings keeps logging out the current device too.
 
@@ -101,14 +101,14 @@ From Account in the tab bar of home and the pages around the apps. In the apps' 
 - Logged in, in the apps' frame and look (`AppFrame` in `components/common/AppShell`, `components/common/ui.module.css`): the system font, the user's theme, a centered column. Logged out, the website ([docs/decisions/0016](docs/decisions/0016-the-front-page-is-a-website.md)), below
 - **Tab bar** (logged in; `LauncherTabs`, `components/common/HeaderTabs.tsx`): Account (the profile picture) and Home, Home current; on the login pages, Log in (an arrow into a door), Sign up (a person and a +) and Home. On a phone along the bottom; from 48rem across the top as the header, with `>_ diogomota.com` on its left from 64rem
 - **Logged in:** the note to confirm the email until it is, whose Send it again sends another link from here (`components/site/VerifyNote`); then `Home` and the apps' icons in a grid like a phone's home screen (`components/site/AppGrid`, 4 a row on a phone, 6 wider, 64 px icons, 72 px wider), each its icon and name, its description read out with it:
-  - **Badges** (`lib/badges.ts`), a count in the accent on the icon's corner, `9+` past nine, none at 0, read out ("Shared, 2 tasks due"): Shared's open tasks due today or before (Lisbon) for the user or for nobody; Shows' friend requests waiting and the recommendations Discover hasn't shown yet (`recommendations.seen_at`, `022_recommendation_seen.sql`)
+  - **Badges** (`lib/badges.ts`), a count in the accent on the icon's corner, `9+` past nine, none at 0, read out ("Shared, 2 tasks due"): Shared's open tasks due today or before (Lisbon) for the user or for nobody; Shows' friend requests waiting and the recommendations Discover hasn't shown yet (`recommendations.seen_at`, `022_recommendation_seen.sql`); Recipes' shopping list lines not ticked off ("Recipes, 3 to buy")
   - **Reopen where you left off:** an icon opens the view last used in its app on this device (a `last-view-<app>` cookie written by the app, `lib/app-views.ts`); only the view, never panels; one that isn't a view (Shared without a space) opens the app's first
   - A ring turns over the icon until the app has loaded
 - Logged in, at the bottom, small and grey: `Version v1.x.y · Privacy · About` (`Version dev` locally)
 - **Logged out**, the website's front page (`components/site/FrontPage`), in the website's frame (`components/site/SiteFrame`, Light):
   - **Header** (`SiteHeader`, sticky): the `>_` mark and `diogomota` (home); Apps, a menu (`SiteMenu`) of each app's icon, name and description, to its section; How it works; About; Log in (plain) and Sign up (filled). Under 48rem: the mark, Sign up and a menu (☰) with the apps, How it works, About, Privacy and Log in. A menu closes with Escape, a press outside, or a link followed
-  - **Hero:** `Small apps for the things you share with people` (`siteTagline`, `lib/site.ts`), a line from each app's `summary` (`lib/apps.ts`: "A calendar for two, a watchlist with your friends, and more on the way."), Sign up and See the apps (Have an account? Log in under them on a phone), and the apps in browser windows (`AppWindow`: the address bar, then `AppPreview` scaled up with `zoom`), the second behind the first from 48rem
-  - **A section per app** (`AppSections`, `#shared`, `#shows`), by turns picture then words and words then picture: the window, the app's icon and name (its heading), its `tagline`, its `features` each after a tick, and Open, which opens its login prompt
+  - **Hero:** `Small apps for the things you share with people` (`siteTagline`, `lib/site.ts`), a line from each app's `summary` (`lib/apps.ts`: "A calendar for two, a watchlist with your friends, a recipe box with a shopping list, and more on the way."), Sign up and See the apps (Have an account? Log in under them on a phone), and the apps in browser windows (`AppWindow`: the address bar, then `AppPreview` scaled up with `zoom`), the second behind the first from 48rem
+  - **A section per app** (`AppSections`, `#shared`, `#shows`, `#recipes`), by turns picture then words and words then picture: the window, the app's icon and name (its heading), its `tagline`, its `features` each after a tick, and Open, which opens its login prompt
   - **How it works** (`#how-it-works`): Sign up, Pick an app, Bring your people. **Questions:** who runs it (→ About), privacy (→ Privacy), phones and offline, taking your data. Then a band in the accent: Try it with your people, Sign up
   - **Footer:** the mark and what the site is; Apps, Site (How it works, About, Privacy) and Account (Log in, Sign up); `© year Diogo Mota` and `Version …`
   - `?next=` opens the prompt for that app and makes every Log in and Sign up return there. After deleting an account (`?account=deleted`), that it's done
@@ -140,7 +140,7 @@ From Account in the tab bar of home and the pages around the apps. In the apps' 
 - **Design:** Minimalistic, modern, clean
 - **Typography:** the system font stack everywhere: the apps, the pages around them and the website. No web fonts
 - **Theme:** two themes (`lib/themes.ts`): **Light** (id `minimal-neutrals`) and **Dark** (id `graphite`); Light out of the box (logged out, and new accounts until they pick another); saved per user (`users.theme_preference`, checked by the app, which shows Light for an id it doesn't know, so themes come and go without a migration) and rendered by the server, so there is no flash on load; chosen in Account settings; applies in the apps, on home and `/account`; no toggle in the top bar; `<meta name="theme-color">` follows it
-- **One look in both apps** (and on home, `/account` and the login pages): every view is built from the same parts, the components of `components/common/ui.tsx` (`Button` and its variants, `Alert` with Retry or ×, `Notice`, `Confirm`) on `components/common/ui.module.css`: a 1.75 rem heading, cards (1 px border, 1 rem corners, the surface color), labels over 44 px fields, buttons (plain, `primary` in the accent color for a card's main action, `remove` in red text to start something destructive and a filled red `danger` to confirm it, in a `confirm` box with a red bar), alerts with a red bar and Retry, and what an action did in the accent's soft color, in the card it was done in. The variants are on `.button` (two classes), so they win over an app's own rules for the buttons in its views; the apps keep no copies of them. The red, `--danger`, is the shell's theme variable, like the other colors
+- **One look in every app** (and on home, `/account` and the login pages): every view is built from the same parts, the components of `components/common/ui.tsx` (`Button` and its variants, `Alert` with Retry or ×, `Notice`, `Confirm`) on `components/common/ui.module.css`: a 1.75 rem heading, cards (1 px border, 1 rem corners, the surface color), labels over 44 px fields, buttons (plain, `primary` in the accent color for a card's main action, `remove` in red text to start something destructive and a filled red `danger` to confirm it, in a `confirm` box with a red bar), alerts with a red bar and Retry, and what an action did in the accent's soft color, in the card it was done in. The variants are on `.button` (two classes), so they win over an app's own rules for the buttons in its views; the apps keep no copies of them. The red, `--danger`, is the shell's theme variable, like the other colors
 - **Responsive:** Mobile-first — primarily used on mobile, must work well on desktop too. Nothing scrolls sideways at 1280×800, 390×844 or 375×812; on a phone, controls are at least 44×44 px, text fields have 16 px text (so iOS doesn't zoom), and sheets and the undo message stay clear of the home indicator and of the tab bar
 - **Navigation:** the website (home logged out, `/about`, `/privacy` logged out) has a header (Apps, How it works, About; Log in and Sign up) and a footer of links; one tab bar on every other page but the error page: the app's tabs then Home, or Account (Log in and Sign up) and Home; across the top as the header on a wide screen (with `>_ diogomota.com` on its left from 64rem), along the bottom of the screen on a phone (within reach of a thumb), each its icon over its name
 - **Between apps:** Home, the last tab of every app, to `/`, whose icons open each app on the view last used in it
@@ -300,9 +300,45 @@ Minimalistic tracker for TV shows and movies, for anyone, with their friends.
 
 ---
 
+### App 3 — Recipes (`/recipes`)
+
+Save and organise recipes you want to cook again ([docs/decisions/0017](docs/decisions/0017-recipes.md)). Each user's own: nobody else sees their recipes, photos or shopping list.
+
+#### SPA Views (tabs: across the top, or along the bottom on a phone)
+
+**1. Recipes (default, `/recipes`)**
+- A search (title, tags, ingredients and notes; every word, in any case, without accents: `creme` finds Crème brûlée), a sort (Newest, A–Z) and New recipe; the tags of all the recipes as chips (All, then each tag, as first written, A to Z) to pick one; `3 recipes`, or `2 of 3 recipes` while searching or with a tag picked
+- The recipes as cards, two across on a phone and more wider: the cover photo (or a book on the accent's tint), the title, the tags; a heart on the photo's corner makes it a favourite (or not) in one tap. A card opens the recipe's page
+- No recipes: "Your recipes, in one place", what the app is for, and Add your first recipe
+
+**2. Favourites (`/recipes/favourites`)**
+- The same, with only the favourites (and no New recipe); none: "No favourites yet", with Go to your recipes
+
+**3. Shopping (`/recipes/shopping`)**
+- To buy (and how many), Add an item, then the lines in the order they were added, each with its box to tick off, the recipe it came from (a pill that opens it) and a bin; Ticked off under it (crossed out), with Clear ticked. Delete and Clear ticked wait for their Undo
+- Nothing to buy: "Nothing to buy yet. Add what you need here, or a recipe's ingredients from its page."
+
+#### A recipe
+- **Its page** (`?p=recipe:<id>`, a wide dialog): its photos (the one picked large, Make cover and Remove photo over it, the thumbnails under it to pick one, then +; none: a place to drop one or choose it), its title, Serves N, From `<site>` (its source link, a new tab), its tags, Favourite and Edit; the ingredients beside the method on a wide screen (over it on a phone); notes; Delete recipe, which closes it with Undo
+- **Servings:** − and + (1 to 100) scale the ingredients from the servings it was written for (`scaleIngredient`, `lib/recipe-types.ts`): the first amount of each line (or a range, `2-3`), written as it was: whole numbers and fractions as fractions where one is close (`1½ cups`), decimals as decimals with their point or comma (`0,75 l` → `1,5 l`), whole numbers from 10 up (`67 g`); not a percentage (`5% fat`) or a 0 (`Type 00 flour`); a line without an amount (`Salt, to taste`) and a heading (`For the sauce:`) as they are. Reset to N goes back
+- **Add to shopping list:** the ingredients as checkboxes, all ticked (not the headings), scaled to the servings chosen; untick what's in the cupboard, then Add N items to the list. It says so, with Open it
+- **Its form** (New recipe, `?p=new`; Edit recipe, `?p=recipe:<id>&p=edit:<id>`): Title, Serves (4 to start with), Ingredients and Method (one a line; a pasted list's bullets and numbers are left out, and a line ending in a colon is a heading), Tags (each a chip with ×; Enter or a comma adds one; the user's other tags a tap away), Source link (`bbcgoodfood.com/…` is read as `https://bbcgoodfood.com/…`) and Notes; Save checks them as the API does and marks the fields to fix. A new recipe's page opens once it's saved, for its photos
+- **Photos:** up to 10, the first the cover; need the connection and the recipe saved on the server (they aren't queued offline). The server makes each one smaller (`lib/recipe-photos.ts`): upright, at most 1,600 px a side and a 640×480 copy for its card, WebP, without metadata; files on the `appdata` volume (`RECIPE_PHOTO_DIR`), archived with every backup. Removing one waits for its Undo, which is in the recipe's page (it's modal)
+
+#### API (`/api/recipes`, `apiRoute`, 240 requests a minute per user)
+- `GET /` the recipes, newest first, each with its photos; `POST /` a new one (`recipeCreate`; the client may choose its id, and sending it again answers with what is there); `GET`, `PATCH`, `DELETE /:id`
+- `POST /:id/photos` (multipart, `photo`, up to 20 MB, 30 uploads per 15 minutes); `GET /photos/:photoId` (`?size=thumb`; kept for good by the browser), `DELETE /photos/:photoId`, `POST /photos/:photoId/cover`; each answers with the recipe
+- `GET /shopping`, `POST /shopping {items}` (to its end; a recipe that isn't yours is left off the line), `PATCH /shopping/:id {text?, isChecked?}`, `POST /shopping/remove {ids}`; up to 500 lines
+- Another user's recipe, photo or line is a 404, as one that doesn't exist
+
+#### Home
+- Its icon's badge counts what is on the shopping list, not ticked off (`Recipes, 3 to buy`)
+
+---
+
 ## Database Schema
 
-As in `db/migrations/` (`001_initial.sql` to `020_genres_recommendations.sql`). Ids are `uuid` (`gen_random_uuid()`); usernames and emails are `citext`, so case doesn't matter.
+As in `db/migrations/` (`001_initial.sql` to `023_recipes.sql`). Ids are `uuid` (`gen_random_uuid()`); usernames and emails are `citext`, so case doesn't matter.
 
 ### Single shared `users` table (across all apps)
 | Table | Key Fields |
@@ -335,7 +371,14 @@ As in `db/migrations/` (`001_initial.sql` to `020_genres_recommendations.sql`). 
 | `shows` | id, tmdb_id, type (tv/movie; unique together with tmdb_id), title, poster_url (TMDB's path, e.g. `/abc.jpg`), year, overview, genres (`text[]`), runtime (movie), episode_runtime (TV), episodes_per_season (`integer[]`), vote_average (0–10), last_updated |
 | `user_shows` | id, user_id, show_id, status (watching/planned/completed), rating (1–5; no longer read or written since users stopped rating titles, kept so an older image still works), current_season, current_episode, is_favourite, updated_at |
 | `friendships` | id, user_id (sent the request), friend_id, status (pending/accepted), created_at; one row per pair |
-| `recommendations` | id, from_user, to_user, show_id, created_at; one per pair and title |
+| `recommendations` | id, from_user, to_user, show_id, created_at, seen_at (when Discover showed it to them, nullable); one per pair and title |
+
+### Recipes tables
+| Table | Key Fields |
+|---|---|
+| `recipes` | id (the client may choose it), user_id, title (1–200), servings (1–100, default 4), ingredients and steps (`text[]`, a line each, in order), notes, source_url (http(s), nullable), tags (`text[]`), is_favourite, created_at, updated_at |
+| `recipe_photos` | id (the file's name), recipe_id, position (the lowest is the cover), width, height (the large copy's), created_at; up to 10 a recipe |
+| `shopping_items` | id (the client may choose it), user_id, text (1–300), recipe_id (where it came from; `SET NULL` when the recipe goes), is_checked, position, created_at; up to 500 a user |
 
 ### Migrations
 | File | What it does |
@@ -358,6 +401,9 @@ As in `db/migrations/` (`001_initial.sql` to `020_genres_recommendations.sql`). 
 | `018_repeating_tasks.sql` | `tasks.repeat` |
 | `019_activity.sql` | `activity` |
 | `020_genres_recommendations.sql` | `shows.genres`; `recommendations` |
+| `021_task_assignees.sql` | `task_assignees`, for tasks for several people (`tasks.assignee_id` kept in step by a trigger for the previous release) |
+| `022_recommendation_seen.sql` | `recommendations.seen_at`, for home's Shows badge |
+| `023_recipes.sql` | the Recipes app: `recipes`, `recipe_photos`, `shopping_items` (only added) |
 
 `schema_migrations` records the applied files. Never edit a migration that has been applied; add the next `NNN_name.sql`. From `015` on, migrations **expand and contract**: one only adds what the release that comes with it needs, and dropping or renaming a column or table, changing a column's type or making one NOT NULL waits for a later release, once no deployed image uses it, with a `-- contract: <what>, unread since vX.Y.Z` comment. `npm run check:migrations` (in CI) refuses a migration that doesn't. So the previous release keeps working while the new one's migrations run, and a rollback runs on the current schema. Waiting for the next release: dropping `events.notes`, `users.password_hash` and `password_changed_at` (with the trigger) and `password_resets` (unread since `v1.2.0`), and `user_shows.rating`
 
@@ -367,6 +413,7 @@ As in `db/migrations/` (`001_initial.sql` to `020_genres_recommendations.sql`). 
 - **`pg_dump` every 3 days** via cron on the VPS, as `deploy`: [infra/backup.sh](infra/backup.sh) at 03:00 (UTC)
 - Plain SQL without owners or grants, gzipped and tested, in `/opt/diogomota/backups/` as `diogomota_YYYYMMDD-HHMMSS.sql.gz`
 - Retain backups for **2 weeks**: dumps older than 14 days are deleted, only after a successful dump
+- Beside each dump, the files on the app's `appdata` volume: `avatars_YYYYMMDD-HHMMSS.tar.gz` (profile pictures) and `recipe-photos_YYYYMMDD-HHMMSS.tar.gz` (recipes' photos), each skipped with a note while the app is down or before there are any
 
 ```bash
 # infra/crontab (installed with: crontab /opt/diogomota/infra/crontab)
@@ -476,6 +523,7 @@ diogomota.com/                            # repo root (this folder)
     │   ├── join/[code]/                  # an invite link's page, and its Join (actions.ts)
     │   ├── shared/[[...view]]/page.tsx   # Shared SPA (protected), its views in the URL
     │   ├── shows/[[...view]]/page.tsx    # Shows Tracker SPA (protected), its views in the URL
+    │   ├── recipes/[[...view]]/page.tsx  # Recipes SPA (protected), its views in the URL
     │   ├── manifest.ts icon.svg apple-icon.png favicon.ico error.tsx not-found.tsx
     │   ├── test/                         # test-only pages (404 in production)
     │   └── api/
@@ -485,6 +533,7 @@ diogomota.com/                            # repo root (this folder)
     │       ├── health/                   # /api/health
     │       ├── shared/                   # spaces/, events/, tasks/, activity/, calendar-feed/: one route file per endpoint
     │       ├── shows/                    # discover/, titles/, library/, friends/, recommendations/, activity/
+    │       ├── recipes/                  # recipes ([id], [id]/photos), photos/[photoId] (and cover), shopping/
     │       └── test/                     # outbox/, tmdb/ (test hooks only)
     ├── components/
     │   ├── site/                         # SiteFrame (the website: SiteHeader, SiteMenu, its footer), FrontPage, AppSections, AppWindow,
@@ -496,19 +545,22 @@ diogomota.com/                            # repo root (this folder)
     │   │                                 # OfflineSupport, ActivityFeed, Spinner, icons, ui.module.css
     │   ├── shared/                       # SharedApp, SpaceWelcome, SpaceSettings, InviteLink, Calendar, EventDialog,
     │   │                                 # Tasks, TaskItem, TaskDialogs, Sortable, useTasks, shared-data
-    │   └── shows/                        # ShowsApp, Watchlist (Library), Discover, Profile, Stats, TitleGrid, LibraryGrid,
-    │                                     # TitleDialog, SearchDialog, QuickActions, FriendDialog, EpisodePicker,
-    │                                     # TmdbAttribution, library, shows-data
+    │   ├── shows/                        # ShowsApp, Watchlist (Library), Discover, Profile, Stats, TitleGrid, LibraryGrid,
+    │   │                                 # TitleDialog, SearchDialog, QuickActions, FriendDialog, EpisodePicker,
+    │   │                                 # TmdbAttribution, library, shows-data
+    │   └── recipes/                      # RecipesApp, RecipeList (Recipes, Favourites), RecipeDialog, RecipeForm,
+    │                                     # ShoppingList, Sheet, recipes-data
     ├── lib/                              # db, http (apiRoute), schemas (zod), accounts, auth-emails, activity,
     │                                     # calendar-feeds, tmdb (and tmdb-mock), email, password, rate-limit,
     │                                     # users, spaces, events, calendar, tasks, shows, friends, show-types,
-    │                                     # task-types, app-views, api-request, apps, badges, test-hooks, ...
+    │                                     # task-types, recipes, recipe-types, recipe-photos, app-views,
+    │                                     # api-request, apps, badges, test-hooks, ...
     ├── hooks/                            # useAppView (views and panels in the URL, Back)
-    ├── test/                             # Vitest unit tests: calendar, tasks and shows, schemas and URLs, home and UX
+    ├── test/                             # Vitest unit tests: calendar, tasks and shows, recipes, schemas and URLs, home and UX
     ├── e2e/                              # Playwright specs, checks.ts, fixtures, teardown
     └── public/
         ├── sw.js                         # the service worker (offline)
-        ├── logos/                        # shared.svg, shows.svg, tmdb.svg (TMDB's own)
+        ├── logos/                        # shared.svg, shows.svg, recipes.svg, tmdb.svg (TMDB's own)
         └── icons/                        # home screen icons (192, 512, maskable 512)
 
 Not in the repo: .env and app/.env.local (gitignored), and backups/ and logs/ in /opt/diogomota on the VPS.
@@ -663,6 +715,7 @@ Everything done, in the order it happened (moved here from the former `roadmap.m
 - Only main (2026-11-14, [docs/decisions/0015](docs/decisions/0015-only-main.md)): `.github/dependabot.yml` deleted, its seven pull requests closed and their branches deleted; the repository has `main` only. What they proposed, applied by hand on `main`: the npm minor and patch updates (`next` 16.4.5, `react` and `react-dom` 19.3.1, `better-auth` 1.7.18, `@tanstack/*` 5.106.1, `eslint-config-next` 16.4.5, `@playwright/test` 1.65), `eslint` 10 and `vitest` 5 (no change needed to the config or the tests), `docker/login-action` 4.8.0, and `anchore/scan-action` pinned by the commit of v7.4.2 rather than its tag object (the same code). Left: `typescript` 7 (typescript-eslint refuses TS 7.0, so lint fails), `node:25-alpine` (not an LTS, past its end of life) and `@types/node` 26 (the types follow Node 24). `npm audit --omit=dev`: 0; the 8 moderate ones left are `minimatch` inside `eslint-config-next`'s plugins, lint only. Checked locally: Prettier, lint, typecheck, the 40 unit tests, `check:migrations`, the production build, and `auth`, `home`, `shared-features`, `shows-home` and `calendar` on the desktop project (48 tests, all pass).
 - Home, Account, the calendar's toolbar, Today and the episode tick (2026-11-14): **home** (`app/page.tsx`): List of apps, centered, over bigger icons (`components/site/AppGrid`: 6rem on a phone, 7rem from 40rem; two to a row, then four, a row that isn't full centered); `.view` is as tall as `--app-view-height`, so `Version … · Privacy · About` (a `<footer>`) is at the bottom of the page. Logged out, Personal apps for friends (also `appsDescription` and the link preview), its line without a max width. The tab bars lose `Brand` (`>_ diogomota.com`). **`/account`**: the title centered; About · Privacy gone from under Log out, which is as wide as the rows, with `LogoutIcon`, in the accent on `--accent-soft`; Your data says Check our Privacy page. **Shared**: the agenda no longer makes the whole calendar a 48rem column; only its days (and its alerts) are, by margins (`--agenda-margin`), so the toolbar and the invite prompt are laid out the same in both views, and `html:has(.calendar)` keeps the scrollbar's room (`scrollbar-gutter: stable`). Tasks has no Today chip or view (a stored `today` opens the first list). **Shows**: `NextEpisodeButton` (`LibraryGrid.tsx`): tapped, green (`--success`, new in both themes, AA with `--bg` on it) for 900 ms with its tick drawn and a green ring, taking no second tap; then the next episode's label comes in from below.
 - The front page is a website; Account's Data / Privacy page; the calendar's toolbar in the middle (2026-11-16, [docs/decisions/0016](docs/decisions/0016-the-front-page-is-a-website.md)): logged out, `/` is a website (`components/site/SiteFrame` with `SiteHeader`, `SiteMenu` and its footer; `FrontPage`, `AppSections`, `AppWindow`), for visitors from a link who don't know the site: header (the mark, Apps ▾, How it works, About; Log in, Sign up; a ☰ menu on a phone), a hero (`siteTagline`, a line from the apps' new `summary`, Sign up, See the apps, the apps in browser windows), a section per app (its new `tagline`, `features`, Open → its login prompt), How it works, Questions, a Sign up band, and a footer of links with the year and version. `Hero` and `AppList` are gone. `/about` moved into the same frame (initials, name, Richemont, Lisbon; This site; Get in touch with `CONTACT_EMAIL`), without See the apps; IBM Plex Mono is gone (`app/fonts`, `SitePage`, `site.module.css`), and the preview images are drawn in the website's look without it. `/privacy` logged out is in the website's frame. Logged in, home's heading is Home (was List of apps). The site's description is `Small apps for the things you share with people: Shared and Shows.` **Account**: Your data under Log out is gone; Data / Privacy page is the last row (Manage), whose popup has the Privacy page, Download my data and Delete my account (whose popup takes its place, and Close comes back to the row). **Shared**: the calendar's toolbar is all together in the middle, and Month comes before Agenda. Tests: `home`, `about`, `account`, `shared-features`, `site`, `auth` and `views` specs updated (the website's header, Apps menu, phone menu, sections, footer; Data / Privacy page; the toolbar centered, Month first). A dev server on a `.next` left from before the font's files were deleted reloaded every page in a loop (HMR on every connect); deleting `.next` fixed it. **Email change**: since Better Auth 1.7.18 (2026-11-14), opening the link sent to a new email kept the account's earlier state, so an account that never confirmed its first email stayed "not confirmed" with the new one (`account.spec.ts`'s email test failed on `main` too); a `databaseHooks.user.update.before` in `auth.ts` confirms the email set by `/verify-email`.
+- Recipes, the third app (2026-11-16, [docs/decisions/0017](docs/decisions/0017-recipes.md), from `new_apps.md`): `/recipes` (`app/recipes/[[...view]]`, `components/recipes/`), with Recipes, Favourites and Shopping as tabs and a recipe's page and form as panels in the URL. **Recipes**: ingredients and steps as lines, tags, a source link, notes, servings, a favourite; search, a sort and the tags as chips; a recipe's ingredients scaled to the servings chosen (`scaleIngredient`, `lib/recipe-types.ts`: fractions, decimals with their comma, ranges, headings); up to 10 photos, made smaller on the server (`lib/recipe-photos.ts`: 1,600 px and a 640×480 card copy, WebP, files in `RECIPE_PHOTO_DIR` on the `appdata` volume). **Shopping list**: lines typed in or from a recipe's ingredients (ticked to start with, scaled), ticked off, Clear ticked with Undo. Changes as plain data through TanStack Query (`components/recipes/recipes-data.tsx`), shown at once and kept for offline use, as in Shows; photos need the connection. **API** `/api/recipes` (`lib/recipes.ts`, schemas in `lib/schemas.ts`): each user's own, another's a 404; ids the client may choose, sent twice answered with what is there. `023_recipes.sql` (only added). Around it: its entry in `lib/apps.ts` (front page section, header, footer, About), its logo (`public/logos/recipes.svg`), a picture of it (`AppPreview`), home's badge (what is left to buy), `proxy.ts`, Privacy, Download my data, deleting an account deletes its photos' files (`auth.ts`), nginx lets 21 MB through to a photo's upload, `infra/backup.sh` archives the photos as `recipe-photos_*.tar.gz`. Tests: `test/recipes.test.ts`, `e2e/recipes.spec.ts`, and Recipes in `views.spec.ts`.
 
 ## To-do
 

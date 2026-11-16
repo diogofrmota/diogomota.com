@@ -1,9 +1,10 @@
 // The service worker of the apps (registered by components/common/OfflineSupport
-// in production): Shared and Shows open without a connection, with what they
-// last showed (their data is kept by components/common/QueryProvider, and their
-// changes wait there for the connection).
+// in production): Shared, Shows and Recipes open without a connection, with what
+// they last showed (their data is kept by components/common/QueryProvider, and
+// their changes wait there for the connection; recipes' photos are kept by the
+// browser, which may keep them for good: /api/recipes/photos).
 //
-// - Home and the apps' pages (/, /shared, /shows and their views): from the
+// - Home and the apps' pages (/, /shared, /shows, /recipes and their views): from the
 //   network, and the copy from the last time they loaded when it can't be
 //   reached, so the installed app (which starts on home) opens offline.
 // - Next.js's built files (/_next/static, whose names change with their
@@ -12,7 +13,7 @@
 // Logging out deletes the cache (clearOfflineData).
 
 const cacheName = "diogomota-offline-v1";
-const appPages = /^\/((shared|shows)(\/|$)|$)/;
+const appPages = /^\/((shared|shows|recipes)(\/|$)|$)/;
 const staticFiles = /^\/(_next\/static|icons|logos)\//;
 
 self.addEventListener("install", () => self.skipWaiting());

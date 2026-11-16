@@ -4,6 +4,7 @@
 // message is what the API answers when a field is wrong.
 
 import { z } from "zod";
+import { defaultServings, normalizeSourceUrl, normalizeTags, recipeLimits } from "./recipe-types";
 import { repeats } from "./task-types";
 
 const uuidPattern = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -209,3 +210,100 @@ export type RecommendInput = z.input<typeof recommendInput>;
 
 /** Discover showed the recommendations of TV shows or movies the user was sent. */
 export const recommendationsSeenInput = z.object({ type: mediaTypeSchema });
+
+// --- Recipes -----------------------------------------------------------------
+
+/** Lines of a recipe (ingredients, steps): each trimmed, empty ones left out. */
+const recipeLines = (maxLines: number, maxLength: number, what: string, whats: string) =>
+  z
+    .array(z.string({ error: `Send the ${whats} as lines of text.` }), { error: `Send the ${whats} as lines of text.` })
+    .transform((lines) => lines.map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean))
+    .pipe(
+      z
+        .array(
+          z.string().max(maxLength, { error: `Keep each ${what} to ${maxLength.toLocaleString("en")} characters.` }),
+        )
+        .max(maxLines, { error: `A recipe can have up to ${maxLines} ${whats}.` }),
+    );
+
+const recipeFields = {
+  title: title(recipeLimits.title, "a title"),
+  servings: z
+    .number({ error: `Enter how many it serves, from 1 to ${recipeLimits.servings}.` })
+    .int({ error: `Enter how many it serves, from 1 to ${recipeLimits.servings}.` })
+    .min(1, { error: `Enter how many it serves, from 1 to ${recipeLimits.servings}.` })
+    .max(recipeLimits.servings, { error: `Enter how many it serves, from 1 to ${recipeLimits.servings}.` }),
+  ingredients: recipeLines(recipeLimits.ingredients, recipeLimits.ingredient, "ingredient", "ingredients"),
+  steps: recipeLines(recipeLimits.steps, recipeLimits.step, "step", "steps"),
+  notes: z
+    .string({ error: "Notes must be at most 10,000 characters." })
+    .max(recipeLimits.notes, { error: "Notes must be at most 10,000 characters." }),
+  // Read generously: without https:// is fine (lib/recipe-types.ts, normalizeSourceUrl).
+  sourceUrl: z
+    .string({ error: "Enter a link to where the recipe is from, or none." })
+    .max(recipeLimits.sourceUrl, { error: "That link is too long." })
+    .nullable()
+    .transform((url) => (url === null ? null : normalizeSourceUrl(url)))
+    .refine((url) => url !== undefined, { error: "Enter a web link, like https://example.com/recipe, or none." }),
+  tags: z
+    .array(z.string({ error: "Send the tags as text." }), { error: "Send the tags as text." })
+    .transform(normalizeTags)
+    .pipe(
+      z
+        .array(z.string().max(recipeLimits.tag, { error: `Keep each tag to ${recipeLimits.tag} characters.` }))
+        .max(recipeLimits.tags, { error: `A recipe can have up to ${recipeLimits.tags} tags.` }),
+    ),
+  isFavourite: z.boolean({ error: "Mark it as a favourite or not." }),
+};
+
+/** A new recipe: only its title is needed. */
+export const recipeCreate = z.object({
+  id: uuid.optional(),
+  title: recipeFields.title,
+  servings: recipeFields.servings.default(defaultServings),
+  ingredients: recipeFields.ingredients.default([]),
+  steps: recipeFields.steps.default([]),
+  notes: recipeFields.notes.default(""),
+  sourceUrl: recipeFields.sourceUrl.default(null),
+  tags: recipeFields.tags.default([]),
+  isFavourite: recipeFields.isFavourite.default(false),
+});
+export type RecipeCreate = z.input<typeof recipeCreate>;
+
+/** A change to a recipe: any of its fields. */
+export const recipePatch = z.object(recipeFields).partial();
+export type RecipePatch = z.input<typeof recipePatch>;
+
+const shoppingText = title(recipeLimits.shoppingText, "an item");
+
+/** Lines added to the end of the shopping list, typed or from a recipe's ingredients. */
+export const shoppingAdd = z.object({
+  items: z
+    .array(
+      z.object({
+        id: uuid.optional(),
+        text: shoppingText,
+        recipeId: uuid.nullable().default(null),
+      }),
+      { error: "Send the items to add." },
+    )
+    .min(1, { error: "Add at least one item." })
+    .max(recipeLimits.ingredients, { error: `Add up to ${recipeLimits.ingredients} items at a time.` }),
+});
+export type ShoppingAdd = z.input<typeof shoppingAdd>;
+
+/** A change to a line of the shopping list: its text, or ticked off (or not). */
+export const shoppingPatch = z.object({
+  text: shoppingText.optional(),
+  isChecked: z.boolean({ error: "Tick it off or not." }).optional(),
+});
+export type ShoppingPatch = z.input<typeof shoppingPatch>;
+
+/** Lines taken off the shopping list (Clear ticked, or one deleted). */
+export const shoppingRemove = z.object({
+  ids: z
+    .array(uuid, { error: "Send the items to remove." })
+    .min(1, { error: "Choose an item to remove." })
+    .max(recipeLimits.shoppingItems, { error: "Too many items at once." }),
+});
+export type ShoppingRemove = z.input<typeof shoppingRemove>;

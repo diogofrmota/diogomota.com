@@ -41,8 +41,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # Files the app writes: the profile pictures (data/avatars), kept across
-    # redeploys, and archived with every backup (infra/backup.sh).
+    # Files the app writes: the profile pictures (data/avatars) and the
+    # recipes' photos (data/recipe-photos), kept across redeploys, and archived
+    # with every backup (infra/backup.sh).
     volumes:
       - appdata:/app/data
     healthcheck:

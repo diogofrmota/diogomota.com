@@ -55,6 +55,10 @@ export const userSearchLimit = rateLimit("user-search", 60, MINUTE);
  * cached (lib/tmdb.ts), so most of these don't reach it.
  */
 export const showsRequestLimit = rateLimit("shows", 240, MINUTE);
+/** Recipes API requests, per authenticated user (its photos aren't counted: a list of recipes loads one each). */
+export const recipesRequestLimit = rateLimit("recipes", 240, MINUTE);
+/** Recipe photo uploads, per authenticated user: each one is made smaller on the server. */
+export const recipePhotoUploadLimit = rateLimit("recipe-photo", 30, 15 * MINUTE);
 
 // nginx sets X-Forwarded-For to exactly the client address (nginx/nginx.conf), so
 // in production its first entry can be trusted. In development it is whatever the

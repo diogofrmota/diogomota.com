@@ -81,7 +81,46 @@ function ShowsPreview() {
   );
 }
 
-const previews: Record<string, () => React.ReactNode> = { "/shared": SharedPreview, "/shows": ShowsPreview };
+/** Recipes: a search over a row of recipes' photos, one a favourite, and the shopping list beside them. */
+function RecipesPreview() {
+  const dishes = ["amber", "emerald", "rose"];
+  const shopping = [false, false, true, false, true];
+  return (
+    <span className={styles.recipes}>
+      <span className={styles.recipeCards}>
+        <span className={styles.searchBar} />
+        <span className={styles.dishes}>
+          {dishes.map((dish, i) => (
+            <span key={dish} className={styles.title}>
+              <span className={`${styles.poster} ${styles.dish}`} data-art={dish}>
+                {i === 0 && (
+                  <svg viewBox="0 0 24 24" className={styles.heart}>
+                    <path d="M12 20s-7.5-4.6-7.5-10.1A4.4 4.4 0 0 1 12 7.1a4.4 4.4 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z" />
+                  </svg>
+                )}
+              </span>
+              <span className={styles.line} />
+            </span>
+          ))}
+        </span>
+      </span>
+      <span className={styles.tasks}>
+        {shopping.map((done, i) => (
+          <span key={i} className={styles.task} data-done={done || undefined}>
+            <span className={styles.check} />
+            <span className={styles.line} style={{ width: `${[60, 80, 50, 70, 55][i]}%` }} />
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
+const previews: Record<string, () => React.ReactNode> = {
+  "/shared": SharedPreview,
+  "/shows": ShowsPreview,
+  "/recipes": RecipesPreview,
+};
 
 /** The picture of the app at `href`, or nothing for an app without one. */
 export function AppPreview({ href, className = "" }: { href: string; className?: string }) {

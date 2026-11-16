@@ -8,7 +8,7 @@ import { AppGrid, type GridApp } from "@/components/site/AppGrid";
 import { FrontPage } from "@/components/site/FrontPage";
 import { SiteFrame } from "@/components/site/SiteFrame";
 import { VerifyNote } from "@/components/site/VerifyNote";
-import { lastViewCookieName, lastViewHref, sharedViews, showsViews } from "@/lib/app-views";
+import { lastViewCookieName, lastViewHref, recipesViews, sharedViews, showsViews } from "@/lib/app-views";
 import { appViewport, apps } from "@/lib/apps";
 import { homeBadges } from "@/lib/badges";
 import { safeNextPath } from "@/lib/next-path";
@@ -25,7 +25,11 @@ export const metadata: Metadata = {
 
 export const viewport = appViewport;
 
-const views: Record<string, readonly string[]> = { "/shared": sharedViews, "/shows": showsViews };
+const views: Record<string, readonly string[]> = {
+  "/shared": sharedViews,
+  "/shows": showsViews,
+  "/recipes": recipesViews,
+};
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 // Home (docs/decisions/0014, 0016). Logged out, the website's front page
@@ -57,6 +61,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const counts: Record<string, [number, string]> = {
     "/shared": [badges.shared, plural(badges.shared, "task due", "tasks due")],
     "/shows": [badges.shows, `${badges.shows} new`],
+    "/recipes": [badges.recipes, `${badges.recipes} to buy`],
   };
   const grid: GridApp[] = apps.map((app) => {
     const [badge, badgeLabel] = counts[app.href] ?? [0, ""];

@@ -41,11 +41,14 @@ COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 COPY --from=builder /app/scripts ./scripts
 COPY --from=migrations / ./db/migrations/
 
-# What the app writes while it runs: the profile pictures (lib/avatars.ts).
-# docker-compose.prod.yml mounts a volume here, which takes this folder's owner
-# when it is first created, so the app (user node) can write to it.
-RUN mkdir -p /app/data/avatars && chown -R node:node /app/data
+# What the app writes while it runs: the profile pictures (lib/avatars.ts) and
+# the recipes' photos (lib/recipe-photos.ts). docker-compose.prod.yml mounts a
+# volume here, which takes this folder's owner when it is first created, so the
+# app (user node) can write to it; on a volume made before a folder was added
+# here, the app makes the folder the first time it writes to it.
+RUN mkdir -p /app/data/avatars /app/data/recipe-photos && chown -R node:node /app/data
 ENV AVATAR_DIR=/app/data/avatars
+ENV RECIPE_PHOTO_DIR=/app/data/recipe-photos
 
 # The image's version tag (vX.Y.Z), passed in by deploy.yml and shown on /apps.
 # Set last so a new version doesn't invalidate the layers above.

@@ -295,6 +295,91 @@ test("Shows: every view and dialog, each closed with Back", async ({ page, brows
   await asker.context.close();
 });
 
+test("Recipes: every view and dialog, each closed with Back", async ({ page }) => {
+  const recipesTab = (view: string) =>
+    page.getByRole("navigation", { name: "Recipes", exact: true }).getByRole("button", { name: view, exact: true });
+  await signUp(page, newUser(), "/signup?next=/recipes");
+  await expect(page.getByRole("heading", { name: "Your recipes, in one place" })).toBeVisible();
+  await checkView(page, "Recipes, empty");
+  await recipesTab("Favourites").click();
+  await expect(page.getByRole("heading", { name: "No favourites yet" })).toBeVisible();
+  await checkView(page, "Favourites, empty");
+  await recipesTab("Shopping").click();
+  await expect(page.getByText(/^Nothing to buy yet\./)).toBeVisible();
+  await checkView(page, "Shopping list, empty");
+  await goBackTo(page, "Favourites");
+  await goBackTo(page, "Recipes");
+
+  await page.getByRole("button", { name: "Add your first recipe" }).click();
+  const form = page.getByRole("dialog", { name: "New recipe" });
+  await expectFocusedWithMouse(page, form.getByLabel("Title"));
+  await checkView(page, "new recipe");
+  await form.getByRole("button", { name: "Save" }).click();
+  await expect(form.getByText("Enter a title.")).toBeVisible();
+  await checkView(page, "new recipe with errors");
+  await page.goBack();
+  await expect(form).toBeHidden();
+
+  // Filled: a recipe with everything (two photos), and a plain one.
+  const created = await page.request.post("/api/recipes", {
+    data: {
+      title: "Roast chicken with lemon, garlic and thyme, and a very long name to wrap",
+      servings: 4,
+      ingredients: ["For the chicken:", "1 whole chicken (1.5 kg)", "2 lemons", "6 cloves garlic", "Salt, to taste"],
+      steps: ["Heat the oven to 200°C.", "Stuff the chicken with the lemons and garlic, and roast for 90 minutes."],
+      notes: "Rest it for 15 minutes before carving.",
+      sourceUrl: "https://www.bbcgoodfood.com/recipes/roast-chicken",
+      tags: ["Dinner", "Sunday", "Family"],
+    },
+  });
+  const recipe = (await created.json()).data;
+  for (const background of ["#d35400", "#16a085"]) {
+    const buffer = await sharp({ create: { width: 800, height: 600, channels: 3, background } })
+      .png()
+      .toBuffer();
+    const added = await page.request.post(`/api/recipes/${recipe.id}/photos`, {
+      multipart: { photo: { name: "dish.png", mimeType: "image/png", buffer } },
+    });
+    expect(added.status()).toBe(201);
+  }
+  expect((await page.request.post("/api/recipes", { data: { title: "Toast", tags: ["Breakfast"] } })).ok()).toBe(true);
+  await page.reload();
+  await expect(page.getByRole("button", { name: /^Toast/ })).toBeVisible();
+  await checkView(page, "Recipes, filled");
+
+  await page.getByRole("button", { name: /^Roast chicken/ }).click();
+  const dialog = page.getByRole("dialog", { name: /^Roast chicken/ });
+  await expect(dialog.getByRole("img", { name: /^Photo of Roast chicken/ })).toBeVisible();
+  await checkView(page, "recipe");
+  // For six: 3 lemons.
+  await dialog.getByRole("button", { name: "More servings" }).click();
+  await dialog.getByRole("button", { name: "More servings" }).click();
+  await dialog.getByRole("button", { name: "Add to shopping list" }).click();
+  await expect(dialog.getByRole("checkbox")).toHaveCount(4);
+  await checkView(page, "recipe, adding to the shopping list");
+  await dialog.getByRole("button", { name: "Add 4 items to the list" }).click();
+  await expect(dialog.getByText(/^Added 4 items/)).toBeVisible();
+  await dialog.getByRole("button", { name: "Edit" }).click();
+  const edit = page.getByRole("dialog", { name: "Edit recipe" });
+  await expect(edit.getByRole("button", { name: "Remove the tag Sunday" })).toBeVisible();
+  await checkView(page, "edit recipe");
+  await page.goBack();
+  await expect(edit).toBeHidden();
+  await page.goBack();
+  await expect(dialog).toBeHidden();
+
+  await page.getByRole("button", { name: /^Favourite Toast/ }).click();
+  await recipesTab("Favourites").click();
+  await expect(page.getByRole("button", { name: /^Toast/ })).toBeVisible();
+  await checkView(page, "Favourites, filled");
+  await recipesTab("Shopping").click();
+  await page.getByRole("checkbox", { name: "3 lemons" }).check();
+  await expect(page.getByRole("list", { name: "Ticked off" })).toBeVisible();
+  await checkView(page, "Shopping list, filled");
+  await goBackTo(page, "Favourites");
+  await goBackTo(page, "Recipes");
+});
+
 test("a load that fails says so, and Retry loads it again", async ({ page }) => {
   const offline = "Could not reach the server. Check your connection.";
   const failing = async (path: string | RegExp, view: () => Promise<void>, name: string) => {

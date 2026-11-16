@@ -1,0 +1,1161 @@
+/* The Recipes app. Its colors are the theme's (components/common/themes.module.css)
+   and its sizes the shell's scales (AppShell.module.css); its buttons, alerts and
+   notices are the apps' common ones (components/common/ui.module.css). The
+   dialogs are rendered inside the AppShell, so its variables reach them too. */
+
+.view {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  max-width: 72rem;
+  margin: auto;
+}
+
+.viewError {
+  margin: 0;
+}
+
+/* A message comes in from just above, so it is seen to be new. */
+@keyframes feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.inlineLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .inlineLink:hover {
+    text-decoration-thickness: 2px;
+  }
+}
+
+/* --- Recipes and Favourites ------------------------------------------------ */
+
+/* The search, then the sort and New recipe; on a phone the search on a line of its own. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.search,
+.sort {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search {
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 32rem;
+}
+.search svg,
+.sort svg {
+  position: absolute;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--muted);
+  pointer-events: none;
+}
+.search svg {
+  left: var(--space-3);
+}
+.sort svg {
+  right: var(--space-3);
+}
+.search input,
+.sort select {
+  width: 100%;
+  min-height: var(--control-height);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-md);
+}
+.search input {
+  padding: 0 var(--space-3) 0 calc(var(--space-3) + var(--icon-sm) + var(--space-2));
+}
+.sort select {
+  padding: 0 calc(var(--space-3) + var(--icon-sm) + var(--space-1)) 0 var(--space-3);
+  appearance: none;
+  cursor: pointer;
+}
+.newRecipe {
+  margin-left: auto;
+}
+@media (max-width: 47.99rem) {
+  .search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .newRecipe {
+    flex: 1;
+  }
+}
+
+/* The tags, as chips in a row that scrolls sideways; the one picked in the accent. */
+.tagChips {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 calc(-1 * var(--space-1));
+  padding: var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tagChips button,
+.knownTags button,
+.chosenTags button {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-height);
+  max-width: 14rem;
+  padding: 0 var(--space-4);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+.tagChips button:active,
+.knownTags button:active,
+.chosenTags button:active {
+  scale: var(--press);
+}
+.tagChips button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+@media (hover: hover) {
+  .tagChips button:hover,
+  .knownTags button:hover,
+  .chosenTags button:hover {
+    background: var(--hover);
+  }
+  .tagChips button[aria-pressed="true"]:hover {
+    background: var(--accent-soft);
+  }
+}
+
+.count {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* The cards: two across on a phone, more on wider screens. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: var(--space-4) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 48rem) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    gap: var(--space-6) var(--space-5);
+  }
+}
+
+/* Cards fade up into place one after another (--delay: motion.tsx, stagger), easing out. */
+.cardItem {
+  position: relative;
+  min-width: 0;
+  animation: card-in var(--duration) var(--ease-out) backwards;
+  animation-delay: var(--delay, 0ms);
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* The whole card is its button; the heart is over its photo's corner, beside it. */
+.card {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+.card:active {
+  scale: var(--press);
+}
+.cover {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  box-shadow: var(--shadow-sm);
+}
+.cover img {
+  object-fit: cover;
+  transition: scale var(--duration-move) var(--ease-out);
+}
+@media (hover: hover) {
+  .card:hover .cover img {
+    scale: 1.04;
+  }
+}
+/* No photo: the book, on the accent's tint. */
+.coverEmpty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+.coverEmpty svg {
+  width: 2.5rem;
+  height: 2.5rem;
+  opacity: 0.55;
+}
+.cardTitle {
+  display: -webkit-box;
+  margin-top: var(--space-1);
+  overflow: hidden;
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.cardTags {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cardHeart {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  display: grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--surface) 82%, transparent);
+  color: var(--muted);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition:
+    scale var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+.cardHeart svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+.cardHeart[aria-pressed="true"] {
+  color: var(--danger);
+}
+.cardHeart:active {
+  scale: 0.9;
+}
+@media (hover: hover) {
+  .cardHeart:hover {
+    color: var(--danger);
+  }
+}
+
+/* Loading: grey shapes, shimmering. */
+.skeleton {
+  background: linear-gradient(90deg, var(--hover) 25%, var(--border) 50%, var(--hover) 75%);
+  background-size: 300% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  box-shadow: none;
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+.skeletonLine {
+  display: block;
+  width: 70%;
+  height: 0.85rem;
+  margin-top: var(--space-2);
+  border-radius: var(--radius-xs);
+}
+
+/* No recipes (or favourites) yet. */
+.welcome {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  max-width: 36rem;
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  background: var(--accent-soft);
+}
+.welcome h2 {
+  margin: 0;
+  color: var(--accent);
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+.welcome p {
+  margin: 0;
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+
+/* --- Dialogs --------------------------------------------------------------- */
+
+/* The content fills the dialog, so a click on the dialog itself is on the backdrop (components/common/Dialog). */
+.dialog {
+  margin: auto;
+  width: min(40rem, calc(100% - 2rem));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+.dialog.wide {
+  width: min(60rem, calc(100% - 2rem));
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.dialog::backdrop {
+  background: #0008;
+}
+.dialogBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-6);
+}
+.dialogHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.dialogHeader h2 {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+.wide .dialogHeader h2 {
+  font-size: var(--text-2xl);
+}
+/* The ×: a round button with a drawn cross. */
+.close {
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--hover);
+  color: var(--muted);
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+.close:active {
+  scale: var(--press);
+}
+.close svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+@media (hover: hover) {
+  .close:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+}
+
+/* --- A recipe's page ---------------------------------------------------------- */
+
+.photos {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+.photos[data-dragging] .photo {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+.photo {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--hover);
+}
+@media (min-width: 48rem) {
+  .photo {
+    aspect-ratio: 21 / 9;
+  }
+}
+.photoLink {
+  position: absolute;
+  inset: 0;
+}
+.photoLink img {
+  object-fit: cover;
+}
+/* Over the photo's bottom right, on a pill of the surface. */
+.photoActions {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.photoActions button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: color-mix(in oklch, var(--surface) 88%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+.photoActions button:active {
+  scale: var(--press);
+}
+.photoActions svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+/* The thumbnails under it, then Add a photo, in a row that scrolls sideways. */
+.thumbs {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 2px;
+  overflow-x: auto;
+  list-style: none;
+}
+.thumbs li {
+  flex-shrink: 0;
+}
+.thumbs button,
+.thumbUploading {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 3.375rem;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--hover);
+  color: var(--muted);
+  cursor: pointer;
+}
+.thumbs button img {
+  object-fit: cover;
+}
+.thumbs button[aria-pressed="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.thumbs .addThumb {
+  border-style: dashed;
+  background: none;
+}
+.thumbs .addThumb svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+.thumbs button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+/* A photo just removed, with its Undo. */
+.photoRemoved {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-left: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--hover);
+  animation: feedback-in var(--duration) var(--ease-out);
+}
+.photoRemoved button {
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+
+/* No photo yet: a place to drop one, or a tap to choose it. */
+.dropZone {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-6) var(--space-4);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+.dropZone svg {
+  width: 2rem;
+  height: 2rem;
+  color: var(--accent);
+}
+.dropZone[data-dragging] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.dropZone:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+@media (hover: hover) {
+  .dropZone:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--hover);
+  }
+}
+.dropTitle {
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+}
+.dropHint {
+  font-size: var(--text-sm);
+}
+
+/* Under the title: how many it serves and where it's from, its tags, Favourite and Edit. */
+.recipeTop {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+.recipeMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  color: var(--muted);
+}
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+.source svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tags li {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.favourite[aria-pressed="true"] {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* The ingredients beside the method on a wide screen, over it on a phone. */
+.columns {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (min-width: 48rem) {
+  .columns {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: var(--space-8);
+  }
+}
+.columns h3,
+.notes h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+.ingredients,
+.method {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+/* Servings, with − and + around the number (tabular, so it doesn't jump). */
+.servings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.servings span {
+  margin-right: var(--space-1);
+}
+.servings button:not(.reset) {
+  display: grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+.servings button:not(.reset):active:not(:disabled) {
+  scale: 0.9;
+}
+.servings button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.servings svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+.servings output {
+  min-width: 2ch;
+  color: var(--text);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.servings .reset {
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .servings button:not(.reset):hover:not(:disabled) {
+    background: var(--hover);
+  }
+  .servings .reset:hover {
+    text-decoration: underline;
+  }
+}
+.ingredientList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ingredientList li {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.ingredientList .ingredientHeading {
+  padding-top: var(--space-4);
+  border-bottom: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+.ingredientList .ingredientHeading:first-child {
+  padding-top: 0;
+}
+.picking {
+  display: grid;
+  gap: var(--space-3);
+}
+.pick {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  padding: var(--space-2) 0;
+  cursor: pointer;
+}
+.picking .ingredientList li:not(.ingredientHeading) {
+  padding: 0;
+}
+.pick input,
+.itemLabel input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0.15rem 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.toShopping {
+  justify-self: start;
+}
+.added {
+  margin: 0;
+}
+.steps {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+/* Each step after its number, in a circle of the accent's tint. */
+.steps li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: var(--space-3);
+  max-width: var(--measure);
+  counter-increment: step;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+.steps li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+.notes {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+.notes p {
+  margin: 0;
+  max-width: var(--measure);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.deleteRow {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+/* --- A recipe's form -------------------------------------------------------------- */
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+.form label,
+.tagPicker {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+.form input,
+.form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0.625rem var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-md); /* 16px, so iOS doesn't zoom in on it */
+}
+.form textarea {
+  resize: vertical;
+  line-height: var(--leading-normal);
+}
+.form input:focus-visible,
+.form textarea:focus-visible {
+  border-color: var(--accent);
+}
+.form [aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.hint {
+  color: var(--muted);
+}
+.fieldError {
+  margin: 0;
+  color: var(--danger);
+  font-weight: var(--weight-semibold);
+  animation: feedback-in var(--duration) var(--ease-out);
+}
+/* Title, and Serves beside it, narrow. */
+.titleRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6rem;
+  gap: var(--space-3);
+  align-items: start;
+}
+.serves input {
+  font-variant-numeric: tabular-nums;
+}
+.tagPicker {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.tagPicker legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+}
+.chosenTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  padding: 0;
+  list-style: none;
+}
+.chosenTags button {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+.chosenTags svg,
+.knownTags svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.inputRow {
+  display: flex;
+  gap: var(--space-2);
+}
+.knownTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+.knownTags button {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+/* --- Shopping list ---------------------------------------------------------------- */
+
+.shopping {
+  max-width: 44rem;
+}
+.list {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.listHeading {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+.listCount {
+  color: var(--muted);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+.addItem {
+  display: flex;
+  gap: var(--space-2);
+}
+.addItem input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-md);
+}
+.addItem input:focus-visible {
+  border-color: var(--accent);
+}
+.items {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* A row: its box and text, the recipe it's from, its bin; on a phone the
+   recipe under the text, in line with it, and the bin beside the text. It
+   comes in from just below, easing out (--delay: motion.tsx, stagger). */
+.item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "label from delete";
+  align-items: center;
+  column-gap: var(--space-2);
+  min-height: var(--control-height);
+  animation: row-in var(--duration) var(--ease-out) backwards;
+  animation-delay: var(--delay, 0ms);
+}
+.itemLabel {
+  grid-area: label;
+}
+.fromRecipe {
+  grid-area: from;
+}
+.itemDelete {
+  grid-area: delete;
+}
+@media (max-width: 47.99rem) {
+  .item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "label delete"
+      "from .";
+  }
+  /* Under the text (past the box and the room after it), close to it. */
+  .fromRecipe {
+    justify-self: start;
+    max-width: 100%;
+    margin: calc(-1 * var(--space-3)) 0 0 calc(1.25rem + var(--space-3));
+  }
+}
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.item + .item {
+  border-top: 1px solid var(--border);
+}
+.itemLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: var(--space-2) 0;
+  cursor: pointer;
+}
+.itemText {
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.item[data-checked] .itemText {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+/* The recipe a line is from: a small pill after it, which opens it, in a tap
+   target of the full size (the button, see-through around the pill). */
+.fromRecipe {
+  display: inline-flex;
+  align-items: center;
+  max-width: 12rem;
+  min-height: var(--control-height);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.fromPill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  min-height: 1.75rem;
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+.fromTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (hover: hover) {
+  .fromRecipe:hover .fromPill {
+    text-decoration: underline;
+  }
+}
+.fromRecipe svg {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.itemDelete {
+  display: grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.itemDelete svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+@media (hover: hover) {
+  .itemDelete:hover {
+    background: var(--hover);
+    color: var(--danger);
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .dialogBody {
+    padding: var(--space-4);
+  }
+}
+
+/* Last, so it wins over the rules above. */
+@media (prefers-reduced-motion: reduce) {
+  .cardItem,
+  .item,
+  .fieldError,
+  .photoRemoved,
+  .skeleton {
+    animation: none;
+  }
+  .card,
+  .cover img,
+  .cardHeart,
+  .close,
+  .photoActions button,
+  .tagChips button,
+  .knownTags button,
+  .chosenTags button,
+  .servings button,
+  .dropZone {
+    transition: none;
+  }
+  .card:active,
+  .cardHeart:active,
+  .close:active,
+  .photoActions button:active,
+  .tagChips button:active,
+  .knownTags button:active,
+  .chosenTags button:active,
+  .servings button:not(.reset):active:not(:disabled) {
+    scale: none;
+  }
+  .card:hover .cover img {
+    scale: none;
+  }
+}

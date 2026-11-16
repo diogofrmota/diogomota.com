@@ -49,6 +49,10 @@ export default async function PrivacyPage() {
           what you recommend to them. Only friends you accepted see your library.
         </li>
         <li>
+          <strong>Recipes:</strong> your recipes (their ingredients, steps, notes, tags and links), their photos (made
+          smaller, without their location or other metadata), your favourites and your shopping list. Only you see them.
+        </li>
+        <li>
           <strong>Activity:</strong> what you did lately (an event added, a show finished), shown to your space or your
           friends for 60 days.
         </li>
@@ -70,8 +74,8 @@ export default async function PrivacyPage() {
       <p>
         In <Link href="/account">Account</Link>, Data / Privacy page has <strong>Download my data</strong> (everything
         above, as a file) and <strong>Delete my account</strong>, which deletes it all at once: you leave your space
-        (the space goes with its last member) and your library, friends and activity go. Backups forget it within two
-        weeks.
+        (the space goes with its last member) and your library, friends, recipes, photos and activity go. Backups forget
+        it within two weeks.
       </p>
       <p>
         Questions, or anything you want changed:{" "}

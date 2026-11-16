@@ -45,9 +45,22 @@ export const apps: readonly AppInfo[] = [
     ],
     logo: "/logos/shows.svg",
   },
+  {
+    name: "Recipes",
+    href: "/recipes",
+    description: "Save and organise recipes you want to cook again",
+    summary: "a recipe box with a shopping list",
+    tagline: "The recipes you want to cook again",
+    features: [
+      "Ingredients, steps, photos and where each recipe came from",
+      "Tags and search, and any recipe scaled to how many you're cooking for",
+      "A shopping list from a recipe's ingredients, and your favourites a tap away",
+    ],
+    logo: "/logos/recipes.svg",
+  },
 ];
 
-/** "Shared and Shows". */
+/** "Shared, Shows, and Recipes". */
 export const appNames = new Intl.ListFormat("en", { type: "conjunction" }).format(apps.map((app) => app.name));
 
 /** The id of an app's section on the front page, and of its link there: "shared" (/#shared). */

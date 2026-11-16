@@ -8,6 +8,8 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { USERNAME_MAX, USERNAME_MIN } from "@/lib/account-rules";
 import { removeAvatar } from "@/lib/avatars";
+import { removePhotoFiles } from "@/lib/recipe-photos";
+import { photoIdsOf } from "@/lib/recipes";
 import { getPool } from "@/lib/db";
 import { emailVerificationEmail, resetPasswordEmail } from "@/lib/auth-emails";
 import { sendEmail } from "@/lib/email";
@@ -56,11 +58,13 @@ function createAuth() {
       deleteUser: {
         enabled: true,
         // Leaves the space first (handing it on, or deleting it if they were its
-        // last member), and deletes the profile picture's file. Everything else of
-        // theirs goes with the users row (ON DELETE CASCADE).
+        // last member), and deletes the profile picture's file and their recipes'
+        // photos' files. Everything else of theirs goes with the users row (ON
+        // DELETE CASCADE).
         beforeDelete: async (user) => {
           await leaveSpaceOf(user.id);
           await removeAvatar(user.id);
+          await removePhotoFiles(await photoIdsOf(user.id));
         },
       },
     },

@@ -16,9 +16,12 @@ test("about is in the website's look: its header and footer, the intro, and what
 
   // What the site is, with a link to each app's section and to Privacy.
   const site = main.getByRole("region", { name: "This site" });
-  await expect(site).toContainText("Shared, a calendar for two, and Shows, a watchlist with your friends.");
+  await expect(site).toContainText(
+    "Shared, a calendar for two, Shows, a watchlist with your friends, and Recipes, a recipe box with a shopping list.",
+  );
   await expect(site.getByRole("link", { name: "Shared", exact: true })).toHaveAttribute("href", "/#shared");
   await expect(site.getByRole("link", { name: "Shows", exact: true })).toHaveAttribute("href", "/#shows");
+  await expect(site.getByRole("link", { name: "Recipes", exact: true })).toHaveAttribute("href", "/#recipes");
   await expect(site.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
 
   // The header, with About marked, and the footer.

@@ -435,7 +435,7 @@ function ThemeForm({ theme, labelledBy, onSaved }: { theme: Theme; labelledBy: s
     <form action={action} className={formStyles.form}>
       <fieldset className={styles.fieldset} aria-labelledby={labelledBy} aria-describedby={hintId}>
         <p id={hintId} className={formStyles.hint}>
-          Applies to both apps, and to this page.
+          Applies to every app, and to this page.
         </p>
         <ThemeOptions defaultValue={selected} />
       </fieldset>
