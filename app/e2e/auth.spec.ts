@@ -15,7 +15,7 @@ test("sign up logs the new user in, home, whose icons go straight into the apps"
   await expect(accountButton(page, user.username)).toBeVisible();
   await expect(account.getByRole("link", { name: "Account", exact: true })).toBeVisible();
   // Logged in, no front page (the website's): the apps' icons.
-  await expect(page.getByRole("region", { name: "Small apps for the things you share with people" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Small apps to share with friends" })).toHaveCount(0);
   await expect(page.getByRole("banner")).toHaveCount(0);
 
   await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();

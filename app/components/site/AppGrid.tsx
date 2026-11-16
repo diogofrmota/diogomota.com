@@ -8,7 +8,7 @@ import styles from "./AppGrid.module.css";
 
 /** An app on home, logged in: where its icon goes, and what is waiting in it. */
 export type GridApp = {
-  app: AppInfo;
+  app: Pick<AppInfo, "name" | "href" | "description" | "logo">;
   /** The app's own path, or the view last used in it on this device (lib/app-views.ts, lastViewHref). */
   href: string;
   /** How many things are waiting (lib/badges.ts); none shows no badge. */

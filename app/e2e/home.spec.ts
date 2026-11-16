@@ -35,12 +35,10 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
   const main = page.getByRole("main");
   const hero = main.getByRole("region", { name: siteTagline });
-  await expect(hero.getByRole("heading", { level: 1 })).toHaveText(siteTagline);
-  await expect(hero).toContainText(
-    "A calendar for two, a watchlist with your friends, a recipe box with a shopping list, and more on the way.",
-  );
+  await expect(hero.getByRole("heading", { level: 1 })).toHaveText("Small apps to share with friends");
+  await expect(hero).toContainText("A shared calendar and task list, a watchlist for your shows and much more!");
   await expect(hero.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup");
-  await expect(hero.getByRole("link", { name: "See the apps" })).toHaveAttribute("href", "#apps");
+  await expect(hero.getByRole("link", { name: "Login", exact: true })).toHaveAttribute("href", "/login");
   // Log in is the header's, on a wide screen (a phone has it under the buttons).
   await expect(hero.getByRole("link", { name: "Log in" })).toBeHidden();
 
@@ -73,27 +71,20 @@ test("logged out, home is the website's front page: what the site is, the apps, 
     "Can I use it on my phone?",
     "Can I take my data with me?",
   ]);
+  await expect(questions).toContainText(
+    "Diogo. The apps are made for friends and family, and anyone can sign up. More on the About page.",
+  );
   await expect(questions.getByRole("link", { name: "About" })).toHaveAttribute("href", "/about");
   await expect(questions.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
   // And Sign up once more, at the end.
   await expect(
-    main.getByRole("region", { name: "Try it with your people" }).getByRole("link", { name: "Sign up" }),
+    main.getByRole("region", { name: "Try it now and join the community" }).getByRole("link", { name: "Sign up" }),
   ).toHaveAttribute("href", "/signup");
 
-  // The footer: the apps (each to its section), the site's pages and the account; the year and the version,
-  // "dev" unless APP_VERSION is set, as it is in the Docker image.
+  // Only the year and build version remain in the footer.
   const footer = page.getByRole("contentinfo");
-  expect(await linkNames(footer.getByRole("navigation", { name: "Footer" }))).toEqual([
-    "Shared",
-    "Shows",
-    "Recipes",
-    "How it works",
-    "About",
-    "Privacy",
-    "Log in",
-    "Sign up",
-  ]);
-  await expect(footer.getByRole("link", { name: "Shows" })).toHaveAttribute("href", "/#shows");
+  await expect(footer.getByRole("link")).toHaveCount(0);
+  await expect(footer.locator("span")).toHaveCount(2);
   await expect(footer).toContainText(`© ${new Date().getFullYear()} Diogo Mota`);
   await expect(footer.getByText(/^Version (dev|v\d+\.\d+\.\d+)$/)).toBeVisible();
 
@@ -101,12 +92,16 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
   await expect(meta("name", "description")).toHaveAttribute(
     "content",
-    "Small apps for the things you share with people: Shared, Shows, and Recipes.",
+    "Small apps to share with friends: Shared, Shows, and Recipes.",
   );
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com");
   const image = await page.request.get("/opengraph-image");
   expect(image.ok()).toBe(true);
   expect(image.headers()["content-type"]).toBe("image/png");
+
+  await hero.getByRole("link", { name: "Login", exact: true }).click();
+  await expect(page).toHaveURL("/login");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Log in");
 });
 
 test("the website's header: the mark goes home, Apps opens a menu of them, then About; Log in and Sign up", async ({
@@ -190,6 +185,12 @@ test.describe("on a phone", () => {
     await menu.getByRole("link", { name: "Privacy" }).click();
     await expect(page).toHaveURL("/privacy");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Privacy");
+
+    await page.goto("/");
+    await expect(page.getByRole("contentinfo").getByRole("link")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole("main").getByRole("link", { name: "Login", exact: true }).click();
+    await expect(page).toHaveURL("/login");
   });
 });
 
@@ -229,7 +230,7 @@ test("sent home from a protected page, Log in and Sign up return there, and an a
   const header = page.getByRole("banner");
   await expect(header.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login?next=%2Faccount");
   await expect(header.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup?next=%2Faccount");
-  await expect(page.getByRole("contentinfo").getByRole("link", { name: "Log in" })).toHaveAttribute(
+  await expect(hero.getByRole("link", { name: "Login", exact: true })).toHaveAttribute(
     "href",
     "/login?next=%2Faccount",
   );
@@ -301,13 +302,17 @@ test("logged in, home is Home: the apps' icons, and the email note sends its lin
     await expect(link).toHaveAccessibleDescription(app.description);
     await expect(link.locator("img")).toHaveAttribute("src", app.logo);
   }
+  const account = main.getByRole("link", { name: "Account", exact: true });
+  await expect(account).toHaveAttribute("href", "/account");
+  await expect(account).toHaveAccessibleDescription("Manage your profile and account settings");
+  await expect(account.locator("img")).toHaveAttribute("src", "/logos/account.svg");
   // Big icons, side by side in the middle of the page, under the heading (four to a row on a wide screen).
   // Once they have come in (anything that turns for as long as it waits aside).
   await page.waitForFunction(() =>
     document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity),
   );
   const icons = await Promise.all(
-    apps.map(
+    [...apps, { name: "Account" }].map(
       async (app) => (await main.getByRole("link", { name: app.name, exact: true }).locator("img").boundingBox())!,
     ),
   );
@@ -330,6 +335,9 @@ test("logged in, home is Home: the apps' icons, and the email note sends its lin
   await expect(note.getByRole("button", { name: "Sent" })).toBeDisabled();
   await expect(note.getByRole("status")).toHaveText(`We sent a new link to ${user.email}.`);
   await expect(page).toHaveURL("/");
+  await account.click();
+  await expect(page).toHaveURL("/account");
+  await expect(main.getByRole("heading", { level: 1 })).toHaveText("Account");
 });
 
 test("an app's icon reopens the view last used in it, and Shared without a space its welcome", async ({ page }) => {

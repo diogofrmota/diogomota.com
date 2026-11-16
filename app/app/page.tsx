@@ -69,6 +69,17 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     const remembered = app.href === "/shared" && !badges.inSpace ? undefined : jar.get(lastViewCookieName(app.href));
     return { app, href: lastViewHref(app.href, views[app.href] ?? [], remembered?.value), badge, badgeLabel };
   });
+  grid.push({
+    app: {
+      name: "Account",
+      href: "/account",
+      description: "Manage your profile and account settings",
+      logo: "/logos/account.svg",
+    },
+    href: "/account",
+    badge: 0,
+    badgeLabel: "",
+  });
 
   return (
     <AppFrame

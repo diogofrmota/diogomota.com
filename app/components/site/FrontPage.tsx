@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ChevronDownIcon } from "@/components/common/icons";
 import { LinkPending } from "@/components/common/LinkPending";
 import ui from "@/components/common/ui.module.css";
 import { appAt, apps } from "@/lib/apps";
@@ -20,7 +19,7 @@ const questions: { question: string; answer: React.ReactNode }[] = [
     question: "Who runs it?",
     answer: (
       <>
-        Diogo Mota, in Lisbon. The apps are made for friends and family, and anyone can sign up. More on the{" "}
+        Diogo. The apps are made for friends and family, and anyone can sign up. More on the{" "}
         <Link href="/about">About</Link> page.
       </>
     ),
@@ -48,7 +47,7 @@ const questions: { question: string; answer: React.ReactNode }[] = [
 
 /**
  * The front page (home, logged out; docs/decisions/0016), in the website's
- * frame (SiteFrame): what the site is, Sign up and See the apps, and a picture
+ * frame (SiteFrame): what the site is, Sign up and Login, and a picture
  * of the apps; then a section per app (AppSections), How it works, Questions,
  * and Sign up once more. `next` (from a protected page) makes Log in and Sign
  * up return there, and opens the prompt of the app it is in.
@@ -72,10 +71,10 @@ export function FrontPage({ next, deleted }: { next: string | null; deleted: boo
             Sign up
             <LinkPending />
           </Link>
-          <a href="#apps" className={`${ui.button} ${styles.big}`}>
-            See the apps
-            <ChevronDownIcon />
-          </a>
+          <Link href={authHref("/login", next)} className={`${ui.button} ${styles.big}`}>
+            Login
+            <LinkPending />
+          </Link>
         </div>
         {/* On a phone, where the header has no room for Log in. */}
         <p className={styles.haveAccount}>
@@ -127,7 +126,7 @@ export function FrontPage({ next, deleted }: { next: string | null; deleted: boo
 
       <section className={`${styles.section} ${styles.band}`} aria-labelledby="band-title">
         <div>
-          <h2 id="band-title">Try it with your people</h2>
+          <h2 id="band-title">Try it now and join the community</h2>
           <p>It takes a minute to sign up.</p>
         </div>
         <Link href={authHref("/signup", next)} className={`${ui.button} ${styles.big} ${styles.bandButton}`}>

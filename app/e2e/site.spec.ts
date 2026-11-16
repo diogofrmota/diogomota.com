@@ -130,7 +130,7 @@ test("keyboard focus is visible", async ({ page }) => {
 
   await page.goto("/");
   // The header (the mark, Apps, How it works, About, Log in and Sign up), then
-  // the hero's Sign up and See the apps, then Shared's Open.
+  // the hero's Sign up and Login, then Shared's Open.
   for (let i = 0; i < 9; i++) await page.keyboard.press("Tab");
   const open = page.getByRole("main").getByRole("link", { name: "Open Shared" });
   await expect(open).toBeFocused();

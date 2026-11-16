@@ -11,7 +11,7 @@ test("about is in the website's look: its header and footer, the intro, and what
   const main = page.getByRole("main");
   await expect(main.getByRole("heading", { level: 1 })).toHaveText("Diogo Mota");
   await expect(main).toContainText("DevOps engineer at Richemont, based in Lisbon, Portugal.");
-  // No button to the apps: the header and footer have them.
+  // No button to the apps: the header has them.
   await expect(page.getByRole("link", { name: "See the apps" })).toHaveCount(0);
 
   // What the site is, with a link to each app's section and to Privacy.
@@ -27,7 +27,8 @@ test("about is in the website's look: its header and footer, the intro, and what
   // The header, with About marked, and the footer.
   const nav = page.getByRole("banner").getByRole("navigation", { name: "Site" });
   await expect(nav.getByRole("link", { name: "About" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("contentinfo").getByRole("link", { name: "About" })).toBeVisible();
+  await expect(page.getByRole("contentinfo").getByRole("link")).toHaveCount(0);
+  await expect(page.getByRole("contentinfo")).toContainText(`\u00a9 ${new Date().getFullYear()} Diogo Mota`);
 });
 
 test("about links to Richemont, in a new tab", async ({ page }) => {
