@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Locator, Page } from "@playwright/test";
 import sharp from "sharp";
 import { checkView, emulateHomeIndicator } from "./checks";
+import { localParts } from "../lib/calendar";
 import { accountSetting, expect, newUser, signUp, test } from "./fixtures";
 import { card, grid, loadSections, mockBase, openShows, otherPerson, section, tab, userId, viewHeading } from "./shows";
 
@@ -23,6 +24,49 @@ async function goBackTo(page: Page, view: string) {
   await page.goBack();
   await expect(viewHeading(page)).toHaveText(view);
 }
+
+test("Benfica fixtures, stadium days and dialogs", async ({ page, isMobile }) => {
+  await signUp(page, newUser(), "/signup?next=%2Fbenfica");
+  await expect(page).toHaveURL("/benfica");
+  await expect(page.getByRole("heading", { name: "Your next stadium day starts here" })).toBeVisible();
+  await checkView(page, "Benfica empty fixtures");
+  const today = localParts(new Date()).date;
+  const created = await page.request.post("/api/benfica", {
+    data: {
+      opponent: "An opponent with a long name for a small screen",
+      competition: "Liga Portugal",
+      kickoff: `${today}T20:00:00.000Z`,
+      attendance: "going",
+      ticket: "requested",
+      reminderMinutes: 1440,
+    },
+  });
+  expect(created.status()).toBe(201);
+  await page.reload();
+  await expect(page.getByText("Ticket: Requested", { exact: true })).toBeVisible();
+  await checkView(page, "Benfica fixtures");
+  await page.getByRole("button", { name: "Edit match", exact: true }).click();
+  const edit = page.getByRole("dialog", { name: "Edit match" });
+  await checkView(page, "Benfica edit form");
+  await edit.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Benfica", exact: true })
+    .getByRole("button", { name: "Stadium days" })
+    .click();
+  await expect(page.getByRole("button", { name: /Benfica vs An opponent/ }).last()).toBeVisible();
+  await checkView(page, "Benfica calendar");
+  await page.screenshot({
+    path: test.info().outputPath(isMobile ? "benfica-phone.png" : "benfica-desktop.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: /Benfica vs An opponent/ })
+    .last()
+    .click();
+  await checkView(page, "Benfica calendar dialog");
+  await page.goBack();
+  await expect(edit).toBeHidden();
+});
 
 test("Books shelves and dialogs", async ({ page }) => {
   await signUp(page, newUser(), "/signup?next=%2Fbooks");

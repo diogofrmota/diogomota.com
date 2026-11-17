@@ -1,6 +1,14 @@
 # diogomota.com
 
-Personal site plus five small apps for friends (Shared, Shows, Recipes, Fitness, Books), built with Next.js and PostgreSQL. The spec and the full build log are in [plan.md](plan.md), the decisions one by one in [docs/decisions/](docs/decisions/), what each version changed in [CHANGELOG.md](CHANGELOG.md); running the server is in [docs/operations.md](docs/operations.md). The Playwright tests (`app/e2e/`) are the detailed spec of what the apps do; this file says it in words.
+Personal site plus six small apps for friends (Shared, Shows, Recipes, Fitness, Books, Benfica), built with Next.js and PostgreSQL. The spec and the full build log are in [plan.md](plan.md), the decisions one by one in [docs/decisions/](docs/decisions/), what each version changed in [CHANGELOG.md](CHANGELOG.md); running the server is in [docs/operations.md](docs/operations.md). The Playwright tests (`app/e2e/`) are the detailed spec of what the apps do; this file says it in words.
+
+## Benfica
+
+`/benfica` plans home matches at Estádio da Luz. Fixtures are entered manually with opponent, competition and kickoff in Lisbon time. Each account has its own fixtures, attendance plans (Undecided, Going, Maybe, Not going), ticket status (Need a ticket, Requested, Purchased, Season ticket, Not needed) and optional calendar reminder (1 hour, 3 hours, 1 day or 2 days before). Matches can be edited or removed with Undo, searched by opponent or competition, and filtered to upcoming or all fixtures.
+
+Stadium days (`/benfica/calendar`) shows Going and Maybe plans by month, with a match list below on every screen size and an option to show all fixtures. Export event downloads a match as `.ics`; Export upcoming plans downloads future Going and Maybe matches. Imports carry each match's reminder into the user's calendar app, where alerts are delivered. Events reserve an estimated two hours. Imports do not sync automatically: export again after changing a fixture. No fixtures are fetched from a sports service and the site does not send background notifications.
+
+The authenticated `/api/benfica` API lists (`GET`) and creates (`POST`) fixtures; `/api/benfica/:id` reads, replaces (`PATCH`) and deletes them. `/api/benfica/export` exports upcoming plans, or one owned match with `?id=`. Mutations validate JSON, check same-site requests and scope database queries to the current user; every endpoint is rate limited. Migration `026_benfica.sql` adds the private fixture table, deleted with its account. Download my data includes the fixtures. Unit tests cover validation and iCalendar alarms, escaping and UTF-8 folding; `e2e/benfica.spec.ts` covers persistence, edits, exports, account isolation and desktop/phone accessibility.
 
 ## Prerequisites
 

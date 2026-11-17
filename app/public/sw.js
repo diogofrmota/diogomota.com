@@ -13,7 +13,7 @@
 // Logging out deletes the cache (clearOfflineData).
 
 const cacheName = "diogomota-offline-v1";
-const appPages = /^\/((shared|shows|recipes|fitness)(\/|$)|$)/;
+const appPages = /^\/((shared|shows|recipes|fitness|benfica)(\/|$)|$)/;
 const staticFiles = /^\/(_next\/static|icons|logos)\//;
 
 self.addEventListener("install", () => self.skipWaiting());

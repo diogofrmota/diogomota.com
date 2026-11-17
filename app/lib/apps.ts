@@ -84,6 +84,19 @@ export const apps: readonly AppInfo[] = [
     ],
     logo: "/logos/books.svg",
   },
+  {
+    name: "Benfica",
+    href: "/benfica",
+    description: "Plan the days you need to go to the stadium for Benfica home matches.",
+    summary: "your Benfica stadium days",
+    tagline: "Make room for match day",
+    features: [
+      "Home fixtures, competitions and kickoff times",
+      "Your attendance plans and tickets in one place",
+      "Stadium days in a calendar, with reminders to export",
+    ],
+    logo: "/logos/benfica.svg",
+  },
 ];
 
 /** "Shared, Shows, and Recipes". */

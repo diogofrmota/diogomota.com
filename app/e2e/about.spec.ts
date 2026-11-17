@@ -24,7 +24,7 @@ test("about is in the website's look: its header and footer, the intro, and what
   await expect(site).toContainText("I make them for my friends and family");
   await expect(site).not.toContainText("Diogo makes");
   await expect(site).toContainText(
-    "Shared, a calendar for two, Shows, a watchlist with your friends, Recipes, a recipe box with a shopping list, Fitness, a workout and health tracker, and Books, a bookshelf and reading tracker.",
+    "Shared, a calendar for two, Shows, a watchlist with your friends, Recipes, a recipe box with a shopping list, Fitness, a workout and health tracker, Books, a bookshelf and reading tracker, and Benfica, your Benfica stadium days.",
   );
   await expect(site.getByRole("link", { name: "Shared", exact: true })).toHaveAttribute("href", "/#shared");
   await expect(site.getByRole("link", { name: "Shows", exact: true })).toHaveAttribute("href", "/#shows");

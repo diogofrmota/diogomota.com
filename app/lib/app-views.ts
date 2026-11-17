@@ -9,6 +9,7 @@ export const showsViews = ["library", "discover", "profile"] as const;
 export const recipesViews = ["recipes", "favourites", "shopping"] as const;
 export const fitnessViews = ["today", "workouts", "progress"] as const;
 export const booksViews = ["want-to-read", "currently-reading", "finished"] as const;
+export const benficaViews = ["fixtures", "calendar"] as const;
 
 /** At most this many panels are taken from a URL: more is a broken link. */
 const maxPanels = 5;

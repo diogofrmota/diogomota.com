@@ -10,6 +10,7 @@ import { SiteFrame } from "@/components/site/SiteFrame";
 import { VerifyNote } from "@/components/site/VerifyNote";
 import {
   booksViews,
+  benficaViews,
   fitnessViews,
   lastViewCookieName,
   lastViewHref,
@@ -34,6 +35,7 @@ export const metadata: Metadata = {
 export const viewport = appViewport;
 
 const views: Record<string, readonly string[]> = {
+  "/benfica": benficaViews,
   "/books": booksViews,
   "/shared": sharedViews,
   "/shows": showsViews,

@@ -57,6 +57,10 @@ export default async function PrivacyPage() {
           <strong>Books:</strong> your books, reading shelves and page progress. Only you see them.
         </li>
         <li>
+          <strong>Benfica:</strong> your home fixtures, attendance plans, ticket status and calendar reminder choices.
+          Only you see them. Exported events are shared with the calendar app you import them into.
+        </li>
+        <li>
           <strong>Fitness:</strong> your gym routines, workouts (exercises, sets, reps and weights) and runs, and the
           steps, water, body weight and supplements you log each day, with your daily goals. Only you see them.
         </li>

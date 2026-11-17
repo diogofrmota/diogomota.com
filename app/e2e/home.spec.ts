@@ -45,7 +45,7 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   await expect(hero.getByText(/^diogomota\.com\//)).toHaveCount(0);
 
   // A section per app, by its name: its icon, headline, what it does, and Open.
-  expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows", "Recipes", "Fitness", "Books"]);
+  expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows", "Recipes", "Fitness", "Books", "Benfica"]);
   for (const app of apps) {
     const section = appSection(page, app.name);
     await expect(section).toHaveAttribute("id", app.href.slice(1));
@@ -96,7 +96,7 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
   await expect(meta("name", "description")).toHaveAttribute(
     "content",
-    "Small apps to share with friends: Shared, Shows, Recipes, Fitness, and Books.",
+    "Small apps to share with friends: Shared, Shows, Recipes, Fitness, Books, and Benfica.",
   );
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com");
   const image = await page.request.get("/opengraph-image");
