@@ -64,10 +64,11 @@ function layoutProblems({ phone, bottomInset }: { phone: boolean; bottomInset: n
   }
   if (!phone) return problems;
 
-  // Not shown (display: none, a hidden view), or only there for screen readers.
+  // Not shown (display: none, a hidden view), or only there for screen readers,
+  // or for no one (a spam trap: aria-hidden, out of view, never focused).
   const shown = (el: Element) => {
     const box = el.getBoundingClientRect();
-    return box.width > 1 && box.height > 1;
+    return box.width > 1 && box.height > 1 && !el.closest("[aria-hidden='true']");
   };
   const scope = dialog ?? document;
   const targets = [
