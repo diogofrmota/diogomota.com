@@ -8,7 +8,15 @@ import { AppGrid, type GridApp } from "@/components/site/AppGrid";
 import { FrontPage } from "@/components/site/FrontPage";
 import { SiteFrame } from "@/components/site/SiteFrame";
 import { VerifyNote } from "@/components/site/VerifyNote";
-import { fitnessViews, lastViewCookieName, lastViewHref, recipesViews, sharedViews, showsViews } from "@/lib/app-views";
+import {
+  booksViews,
+  fitnessViews,
+  lastViewCookieName,
+  lastViewHref,
+  recipesViews,
+  sharedViews,
+  showsViews,
+} from "@/lib/app-views";
 import { appViewport, apps } from "@/lib/apps";
 import { homeBadges } from "@/lib/badges";
 import { safeNextPath } from "@/lib/next-path";
@@ -26,6 +34,7 @@ export const metadata: Metadata = {
 export const viewport = appViewport;
 
 const views: Record<string, readonly string[]> = {
+  "/books": booksViews,
   "/shared": sharedViews,
   "/shows": showsViews,
   "/recipes": recipesViews,

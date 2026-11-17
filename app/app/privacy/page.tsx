@@ -54,6 +54,9 @@ export default async function PrivacyPage() {
           smaller, without their location or other metadata), your favourites and your shopping list. Only you see them.
         </li>
         <li>
+          <strong>Books:</strong> your books, reading shelves and page progress. Only you see them.
+        </li>
+        <li>
           <strong>Fitness:</strong> your gym routines, workouts (exercises, sets, reps and weights) and runs, and the
           steps, water, body weight and supplements you log each day, with your daily goals. Only you see them.
         </li>
@@ -71,7 +74,8 @@ export default async function PrivacyPage() {
       <h2>Who else sees it</h2>
       <p>
         Nobody sells or shares it. The site runs on a server in Europe (OVH), emails are sent by Resend (EU), and the
-        Shows app gets titles and posters from TMDB, which then sees your browser loading the posters. Backups of the
+        Shows app gets titles and posters from TMDB, which then sees your browser loading the posters. Books searches
+        Open Library, which receives your search terms and sees your browser loading book covers. Backups of the
         database are kept for two weeks.
       </p>
 
@@ -79,8 +83,8 @@ export default async function PrivacyPage() {
       <p>
         In <Link href="/account">Account</Link>, Data / Privacy page has <strong>Download my data</strong> (everything
         above, as a file) and <strong>Delete my account</strong>, which deletes it all at once: you leave your space
-        (the space goes with its last member) and your library, friends, recipes, photos, fitness log and activity go.
-        Backups forget it within two weeks.
+        (the space goes with its last member) and your library, friends, recipes, photos, books, fitness log and
+        activity go. Backups forget it within two weeks.
       </p>
       <p>
         Questions, or anything you want changed:{" "}

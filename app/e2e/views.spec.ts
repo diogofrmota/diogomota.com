@@ -24,6 +24,31 @@ async function goBackTo(page: Page, view: string) {
   await expect(viewHeading(page)).toHaveText(view);
 }
 
+test("Books shelves and dialogs", async ({ page }) => {
+  await signUp(page, newUser(), "/signup?next=%2Fbooks");
+  await expect(page).toHaveURL("/books");
+  await expect(page.getByRole("heading", { name: "A shelf waiting for a story" })).toBeVisible();
+  await checkView(page, "Books empty shelf");
+  await page.getByRole("button", { name: "Add book", exact: true }).click();
+  await checkView(page, "Books search dialog");
+  await page.getByRole("button", { name: "Add manually" }).click();
+  const form = page.getByRole("dialog", { name: "Add book", exact: true });
+  await form.getByLabel("Title", { exact: true }).fill("A book with a long title for a narrow shelf");
+  await form.getByLabel("Author", { exact: true }).fill("A. Reader");
+  await form.getByLabel("Total pages").fill("300");
+  await form.getByLabel("Shelf", { exact: true }).selectOption("currently-reading");
+  await form.getByLabel("Pages read").fill("75");
+  await checkView(page, "Books progress form");
+  await form.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("dialog", { name: "Find a book" }).getByRole("button", { name: "Close", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Books", exact: true })
+    .getByRole("button", { name: "Currently Reading", exact: true })
+    .click();
+  await expect(page.getByText("75 of 300 pages · 25%")).toBeVisible();
+  await checkView(page, "Books reading shelf");
+});
+
 /** A popup's text field starts focused with a mouse; on a touch screen it doesn't (the keyboard would cover the popup). */
 async function expectFocusedWithMouse(page: Page, field: Locator) {
   if (await page.evaluate(() => matchMedia("(pointer: fine)").matches)) await expect(field).toBeFocused();

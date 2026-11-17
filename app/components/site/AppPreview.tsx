@@ -142,11 +142,38 @@ function FitnessPreview() {
 }
 
 const previews: Record<string, () => React.ReactNode> = {
+  "/books": BooksPreview,
   "/shared": SharedPreview,
   "/shows": ShowsPreview,
   "/recipes": RecipesPreview,
   "/fitness": FitnessPreview,
 };
+
+function BooksPreview() {
+  return (
+    <span className={styles.shows}>
+      <span className={styles.searchBar} />
+      <span className={styles.posters}>
+        {["amber", "emerald", "indigo"].map((art, i) => (
+          <span key={art} className={styles.title}>
+            <span className={styles.poster} data-art={art}>
+              <svg viewBox="0 0 80 110" width="100%" height="100%">
+                <path
+                  d="M12 0v110M22 28h44M22 38h36M22 80h32"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  opacity=".45"
+                />
+              </svg>
+            </span>
+            <span className={styles.line} style={{ width: `${[35, 65, 100][i]}%` }} />
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
 
 /** The picture of the app at `href`, or nothing for an app without one. */
 export function AppPreview({ href, className = "" }: { href: string; className?: string }) {

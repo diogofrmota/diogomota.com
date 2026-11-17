@@ -9,6 +9,9 @@ const windows = (globalForLimits.rateLimitWindows ??= new Map());
 
 const MINUTE = 60_000;
 
+export const booksRequestLimit = rateLimit("books", 120, MINUTE);
+export const bookSearchLimit = rateLimit("book-search", 20, MINUTE);
+
 // Returns a function that records one attempt for `key` and says whether it is
 // within `limit` attempts per `windowMs`.
 function rateLimit(name: string, limit: number, windowMs: number) {

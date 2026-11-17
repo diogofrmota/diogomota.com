@@ -71,6 +71,19 @@ export const apps: readonly AppInfo[] = [
     ],
     logo: "/logos/fitness.svg",
   },
+  {
+    name: "Books",
+    href: "/books",
+    description: "Organize your books and track your reading.",
+    summary: "a bookshelf and reading tracker",
+    tagline: "Your next book, and every page along the way",
+    features: [
+      "Search for books or add your own",
+      "Want to Read, Currently Reading and Finished shelves",
+      "Track your reading, page by page",
+    ],
+    logo: "/logos/books.svg",
+  },
 ];
 
 /** "Shared, Shows, and Recipes". */

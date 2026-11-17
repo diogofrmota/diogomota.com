@@ -18,6 +18,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/books/:path*",
+    "/api/books/:path*",
     "/shared/:path*",
     "/shows/:path*",
     "/recipes/:path*",
