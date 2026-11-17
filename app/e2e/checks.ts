@@ -47,6 +47,13 @@ function layoutProblems({ phone, bottomInset }: { phone: boolean; bottomInset: n
   if (dialog) {
     if (dialog.scrollWidth > dialog.clientWidth + 1)
       problems.push(`${name(dialog)} is cut off: ${dialog.scrollWidth}px wide in ${dialog.clientWidth}px`);
+    // A popup as tall as its content (Dialog.module.css): Safari on iPhones
+    // sizes it from its content's flex basis, so a basis of 0 there draws an
+    // empty box. Chromium lays it out right either way, so the basis is checked.
+    const content = dialog.firstElementChild;
+    const flex = getComputedStyle(dialog).display.includes("flex");
+    if (flex && content && getComputedStyle(content).flexBasis !== "auto")
+      problems.push(`${name(dialog)}'s content has a flex basis of ${getComputedStyle(content).flexBasis}, not auto`);
     for (const el of dialog.querySelectorAll("*")) {
       // A row of posters (More like this) scrolls sideways on purpose; the panel around it mustn't.
       if (el.hasAttribute("data-scrolls-sideways")) continue;

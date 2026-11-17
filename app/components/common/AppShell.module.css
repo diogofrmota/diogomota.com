@@ -4,7 +4,9 @@
    from them. */
 
 .shell {
-  --top-bar-height: 3.5rem;
+  /* None without a tab bar (`bare`: / logged in, the error page); .withNav
+     sets it where the tab bar is the header. */
+  --top-bar-height: 0px;
 
   /* The design system's scales, the same in every theme (the colors are the
      theme's, themes.module.css). Every module takes its sizes from these. */

@@ -1,7 +1,7 @@
-/* Home, logged in: the apps' icons in a column (the front page, logged out,
-   is the website's: components/site/FrontPage). At least as tall as the room
-   under (or over) the tab bar, so the footer is at the bottom of the page
-   however little is above it. */
+/* /, logged in: the apps' icons in a column (the front page, logged out,
+   is the website's: components/site/FrontPage), with no tab bar. At least as
+   tall as the screen less the page's padding, so the footer is at the bottom
+   of the page however little is above it. */
 .view {
   display: flex;
   flex-direction: column;
@@ -10,15 +10,15 @@
   margin-inline: auto;
 }
 
-/* Home, over the icons: in the middle, as the icons are. Two classes, to win
-   over ui.module.css's heading whatever the order. */
+/* "Diogo’s Apps", over the icons: in the middle, as the icons are. Two
+   classes, to win over ui.module.css's heading whatever the order. */
 .title.title {
   margin-bottom: var(--space-6);
   text-align: center;
 }
 
-/* Version, Privacy and About: for whoever deploys it, and for the curious. At
-   the bottom of the page, after whatever is above it. */
+/* Version and Privacy: for whoever deploys it, and for the curious. At the
+   bottom of the page, after whatever is above it. */
 .footer {
   margin-top: auto;
   padding-top: var(--space-8);

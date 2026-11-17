@@ -32,15 +32,22 @@ const views: Record<string, readonly string[]> = {
 };
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
-// Home (docs/decisions/0014, 0016). Logged out, the website's front page
+/** "Diogo’s Apps": the first word of the user's name, or their username without one. */
+function appsTitle(name: string | null, username: string) {
+  const first = name?.trim().split(/\s+/)[0];
+  return `${first || username}’s Apps`;
+}
+
+// / (docs/decisions/0014, 0016). Logged out, the website's front page
 // (FrontPage, in SiteFrame): what the site is, Sign up, a section per app, How
 // it works and Questions; `next` is set when the user was sent here from a
 // protected page (proxy.ts): Log in and Sign up return there, and for an app
 // its prompt opens. Logged in, the apps, in their frame and the user's theme,
-// with the tab bar of the pages around them (Account and Home): Home over the
-// apps' icons, each with what is waiting in it (lib/badges.ts) and going back
-// to the view last used in it (lib/app-views.ts). The build's version, Privacy
-// and About are at the bottom of the page, however little is above them.
+// without a tab bar (the icons are the way to everything, Account among
+// them): "Diogo’s Apps" over the apps' icons, each with what is waiting in it
+// (lib/badges.ts) and going back to the view last used in it
+// (lib/app-views.ts). The build's version and Privacy are at the bottom of
+// the page, however little is above them.
 export default async function Home({ searchParams }: PageProps<"/">) {
   const session = await getSession();
   const user = session ? await findUserById(session.user.id) : null;
@@ -82,20 +89,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   });
 
   return (
-    <AppFrame
-      theme={user.themePreference}
-      username={user.username}
-      name={user.name}
-      avatarUrl={user.avatarUrl}
-      current="home"
-    >
+    <AppFrame theme={user.themePreference} username={user.username} name={user.name} avatarUrl={user.avatarUrl} bare>
       <div className={styles.view}>
         {!user.emailVerified && <VerifyNote email={user.email} />}
-        <h1 className={`${ui.heading} ${styles.title}`}>Home</h1>
+        <h1 className={`${ui.heading} ${styles.title}`}>{appsTitle(user.name, user.username)}</h1>
         <AppGrid apps={grid} />
-        {/* Which build is live (for whoever deploys it, so out of the way), and the pages about the site. */}
+        {/* Which build is live (for whoever deploys it, so out of the way), and how the data is kept. */}
         <footer className={styles.footer}>
-          Version {version} · <Link href="/privacy">Privacy</Link> · <Link href="/about">About</Link>
+          Version {version} · <Link href="/privacy">Privacy</Link>
         </footer>
       </div>
     </AppFrame>

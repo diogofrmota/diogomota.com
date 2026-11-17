@@ -1,10 +1,11 @@
-/* Home's apps, logged in (AppGrid): their icons in a grid, like a phone's home
-   screen, each its icon with its name under it: two to a row on a phone, four
-   from 40rem, in the middle of the page under its heading (a row that isn't
-   full is in the middle too). */
+/* The apps on /, logged in (AppGrid): their icons in a grid, like a phone's
+   home screen, each its icon with its name under it: three to a row on a
+   phone, four from 40rem, in the middle of the page under its heading (a row
+   that isn't full is in the middle too). On a phone the icons take a share of
+   the screen's width, so three fit on the narrowest. */
 .grid {
-  --icon-size: 6rem;
-  --columns: 2;
+  --icon-size: min(5.5rem, 22vw);
+  --columns: 3;
   --column-gap: var(--space-4);
 
   display: flex;

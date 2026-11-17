@@ -25,6 +25,16 @@
   animation: popup-in var(--duration) var(--ease-out);
 }
 
+/* Its content (one child, which scrolls): as tall as what is in it (a flex
+   basis of auto), shrinking to the popup's max-height and scrolling inside,
+   or growing to fill a popup of a set height (Shows' search). Not the
+   modules' flex: 1, a basis of 0: Safari on iPhones sizes a popup that is as
+   tall as its content from that basis, and draws an empty box as tall as the
+   padding (WebKit bug 202184). */
+.popup.popup[open] > * {
+  flex: 1 1 auto;
+}
+
 .popup.popup[data-kind="menu"][open] {
   animation-duration: var(--duration-dropdown);
 }

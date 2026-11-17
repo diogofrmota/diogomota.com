@@ -40,16 +40,16 @@ async function expectNoHorizontalScroll(page: Page) {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
-test("Account and Home in the tab bar go between home and the settings; /account has no top bar", async ({ page }) => {
+test("Account's icon on / opens the settings, whose tab bar has only Apps, the way back; /account has no top bar", async ({
+  page,
+}) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/");
-  const bar = page.getByRole("navigation", { name: "Account", exact: true });
-  // Only the tabs: no site name on the left.
-  expect(await linkNames(bar)).toEqual(["Account", "Home"]);
-  await expect(bar.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
+  // / has no tab bar: its icons are the way on, Account among them.
+  await expect(page.getByRole("navigation")).toHaveCount(0);
 
-  await bar.getByRole("link", { name: "Account", exact: true }).click();
+  await page.getByRole("main").getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
   // The title in the middle of the page.
   const title = page.getByRole("heading", { level: 1, name: "account" });
@@ -57,12 +57,14 @@ test("Account and Home in the tab bar go between home and the settings; /account
   await expect(title).toHaveCSS("text-align", "center");
   await expect(page.getByRole("banner")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Back to apps" })).toHaveCount(0);
-  await expect(bar.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("aria-current", "page");
-  await expect(bar.getByRole("link", { name: "Home", exact: true })).not.toHaveAttribute("aria-current");
+  // Only Apps: Account is the page itself.
+  const bar = page.getByRole("navigation", { name: "Account", exact: true });
+  expect(await linkNames(bar)).toEqual(["Apps"]);
+  await expect(bar.getByRole("link", { name: "Apps", exact: true })).not.toHaveAttribute("aria-current");
 
   // Who is logged in: their settings, each with what it is now.
   await expect(page.getByRole("main")).toContainText(user.email);
-  await bar.getByRole("link", { name: "Home", exact: true }).click();
+  await bar.getByRole("link", { name: "Apps", exact: true }).click();
   await expect(page).toHaveURL("/");
 });
 
@@ -174,16 +176,16 @@ test("change username", async ({ page }) => {
   const renamed = newUser().username;
   await field.fill(renamed);
   await expect(form.getByRole("status")).toHaveText("That username is available.");
-  await expect(accountButton(page, user.username)).toBeVisible();
   await save.click();
   // Saved, the popup closes, and the row has the new one.
   await expect(form).toBeHidden();
   await expect(notice(page, "Username changed.")).toBeVisible();
   await expect(accountSetting(page, "Username")).toContainText(renamed);
   // The session has the new name too.
+  await page.goto("/privacy");
   await expect(accountButton(page, renamed)).toBeVisible();
   await page.goto("/shows");
-  await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
 
   await logOut(page, renamed);
   await logIn(page, user.username, user.password);
@@ -447,7 +449,7 @@ test("theme preference persists after logging in again", async ({ page }) => {
   await expect(app).toHaveCSS("background-color", "rgb(31, 32, 35)");
 });
 
-test("a profile picture, chosen or dropped, is adjusted, made small and shows in the account menu; Remove picture takes it away", async ({
+test("a profile picture, chosen or dropped, is adjusted, made small and shows in the tab bars; Remove picture takes it away", async ({
   page,
   request,
 }) => {
@@ -456,9 +458,9 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   await expect(page).toHaveURL("/");
   await page.goto("/account");
   const picture = await openPopup(page, profilePicture(page), "Profile picture");
-  // The account menu's button (the menu repeats it, for phones, once open).
-  const menuPicture = accountButton(page, user.username).locator("img");
-  await expect(menuPicture).toHaveCount(0);
+  // The page's own picture (its tab bar has no Account: that is in the other pages' tab bars).
+  const pagePicture = profilePicture(page).locator("img");
+  await expect(pagePicture).toHaveCount(0);
 
   // A landscape phone photo, with metadata that mustn't be kept: blue on the left, orange on the right.
   const half = { width: 800, height: 1200, channels: 3 } as const;
@@ -483,7 +485,7 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   await crop.getByRole("button", { name: "Cancel" }).click();
   await expect(crop).toBeHidden();
   await expect(picture).toBeVisible();
-  await expect(menuPicture).toHaveCount(0);
+  await expect(pagePicture).toHaveCount(0);
   await picture.locator('input[type="file"]').setInputFiles({ name: "me.jpg", mimeType: "image/jpeg", buffer: photo });
 
   // Zoomed all the way in (the slider, from the keyboard), then dragged to the photo's right edge: all orange.
@@ -502,12 +504,11 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   }
   await crop.getByRole("button", { name: "Save picture" }).click();
   await expect(crop).toBeHidden();
-  // Saved: the popup closes, and the page has it, in the middle, as does the account menu.
+  // Saved: the popup closes, and the page has it, in the middle.
   await expect(picture).toBeHidden();
   await expect(notice(page, "Profile picture saved.")).toBeVisible();
-  await expect(menuPicture).toHaveAttribute("src", /^\/api\/avatars\/[0-9a-f-]{36}\?v=\d+$/);
-  const url = (await menuPicture.getAttribute("src"))!;
-  await expect(profilePicture(page).locator("img")).toHaveAttribute("src", url);
+  await expect(pagePicture).toHaveAttribute("src", /^\/api\/avatars\/[0-9a-f-]{36}\?v=\d+$/);
+  const url = (await pagePicture.getAttribute("src"))!;
 
   // Saved square, 512 px, as WebP without the photo's metadata, and only for those logged in.
   const saved = await page.request.get(url);
@@ -527,9 +528,9 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   expect(blue).toBeLessThan(30);
   expect((await request.get(url)).status()).toBe(401);
 
-  // Shown on the other pages too.
-  await page.goto("/");
-  await expect(menuPicture).toHaveAttribute("src", url);
+  // Shown on the other pages too, as Account's picture in their tab bar.
+  await page.goto("/privacy");
+  await expect(accountButton(page, user.username).locator("img")).toHaveAttribute("src", url);
   await page.goto("/account");
   await openPopup(page, profilePicture(page), "Profile picture");
   await expect(picture.locator(`img[src="${url}"]`)).toHaveCount(1);
@@ -551,7 +552,7 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   await picture.locator("label").dispatchEvent("drop", { dataTransfer: dropped });
   await crop.getByRole("button", { name: "Save picture" }).click();
   await expect(notice(page, "Profile picture saved.")).toBeVisible();
-  await expect(menuPicture).not.toHaveAttribute("src", url);
+  await expect(pagePicture).not.toHaveAttribute("src", url);
 
   // What isn't a picture says so, here or (pretending to be one, which the browser can't show, so it goes as it is) from the server.
   await openPopup(page, profilePicture(page), "Profile picture");
@@ -565,17 +566,19 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   await expect(picture.getByRole("alert")).toHaveText(
     "That file isn't a picture that can be read. Try a JPEG, PNG or WebP.",
   );
-  await expect(menuPicture).toHaveCount(1);
+  await expect(pagePicture).toHaveCount(1);
 
   // Removed: the initial again, and the picture is gone.
-  const current = (await menuPicture.getAttribute("src"))!;
+  const current = (await pagePicture.getAttribute("src"))!;
   await picture.getByRole("button", { name: "Remove picture" }).click();
   await expect(picture).toBeHidden();
   await expect(notice(page, "Profile picture removed.")).toBeVisible();
-  await expect(menuPicture).toHaveCount(0);
-  await expect(accountButton(page, user.username)).toContainText(initials(user.username, user.name));
+  await expect(pagePicture).toHaveCount(0);
   await expect(profilePicture(page)).toContainText(initials(user.username, user.name));
   expect((await page.request.get(current)).status()).toBe(404);
+  await page.goto("/privacy");
+  await expect(accountButton(page, user.username).locator("img")).toHaveCount(0);
+  await expect(accountButton(page, user.username)).toContainText(initials(user.username, user.name));
 });
 
 test("forgot password, in Update password, opens the reset by email", async ({ page }) => {
@@ -609,9 +612,12 @@ test.describe("at 320px wide", () => {
     await expect(page).toHaveURL("/");
     await expectNoHorizontalScroll(page);
 
-    await expect(
-      page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Account", exact: true }),
-    ).toBeInViewport({ ratio: 1 });
+    // Three icons to a row, all of each on the screen, even this narrow.
+    const main = page.getByRole("main");
+    const icons = ["Shared", "Shows", "Recipes"].map((name) => main.getByRole("link", { name, exact: true }));
+    for (const icon of icons) await expect(icon).toBeInViewport({ ratio: 1 });
+    const tops = await Promise.all(icons.map(async (icon) => (await icon.boundingBox())!.y));
+    expect(new Set(tops).size).toBe(1);
     await expectNoHorizontalScroll(page);
 
     await page.goto("/account");

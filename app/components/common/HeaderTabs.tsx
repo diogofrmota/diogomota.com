@@ -1,40 +1,40 @@
 import Link from "next/link";
 import { authHref } from "@/lib/next-path";
 import { Avatar } from "./Avatar";
-import { HomeIcon, LoginIcon, UserPlusIcon } from "./icons";
+import { AppsIcon, LoginIcon, UserPlusIcon } from "./icons";
 import { LinkPending } from "./LinkPending";
 import { SegmentThumb } from "./motion";
 
 import type { TabNavProps } from "./AppShell";
 import shell from "./AppShell.module.css";
 
-/** The tab of a page outside the apps that is current: home, account, or one of the login pages. */
-export type LauncherTab = "home" | "account" | "login" | "signup";
+/** The tab of a page outside the apps that is current: account, or one of the login pages. */
+export type LauncherTab = "account" | "login" | "signup";
 
 /** The current tab's underline: one per tab bar (its layoutId), sliding from tab to tab. */
 function Underline({ bar }: { bar: string }) {
   return <SegmentThumb layoutId={`tab-underline:${bar}`} className={shell.underline} />;
 }
 
-/** Home, at the end of every tab bar: /, the apps, and the way from one app to another. */
-function HomeTab({ current = false }: { current?: boolean }) {
+/** Apps, at the end of every tab bar: /, the apps, and the way from one app to another. */
+function AppsTab() {
   return (
     <li>
-      <Link href="/" aria-current={current ? "page" : undefined}>
-        <LinkPending icon={<HomeIcon />} />
-        Home
-        {current && <Underline bar="launcher" />}
+      <Link href="/">
+        <LinkPending icon={<AppsIcon />} />
+        Apps
       </Link>
     </li>
   );
 }
 
 /**
- * The tab bar of every page outside the apps (home, /account, the login
- * pages, /privacy, an invite, the 404): Account (with the profile picture)
- * and Home, the current one marked; Log out is on /account. Logged out, Log in
- * and Sign up in Account's place, each its own icon. `current` is none on the
- * pages that aren't one of the tabs.
+ * The tab bar of the pages outside the apps (/account, the login pages,
+ * /privacy, an invite, the 404; / itself has none, its icons are the way
+ * on): Account (with the profile picture) and Apps; on /account, only Apps,
+ * the way back (Log out is on the page). Logged out, Log in and Sign up in
+ * Account's place, each its own icon, the current one marked. `current` is
+ * none on the pages that aren't one of the tabs.
  */
 export function LauncherTabs({
   current,
@@ -53,14 +53,15 @@ export function LauncherTabs({
     <nav aria-label="Account" className={shell.tabBar}>
       <ul>
         {username ? (
-          <li>
-            <Link href="/account" aria-current={current === "account" ? "page" : undefined}>
-              <Avatar username={username} name={name} url={avatarUrl} className={shell.navAvatar} />
-              Account
-              <LinkPending />
-              {current === "account" && <Underline bar="launcher" />}
-            </Link>
-          </li>
+          current !== "account" && (
+            <li>
+              <Link href="/account">
+                <Avatar username={username} name={name} url={avatarUrl} className={shell.navAvatar} />
+                Account
+                <LinkPending />
+              </Link>
+            </li>
+          )
         ) : (
           <>
             <li>
@@ -79,14 +80,14 @@ export function LauncherTabs({
             </li>
           </>
         )}
-        <HomeTab current={current === "home"} />
+        <AppsTab />
       </ul>
     </nav>
   );
 }
 
 /**
- * An app's tab bar: its tabs, each its icon and name, then Home. Along the
+ * An app's tab bar: its tabs, each its icon and name, then Apps. Along the
  * bottom of a phone's screen, across the top of a wider one (AppShell.module.css).
  */
 export function TabBar({ label, tabs, current, onSelect }: TabNavProps) {
@@ -107,7 +108,7 @@ export function TabBar({ label, tabs, current, onSelect }: TabNavProps) {
             </button>
           </li>
         ))}
-        <HomeTab />
+        <AppsTab />
       </ul>
     </nav>
   );

@@ -28,14 +28,15 @@ export type TabNavProps = {
 };
 
 /**
- * The frame of the apps and every page around them (home logged in, /account, the
+ * The frame of the apps and every page around them (/ logged in, /account, the
  * login pages, /privacy, an invite, the 404), in the user's theme, with a tab
  * bar (HeaderTabs): an app's tabs, or Account (or Log in and Sign up) and
- * Home. Along the bottom of a phone's screen, within reach of a thumb, and
+ * Apps. Along the bottom of a phone's screen, within reach of a thumb, and
  * across the top of a wider one, as its header. With an app's tabs, the page
- * has the whole width; without (home and the rest, Shared before there is a
- * space) it is a centered column. `bare` leaves the tab bar out (the error
- * page, which can't tell who is logged in).
+ * has the whole width; without (/ and the rest, Shared before there is a
+ * space) it is a centered column. `bare` leaves the tab bar out: on / logged
+ * in, whose icons are the way to everything (Account is one of them), and on
+ * the error page, which can't tell who is logged in.
  */
 export function AppFrame({
   theme,
@@ -59,9 +60,9 @@ export function AppFrame({
   avatarUrl?: string | null;
   /** Where Log in and Sign up return to. */
   next?: string | null;
-  /** Which of Account (or Log in, Sign up) and Home is the page shown, if one is. */
+  /** Which of Account (or Log in, Sign up) is the page shown, if one is. */
   current?: LauncherTab;
-  /** An app's page: its tab bar (nav), or only Home in Shared before there is a space. */
+  /** An app's page: its tab bar (nav), or only Apps in Shared before there is a space. */
   inApp?: boolean;
   bare?: boolean;
   nav?: TabNavProps;
@@ -80,7 +81,7 @@ export function AppFrame({
       <meta name="theme-color" content={themeBackground(theme)} />
       {/* Before the page: the header on a wide screen (sticky), fixed to the bottom on a phone. */}
       {bare ? null : app ? (
-        // Shared before there is a space: no tabs yet, only Home.
+        // Shared before there is a space: no tabs yet, only Apps.
         <TabBar {...(nav ?? { label: "Shared", tabs: [], current: "", onSelect: () => {} })} />
       ) : (
         <LauncherTabs current={current} username={username} name={name} avatarUrl={avatarUrl} next={next} />
@@ -95,7 +96,7 @@ export function AppFrame({
   );
 }
 
-// An app in the frame: the current view and its tab bar, ending with Home, the
+// An app in the frame: the current view and its tab bar, ending with Apps, the
 // way to the other apps and to Account. The view and the open panels
 // are in the URL (useAppView), so Back, reload and links work.
 //

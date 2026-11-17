@@ -12,11 +12,11 @@ export const metadata: Metadata = { title: "account", robots: { index: false } }
 
 export const viewport = appViewport;
 
-// Account settings, opened from Account in the tab bar of home and the pages
-// around the apps. Like home, in the apps' frame and the user's theme, which is
-// set here (and only here), with the same tab bar (Account current, Home the
-// way back). The title, then the settings, each opening a popup
-// (AccountSettings), Log out, and the user's data.
+// Account settings, opened from Account's icon on / and Account in the tab
+// bar of the pages around the apps. Like /, in the apps' frame and the user's
+// theme, which is set here (and only here), with the tab bar of those pages
+// less Account: only Apps, the way back. The title, then the settings, each
+// opening a popup (AccountSettings), Log out, and the user's data.
 // What an emailed link did, when it comes back here (auth.ts, app/account/actions.ts).
 const messages: Record<string, string> = {
   changed: "Your email is changed.",

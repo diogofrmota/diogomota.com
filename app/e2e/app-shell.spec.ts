@@ -104,7 +104,7 @@ test("back and forward move between views, and out of the app to home", async ({
   await expect(viewHeading(page)).toHaveText("Calendar");
   await page.goBack();
   await expect(page).toHaveURL("/");
-  await expect(page.getByRole("heading", { level: 1, name: /^Apps/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /’s Apps$/ })).toBeVisible();
   await page.goForward();
   await expect(page).toHaveURL("/shared");
   await expect(viewHeading(page)).toHaveText("Calendar");
@@ -163,20 +163,20 @@ test("back pressed while the page is still loading still goes to the previous vi
   await expect(viewHeading(page)).toHaveText("Library");
 });
 
-test("Home goes home; its tab bar has Account and Home", async ({ page }) => {
+test("Apps goes to /, which has no header or tab bar: its icons, Account among them", async ({ page }) => {
   await openApp(page, "/shared");
   for (const app of appViews) {
     await page.goto(app.path);
     await expect(page.getByRole("banner")).toHaveCount(0);
     const navigation = tabBar(page, app.name);
     await expect(navigation.getByRole("button")).toHaveText([...app.views]);
-    await navigation.getByRole("link", { name: "Home", exact: true }).click();
+    await navigation.getByRole("link", { name: "Apps", exact: true }).click();
     await expect(page).toHaveURL("/");
     await expect(page.getByRole("banner")).toHaveCount(0);
-    const account = page.getByRole("navigation", { name: "Account", exact: true });
-    await expect(account.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
-    await expect(account.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
-    await expect(account.getByRole("button", { name: "Log out" })).toHaveCount(0);
+    await expect(page.getByRole("navigation")).toHaveCount(0);
+    const main = page.getByRole("main");
+    await expect(main.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
+    await expect(main.getByRole("button", { name: "Log out" })).toHaveCount(0);
   }
 });
 
@@ -335,7 +335,7 @@ test.describe("on a phone", () => {
       await tab(page, app.name, app.views[1]).click();
       await expect(viewHeading(page)).toHaveText(app.views[1]);
       await expectNoHorizontalScroll(page);
-      await expect(tabBar(page, app.name).getByRole("link", { name: "Home", exact: true })).toBeInViewport();
+      await expect(tabBar(page, app.name).getByRole("link", { name: "Apps", exact: true })).toBeInViewport();
     }
   });
 });

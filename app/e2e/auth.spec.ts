@@ -11,16 +11,15 @@ test("sign up logs the new user in, home, whose icons go straight into the apps"
   await signUp(page, { ...user, username: user.username.toUpperCase() });
 
   await expect(page).toHaveURL("/");
-  const account = page.getByRole("navigation", { name: "Account" });
   await expect(accountButton(page, user.username)).toBeVisible();
-  await expect(account.getByRole("link", { name: "Account", exact: true })).toBeVisible();
-  // Logged in, no front page (the website's): the apps' icons.
+  // Logged in, no front page (the website's): the apps' icons, with no header or tab bar.
   await expect(page.getByRole("region", { name: "Small apps to share with friends" })).toHaveCount(0);
   await expect(page.getByRole("banner")).toHaveCount(0);
+  await expect(page.getByRole("navigation")).toHaveCount(0);
 
   await page.getByRole("main").getByRole("link", { name: "Shared", exact: true }).click();
   await expect(page).toHaveURL("/shared");
-  await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
 });
 
 test("sign up explains what is wrong with each field", async ({ page }) => {
@@ -52,16 +51,14 @@ test("a taken username or email gets one message that doesn't say which", async 
   await expect(formAlert(page)).toHaveText(signUpConflict);
 });
 
-test("log out from Account, opened from the tab bar of home", async ({ page }) => {
+test("log out from Account, opened from its icon on /", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/");
-  // Not in the tab bar: Account and Apps.
-  await expect(page.getByRole("navigation", { name: "Account" }).getByRole("button", { name: "Log out" })).toHaveCount(
-    0,
-  );
+  // Not on / (which has no tab bar): only on Account.
+  await expect(page.getByRole("button", { name: "Log out" })).toHaveCount(0);
 
-  await page.getByRole("navigation", { name: "Account" }).getByRole("link", { name: "Account", exact: true }).click();
+  await page.getByRole("main").getByRole("link", { name: "Account", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await page.getByRole("main").getByRole("button", { name: "Log out", exact: true }).click();
 
@@ -130,7 +127,7 @@ test("logged out, the apps redirect home, which logs in and goes back", async ({
   await page.getByLabel("Password", { exact: true }).fill(user.password);
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL("/shows");
-  await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
 });
 
 test("logged out, the apps' API routes answer 401", async ({ page }) => {

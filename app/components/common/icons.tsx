@@ -67,12 +67,15 @@ export function UsersIcon() {
   );
 }
 
-// Home, at the end of every tab bar: the way to / and from one app to another.
-export function HomeIcon() {
+// Apps, at the end of every tab bar: the way to / and from one app to another.
+// Four rounded tiles, as the apps' icons are on /.
+export function AppsIcon() {
   return (
     <Icon>
-      <path d="M4 10.5 12 4l8 6.5" />
-      <path d="M6 9v10.5h4.5V14h3v5.5H18V9" />
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1.5" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" />
     </Icon>
   );
 }

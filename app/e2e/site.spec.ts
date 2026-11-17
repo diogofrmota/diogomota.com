@@ -51,7 +51,7 @@ test("unknown URLs get a 404 page in the apps' look, with the tab bar and Go hom
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(
     "rgb(230, 230, 230)",
   );
-  expect(await linkNames(page.getByRole("navigation", { name: "Account" }))).toEqual(["Log in", "Sign up", "Home"]);
+  expect(await linkNames(page.getByRole("navigation", { name: "Account" }))).toEqual(["Log in", "Sign up", "Apps"]);
 
   await page.getByRole("main").getByRole("link", { name: "Go home" }).click();
   await expect(page).toHaveURL("/");

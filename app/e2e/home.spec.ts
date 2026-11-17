@@ -6,8 +6,9 @@ import { mockBase, otherPerson, userId } from "./shows";
 
 // Home (docs/decisions/0014, 0016). Logged out, the website's front page: its
 // header, what the site is, Sign up, a section per app (Open opens its login
-// prompt), How it works, Questions, and its footer. Logged in, Home: the apps'
-// icons, with what is waiting in each and going back to the view last used in it.
+// prompt), How it works, Questions, and its footer. Logged in, "Diogo’s Apps":
+// the apps' icons, with no tab bar, with what is waiting in each and going
+// back to the view last used in it.
 
 const appSection = (page: Page, name: string) =>
   page
@@ -150,11 +151,11 @@ test("the website's header: the mark goes home, Apps opens a menu of them, then 
   await expect(page).toHaveURL("/about");
   await expect(siteNav(page).getByRole("link", { name: "About" })).toHaveAttribute("aria-current", "page");
 
-  // Log in leaves the website for the login page, in the apps' frame, whose Home comes back.
+  // Log in leaves the website for the login page, in the apps' frame, whose Apps comes back.
   await page.getByRole("banner").getByRole("link", { name: "Log in" }).click();
   await expect(page).toHaveURL("/login");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Log in");
-  await tabBar(page).getByRole("link", { name: "Home" }).click();
+  await tabBar(page).getByRole("link", { name: "Apps" }).click();
   await expect(page).toHaveURL("/");
 });
 
@@ -204,10 +205,10 @@ test.describe("on a phone", () => {
   });
 });
 
-test("the login pages keep the apps' tab bar: Log in, Sign up (each its own icon) and Home", async ({ page }) => {
+test("the login pages keep the apps' tab bar: Log in, Sign up (each its own icon) and Apps", async ({ page }) => {
   await page.goto("/login");
   const bar = tabBar(page);
-  expect(await linkNames(bar)).toEqual(["Log in", "Sign up", "Home"]);
+  expect(await linkNames(bar)).toEqual(["Log in", "Sign up", "Apps"]);
   // No top bar and no Back to apps: the tab bar, with Log in current.
   await expect(page.getByRole("banner")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Back to apps" })).toHaveCount(0);
@@ -293,17 +294,21 @@ test("the login prompt closes with Escape, its close button or the backdrop", as
   await expect(page).toHaveURL("/");
 });
 
-test("logged in, home is Home: the apps' icons, and the email note sends its link from here", async ({ page }) => {
+test("logged in, / is the user's apps: their icons, no tab bar, and the email note sends its link from here", async ({
+  page,
+}) => {
   const user = newUser();
   await signUp(page, user);
-  // Signing up with nowhere to go next lands home.
+  // Signing up with nowhere to go next lands on /.
   await expect(page).toHaveURL("/");
   const main = page.getByRole("main");
   const heading = main.getByRole("heading", { level: 1 });
-  await expect(heading).toHaveText("Home");
+  // The first word of the name: "Tester’s Apps".
+  await expect(heading).toHaveText(`${user.name.split(" ")[0]}’s Apps`);
   await expect(heading).toHaveCSS("text-align", "center");
-  expect(await linkNames(tabBar(page))).toEqual(["Account", "Home"]);
-  await expect(tabBar(page).getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+  // No header and no tab bar: the icons are the way to everything, Account among them.
+  await expect(page.getByRole("banner")).toHaveCount(0);
+  await expect(page.getByRole("navigation")).toHaveCount(0);
 
   // An icon for each app, straight into it, with what it is for read out with it.
   for (const app of apps) {
@@ -330,8 +335,9 @@ test("logged in, home is Home: the apps' icons, and the email note sends its lin
   for (const icon of icons) expect(icon.width).toBeGreaterThanOrEqual(112);
   expect(icons[1].y).toBe(icons[0].y);
   expect(Math.abs((icons[0].x + icons.at(-1)!.x + icons.at(-1)!.width) / 2 - width / 2)).toBeLessThanOrEqual(2);
-  // Version, Privacy and About at the bottom of the page, well under the icons.
-  const footer = (await main.getByText(/^Version (dev|v\d+\.\d+\.\d+) · Privacy · About$/).boundingBox())!;
+  // Version and Privacy at the bottom of the page, well under the icons.
+  const footer = (await main.getByText(/^Version (dev|v\d+\.\d+\.\d+) · Privacy$/).boundingBox())!;
+  await expect(main.getByRole("link", { name: "About" })).toHaveCount(0);
   const height = await page.evaluate(() => innerHeight);
   expect(footer.y).toBeGreaterThan(height - 100);
   expect(footer.y + footer.height).toBeLessThanOrEqual(height);
@@ -358,7 +364,7 @@ test("an app's icon reopens the view last used in it, and Shared without a space
   await expect(
     page.getByRole("navigation", { name: "Shows" }).getByRole("button", { name: "Discover" }),
   ).toHaveAttribute("aria-current", "page");
-  await page.getByRole("navigation", { name: "Shows" }).getByRole("link", { name: "Home" }).click();
+  await page.getByRole("navigation", { name: "Shows" }).getByRole("link", { name: "Apps" }).click();
   await expect(page).toHaveURL("/");
   const shows = page.getByRole("main").getByRole("link", { name: "Shows", exact: true });
   await expect(shows).toHaveAttribute("href", "/shows/discover");

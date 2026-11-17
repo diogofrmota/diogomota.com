@@ -6,7 +6,7 @@ import { useId } from "react";
 import type { AppInfo } from "@/lib/apps";
 import styles from "./AppGrid.module.css";
 
-/** An app on home, logged in: where its icon goes, and what is waiting in it. */
+/** An app on /, logged in: where its icon goes, and what is waiting in it. */
 export type GridApp = {
   app: Pick<AppInfo, "name" | "href" | "description" | "logo">;
   /** The app's own path, or the view last used in it on this device (lib/app-views.ts, lastViewHref). */
@@ -28,7 +28,7 @@ function PendingRing() {
 }
 
 /**
- * Home's apps, logged in: a grid of their icons, like a phone's home screen,
+ * The apps on /, logged in: a grid of their icons, like a phone's home screen,
  * each with its name under it and a count of what is waiting in it on its
  * corner. Each goes straight into its app, on the view last used there.
  */

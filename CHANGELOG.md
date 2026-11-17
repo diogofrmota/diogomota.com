@@ -4,6 +4,8 @@ Each deploy publishes a GitHub Release (`vX.Y.Z`) listing its commits (`.github/
 
 ## Unreleased
 
+- Logged in, `/` is "Diogo’s Apps" (the first word of your name, or your username without one), with no header or tab bar: its icons are the way to everything, Account among them. Three icons to a row on a phone, four wider. Its footer is Version · Privacy (About is gone from it). Home is called Apps everywhere: the last tab of every tab bar, with a grid icon. On `/account` the tab bar is only Apps.
+- Popups on iPhones (a new event, a task, a show's details, a recipe) were an empty white box: Safari sized them from their content's flex basis of 0. The content is now as tall as what is in it (a basis of auto), scrolling inside past the popup's max-height.
 - The front page's introduction is Share your calendar and register your shows watchlist!, and under Sign up and Login there is nothing more: no Have an account? Log in, and no pictures of the apps. The apps' sections keep their pictures from 48rem; a phone has only their words. The website's footer is on the page's own gray, not a white band.
 - `/about`: DevOps engineer based in Lisbon, Portugal; This site is in Diogo's own words; Get in touch is a form (name, email, message) that emails `CONTACT_EMAIL` with Reply-To the sender, so the address is no longer on any page (`/privacy` links to the form instead).
 

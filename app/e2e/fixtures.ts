@@ -70,17 +70,16 @@ export async function logIn(page: Page, login: string, password: string, path = 
 }
 
 /**
- * Goes where the account menu went before the tab bars had it all: home (its
- * Switch app, the tab bar's Home now), and from there to Account (the tab
- * bar's Account) or another link of the tab bar named `name`.
+ * Goes where the account menu went before the tab bars had it all: / (its
+ * Switch app, the tab bars' Apps now), and from there to Account (its icon
+ * on /, which has no tab bar).
  */
-export async function followAccountMenu(page: Page, name: string) {
-  const home = page.getByRole("link", { name: "Home", exact: true });
-  if (await home.isVisible()) await home.click();
+export async function followAccountMenu(page: Page, name: "Account" | "Switch app") {
+  const apps = page.getByRole("link", { name: "Apps", exact: true });
+  if (await apps.isVisible()) await apps.click();
   if (name === "Switch app") return;
-  const disclosure = page.getByRole("navigation", { name: "Account" }).locator("button[aria-expanded]");
-  if (await disclosure.isVisible()) await disclosure.click();
-  await page.getByRole("navigation", { name: "Account" }).getByRole("link", { name, exact: true }).click();
+  await expect(page).toHaveURL("/");
+  await page.getByRole("main").getByRole("link", { name, exact: true }).click();
 }
 
 /** A tab of Shared's, in the middle of the top bar. */
@@ -123,11 +122,16 @@ export async function saveTheme(page: Page, name: string) {
   await expect(dialog).toBeHidden();
 }
 
-/** Account in the tab bar of home and the pages around the apps (once the account menu, by the username). */
+/**
+ * Account where a logged-in page has it (once the account menu, by the
+ * username): its icon on /, or its tab, with the profile picture, in the tab
+ * bar of the pages around the apps (/privacy, an invite, the 404; not
+ * /account itself).
+ */
 export function accountButton(page: Page, username: string) {
+  void username;
   return page
-    .getByRole("navigation", { name: "Account" })
-    .getByRole("button", { name: username, exact: true })
+    .locator('main a[href="/account"]:has(img[src="/logos/account.svg"])')
     .or(page.locator('nav[aria-label="Account"]:not(header nav) a[href="/account"]'));
 }
 
@@ -170,7 +174,7 @@ export async function confirmEmail(page: Page, address: string, expected = "Your
 
 /**
  * The names of a tab bar's links, as screen readers read them (a picture or an
- * icon in one is hidden from them): ["Account", "Home"] logged in.
+ * icon in one is hidden from them): ["Account", "Apps"] logged in.
  */
 export async function linkNames(nav: Locator): Promise<string[]> {
   return nav.getByRole("link").evaluateAll((links) =>
