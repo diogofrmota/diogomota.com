@@ -61,6 +61,8 @@ export const showsRequestLimit = rateLimit("shows", 240, MINUTE);
 export const recipesRequestLimit = rateLimit("recipes", 240, MINUTE);
 /** Recipe photo uploads, per authenticated user: each one is made smaller on the server. */
 export const recipePhotoUploadLimit = rateLimit("recipe-photo", 30, 15 * MINUTE);
+/** Fitness API requests, per authenticated user: a workout being logged sends a change for each set ticked off. */
+export const fitnessRequestLimit = rateLimit("fitness", 240, MINUTE);
 
 // nginx sets X-Forwarded-For to exactly the client address (nginx/nginx.conf), so
 // in production its first entry can be trusted. In development it is whatever the

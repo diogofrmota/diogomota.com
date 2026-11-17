@@ -1,6 +1,7 @@
 import { getSession } from "@/auth";
 import { query } from "@/lib/db";
 import { listEvents } from "@/lib/events";
+import { readFitness } from "@/lib/fitness";
 import { listRecipes, listShopping } from "@/lib/recipes";
 import { readSpace, transaction } from "@/lib/spaces";
 import { readLists } from "@/lib/tasks";
@@ -8,15 +9,16 @@ import { readLists } from "@/lib/tasks";
 // GET /api/account/export: everything the site keeps about you, as a JSON file
 // (Account, Data / Privacy page): your account, your Shows library, friends and
 // recommendations, what you did (the activity feeds), your space's calendar
-// and tasks, which you share with its members, and your recipes and shopping
-// list. Not the password, sessions, profile picture (that one is on your
-// Account page to save) or recipes' photos (each recipe lists its photos' links).
+// and tasks, which you share with its members, your recipes and shopping list,
+// and your fitness log (routines, workouts, runs, supplements, the days logged
+// and the goals). Not the password, sessions, profile picture (that one is on
+// your Account page to save) or recipes' photos (each recipe lists its photos' links).
 export async function GET() {
   const session = await getSession();
   if (!session) return Response.json({ error: "Please log in again." }, { status: 401 });
   const userId = session.user.id;
 
-  const [account, library, friends, recommendations, activity, space, recipes, shopping] = await Promise.all([
+  const [account, library, friends, recommendations, activity, space, recipes, shopping, fitness] = await Promise.all([
     query(
       `SELECT username, name, email, email_verified AS "emailVerified", theme_preference AS theme,
          created_at AS "createdAt", avatar_updated_at AS "pictureSetAt"
@@ -51,6 +53,7 @@ export async function GET() {
     readSpace(userId),
     listRecipes(userId),
     listShopping(userId),
+    readFitness(userId),
   ]);
 
   const shared = space
@@ -73,6 +76,7 @@ export async function GET() {
       })),
       shoppingList: shopping.map(({ text, isChecked, recipeId }) => ({ text, isChecked, recipeId })),
     },
+    fitness,
     activity: activity.rows,
   };
   const day = new Date().toISOString().slice(0, 10);

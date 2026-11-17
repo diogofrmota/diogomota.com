@@ -12,6 +12,8 @@ export type HomeBadges = {
   shows: number;
   /** Recipes: what is on the shopping list, not ticked off yet. */
   recipes: number;
+  /** Fitness: the supplements not ticked off yet today (in Lisbon). */
+  fitness: number;
   /** Whether the user is in a space: without one, Shared opens on its welcome. */
   inSpace: boolean;
 };
@@ -29,9 +31,12 @@ export async function homeBadges(userId: string): Promise<HomeBadges> {
         + (SELECT count(*) FROM recommendations r
            WHERE r.to_user = me.id AND r.seen_at IS NULL
              AND NOT EXISTS (SELECT 1 FROM user_shows us WHERE us.user_id = me.id AND us.show_id = r.show_id)))::int AS shows,
-       (SELECT count(*) FROM shopping_items s WHERE s.user_id = me.id AND NOT s.is_checked)::int AS recipes
+       (SELECT count(*) FROM shopping_items s WHERE s.user_id = me.id AND NOT s.is_checked)::int AS recipes,
+       (SELECT count(*) FROM fitness_supplements s WHERE s.user_id = me.id
+          AND NOT EXISTS (SELECT 1 FROM fitness_days d WHERE d.user_id = me.id
+            AND d.date = (now() AT TIME ZONE $2)::date AND s.id = ANY (d.supplements_taken)))::int AS fitness
      FROM users me WHERE me.id = $1`,
     [userId, calendarZone],
   );
-  return rows[0] ?? { shared: 0, shows: 0, recipes: 0, inSpace: false };
+  return rows[0] ?? { shared: 0, shows: 0, recipes: 0, fitness: 0, inSpace: false };
 }

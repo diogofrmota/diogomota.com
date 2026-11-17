@@ -45,7 +45,7 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   await expect(hero.getByText(/^diogomota\.com\//)).toHaveCount(0);
 
   // A section per app, by its name: its icon, headline, what it does, and Open.
-  expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows", "Recipes"]);
+  expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows", "Recipes", "Fitness"]);
   for (const app of apps) {
     const section = appSection(page, app.name);
     await expect(section).toHaveAttribute("id", app.href.slice(1));
@@ -56,13 +56,14 @@ test("logged out, home is the website's front page: what the site is, the apps, 
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     await expect(section.getByRole("link", { name: `Open ${app.name}` })).toBeVisible();
   }
-  // Side by side, by turns: Shared's picture on the left, Shows' on the right, Recipes' on the left.
+  // Side by side, by turns: Shared's picture on the left, Shows' on the right, Recipes' on the left, Fitness' on the right.
   const pictureX = async (name: string) =>
     (await appSection(page, name).locator("[aria-hidden='true']").first().boundingBox())!.x;
   const wordsX = async (name: string) => (await appSection(page, name).getByRole("heading").boundingBox())!.x;
   expect(await pictureX("Shared")).toBeLessThan(await wordsX("Shared"));
   expect(await pictureX("Shows")).toBeGreaterThan(await wordsX("Shows"));
   expect(await pictureX("Recipes")).toBeLessThan(await wordsX("Recipes"));
+  expect(await pictureX("Fitness")).toBeGreaterThan(await wordsX("Fitness"));
 
   // How it works, in three steps; Questions, with the way to About and Privacy.
   await expect(main.getByRole("region", { name: "How it works" }).getByRole("listitem")).toHaveCount(3);
@@ -95,7 +96,7 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
   await expect(meta("name", "description")).toHaveAttribute(
     "content",
-    "Small apps to share with friends: Shared, Shows, and Recipes.",
+    "Small apps to share with friends: Shared, Shows, Recipes, and Fitness.",
   );
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com");
   const image = await page.request.get("/opengraph-image");
@@ -333,8 +334,14 @@ test("logged in, / is the user's apps: their icons, no tab bar, and the email no
   );
   const width = await page.evaluate(() => document.documentElement.clientWidth);
   for (const icon of icons) expect(icon.width).toBeGreaterThanOrEqual(112);
-  expect(icons[1].y).toBe(icons[0].y);
-  expect(Math.abs((icons[0].x + icons.at(-1)!.x + icons.at(-1)!.width) / 2 - width / 2)).toBeLessThanOrEqual(2);
+  // The first row full, in the middle; the row under it, not full (Account), in the middle too.
+  const middle = (left: { x: number }, right: { x: number; width: number }) => (left.x + right.x + right.width) / 2;
+  const row = icons.slice(0, 4);
+  for (const icon of row) expect(icon.y).toBe(icons[0].y);
+  expect(Math.abs(middle(row[0], row[3]) - width / 2)).toBeLessThanOrEqual(2);
+  const last = icons.at(-1)!;
+  expect(last.y).toBeGreaterThan(icons[0].y);
+  expect(Math.abs(middle(last, last) - width / 2)).toBeLessThanOrEqual(2);
   // Version and Privacy at the bottom of the page, well under the icons.
   const footer = (await main.getByText(/^Version (dev|v\d+\.\d+\.\d+) · Privacy$/).boundingBox())!;
   await expect(main.getByRole("link", { name: "About" })).toHaveCount(0);

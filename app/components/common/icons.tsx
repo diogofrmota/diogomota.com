@@ -396,3 +396,97 @@ export function BasketIcon() {
     </Icon>
   );
 }
+
+// Fitness: its tabs (Today, Workouts, Progress) and what Today logs.
+
+/** A pulse: what was done today. */
+export function PulseIcon() {
+  return (
+    <Icon>
+      <path d="M3 12h3.5l2.5-6.5 4.5 13 2.5-6.5H21" />
+    </Icon>
+  );
+}
+
+/** A dumbbell: a workout. */
+export function DumbbellIcon() {
+  return (
+    <Icon>
+      <rect x="5" y="6.5" width="3.5" height="11" rx="1" />
+      <rect x="15.5" y="6.5" width="3.5" height="11" rx="1" />
+      <path d="M2.5 10v4M21.5 10v4M8.5 12h7" />
+    </Icon>
+  );
+}
+
+/** A line going up its axes: progress. */
+export function ChartIcon() {
+  return (
+    <Icon>
+      <path d="M4 4.5v15h16M7.5 15l3.5-4 3 2.5 5-6" />
+    </Icon>
+  );
+}
+
+/** A drop of water. */
+export function DropIcon() {
+  return (
+    <Icon>
+      <path d="M12 3.5c3.6 4.3 6 7.5 6 10.6a6 6 0 0 1-12 0c0-3.1 2.4-6.3 6-10.6z" />
+    </Icon>
+  );
+}
+
+/** Two footprints: steps. */
+export function StepsIcon() {
+  return (
+    <Icon>
+      <path d="M8 3c-1.9 0-3.2 2.2-3.2 5 0 2.1.8 3.5 1.1 5h4.2c.3-1.5 1.1-2.9 1.1-5C11.2 5.2 9.9 3 8 3zM5.9 15.5h4.2v1.2a2.1 2.1 0 0 1-4.2 0zM16 6.5c1.9 0 3.2 2.2 3.2 5 0 2.1-.8 3.5-1.1 5h-4.2c-.3-1.5-1.1-2.9-1.1-5 0-2.8 1.3-5 3.2-5zM13.9 19h4.2v1.2a2.1 2.1 0 0 1-4.2 0z" />
+    </Icon>
+  );
+}
+
+/** A bathroom scale: body weight. */
+export function ScaleIcon() {
+  return (
+    <Icon>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+      <path d="M8 10.5a5 5 0 0 1 8 0M12 10.5l1.6-2.4" />
+    </Icon>
+  );
+}
+
+/** A capsule: supplements. */
+export function PillIcon() {
+  return (
+    <Icon>
+      <path d="m10.5 20.5 10-10a4.95 4.95 0 0 0-7-7l-10 10a4.95 4.95 0 0 0 7 7zM8.5 8.5l7 7" />
+    </Icon>
+  );
+}
+
+/** A running shoe: a run. */
+export function ShoeIcon() {
+  return (
+    <Icon>
+      <path d="M2.5 16V8l3.5 1 1.5-3h3l2.5 4.2 5.6 1.3a3 3 0 0 1 2.4 2.9V16zM2.5 16v2.5h19V16M9.5 9.8l1.7-.9M10.8 12l1.7-.9" />
+    </Icon>
+  );
+}
+
+/** A trophy: a personal record. */
+export function TrophyIcon() {
+  return (
+    <Icon>
+      <path d="M7.5 4h9v5a4.5 4.5 0 0 1-9 0zM7.5 6H5v1a3.5 3.5 0 0 0 3 3.4M16.5 6H19v1a3.5 3.5 0 0 1-3 3.4M12 13.5V17M8.5 20.5h7M10 17h4v3.5h-4z" />
+    </Icon>
+  );
+}
+
+export function ChevronUpIcon() {
+  return (
+    <Icon>
+      <path d="m6 15 6-6 6 6" />
+    </Icon>
+  );
+}

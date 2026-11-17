@@ -58,6 +58,19 @@ export const apps: readonly AppInfo[] = [
     ],
     logo: "/logos/recipes.svg",
   },
+  {
+    name: "Fitness",
+    href: "/fitness",
+    description: "Plan workouts and track fitness, hydration, and body weight",
+    summary: "a workout and health tracker",
+    tagline: "Every workout, run and glass of water",
+    features: [
+      "Gym routines, and each set's reps and weight logged as you lift",
+      "Runs, daily steps, body weight, water and supplements, day by day",
+      "Your history, your progress over time and your personal records",
+    ],
+    logo: "/logos/fitness.svg",
+  },
 ];
 
 /** "Shared, Shows, and Recipes". */

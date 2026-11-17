@@ -116,10 +116,36 @@ function RecipesPreview() {
   );
 }
 
+/** Fitness: a workout's sets, the first ones ticked off, and a week of steps beside them, against the goal. */
+function FitnessPreview() {
+  const sets = [true, true, true, false];
+  const steps = [55, 80, 40, 95, 70, 60, 85];
+  return (
+    <span className={styles.fitness}>
+      <span className={styles.workout}>
+        <span className={styles.line} style={{ width: "45%" }} />
+        {sets.map((done, i) => (
+          <span key={i} className={styles.set} data-done={done || undefined}>
+            <span className={styles.setValue} />
+            <span className={styles.setValue} />
+            <span className={styles.setTick} />
+          </span>
+        ))}
+      </span>
+      <span className={styles.week}>
+        {steps.map((height, i) => (
+          <span key={i} className={styles.stepBar} style={{ height: `${height}%` }} />
+        ))}
+      </span>
+    </span>
+  );
+}
+
 const previews: Record<string, () => React.ReactNode> = {
   "/shared": SharedPreview,
   "/shows": ShowsPreview,
   "/recipes": RecipesPreview,
+  "/fitness": FitnessPreview,
 };
 
 /** The picture of the app at `href`, or nothing for an app without one. */

@@ -8,7 +8,7 @@ import { AppGrid, type GridApp } from "@/components/site/AppGrid";
 import { FrontPage } from "@/components/site/FrontPage";
 import { SiteFrame } from "@/components/site/SiteFrame";
 import { VerifyNote } from "@/components/site/VerifyNote";
-import { lastViewCookieName, lastViewHref, recipesViews, sharedViews, showsViews } from "@/lib/app-views";
+import { fitnessViews, lastViewCookieName, lastViewHref, recipesViews, sharedViews, showsViews } from "@/lib/app-views";
 import { appViewport, apps } from "@/lib/apps";
 import { homeBadges } from "@/lib/badges";
 import { safeNextPath } from "@/lib/next-path";
@@ -29,6 +29,7 @@ const views: Record<string, readonly string[]> = {
   "/shared": sharedViews,
   "/shows": showsViews,
   "/recipes": recipesViews,
+  "/fitness": fitnessViews,
 };
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
@@ -69,6 +70,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     "/shared": [badges.shared, plural(badges.shared, "task due", "tasks due")],
     "/shows": [badges.shows, `${badges.shows} new`],
     "/recipes": [badges.recipes, `${badges.recipes} to buy`],
+    "/fitness": [badges.fitness, plural(badges.fitness, "supplement to take", "supplements to take")],
   };
   const grid: GridApp[] = apps.map((app) => {
     const [badge, badgeLabel] = counts[app.href] ?? [0, ""];

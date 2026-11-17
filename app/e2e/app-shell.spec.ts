@@ -5,6 +5,7 @@ import { expect, followAccountMenu, newUser, saveTheme, signUp, test } from "./f
 const appViews = [
   { path: "/shared", name: "Shared", views: ["Calendar", "Tasks", "Settings"] },
   { path: "/shows", name: "Shows", views: ["Library", "Discover", "Profile"] },
+  { path: "/fitness", name: "Fitness", views: ["Today", "Workouts", "Progress"] },
 ] as const;
 
 /** A view's URL: the app's own path for its first view, the view under it for the others. */

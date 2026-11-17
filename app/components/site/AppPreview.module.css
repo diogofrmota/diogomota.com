@@ -269,3 +269,82 @@
   fill: #fff;
   filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.35));
 }
+
+/* Fitness: a workout's sets (weight, reps and the tick, green once done), and
+   a week of steps beside them, as columns under the goal's line. */
+.fitness {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--space-2);
+  height: 100%;
+}
+
+.workout,
+.week {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+}
+
+.workout {
+  display: grid;
+  align-content: start;
+  gap: 0.375rem;
+  padding: var(--space-2);
+}
+
+.set {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 0.75rem;
+  align-items: center;
+  gap: 0.3125rem;
+}
+
+.setValue {
+  height: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg);
+}
+
+.set[data-done] .setValue {
+  border-color: color-mix(in oklch, var(--success) 45%, var(--border));
+  background: color-mix(in oklch, var(--success) 12%, var(--surface));
+}
+
+.setTick {
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+
+.set[data-done] .setTick {
+  border-color: var(--success);
+  background: var(--success);
+}
+
+.week {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  padding: var(--space-2);
+}
+
+/* The goal. */
+.week::before {
+  content: "";
+  position: absolute;
+  top: 30%;
+  right: var(--space-2);
+  left: var(--space-2);
+  height: 1px;
+  background: color-mix(in srgb, var(--text) 45%, transparent);
+}
+
+.stepBar {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+}

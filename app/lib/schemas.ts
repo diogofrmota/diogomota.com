@@ -4,6 +4,7 @@
 // message is what the API answers when a field is wrong.
 
 import { z } from "zod";
+import { fitnessLimits } from "./fitness-types";
 import { defaultServings, normalizeSourceUrl, normalizeTags, recipeLimits } from "./recipe-types";
 import { repeats } from "./task-types";
 
@@ -307,3 +308,168 @@ export const shoppingRemove = z.object({
     .max(recipeLimits.shoppingItems, { error: "Too many items at once." }),
 });
 export type ShoppingRemove = z.input<typeof shoppingRemove>;
+
+// --- Fitness -------------------------------------------------------------------
+
+/** A whole number from `min` to `max`, with one message for anything else. */
+const wholeNumber = (min: number, max: number, message: string) =>
+  z.number({ error: message }).int({ error: message }).min(min, { error: message }).max(max, { error: message });
+
+const fitnessDate = z
+  .string({ error: "Enter a date as dd/mm/yyyy." })
+  .refine(isDate, { error: "Enter a date as dd/mm/yyyy." });
+const fitnessNotes = z
+  .string({ error: "Notes must be at most 2,000 characters." })
+  .max(fitnessLimits.notes, { error: "Notes must be at most 2,000 characters." });
+const exerciseName = title(fitnessLimits.name, "an exercise's name");
+
+const routineExercise = z.object({
+  name: exerciseName,
+  sets: wholeNumber(1, fitnessLimits.targetSets, `Enter from 1 to ${fitnessLimits.targetSets} sets.`),
+  reps: wholeNumber(1, fitnessLimits.targetReps, `Enter from 1 to ${fitnessLimits.targetReps} reps.`),
+});
+
+const routineFields = {
+  name: title(fitnessLimits.name, "a name"),
+  exercises: z
+    .array(routineExercise, { error: "Send the routine's exercises." })
+    .min(1, { error: "Add at least one exercise." })
+    .max(fitnessLimits.exercises, { error: `A routine can have up to ${fitnessLimits.exercises} exercises.` }),
+  notes: fitnessNotes,
+};
+
+/** A new routine: its name and exercises. */
+export const routineCreate = z.object({
+  id: uuid.optional(),
+  name: routineFields.name,
+  exercises: routineFields.exercises,
+  notes: routineFields.notes.default(""),
+});
+export type RoutineCreate = z.input<typeof routineCreate>;
+
+/** A change to a routine: any of its fields. */
+export const routinePatch = z.object(routineFields).partial();
+export type RoutinePatch = z.input<typeof routinePatch>;
+
+const workoutSet = z.object({
+  reps: wholeNumber(0, fitnessLimits.reps, `Enter from 0 to ${fitnessLimits.reps} reps.`).nullable(),
+  weightKg: z
+    .number({ error: `Enter a weight from 0 to ${fitnessLimits.weightKg} kg.` })
+    .min(0, { error: `Enter a weight from 0 to ${fitnessLimits.weightKg} kg.` })
+    .max(fitnessLimits.weightKg, { error: `Enter a weight from 0 to ${fitnessLimits.weightKg} kg.` })
+    .transform((kg) => Math.round(kg * 100) / 100)
+    .nullable(),
+  done: z.boolean({ error: "Mark the set done or not." }),
+});
+
+const workoutExercise = z.object({
+  id: uuid,
+  name: exerciseName,
+  sets: z
+    .array(workoutSet, { error: "Send the exercise's sets." })
+    .max(fitnessLimits.sets, { error: `An exercise can have up to ${fitnessLimits.sets} sets.` }),
+});
+
+const workoutFields = {
+  date: fitnessDate,
+  name: title(fitnessLimits.name, "a name"),
+  exercises: z
+    .array(workoutExercise, { error: "Send the workout's exercises." })
+    .max(fitnessLimits.exercises, { error: `A workout can have up to ${fitnessLimits.exercises} exercises.` }),
+  notes: fitnessNotes,
+};
+
+/** A new workout: its day and name; from a routine (routineId), with exercises, or empty. */
+export const workoutCreate = z.object({
+  id: uuid.optional(),
+  date: workoutFields.date,
+  name: workoutFields.name,
+  routineId: uuid.nullable().default(null),
+  exercises: workoutFields.exercises.default([]),
+  notes: workoutFields.notes.default(""),
+});
+export type WorkoutCreate = z.input<typeof workoutCreate>;
+
+/** A change to a workout: its day, name, exercises (all of them, with their sets) or notes. */
+export const workoutPatch = z.object(workoutFields).partial();
+export type WorkoutPatch = z.input<typeof workoutPatch>;
+
+const runFields = {
+  date: fitnessDate,
+  distanceM: wholeNumber(
+    fitnessLimits.distanceMinM,
+    fitnessLimits.distanceMaxM,
+    `Enter a distance from 0.01 to ${fitnessLimits.distanceMaxM / 1000} km.`,
+  ),
+  durationS: wholeNumber(1, fitnessLimits.durationMaxS, "Enter a time from 1 second to 99:59:59."),
+  notes: fitnessNotes,
+};
+
+/** A new run: its day, distance (metres) and time (seconds). */
+export const runCreate = z.object({
+  id: uuid.optional(),
+  date: runFields.date,
+  distanceM: runFields.distanceM,
+  durationS: runFields.durationS,
+  notes: runFields.notes.default(""),
+});
+export type RunCreate = z.input<typeof runCreate>;
+
+export const runPatch = z.object(runFields).partial();
+export type RunPatch = z.input<typeof runPatch>;
+
+/** A new supplement: its name, and its dose if any ("5 g"). */
+export const supplementCreate = z.object({
+  id: uuid.optional(),
+  name: title(fitnessLimits.supplementName, "a name"),
+  dose: z
+    .string({ error: `Keep the dose to ${fitnessLimits.dose} characters.` })
+    .transform((dose) => dose.replace(/\s+/g, " ").trim())
+    .pipe(z.string().max(fitnessLimits.dose, { error: `Keep the dose to ${fitnessLimits.dose} characters.` }))
+    .default(""),
+});
+export type SupplementCreate = z.input<typeof supplementCreate>;
+
+/** A change to a day of the log: any of its fields; null clears the steps or the weight. */
+export const dayPatch = z.object({
+  steps: wholeNumber(0, fitnessLimits.steps, `Enter from 0 to ${fitnessLimits.steps.toLocaleString("en")} steps.`)
+    .nullable()
+    .optional(),
+  waterMl: wholeNumber(
+    0,
+    fitnessLimits.waterMl,
+    `Enter from 0 to ${fitnessLimits.waterMl.toLocaleString("en")} ml of water.`,
+  ).optional(),
+  weightKg: z
+    .number({ error: `Enter a weight from ${fitnessLimits.bodyWeightMin} to ${fitnessLimits.bodyWeightMax} kg.` })
+    .min(fitnessLimits.bodyWeightMin, {
+      error: `Enter a weight from ${fitnessLimits.bodyWeightMin} to ${fitnessLimits.bodyWeightMax} kg.`,
+    })
+    .max(fitnessLimits.bodyWeightMax, {
+      error: `Enter a weight from ${fitnessLimits.bodyWeightMin} to ${fitnessLimits.bodyWeightMax} kg.`,
+    })
+    .transform((kg) => Math.round(kg * 10) / 10)
+    .nullable()
+    .optional(),
+  taken: z
+    .array(uuid, { error: "Send the supplements taken." })
+    .max(fitnessLimits.supplements, { error: "Too many supplements." })
+    .transform((ids) => [...new Set(ids)])
+    .optional(),
+});
+export type DayPatch = z.input<typeof dayPatch>;
+
+/** A change to the daily goals. */
+export const goalsPatch = z.object({
+  waterMl: wholeNumber(
+    fitnessLimits.waterGoalMin,
+    fitnessLimits.waterGoalMax,
+    `Enter a water goal from ${fitnessLimits.waterGoalMin} to ${fitnessLimits.waterGoalMax.toLocaleString("en")} ml.`,
+  ).optional(),
+  steps: wholeNumber(
+    fitnessLimits.stepsGoalMin,
+    fitnessLimits.stepsGoalMax,
+    `Enter a steps goal from ${fitnessLimits.stepsGoalMin} to ${fitnessLimits.stepsGoalMax.toLocaleString("en")}.`,
+  ).optional(),
+});
+export type GoalsPatch = z.input<typeof goalsPatch>;

@@ -1,0 +1,1393 @@
+/* The Fitness app. Its colors are the theme's (components/common/themes.module.css)
+   and its sizes the shell's scales (AppShell.module.css); its buttons, alerts and
+   notices are the apps' common ones (components/common/ui.module.css). The
+   dialogs are rendered inside the AppShell, so its variables reach them too. */
+
+.view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-content: start;
+  max-width: 64rem;
+  margin: auto;
+}
+
+.viewError {
+  margin: 0;
+}
+
+/* A message comes in from just above, so it is seen to be new. */
+@keyframes feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.inlineLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.empty {
+  margin: 0;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+/* --- Sections and cards --------------------------------------------------------- */
+
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.sectionHeader h2,
+.sectionTitle {
+  margin: 0;
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+/* One column on a phone, two from 48rem; the training and records cards across both. */
+.cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (min-width: 48rem) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wideCard {
+    grid-column: 1 / -1;
+  }
+}
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  animation: card-in var(--duration) var(--ease-out) backwards;
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (min-width: 48rem) {
+  .card {
+    padding: var(--space-5);
+  }
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+}
+.cardHeader h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+}
+.cardIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.cardIcon svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+.cardAction {
+  min-width: var(--control-height);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.cardNote {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-wrap: pretty;
+}
+
+/* A day's number: big, with what it is out of beside it. */
+.amount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+}
+.big {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+.of {
+  color: var(--muted);
+}
+
+/* How far along the goal: a track, filled in the accent, in green once met. */
+.bar {
+  display: block;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--hover);
+}
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition:
+    inline-size var(--duration-move) var(--ease-in-out),
+    background-color var(--duration) var(--ease-out);
+}
+.bar[data-met] .barFill {
+  background: var(--success);
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.buttonRow > button {
+  flex: 1 1 auto;
+  font-variant-numeric: tabular-nums;
+}
+.buttonRow > button:first-child {
+  flex: none;
+  width: var(--control-height);
+  padding: 0;
+}
+
+/* A number typed for the day: the field (with its unit inside), then Save. */
+.entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.entry .fieldError {
+  flex-basis: 100%;
+}
+.entryField {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+.entryField input,
+.addExercise input,
+.select select {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-md); /* 16px, so iOS doesn't zoom in on it */
+  font-variant-numeric: tabular-nums;
+}
+.entryField:has(.entryUnit) input {
+  padding-right: calc(var(--space-3) + 2.5ch);
+}
+.entryUnit {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  color: var(--muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.entryField input:focus-visible,
+.addExercise input:focus-visible,
+.select select:focus-visible {
+  border-color: var(--accent);
+}
+.entryField input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+/* --- Today ------------------------------------------------------------------------ */
+
+/* The day shown, between ‹ and ›, and Back to today under it on another day. */
+.dayBar {
+  display: grid;
+  grid-template-columns: var(--control-height) minmax(0, 1fr) var(--control-height);
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 28rem;
+  width: 100%;
+  margin: 0 auto;
+}
+.dayLabel {
+  text-align: center;
+}
+.dayLabel h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+.dayLabel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.dayStep {
+  display: grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+.dayStep svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+.dayStep:active:not(:disabled) {
+  scale: 0.92;
+}
+.dayStep:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.backToToday {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+@media (hover: hover) {
+  .dayStep:hover:not(:disabled) {
+    background: var(--hover);
+  }
+}
+
+/* Rows that open something: a workout, a run, a routine to start. */
+.rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rows > li + li {
+  border-top: 1px solid var(--border);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 3.25rem;
+  padding: var(--space-2) var(--space-1);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+.row:active {
+  scale: var(--press);
+}
+.row > svg {
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  color: var(--muted);
+}
+@media (hover: hover) {
+  .row:hover {
+    background: var(--hover);
+  }
+}
+.rowIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.rowIcon svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+.rowText {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 0.125rem;
+}
+.rowTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  overflow: hidden;
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowKind {
+  display: inline-grid;
+  color: var(--muted);
+}
+.rowKind svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+.rowMeta {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* The supplements, ticked off: each its box and name, the whole row to tap. */
+.checklist {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  cursor: pointer;
+}
+.check input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.checklist li + li {
+  border-top: 1px solid var(--border);
+}
+.checkText {
+  overflow-wrap: anywhere;
+}
+.check:has(input:checked) .checkText {
+  color: var(--muted);
+}
+.dose {
+  color: var(--muted);
+}
+
+/* Loading: grey shapes, shimmering. */
+.skeleton {
+  background: linear-gradient(90deg, var(--hover) 25%, var(--border) 50%, var(--hover) 75%);
+  background-size: 300% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+.skeletonCard {
+  min-height: 9rem;
+}
+.skeletonLine {
+  display: block;
+  width: 40%;
+  height: 1rem;
+  border-radius: var(--radius-xs);
+}
+.skeletonBlock {
+  display: block;
+  height: 3rem;
+  border-radius: var(--radius-md);
+}
+
+/* --- Workouts -------------------------------------------------------------------- */
+
+.routineGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.routineCard {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  animation: card-in var(--duration) var(--ease-out) backwards;
+  animation-delay: var(--delay, 0ms);
+}
+.routineTop h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+}
+.routineExercises {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+.routineExercises li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.routineExercise {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.target {
+  flex: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chips: All, Workouts, Runs (and a time range); the one picked in the accent. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.chips button {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+.chips button:active {
+  scale: var(--press);
+}
+.chips button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+@media (hover: hover) {
+  .chips button:hover {
+    background: var(--hover);
+  }
+  .chips button[aria-pressed="true"]:hover {
+    background: var(--accent-soft);
+  }
+}
+
+/* The history, by month, on a card. */
+.month {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+.month h3 {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+/* A day of the history: its weekday over its number. */
+.dateBadge {
+  display: grid;
+  flex: none;
+  justify-items: center;
+  width: 2.75rem;
+  line-height: 1.1;
+}
+.dateBadge span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.dateBadge strong {
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+.showMore {
+  justify-self: start;
+}
+
+/* None yet: what this is for, and the way to start. */
+.welcome {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  max-width: 36rem;
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  background: var(--accent-soft);
+}
+.welcome h2,
+.welcome h3 {
+  margin: 0;
+  color: var(--accent);
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+.welcome p {
+  margin: 0;
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+
+/* --- Progress --------------------------------------------------------------------- */
+
+/* Four numbers: two across on a phone, four wider. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+@media (min-width: 48rem) {
+  .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.stat {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.stat dt {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.stat dd {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  overflow-wrap: anywhere;
+}
+
+/* Records: the exercise, its best, and when; each opens where it was set. */
+.records {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.records li + li {
+  border-top: 1px solid var(--border);
+}
+.record {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name value"
+    "meta meta";
+  gap: 0.125rem var(--space-3);
+  width: 100%;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-1);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .record:hover {
+    background: var(--hover);
+  }
+}
+.recordName {
+  grid-area: name;
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+.recordValue {
+  grid-area: value;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.recordMeta {
+  grid-area: meta;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* The exercise picked for Strength. */
+.select {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.select select {
+  padding-right: calc(var(--space-3) + var(--icon-sm) + var(--space-2));
+  appearance: none;
+  cursor: pointer;
+}
+.select svg {
+  position: absolute;
+  right: var(--space-3);
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* A chart: its SVG at the width it has, a tooltip over it, its table under it. */
+.chartBox {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.chart {
+  position: relative;
+  min-width: 0;
+  height: 200px;
+  border-radius: var(--radius-md);
+  touch-action: pan-y;
+}
+.chart:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.chart svg {
+  display: block;
+  overflow: visible;
+}
+.gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.axisText {
+  fill: var(--muted);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+.line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.area {
+  fill: var(--accent);
+  fill-opacity: 0.1;
+}
+/* The end of the line, and the point shown: ringed in the card's color, to stand clear of the line. */
+.dot {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.endLabel {
+  fill: var(--text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.column {
+  fill: var(--accent);
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.column[data-active] {
+  opacity: 0.75;
+}
+.goalLine {
+  stroke: var(--text);
+  stroke-width: 1;
+  stroke-opacity: 0.55;
+  shape-rendering: crispEdges;
+}
+.goalLabel {
+  fill: var(--muted);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.hit {
+  fill: transparent;
+}
+.tooltip {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+}
+.tooltip strong {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.tooltip span {
+  color: var(--muted);
+}
+.tableView summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+.tableView table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.tableView th,
+.tableView td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.tableView th:last-child,
+.tableView td:last-child {
+  text-align: right;
+}
+.tableView th {
+  color: var(--muted);
+  font-weight: var(--weight-medium);
+}
+
+/* --- Dialogs ------------------------------------------------------------------------ */
+
+/* The content fills the dialog, so a click on the dialog itself is on the backdrop (components/common/Dialog). */
+.dialog {
+  margin: auto;
+  width: min(36rem, calc(100% - 2rem));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+.dialog.wide {
+  width: min(44rem, calc(100% - 2rem));
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.dialog::backdrop {
+  background: #0008;
+}
+.dialogBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-6);
+}
+.dialogHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.dialogHeader h2 {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+/* The ×: a round button with a drawn cross. */
+.close {
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--hover);
+  color: var(--muted);
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+.close:active {
+  scale: var(--press);
+}
+.close svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+@media (hover: hover) {
+  .close:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+}
+.sheetLead,
+.sheetNote {
+  margin: 0;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+/* A round button with just an icon: a bin, a move, a remove. */
+.iconButton {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.iconButton svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+.iconButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+@media (hover: hover) {
+  .iconButton:hover:not(:disabled) {
+    background: var(--hover);
+    color: var(--text);
+  }
+}
+
+/* Something just removed, in its place, with its Undo. */
+.removed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-left: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--hover);
+  animation: feedback-in var(--duration) var(--ease-out);
+}
+.removed button {
+  min-width: var(--control-height);
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+
+/* Forms: labels over their fields. */
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+.field,
+.fieldset {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.fieldset legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+}
+.field > input,
+.field > textarea,
+.field input:not([type]),
+.exerciseRow input,
+.timePart input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0.625rem var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-md); /* 16px, so iOS doesn't zoom in on it */
+}
+.field textarea {
+  resize: vertical;
+  line-height: var(--leading-normal);
+}
+.field input:focus-visible,
+.field textarea:focus-visible,
+.exerciseRow input:focus-visible,
+.timePart input:focus-visible {
+  border-color: var(--accent);
+}
+.form [aria-invalid="true"],
+.details [aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.optional {
+  color: var(--muted);
+}
+.fieldError {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  animation: feedback-in var(--duration) var(--ease-out);
+}
+.dateField {
+  max-width: 12rem;
+}
+.deleteRow,
+.dialogFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.dialogFooter {
+  justify-content: space-between;
+}
+
+/* --- A workout -------------------------------------------------------------------- */
+
+/* Its name, and its day beside it. */
+.details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 9.5rem;
+  gap: var(--space-3);
+}
+.details .dateField {
+  max-width: none;
+}
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.recordNote {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+.recordNote svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.exercise {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+.exerciseHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.exerciseHeader h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+}
+.lastTime {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The sets: number, weight, reps and the tick, in columns. */
+.sets {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 var(--space-1);
+  table-layout: fixed;
+}
+.sets th {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-align: center;
+}
+.sets thead th:first-child {
+  width: 3.25rem;
+}
+.sets thead th:last-child {
+  width: 3.5rem;
+}
+.sets td {
+  padding: 0 var(--space-1);
+}
+.setNumber {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.setRow .setNumber {
+  color: var(--text);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+.prMark {
+  display: inline-grid;
+  margin-left: var(--space-1);
+  color: var(--accent);
+  vertical-align: -0.15em;
+}
+.prMark svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+.setInput {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-md); /* 16px, so iOS doesn't zoom in on it */
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition: background-color var(--duration) var(--ease-out);
+}
+.setInput:focus-visible {
+  border-color: var(--accent);
+}
+.setRow[data-done] .setInput {
+  border-color: color-mix(in oklch, var(--success) 45%, var(--border));
+  background: color-mix(in oklch, var(--success) 12%, var(--surface));
+}
+/* The tick: an outline until the set is done, then filled in green. */
+.doneButton {
+  display: grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  margin: 0 auto;
+  padding: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration) var(--ease-out),
+    border-color var(--duration) var(--ease-out),
+    color var(--duration) var(--ease-out),
+    scale var(--duration-fast) var(--ease-out);
+}
+.doneButton svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+.doneButton[aria-pressed="true"] {
+  border-color: var(--success);
+  background: var(--success);
+  color: var(--bg);
+}
+.doneButton:active {
+  scale: 0.9;
+}
+@media (hover: hover) {
+  .doneButton:hover:not([aria-pressed="true"]) {
+    border-color: var(--success);
+    color: var(--success);
+  }
+}
+.setActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.addExercise,
+.addSupplement {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: end;
+}
+.addExercise input {
+  flex: 1;
+  width: auto;
+}
+.addSupplement .field {
+  flex: 1 1 10rem;
+}
+.addSupplement .fieldError,
+.addSupplement p {
+  flex-basis: 100%;
+}
+
+.supplementList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.supplementList li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+}
+.supplementList li + li {
+  border-top: 1px solid var(--border);
+}
+
+/* --- A routine's form ---------------------------------------------------------- */
+
+.exerciseRows {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+/* A row: the name, then sets × reps and the tools; on a phone the name on a line of its own. */
+.exerciseRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name name"
+    "targets tools"
+    "error error";
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+@media (min-width: 40rem) {
+  .exerciseRow {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name targets tools"
+      "error error error";
+  }
+}
+.exerciseName {
+  grid-area: name;
+}
+.targets {
+  grid-area: targets;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+}
+.targets label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.targets input {
+  width: 3.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.rowTools {
+  grid-area: tools;
+  display: flex;
+  justify-content: flex-end;
+}
+.exerciseRow .fieldError {
+  grid-area: error;
+}
+
+/* --- A run's form ---------------------------------------------------------------- */
+
+.runFields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+@media (min-width: 40rem) {
+  .runFields {
+    grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
+  }
+}
+.timeParts {
+  display: flex;
+  gap: var(--space-2);
+}
+.timePart {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--muted);
+}
+.timePart input {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.pace {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--muted);
+}
+.pace output {
+  color: var(--text);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 47.99rem) {
+  .dialogBody {
+    padding: var(--space-4);
+  }
+}
+
+/* Last, so it wins over the rules above. */
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .routineCard,
+  .fieldError,
+  .removed,
+  .skeleton {
+    animation: none;
+  }
+  .barFill,
+  .row,
+  .dayStep,
+  .chips button,
+  .close,
+  .column,
+  .setInput,
+  .doneButton {
+    transition: none;
+  }
+  .row:active,
+  .dayStep:active:not(:disabled),
+  .chips button:active,
+  .close:active,
+  .doneButton:active {
+    scale: none;
+  }
+}

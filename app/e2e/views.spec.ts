@@ -380,6 +380,157 @@ test("Recipes: every view and dialog, each closed with Back", async ({ page }) =
   await goBackTo(page, "Recipes");
 });
 
+test("Fitness: every view and dialog, each closed with Back", async ({ page }) => {
+  const fitnessTab = (view: string) =>
+    page.getByRole("navigation", { name: "Fitness", exact: true }).getByRole("button", { name: view, exact: true });
+  await signUp(page, newUser(), "/signup?next=/fitness");
+  await expect(page.getByText("No workout or run yet today.")).toBeVisible();
+  await checkView(page, "Today, empty");
+  await fitnessTab("Workouts").click();
+  await expect(page.getByRole("heading", { name: "Plan your workouts" })).toBeVisible();
+  await checkView(page, "Workouts, empty");
+  await fitnessTab("Progress").click();
+  await expect(page.getByRole("heading", { name: "Your progress, over time" })).toBeVisible();
+  await checkView(page, "Progress, empty");
+  await goBackTo(page, "Workouts");
+
+  await page.getByRole("button", { name: "Create your first routine" }).click();
+  const routine = page.getByRole("dialog", { name: "New routine" });
+  await expectFocusedWithMouse(page, routine.getByLabel("Name"));
+  await checkView(page, "new routine");
+  await routine.getByRole("button", { name: "Save" }).click();
+  await expect(routine.getByText("Enter a name, like Push day.")).toBeVisible();
+  await checkView(page, "new routine with errors");
+  await page.goBack();
+  await expect(routine).toBeHidden();
+  await goBackTo(page, "Today");
+
+  // Today's dialogs, with nothing yet.
+  await page.getByRole("button", { name: "Start workout" }).click();
+  const start = page.getByRole("dialog", { name: "Start a workout" });
+  await expect(start.getByRole("button", { name: "Empty workout" })).toBeVisible();
+  await checkView(page, "start a workout, no routines");
+  await page.goBack();
+  await expect(start).toBeHidden();
+  await page.getByRole("button", { name: "Log a run" }).click();
+  const newRun = page.getByRole("dialog", { name: "Log a run" });
+  await expectFocusedWithMouse(page, newRun.getByLabel("Distance in km"));
+  await newRun.getByRole("button", { name: "Save" }).click();
+  await expect(newRun.getByText("Enter the distance in km, like 5.2.")).toBeVisible();
+  await checkView(page, "log a run with errors");
+  await page.goBack();
+  await expect(newRun).toBeHidden();
+  await page.getByRole("button", { name: "Add supplements" }).click();
+  const supplements = page.getByRole("dialog", { name: "Supplements" });
+  await checkView(page, "supplements, none");
+  await page.goBack();
+  await expect(supplements).toBeHidden();
+  await page.getByRole("button", { name: "Goal 2,000 ml" }).click();
+  const goals = page.getByRole("dialog", { name: "Daily goals" });
+  await checkView(page, "daily goals");
+  await page.goBack();
+  await expect(goals).toBeHidden();
+
+  // Filled: a routine, six weeks of workouts and runs, two months of days, supplements.
+  const lisbonToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(new Date());
+  const day = (n: number) =>
+    new Date(Date.parse(`${lisbonToday}T12:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10);
+  const post = async (path: string, data: object) => {
+    const response = await page.request.post(`/api/fitness${path}`, { data });
+    expect(response.status(), path).toBe(201);
+    return (await response.json()).data;
+  };
+  await post("/routines", {
+    name: "Push day, with a very long name to see that it wraps and pushes nothing out",
+    exercises: [
+      { name: "Bench press", sets: 3, reps: 8 },
+      { name: "Overhead press", sets: 3, reps: 10 },
+      { name: "Dips", sets: 3, reps: 12 },
+    ],
+  });
+  for (let week = 6; week >= 1; week--) {
+    await post("/workouts", {
+      date: day(week * 7 - 2),
+      name: "Push day",
+      exercises: [
+        {
+          id: randomUUID(),
+          name: "Bench press",
+          sets: [8, 8, 7].map((reps) => ({ reps, weightKg: 70 - week * 2.5, done: true })),
+        },
+        { id: randomUUID(), name: "Dips", sets: [12, 10].map((reps) => ({ reps, weightKg: null, done: true })) },
+      ],
+    });
+    await post("/runs", { date: day(week * 7 - 4), distanceM: 4000 + week * 700, durationS: 1500 + week * 240 });
+  }
+  for (let n = 60; n >= 0; n--) {
+    const response = await page.request.patch(`/api/fitness/days/${day(n)}`, {
+      data: { steps: 5000 + ((n * 1373) % 8000), waterMl: 1000 + ((n * 250) % 1500), weightKg: 80 - n * 0.04 },
+    });
+    expect(response.ok()).toBe(true);
+  }
+  await post("/supplements", { name: "Creatine", dose: "5 g" });
+  await post("/supplements", { name: "Vitamin D" });
+  await page.reload();
+  await expect(page.getByRole("checkbox", { name: "Creatine · 5 g" })).toBeVisible();
+  await page.getByRole("checkbox", { name: "Creatine · 5 g" }).check();
+  await checkView(page, "Today, filled");
+  await page.getByRole("button", { name: "Edit supplements" }).click();
+  const list = page.getByRole("dialog", { name: "Supplements" });
+  await list.getByRole("button", { name: "Remove Vitamin D" }).click();
+  await expect(list.getByRole("status")).toBeVisible();
+  // Focused, its Undo waits for the checks.
+  await list.getByRole("button", { name: "Undo" }).focus();
+  await checkView(page, "supplements, one just removed");
+  await list.getByRole("button", { name: "Undo" }).click();
+  await page.goBack();
+  await expect(list).toBeHidden();
+
+  await fitnessTab("Workouts").click();
+  await expect(page.getByRole("button", { name: /^Start Push day/ })).toBeVisible();
+  await checkView(page, "Workouts, filled");
+  await page.getByRole("button", { name: /^Start Push day/ }).click();
+  const workout = page.getByRole("dialog", { name: /^Push day/ });
+  const bench = workout.getByRole("region", { name: "Bench press" });
+  await bench.getByLabel("Set 1 weight in kg").fill("72.5");
+  await bench.getByRole("button", { name: "Set 1 done" }).click();
+  await expect(workout.getByText("A personal record", { exact: true })).toBeVisible();
+  await checkView(page, "workout");
+  await workout.getByRole("button", { name: "Remove Dips" }).click();
+  await expect(workout.getByText("Dips removed.")).toBeVisible();
+  await workout.getByRole("button", { name: "Undo" }).focus();
+  await checkView(page, "workout, an exercise just removed");
+  await workout.getByRole("button", { name: "Undo" }).click();
+  await page.goBack();
+  await expect(workout).toBeHidden();
+  await page.getByRole("button", { name: /^Edit Push day/ }).click();
+  const edit = page.getByRole("dialog", { name: "Edit routine" });
+  await expect(edit.getByLabel("Exercise 3", { exact: true })).toHaveValue("Dips");
+  await checkView(page, "edit routine");
+  await page.goBack();
+  await expect(edit).toBeHidden();
+  await page.getByRole("button", { name: "Runs", exact: true }).click();
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: /Run\s*\d/ })
+    .first()
+    .click();
+  const run = page.getByRole("dialog", { name: "Run" });
+  await expect(run.getByLabel("Distance in km")).not.toHaveValue("");
+  await checkView(page, "run");
+  await page.goBack();
+  await expect(run).toBeHidden();
+
+  await fitnessTab("Progress").click();
+  await expect(page.getByRole("heading", { name: "Personal records" })).toBeVisible();
+  await page.getByText("Show as a table").first().click();
+  // A chart's point, shown from the keyboard.
+  await page.getByRole("group", { name: /^Bench press, heaviest set each day/ }).focus();
+  await checkView(page, "Progress, filled");
+  await goBackTo(page, "Workouts");
+  await goBackTo(page, "Today");
+});
+
 test("a load that fails says so, and Retry loads it again", async ({ page }) => {
   const offline = "Could not reach the server. Check your connection.";
   const failing = async (path: string | RegExp, view: () => Promise<void>, name: string) => {

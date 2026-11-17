@@ -24,11 +24,12 @@ test("about is in the website's look: its header and footer, the intro, and what
   await expect(site).toContainText("I make them for my friends and family");
   await expect(site).not.toContainText("Diogo makes");
   await expect(site).toContainText(
-    "Shared, a calendar for two, Shows, a watchlist with your friends, and Recipes, a recipe box with a shopping list.",
+    "Shared, a calendar for two, Shows, a watchlist with your friends, Recipes, a recipe box with a shopping list, and Fitness, a workout and health tracker.",
   );
   await expect(site.getByRole("link", { name: "Shared", exact: true })).toHaveAttribute("href", "/#shared");
   await expect(site.getByRole("link", { name: "Shows", exact: true })).toHaveAttribute("href", "/#shows");
   await expect(site.getByRole("link", { name: "Recipes", exact: true })).toHaveAttribute("href", "/#recipes");
+  await expect(site.getByRole("link", { name: "Fitness", exact: true })).toHaveAttribute("href", "/#fitness");
   await expect(site.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
 
   // The header, with About marked, and the footer.

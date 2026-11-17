@@ -21,9 +21,11 @@ export const config = {
     "/shared/:path*",
     "/shows/:path*",
     "/recipes/:path*",
+    "/fitness/:path*",
     "/account/:path*",
     "/api/shared/:path*",
     "/api/shows/:path*",
     "/api/recipes/:path*",
+    "/api/fitness/:path*",
   ],
 };
