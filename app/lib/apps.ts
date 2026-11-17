@@ -14,11 +14,24 @@ export type AppInfo = {
   tagline: string;
   /** What it does, a short line each, in its section on the front page. */
   features: readonly string[];
-  /** Square SVG in public/logos: an app icon with its own colored tile, shown at 56x56. */
-  logo: `/logos/${string}.svg`;
+  /** Square image in public/logos: an app icon with its own colored tile, shown at 56x56. */
+  logo: `/logos/${string}`;
 };
 
 export const apps: readonly AppInfo[] = [
+  {
+    name: "Social",
+    href: "/social",
+    description: "Friends, reading and watching, together",
+    summary: "a place to keep up with friends",
+    tagline: "See what your friends are reading and watching",
+    features: [
+      "Find friends by name or username",
+      "Share your Books and Shows profiles with accepted friends",
+      "Keep up with friends' reading and watching activity",
+    ],
+    logo: "/logos/social.svg",
+  },
   {
     name: "Shared",
     href: "/shared",
@@ -44,6 +57,19 @@ export const apps: readonly AppInfo[] = [
       "See what your friends are watching",
     ],
     logo: "/logos/shows.svg",
+  },
+  {
+    name: "Books",
+    href: "/books",
+    description: "Organize your books and track your reading.",
+    summary: "a bookshelf and reading tracker",
+    tagline: "Your next book, and every page along the way",
+    features: [
+      "Search for books or add your own",
+      "Want to Read, Currently Reading and Finished shelves",
+      "Track your reading, page by page",
+    ],
+    logo: "/logos/books.svg",
   },
   {
     name: "Recipes",
@@ -72,43 +98,17 @@ export const apps: readonly AppInfo[] = [
     logo: "/logos/fitness.svg",
   },
   {
-    name: "Books",
-    href: "/books",
-    description: "Organize your books and track your reading.",
-    summary: "a bookshelf and reading tracker",
-    tagline: "Your next book, and every page along the way",
-    features: [
-      "Search for books or add your own",
-      "Want to Read, Currently Reading and Finished shelves",
-      "Track your reading, page by page",
-    ],
-    logo: "/logos/books.svg",
-  },
-  {
     name: "Benfica",
     href: "/benfica",
-    description: "Plan the days you need to go to the stadium for Benfica home matches.",
+    description: "Upcoming Benfica games, with home matches highlighted.",
     summary: "your Benfica stadium days",
     tagline: "Make room for match day",
     features: [
-      "Home fixtures, competitions and kickoff times",
-      "Your attendance plans and tickets in one place",
-      "Stadium days in a calendar, with reminders to export",
+      "Upcoming fixtures fetched automatically from football-data.org",
+      "Home matches highlighted for your stadium days",
+      "Competitions and kickoff times in Lisbon time",
     ],
-    logo: "/logos/benfica.svg",
-  },
-  {
-    name: "Social",
-    href: "/social",
-    description: "Friends, reading and watching, together",
-    summary: "a place to keep up with friends",
-    tagline: "See what your friends are reading and watching",
-    features: [
-      "Find friends by name or username",
-      "Share your Books and Shows profiles with accepted friends",
-      "Keep up with friends' reading and watching activity",
-    ],
-    logo: "/logos/social.svg",
+    logo: "/logos/benfica.webp",
   },
 ];
 

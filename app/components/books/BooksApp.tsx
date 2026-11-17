@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/common/AppShell";
-import { BookIcon, CheckIcon, SearchIcon } from "@/components/common/icons";
+import { BookIcon } from "@/components/common/icons";
 import { QueryProvider } from "@/components/common/QueryProvider";
 import { Dialog } from "@/components/common/Dialog";
 import { Alert, Button } from "@/components/common/ui";
@@ -57,56 +57,34 @@ function Cover({ book }: { book: Pick<CatalogBook, "coverId" | "title"> }) {
   );
 }
 
-function ShelfView({ shelf }: { shelf: Shelf }) {
-  const books = useBooks();
-  const client = useQueryClient();
+function ShelfView({
+  shelf,
+  filter,
+  allBooks,
+  onRemove,
+  removing,
+}: {
+  shelf: Shelf;
+  filter: string;
+  allBooks: readonly Book[];
+  onRemove: (book: Book) => void;
+  removing: boolean;
+}) {
   const { openPanel } = useAppView();
-  const [filter, setFilter] = useState("");
-  const undo = useUndo();
-  const remove = useMutation({
-    networkMode: "always",
-    mutationFn: (id: string) => request(`/api/books/${id}`, { method: "DELETE" }),
-    onSuccess: () => client.invalidateQueries({ queryKey: booksKey }),
-  });
-  const onShelf = (books.data ?? []).filter((book) => book.shelf === shelf && book.id !== undo.pending?.id);
+  const onShelf = allBooks.filter((book) => book.shelf === shelf);
   const visible = onShelf.filter((book) =>
     `${book.title} ${book.author}`.toLowerCase().includes(filter.toLowerCase().trim()),
   );
   return (
-    <section className={styles.view}>
-      <div className={styles.toolbar}>
-        <div>
-          <h1 className={ui.heading}>{shelfLabels[shelf]}</h1>
-          <p className={styles.muted}>
-            {onShelf.length} {onShelf.length === 1 ? "book" : "books"}
-          </p>
-        </div>
-        <Button variant="primary" onClick={() => openPanel("search")}>
-          Add book
-        </Button>
+    <section className={styles.shelf} aria-labelledby={`shelf-${shelf}`}>
+      <div className={styles.shelfHeading}>
+        <h2 id={`shelf-${shelf}`}>{shelfLabels[shelf]}</h2>
+        <span className={styles.muted}>
+          {onShelf.length} {onShelf.length === 1 ? "book" : "books"}
+        </span>
       </div>
-      <label className={styles.filter}>
-        Search your shelf
-        <input
-          type="search"
-          className={ui.input}
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Title or author"
-        />
-      </label>
-      {books.isPending && <p role="status">Loading your books…</p>}
-      {books.error && <Alert onRetry={() => void books.refetch()}>{books.error.message}</Alert>}
-      {remove.error && <Alert onDismiss={() => remove.reset()}>{remove.error.message}</Alert>}
-      {books.isSuccess && visible.length === 0 && (
-        <div className={styles.empty}>
-          <BookIcon />
-          <h2>{filter ? "No matching books" : "A shelf waiting for a story"}</h2>
-          <p>
-            {filter ? "Try another title or author." : "Find a book you love, or add one you've been meaning to read."}
-          </p>
-          {!filter && <Button onClick={() => openPanel("search")}>Find your first book</Button>}
-        </div>
+      {visible.length === 0 && (
+        <p className={styles.muted}>{filter ? "No matching books on this shelf." : "No books on this shelf yet."}</p>
       )}
       <ul className={styles.grid}>
         {visible.map((book) => {
@@ -136,17 +114,7 @@ function ShelfView({ shelf }: { shelf: Shelf }) {
                   <Button onClick={() => openPanel(`book:${book.id}`)}>
                     {shelf === "currently-reading" ? "Update progress" : "Edit book"}
                   </Button>
-                  <Button
-                    variant="remove"
-                    disabled={remove.isPending}
-                    onClick={() =>
-                      undo.schedule({
-                        id: book.id,
-                        label: `Removed “${book.title}”`,
-                        commit: () => remove.mutate(book.id),
-                      })
-                    }
-                  >
+                  <Button variant="remove" disabled={removing} onClick={() => onRemove(book)}>
                     Remove
                   </Button>
                 </div>
@@ -155,8 +123,58 @@ function ShelfView({ shelf }: { shelf: Shelf }) {
           );
         })}
       </ul>
-      <UndoToast undo={undo} />
     </section>
+  );
+}
+
+function BooksLibrary() {
+  const books = useBooks();
+  const { openPanel } = useAppView();
+  const [filter, setFilter] = useState("");
+  const client = useQueryClient();
+  const undo = useUndo();
+  const remove = useMutation({
+    networkMode: "always",
+    mutationFn: (id: string) => request(`/api/books/${id}`, { method: "DELETE" }),
+    onSuccess: () => client.invalidateQueries({ queryKey: booksKey }),
+  });
+  const visibleBooks = (books.data ?? []).filter((book) => book.id !== undo.pending?.id);
+  function onRemove(book: Book) {
+    undo.schedule({ id: book.id, label: `Removed "${book.title}"`, commit: () => remove.mutate(book.id) });
+  }
+  return (
+    <div className={styles.view}>
+      <div className={styles.toolbar}>
+        <h1 className={ui.heading}>Books</h1>
+        <Button variant="primary" onClick={() => openPanel("search")}>
+          Add book
+        </Button>
+      </div>
+      <label className={styles.filter}>
+        Search your books
+        <input
+          type="search"
+          className={ui.input}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Title or author"
+        />
+      </label>
+      {books.isPending && <p role="status">Loading your books…</p>}
+      {books.error && <Alert onRetry={() => void books.refetch()}>{books.error.message}</Alert>}
+      {remove.error && <Alert onDismiss={() => remove.reset()}>{remove.error.message}</Alert>}
+      {shelves.map((shelf) => (
+        <ShelfView
+          key={shelf}
+          shelf={shelf}
+          filter={filter}
+          allBooks={visibleBooks}
+          onRemove={onRemove}
+          removing={remove.isPending}
+        />
+      ))}
+      <UndoToast undo={undo} />
+    </div>
   );
 }
 
@@ -400,16 +418,7 @@ export function BooksApp({
   initial: AppViewState;
   version: string;
 }) {
-  const tabs = useMemo(
-    () =>
-      shelves.map((shelf, i) => ({
-        id: shelf,
-        label: shelfLabels[shelf],
-        icon: i === 2 ? <CheckIcon /> : i === 1 ? <BookIcon /> : <SearchIcon />,
-        view: <ShelfView shelf={shelf} />,
-      })),
-    [],
-  );
+  const tabs = useMemo(() => [{ id: "library", label: "Books", icon: <BookIcon />, view: <BooksLibrary /> }], []);
   return (
     <QueryProvider userId={user.id} version={version}>
       <AppShell

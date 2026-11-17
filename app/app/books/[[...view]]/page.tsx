@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/auth";
 import { BooksApp } from "@/components/books/BooksApp";
 import { appViewport } from "@/lib/apps";
@@ -11,6 +11,7 @@ export const viewport = appViewport;
 
 export default async function BooksPage({ params, searchParams }: PageProps<"/books/[[...view]]">) {
   const [{ view }, { p }] = await Promise.all([params, searchParams]);
+  if (view?.length === 1 && ["want-to-read", "currently-reading", "finished"].includes(view[0])) redirect("/books");
   const initial = viewFromParams(booksViews, view, p);
   if (!initial) notFound();
   const { id } = await requireUser(view ? `/books/${view.join("/")}` : "/books");

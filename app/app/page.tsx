@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { getSession } from "@/auth";
 import { AppFrame } from "@/components/common/AppShell";
@@ -8,17 +7,6 @@ import { AppGrid, type GridApp } from "@/components/site/AppGrid";
 import { FrontPage } from "@/components/site/FrontPage";
 import { SiteFrame } from "@/components/site/SiteFrame";
 import { VerifyNote } from "@/components/site/VerifyNote";
-import {
-  booksViews,
-  benficaViews,
-  fitnessViews,
-  lastViewCookieName,
-  lastViewHref,
-  recipesViews,
-  sharedViews,
-  showsViews,
-  socialViews,
-} from "@/lib/app-views";
 import { appViewport, apps } from "@/lib/apps";
 import { homeBadges } from "@/lib/badges";
 import { safeNextPath } from "@/lib/next-path";
@@ -35,15 +23,6 @@ export const metadata: Metadata = {
 
 export const viewport = appViewport;
 
-const views: Record<string, readonly string[]> = {
-  "/benfica": benficaViews,
-  "/books": booksViews,
-  "/shared": sharedViews,
-  "/shows": showsViews,
-  "/social": socialViews,
-  "/recipes": recipesViews,
-  "/fitness": fitnessViews,
-};
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 /** "Diogo’s Apps": the first word of the user's name, or their username without one. */
@@ -59,8 +38,7 @@ function appsTitle(name: string | null, username: string) {
 // its prompt opens. Logged in, the apps, in their frame and the user's theme,
 // without a tab bar (the icons are the way to everything, Account among
 // them): "Diogo’s Apps" over the apps' icons, each with what is waiting in it
-// (lib/badges.ts) and going back to the view last used in it
-// (lib/app-views.ts). The build's version and Privacy are at the bottom of
+// (lib/badges.ts) and opening its main page. The build's version and Privacy are at the bottom of
 // the page, however little is above them.
 export default async function Home({ searchParams }: PageProps<"/">) {
   const session = await getSession();
@@ -78,7 +56,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
   // The image's Docker Hub version tag (Dockerfile, deploy.yml); unset outside the image.
   const version = process.env.APP_VERSION ?? "dev";
-  const [badges, jar] = await Promise.all([homeBadges(user.id), cookies()]);
+  const badges = await homeBadges(user.id);
   const counts: Record<string, [number, string]> = {
     "/shared": [badges.shared, plural(badges.shared, "task due", "tasks due")],
     "/social": [badges.social, plural(badges.social, "friend request", "friend requests")],
@@ -88,11 +66,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   };
   const grid: GridApp[] = apps.map((app) => {
     const [badge, badgeLabel] = counts[app.href] ?? [0, ""];
-    // Shared without a space has only its welcome: it opens there.
-    const remembered = app.href === "/shared" && !badges.inSpace ? undefined : jar.get(lastViewCookieName(app.href));
-    return { app, href: lastViewHref(app.href, views[app.href] ?? [], remembered?.value), badge, badgeLabel };
+    return { app, href: app.href, badge, badgeLabel };
   });
-  grid.push({
+  grid.unshift({
     app: {
       name: "Account",
       href: "/account",
@@ -108,8 +84,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     <AppFrame theme={user.themePreference} username={user.username} name={user.name} avatarUrl={user.avatarUrl} bare>
       <div className={styles.view}>
         {!user.emailVerified && <VerifyNote email={user.email} />}
-        <h1 className={`${ui.heading} ${styles.title}`}>{appsTitle(user.name, user.username)}</h1>
-        <AppGrid apps={grid} />
+        <div className={styles.launcher}>
+          <h1 className={`${ui.heading} ${styles.title}`}>{appsTitle(user.name, user.username)}</h1>
+          <AppGrid apps={grid} />
+        </div>
         {/* Which build is live (for whoever deploys it, so out of the way), and how the data is kept. */}
         <footer className={styles.footer}>
           Version {version} · <Link href="/privacy">Privacy</Link>

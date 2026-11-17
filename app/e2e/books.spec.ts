@@ -19,8 +19,7 @@ test("books: add manually, save progress across reloads, finish and undo removal
   await edit.getByLabel("Pages read").fill("75");
   await edit.getByRole("button", { name: "Save", exact: true }).click();
   await expect(edit).toBeHidden();
-  const nav = page.getByRole("navigation", { name: "Books", exact: true });
-  await nav.getByRole("button", { name: "Currently Reading", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 2 })).toHaveText(["Want to Read", "Currently Reading", "Finished"]);
   await expect(page.getByText("75 of 200 pages · 38%")).toBeVisible();
   await page.reload();
   await expect(page.getByText("75 of 200 pages · 38%")).toBeVisible();
@@ -29,7 +28,7 @@ test("books: add manually, save progress across reloads, finish and undo removal
   await edit.getByLabel("Pages read").fill("200");
   await edit.getByRole("button", { name: "Save", exact: true }).click();
   await expect(edit).toBeHidden();
-  await nav.getByRole("button", { name: "Finished", exact: true }).click();
+  await expect(page).toHaveURL("/books");
   await expect(page.getByText("200 of 200 pages · 100%")).toBeVisible();
   await page.getByRole("button", { name: "Remove", exact: true }).click();
   await page.getByRole("button", { name: "Undo", exact: true }).click();

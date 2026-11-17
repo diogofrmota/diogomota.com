@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import sharp from "sharp";
 import { apps } from "@/lib/apps";
 import { siteTagline } from "@/lib/site";
 import { defaultTheme, themeBackground } from "@/lib/themes";
@@ -13,11 +14,22 @@ export const alt = `diogomota: ${siteTagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-/** A file of public/ (or app/icon.svg) inlined as a data URL: the renderer doesn't fetch. */
-const inline = async (path: string) =>
-  `data:image/svg+xml;base64,${(await readFile(join(process.cwd(), path))).toString("base64")}`;
-const mark = await inline("app/icon.svg");
-const logos = await Promise.all(apps.map(async (app) => ({ name: app.name, src: await inline(`public${app.logo}`) })));
+/** Inline images so the renderer doesn't fetch. Keep file reads scoped for build tracing. */
+const inline = async (file: Buffer, svg: boolean) => {
+  if (svg) return `data:image/svg+xml;base64,${file.toString("base64")}`;
+  // The Open Graph renderer accepts PNG; convert raster app icons before inlining.
+  return `data:image/png;base64,${(await sharp(file).png().toBuffer()).toString("base64")}`;
+};
+const mark = await inline(await readFile(join(process.cwd(), "app", "icon.svg")), true);
+const logos = await Promise.all(
+  apps.map(async (app) => ({
+    name: app.name,
+    src: await inline(
+      await readFile(join(process.cwd(), "public", "logos", app.logo.slice("/logos/".length))),
+      app.logo.endsWith(".svg"),
+    ),
+  })),
+);
 
 export default function OpenGraphImage() {
   return new ImageResponse(

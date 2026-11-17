@@ -9,8 +9,8 @@ export const showsViews = ["library", "discover"] as const;
 export const socialViews = ["activity", "friends", "profile"] as const;
 export const recipesViews = ["recipes", "favourites", "shopping"] as const;
 export const fitnessViews = ["today", "workouts", "progress"] as const;
-export const booksViews = ["want-to-read", "currently-reading", "finished"] as const;
-export const benficaViews = ["fixtures", "calendar"] as const;
+export const booksViews = ["library"] as const;
+export const benficaViews = ["fixtures"] as const;
 
 /** At most this many panels are taken from a URL: more is a broken link. */
 const maxPanels = 5;
@@ -35,26 +35,4 @@ export function viewFromParams(
       .filter((panel) => panel && panel.length <= 200)
       .slice(0, maxPanels),
   };
-}
-
-// The view last shown in each app, on this device: a cookie per app, written
-// by the app (AppShell) whenever its view changes and read by home, whose icon
-// for the app goes straight back to it. Only the view, never the open panels.
-
-/** The cookie of the app at `basePath`: last-view-shared. */
-export const lastViewCookieName = (basePath: string) =>
-  `last-view-${basePath.replace(/^\//, "").replace(/[^a-z0-9]+/gi, "-")}`;
-
-/** The Set-Cookie text (document.cookie) remembering `view` for a year. */
-export function lastViewCookie(basePath: string, view: string): string {
-  return `${lastViewCookieName(basePath)}=${encodeURIComponent(view)}; Path=/; Max-Age=31536000; SameSite=Lax`;
-}
-
-/**
- * Where home's icon for an app goes: the view remembered for it, if it is one
- * of the app's views (and not its first, which is the app's own path), else
- * the app's own path.
- */
-export function lastViewHref(basePath: string, views: readonly string[], remembered: string | undefined): string {
-  return remembered && remembered !== views[0] && views.includes(remembered) ? `${basePath}/${remembered}` : basePath;
 }

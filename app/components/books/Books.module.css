@@ -10,6 +10,20 @@
   gap: var(--space-4);
   margin-bottom: var(--space-6);
 }
+.shelf {
+  margin-top: var(--space-8);
+}
+.shelfHeading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.shelfHeading h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
 .muted {
   color: var(--muted);
   font-size: var(--text-sm);

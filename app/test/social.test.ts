@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { bookStats } from "@/lib/social-types";
 import { bookInput, normalizeProgress } from "@/lib/book-types";
-import { lastViewHref, socialViews, showsViews, viewFromParams } from "@/lib/app-views";
+import { socialViews, viewFromParams } from "@/lib/app-views";
 
 describe("Social", () => {
   test("book totals include recorded progress with unknown page counts", () => {
@@ -14,10 +14,7 @@ describe("Social", () => {
     expect(bookStats(books)).toEqual({ wantToRead: 1, currentlyReading: 1, finished: 2, pagesRead: 325 });
     expect(bookStats([])).toEqual({ wantToRead: 0, currentlyReading: 0, finished: 0, pagesRead: 0 });
   });
-  test("Social remembers its views while old Shows profile cookies fall back to Library", () => {
-    expect(lastViewHref("/social", socialViews, "friends")).toBe("/social/friends");
-    expect(lastViewHref("/social", socialViews, "profile")).toBe("/social/profile");
-    expect(lastViewHref("/shows", showsViews, "profile")).toBe("/shows");
+  test("Social opens on Activity", () => {
     expect(viewFromParams(socialViews, undefined, undefined)?.view).toBe("activity");
   });
 });

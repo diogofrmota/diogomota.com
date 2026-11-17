@@ -2459,7 +2459,7 @@ div.people {
 }
 
 /* Library's top (Watchlist): TV Shows | Movies on the left, as the posters are
-   under it, then, for a long library, its search and its sort; under it on a
+   under it, then, for a long library, its search; under it on a
    phone, beside it on a wider screen. */
 .libraryTop {
   display: flex;
@@ -2474,8 +2474,7 @@ div.people {
   gap: var(--space-2);
   max-width: 28rem;
 }
-.librarySearch,
-.librarySort {
+.librarySearch {
   position: relative;
   display: flex;
   align-items: center;
@@ -2484,8 +2483,7 @@ div.people {
   flex: 1;
   min-width: 0;
 }
-.librarySearch svg,
-.librarySort svg {
+.librarySearch svg {
   position: absolute;
   width: var(--icon-sm);
   height: var(--icon-sm);
@@ -2495,11 +2493,7 @@ div.people {
 .librarySearch svg {
   left: var(--space-3);
 }
-.librarySort svg {
-  right: var(--space-3);
-}
-.librarySearch input,
-.librarySort select {
+.librarySearch input {
   width: 100%;
   min-height: var(--control-height);
   border: 1px solid var(--border);
@@ -2512,119 +2506,11 @@ div.people {
 .librarySearch input {
   padding: 0 var(--space-3) 0 calc(var(--space-3) + var(--icon-sm) + var(--space-2));
 }
-.librarySort select {
-  padding: 0 calc(var(--space-3) + var(--icon-sm) + var(--space-1)) 0 var(--space-3);
-  appearance: none;
-  cursor: pointer;
-}
 @media (max-width: 47.99rem) {
   .libraryTop > :first-child {
     flex: 1 1 100%;
   }
   .libraryControls {
     max-width: none;
-  }
-}
-
-/* A TV show being watched: its next episode, ticked off from the card in one tap.
-   Over the card's own button, which covers the card (as its menu is). */
-.nextEpisodeButton {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  justify-self: start;
-  min-height: var(--control-height);
-  margin-top: var(--space-1);
-  padding: 0 var(--space-3) 0 var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
-  /* Back from green to how it was, as the next episode comes in. */
-  transition:
-    scale var(--duration-fast) var(--ease-out),
-    background-color var(--duration) var(--ease-out),
-    border-color var(--duration) var(--ease-out),
-    color var(--duration) var(--ease-out);
-}
-.nextEpisodeButton svg {
-  width: 0.875rem;
-  height: 0.875rem;
-  color: var(--accent);
-}
-.nextEpisodeButton:active {
-  scale: var(--press);
-}
-@media (hover: hover) {
-  .nextEpisodeButton:hover {
-    background: var(--hover);
-  }
-}
-/* Just ticked (LibraryGrid, NextEpisodeButton): green at once, the tick drawn
-   in from its start and a ring of green spreading from the button once, for
-   the episode just watched. */
-.nextEpisodeButton[data-watched],
-.nextEpisodeButton[data-watched]:hover {
-  border-color: var(--success);
-  background: var(--success);
-  color: var(--bg);
-  cursor: default;
-  transition: scale var(--duration-fast) var(--ease-out);
-  animation: watched-pulse 0.6s var(--ease-out);
-}
-.nextEpisodeButton[data-watched] svg {
-  color: inherit;
-  stroke-dasharray: 24;
-  animation:
-    watched-tick var(--duration) var(--ease-out),
-    watched-draw var(--duration-move) var(--ease-out) both;
-}
-@keyframes watched-pulse {
-  from {
-    box-shadow: 0 0 0 0 color-mix(in oklch, var(--success) 45%, transparent);
-  }
-  to {
-    box-shadow: 0 0 0 0.5rem transparent;
-  }
-}
-@keyframes watched-tick {
-  from {
-    transform: scale(0.6);
-  }
-}
-@keyframes watched-draw {
-  from {
-    stroke-dashoffset: 24;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-/* Then the next episode: its label comes in from just below. */
-.episodeIn {
-  display: inline-block;
-  animation: episode-in var(--duration) var(--ease-out) backwards;
-}
-@keyframes episode-in {
-  from {
-    opacity: 0;
-    transform: translateY(0.5em);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .nextEpisodeButton:active {
-    scale: none;
-  }
-  .nextEpisodeButton[data-watched],
-  .nextEpisodeButton[data-watched] svg,
-  .episodeIn {
-    animation: none;
   }
 }

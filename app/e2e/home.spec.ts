@@ -322,13 +322,25 @@ test("logged in, / is the user's apps: their icons, no tab bar, and the email no
   await expect(account).toHaveAttribute("href", "/account");
   await expect(account).toHaveAccessibleDescription("Manage your profile and account settings");
   await expect(account.locator("img")).toHaveAttribute("src", "/logos/account.svg");
+  await expect(main.locator("ul > li > a")).toHaveText([
+    "Account",
+    "Social",
+    "Shared",
+    "Shows",
+    "Books",
+    "Recipes",
+    "Fitness",
+    "Benfica",
+  ]);
+  const launcherBox = (await heading.locator("..").boundingBox())!;
+  expect(Math.abs(launcherBox.y + launcherBox.height / 2 - 400)).toBeLessThan(25);
   // Big icons, side by side in the middle of the page, under the heading (four to a row on a wide screen).
   // Once they have come in (anything that turns for as long as it waits aside).
   await page.waitForFunction(() =>
     document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity),
   );
   const icons = await Promise.all(
-    [...apps, { name: "Account" }].map(
+    [{ name: "Account" }, ...apps].map(
       async (app) => (await main.getByRole("link", { name: app.name, exact: true }).locator("img").boundingBox())!,
     ),
   );
@@ -364,7 +376,7 @@ test("logged in, / is the user's apps: their icons, no tab bar, and the email no
   await expect(main.getByRole("heading", { level: 1 })).toHaveText("Account");
 });
 
-test("an app's icon reopens the view last used in it, and Shared without a space its welcome", async ({ page }) => {
+test("app icons always open their main page, ignoring old saved-view cookies", async ({ page }) => {
   await signUp(page, newUser());
   await expect(page).toHaveURL("/");
 
@@ -375,9 +387,9 @@ test("an app's icon reopens the view last used in it, and Shared without a space
   await page.getByRole("navigation", { name: "Shows" }).getByRole("link", { name: "Apps" }).click();
   await expect(page).toHaveURL("/");
   const shows = page.getByRole("main").getByRole("link", { name: "Shows", exact: true });
-  await expect(shows).toHaveAttribute("href", "/shows/discover");
+  await expect(shows).toHaveAttribute("href", "/shows");
   await shows.click();
-  await expect(page).toHaveURL("/shows/discover");
+  await expect(page).toHaveURL("/shows");
 
   // Back on its first view: the app's own path.
   await page.getByRole("navigation", { name: "Shows" }).getByRole("button", { name: "Library" }).click();
@@ -395,7 +407,7 @@ test("an app's icon reopens the view last used in it, and Shared without a space
   await page.reload();
   await expect(page.getByRole("main").getByRole("link", { name: "Shared", exact: true })).toHaveAttribute(
     "href",
-    "/shared/tasks",
+    "/shared",
   );
 });
 

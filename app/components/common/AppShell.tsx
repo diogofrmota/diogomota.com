@@ -1,8 +1,7 @@
 "use client";
 
-import { Activity, useCallback, useEffect, useMemo, useState } from "react";
+import { Activity, useCallback, useMemo, useState } from "react";
 import { AppViewContext, useAppViewHistory, type AppViewState } from "@/hooks/useAppView";
-import { lastViewCookie } from "@/lib/app-views";
 import { themeBackground, type Theme } from "@/lib/themes";
 import { LauncherTabs, TabBar, type LauncherTab } from "./HeaderTabs";
 import { OfflineSupport } from "./OfflineSupport";
@@ -147,12 +146,6 @@ export function AppShell({
     [ids, view, showView],
   );
   const appView = useMemo(() => ({ ...history, setView }), [history, setView]);
-
-  // The view shown is remembered on this device, so home's icon reopens it
-  // (lib/app-views.ts, lastViewCookie): a cookie, as home is rendered by the server.
-  useEffect(() => {
-    document.cookie = lastViewCookie(basePath, view);
-  }, [basePath, view]);
 
   function selectTab(id: string) {
     if (id !== view) window.scrollTo(0, 0);

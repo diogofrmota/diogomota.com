@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDownIcon, SearchIcon } from "@/components/common/icons";
+import { SearchIcon } from "@/components/common/icons";
 import { Button } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
 import { useAppView } from "@/hooks/useAppView";
@@ -66,8 +66,7 @@ function Section({
   );
 }
 
-type Sort = "recent" | "az";
-/** Past this many titles of a type, the Library has a search and a sort. */
+/** Past this many titles of a type, the Library has a search. */
 const manyTitles = 6;
 
 // The Library's sections, in this order: what is being watched first.
@@ -122,15 +121,13 @@ export function Watchlist() {
       left.current = true;
     };
   }, []);
-  // Search (by title) and sort (the latest added or changed first, as they come, or A to Z), for a long library.
+  // Search by title, for a long library.
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<Sort>("recent");
   const allOfType = items?.filter((item) => item.type === type) ?? null;
   const controls = (allOfType?.length ?? 0) > manyTitles;
   const query = controls ? search.trim().toLocaleLowerCase() : "";
   const matching = allOfType?.filter((item) => !query || item.title.toLocaleLowerCase().includes(query)) ?? null;
-  const ofType =
-    matching && controls && sort === "az" ? [...matching].sort((a, b) => a.title.localeCompare(b.title)) : matching;
+  const ofType = matching;
   return (
     <div className={styles.view}>
       {/* The Library tab shows which view this is. */}
@@ -145,7 +142,7 @@ export function Watchlist() {
         <Welcome onSetUp={() => setGuide(true)} />
       ) : (
         <>
-          {/* On the left, as the posters are under it; then, for a long library, its search and sort. */}
+          {/* On the left, as the posters are under it; then, for a long library, its search. */}
           <div className={styles.libraryTop}>
             <TypeSwitch type={type} onChange={setType} />
             {controls && (
@@ -160,14 +157,6 @@ export function Watchlist() {
                     autoComplete="off"
                     onChange={(e) => setSearch(e.target.value)}
                   />
-                </label>
-                <label className={styles.librarySort}>
-                  <span className={ui.srOnly}>Sort</span>
-                  <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-                    <option value="recent">Recently updated</option>
-                    <option value="az">A–Z</option>
-                  </select>
-                  <ChevronDownIcon />
                 </label>
               </div>
             )}

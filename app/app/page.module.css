@@ -3,11 +3,17 @@
    tall as the screen less the page's padding, so the footer is at the bottom
    of the page however little is above it. */
 .view {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
   max-width: 56rem;
   min-height: var(--app-view-height);
   margin-inline: auto;
+}
+
+.launcher {
+  grid-row: 2;
+  align-self: center;
+  width: 100%;
 }
 
 /* "Diogo’s Apps", over the icons: in the middle, as the icons are. Two
@@ -20,8 +26,9 @@
 /* Version and Privacy: for whoever deploys it, and for the curious. At the
    bottom of the page, after whatever is above it. */
 .footer {
-  margin-top: auto;
-  padding-top: var(--space-8);
+  grid-row: 3;
+  align-self: end;
+  padding-top: var(--space-4);
   color: var(--muted);
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;

@@ -1,65 +1,31 @@
 import { expect, newUser, signUp, test } from "./fixtures";
 import { checkView } from "./checks";
-import { localParts } from "../lib/calendar";
+import { mockFixtures } from "./benfica";
 
-test("Benfica: plan, update, export and view stadium days", async ({ page }) => {
-  const today = localParts(new Date()).date;
-  const year = Number(today.slice(0, 4)) + 1;
+test("Benfica: automatic fixtures highlight home games, refresh and recover from errors", async ({ page }) => {
+  await mockFixtures(page);
+  expect((await page.request.get("/api/benfica/fixtures")).status()).toBe(401);
   await signUp(page, newUser(), "/signup?next=%2Fbenfica");
   await expect(page).toHaveURL("/benfica");
-  await page.getByRole("button", { name: "Add match", exact: true }).click();
-  const form = page.getByRole("dialog", { name: "Add home match" });
-  await form.getByLabel("Opponent", { exact: true }).fill("Test opponent");
-  await form.getByLabel("Competition", { exact: true }).fill("Liga Portugal");
-  await form.getByLabel("Match date", { exact: true }).fill(`10/07/${year}`);
-  await form.getByLabel("Kickoff", { exact: true }).fill("20:00");
-  await form.getByLabel("Attendance plan").selectOption("going");
-  await form.getByLabel("Ticket status").selectOption("requested");
-  await form.getByLabel("Calendar reminder").selectOption("1440");
-  await checkView(page, "Benfica match form");
-  await form.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(form).toBeHidden();
-  await expect(page.getByRole("heading", { name: "Benfica vs Test opponent" })).toBeVisible();
-  await page.reload();
-  await expect(page.getByText("Ticket: Requested", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Edit match", exact: true }).click();
-  const edit = page.getByRole("dialog", { name: "Edit match" });
-  await edit.getByLabel("Ticket status").selectOption("purchased");
-  await edit.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(edit).toBeHidden();
-  const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("link", { name: "Export event", exact: true }).click();
-  expect((await downloadPromise).suggestedFilename()).toBe("benfica.ics");
-  const exported = await (await page.request.get("/api/benfica/export")).text();
-  expect(exported).toContain("TRIGGER:-PT1440M");
-  expect(exported).toContain(`DTSTART:${year}0710T190000Z`);
-  const account = await (await page.request.get("/api/account/export")).json();
-  expect(account.benfica).toEqual([expect.objectContaining({ opponent: "Test opponent", ticket: "purchased" })]);
-  await checkView(page, "Benfica fixtures");
-  await page
-    .getByRole("navigation", { name: "Benfica", exact: true })
-    .getByRole("button", { name: "Stadium days" })
-    .click();
-  const monthsAhead = 12 + 7 - Number(today.slice(5, 7));
-  for (let i = 0; i < monthsAhead; i++) await page.getByRole("button", { name: "Next month" }).click();
-  await expect(page.getByRole("heading", { name: `July ${year}` })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Benfica vs Test opponent/ }).last()).toBeVisible();
-  await checkView(page, "Benfica stadium days");
-  await page.screenshot({ path: test.info().outputPath("stadium-desktop.png"), fullPage: true });
-  await page
-    .getByRole("button", { name: /Benfica vs Test opponent/ })
-    .last()
-    .click();
-  await expect(edit.getByLabel("Ticket status")).toHaveValue("purchased");
-  await checkView(page, "Benfica edit match");
-  await edit.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page
-    .getByRole("navigation", { name: "Benfica", exact: true })
-    .getByRole("button", { name: "Fixtures", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Remove", exact: true }).click();
-  await page.getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Benfica vs Test opponent" })).toBeVisible();
+  const games = page.getByRole("list", { name: "Upcoming Benfica games" });
+  await expect(games.getByRole("listitem")).toHaveCount(2);
+  await expect(games.getByRole("listitem").first()).toContainText("Home · Stadium day");
+  await expect(games.getByRole("listitem").first()).toContainText("Estádio da Luz");
+  await expect(games.getByRole("listitem").last()).toContainText("Away");
+  await expect(games.getByRole("listitem").last()).toContainText("Kickoff to be confirmed");
+  await expect(page.getByRole("button", { name: "Stadium days" })).toHaveCount(0);
+  await checkView(page, "Benfica upcoming games");
+  await page.route("**/api/benfica/fixtures", (route) =>
+    route.fulfill({ status: 502, json: { error: "Could not load Benfica fixtures." } }),
+  );
+  await page.getByRole("button", { name: "Refresh" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Could not load Benfica fixtures.");
+  await expect(games.getByRole("listitem")).toHaveCount(2);
+  await mockFixtures(page);
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+  await page.goto("/benfica/calendar");
+  await expect(page).toHaveURL("/benfica");
 });
 
 test("Benfica API: validation, authentication, ownership, exports and deletion", async ({ page, browser }) => {

@@ -153,25 +153,14 @@ const previews: Record<string, () => React.ReactNode> = {
 
 function BenficaPreview() {
   return (
-    <span className={styles.shared}>
-      <span className={styles.month}>
-        {Array.from({ length: 21 }, (_, i) => (
-          <span key={i} className={styles.day}>
-            <span className={styles.dayNumber}>{i + 1}</span>
-            {[4, 12, 18].includes(i) && (
-              <span className={styles.event} style={{ "--event-color": "#bf1828" } as React.CSSProperties} />
-            )}
-          </span>
-        ))}
-      </span>
-      <span className={styles.tasks}>
-        {[true, false, true].map((done, i) => (
-          <span key={i} className={styles.task} data-done={done || undefined}>
-            <span className={styles.check} />
-            <span className={styles.line} style={{ width: `${70 - i * 10}%` }} />
-          </span>
-        ))}
-      </span>
+    <span className={styles.fixtureList}>
+      {[true, false, true].map((home, i) => (
+        <span key={i} className={styles.fixture} data-home={home || undefined}>
+          <span className={styles.fixtureBadge}>{home ? "Home" : "Away"}</span>
+          <span className={styles.line} style={{ width: `${75 - i * 10}%` }} />
+          <span className={styles.line} style={{ width: "40%" }} />
+        </span>
+      ))}
     </span>
   );
 }

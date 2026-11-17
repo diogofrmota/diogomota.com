@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 import { groupActivity, type ActivityItem } from "@/lib/activity-types";
-import { lastViewCookie, lastViewCookieName, lastViewHref, sharedViews, showsViews } from "@/lib/app-views";
 import { dayOfEvent, layoutWeek, type CalendarEvent } from "@/lib/calendar";
 import { initials } from "@/lib/names";
 import { authHref, homeWithNext } from "@/lib/next-path";
@@ -9,25 +8,6 @@ describe("home (docs/decisions/0014)", () => {
   test("a logged-out visitor is sent home, which sends them on after logging in", () => {
     expect(homeWithNext("/shows/discover?p=search")).toBe("/?next=%2Fshows%2Fdiscover%3Fp%3Dsearch");
     expect(authHref("/login", "/shared")).toBe("/login?next=%2Fshared");
-  });
-
-  test("an app's icon goes back to the view last used in it, if it is still one", () => {
-    expect(lastViewHref("/shows", showsViews, "discover")).toBe("/shows/discover");
-    expect(lastViewHref("/shared", sharedViews, "tasks")).toBe("/shared/tasks");
-    // The first view is the app's own path.
-    expect(lastViewHref("/shows", showsViews, "library")).toBe("/shows");
-    // Nothing remembered, or something that isn't a view (Shared's welcome, a tampered cookie).
-    expect(lastViewHref("/shows", showsViews, undefined)).toBe("/shows");
-    expect(lastViewHref("/shared", sharedViews, "welcome")).toBe("/shared");
-    expect(lastViewHref("/shared", sharedViews, "../account")).toBe("/shared");
-  });
-
-  test("the cookie that remembers it is one per app, for the whole site, for a year", () => {
-    expect(lastViewCookieName("/shared")).toBe("last-view-shared");
-    expect(lastViewCookieName("/test/app-shell")).toBe("last-view-test-app-shell");
-    expect(lastViewCookie("/shows", "discover")).toBe(
-      "last-view-shows=discover; Path=/; Max-Age=31536000; SameSite=Lax",
-    );
   });
 });
 
