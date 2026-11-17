@@ -144,7 +144,7 @@ export function formAlert(page: Page) {
   return page.getByRole("main").getByRole("alert");
 }
 
-export type Email = { to: string; subject: string; text: string; html: string };
+export type Email = { to: string; subject: string; text: string; html: string; replyTo?: string };
 
 /** The emails the app sent to `address` (only those with `subject`, if given), oldest first. */
 export async function emailsTo(request: APIRequestContext, address: string, subject?: string): Promise<Email[]> {

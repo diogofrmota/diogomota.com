@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { LinkPending } from "@/components/common/LinkPending";
 import ui from "@/components/common/ui.module.css";
-import { appAt, apps } from "@/lib/apps";
+import { appAt } from "@/lib/apps";
 import { authHref } from "@/lib/next-path";
 import { siteLead, siteTagline } from "@/lib/site";
 import { AppSections } from "./AppSections";
-import { AppWindow } from "./AppWindow";
 import styles from "./FrontPage.module.css";
 
 const steps = [
@@ -47,13 +46,12 @@ const questions: { question: string; answer: React.ReactNode }[] = [
 
 /**
  * The front page (home, logged out; docs/decisions/0016), in the website's
- * frame (SiteFrame): what the site is, Sign up and Login, and a picture
- * of the apps; then a section per app (AppSections), How it works, Questions,
+ * frame (SiteFrame): what the site is, Sign up and Login; then a section per
+ * app (AppSections, with its picture on a wider screen), How it works, Questions,
  * and Sign up once more. `next` (from a protected page) makes Log in and Sign
  * up return there, and opens the prompt of the app it is in.
  */
 export function FrontPage({ next, deleted }: { next: string | null; deleted: boolean }) {
-  const [front, back] = apps;
   return (
     <>
       {deleted && (
@@ -75,14 +73,6 @@ export function FrontPage({ next, deleted }: { next: string | null; deleted: boo
             Login
             <LinkPending />
           </Link>
-        </div>
-        {/* On a phone, where the header has no room for Log in. */}
-        <p className={styles.haveAccount}>
-          Have an account? <Link href={authHref("/login", next)}>Log in</Link>
-        </p>
-        <div className={styles.stage}>
-          {back && <AppWindow href={back.href} className={styles.stageBack} />}
-          <AppWindow href={front.href} className={styles.stageFront} />
         </div>
       </section>
 

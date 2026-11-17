@@ -20,11 +20,12 @@ export const viewport = appViewport;
 // What the apps keep about their users (AC1), in plain words: linked from
 // sign-up, the website's footer and /account. Logged out, in the website's
 // frame (SiteFrame); logged in, in the apps' frame and the user's theme, as
-// /account is. Where to write to is CONTACT_EMAIL (lib/site.ts): without it,
-// "ask Diogo".
+// /account is. Questions go through /about's Get in touch form, there when
+// CONTACT_EMAIL is set (lib/site.ts); without it, "ask Diogo". The address
+// itself is never shown.
 export default async function PrivacyPage() {
   const user = await getUser();
-  const contact = contactEmail();
+  const contact = contactEmail() !== null;
   const page = (
     <article className={`${styles.page} ${user ? "" : styles.inSite}`}>
       <h1 className={ui.heading}>Privacy</h1>
@@ -81,7 +82,7 @@ export default async function PrivacyPage() {
         Questions, or anything you want changed:{" "}
         {contact ? (
           <>
-            write to <a href={`mailto:${contact}`}>{contact}</a>.
+            send a message from <Link href="/about#contact">About</Link>.
           </>
         ) : (
           "ask Diogo."

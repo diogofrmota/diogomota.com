@@ -62,7 +62,8 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: false,
     // AUTH_URL: the links in emails (confirming an email, a password reset) are to this server.
-    env: { E2E_TEST_HOOKS: "1", DATABASE_POOL_MAX: "20", AUTH_URL: baseURL },
+    // CONTACT_EMAIL: /about's Get in touch form is there, whatever .env.local says (e2e/about.spec.ts).
+    env: { E2E_TEST_HOOKS: "1", DATABASE_POOL_MAX: "20", AUTH_URL: baseURL, CONTACT_EMAIL: "contact@example.com" },
     timeout: 120_000,
   },
 });

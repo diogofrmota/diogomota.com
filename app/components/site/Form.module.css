@@ -33,6 +33,13 @@
   font-size: var(--text-md);
 }
 
+/* A message: a few lines tall to start, taller if it's pulled down. */
+.textarea {
+  min-height: 9rem;
+  resize: vertical;
+  line-height: var(--leading-normal);
+}
+
 /* A password field, with Show/Hide inside its right end. */
 .password {
   position: relative;

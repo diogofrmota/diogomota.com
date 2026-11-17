@@ -21,12 +21,12 @@
   min-width: 0;
 }
 
-/* The footer: the year and version, small and muted, on the surface color. */
+/* The footer: the year and version, small and muted, on the page's own
+   background (no band of another color), under a hairline. */
 .footer {
   margin-top: 5rem;
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--border);
-  background: var(--surface);
 }
 
 .footerBase {

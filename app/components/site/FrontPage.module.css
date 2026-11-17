@@ -31,8 +31,7 @@
   font-size: 1.0625rem;
 }
 
-/* The hero: the headline, the line under it, the buttons, then the apps in
-   their windows, the first in front, overlapping the second. */
+/* The hero: the headline, the line under it and the buttons. */
 .hero {
   display: grid;
   justify-items: center;
@@ -64,36 +63,6 @@
   justify-content: center;
   gap: var(--space-3);
   margin-top: var(--space-2);
-}
-
-.haveAccount {
-  margin: 0;
-  color: var(--muted);
-}
-
-.haveAccount a {
-  color: var(--accent);
-  font-weight: var(--weight-semibold);
-  text-underline-offset: 0.2em;
-}
-
-/* The windows: on a phone the first alone, as wide as the column; wider, the
-   second up and to the right behind it. */
-.stage {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  width: 100%;
-  max-width: 60rem;
-  margin-top: var(--space-8);
-}
-
-.stageFront {
-  grid-area: 1 / 1 / 2 / -1;
-  z-index: 1;
-}
-
-.stageBack {
-  display: none;
 }
 
 /* A browser window, with an app in it (AppWindow): its bar (three dots and
@@ -147,8 +116,8 @@
   zoom: var(--preview-zoom, 1);
 }
 
-/* The apps: a section each, the window over the words on a phone, side by
-   side wider (by turns: .reverse has the words first). */
+/* The apps: a section each, only the words on a phone (no picture), side by
+   side with the window wider (by turns: .reverse has the words first). */
 .app {
   display: grid;
   gap: var(--space-6);
@@ -158,6 +127,10 @@
 
 .app + .app {
   margin-top: 4rem;
+}
+
+.appWindow {
+  display: none;
 }
 
 .appCopy {
@@ -318,8 +291,8 @@
   font-weight: var(--weight-semibold);
 }
 
-/* From 48rem: the second window behind the first, the apps' sections side by
-   side, the steps in a row, the questions two to a row. */
+/* From 48rem: the apps' sections side by side with their pictures, the steps
+   in a row, the questions two to a row. */
 @media (min-width: 48rem) {
   .hero {
     padding-top: 4.5rem;
@@ -328,21 +301,6 @@
   .hero h1 {
     max-width: 20ch;
     font-size: 3.25rem;
-  }
-
-  .stage {
-    margin-top: var(--space-8);
-  }
-
-  .stageFront {
-    grid-area: 1 / 1 / 2 / 9;
-    margin-top: 3rem;
-  }
-
-  .stageBack {
-    display: block;
-    grid-area: 1 / 6 / 2 / -1;
-    align-self: start;
   }
 
   .section {
@@ -364,6 +322,10 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
   }
 
+  .appWindow {
+    display: block;
+  }
+
   .app.reverse .appWindow {
     order: 1;
   }
@@ -382,10 +344,6 @@
 
   .band {
     padding: var(--space-8) 3rem;
-  }
-
-  .haveAccount {
-    display: none;
   }
 }
 

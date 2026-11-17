@@ -1,6 +1,6 @@
 /* /about, in the website's frame: one centered column, narrower than the
    front page's. The initials, About, the name and the line about work in the
-   middle; then a card for the site, and one for getting in touch. */
+   middle; then a card for the site, and one for getting in touch (its form). */
 .page {
   display: grid;
   gap: var(--space-4);
@@ -57,6 +57,16 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--surface);
+}
+
+/* Get in touch: the form a little apart from the line over it; linked to from
+   Privacy (/about#contact), so it stops clear of the sticky header. */
+.contact {
+  scroll-margin-top: 5rem;
+}
+
+.contact form {
+  margin-top: var(--space-2);
 }
 
 .card h2 {

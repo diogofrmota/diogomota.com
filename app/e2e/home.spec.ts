@@ -36,11 +36,12 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   const main = page.getByRole("main");
   const hero = main.getByRole("region", { name: siteTagline });
   await expect(hero.getByRole("heading", { level: 1 })).toHaveText("Small apps to share with friends");
-  await expect(hero).toContainText("A shared calendar and task list, a watchlist for your shows and much more!");
+  await expect(hero).toContainText("Share your calendar and register your shows watchlist!");
   await expect(hero.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup");
   await expect(hero.getByRole("link", { name: "Login", exact: true })).toHaveAttribute("href", "/login");
-  // Log in is the header's, on a wide screen (a phone has it under the buttons).
-  await expect(hero.getByRole("link", { name: "Log in" })).toBeHidden();
+  // Only the buttons: no "Have an account? Log in" under them, and no pictures of the apps.
+  await expect(hero.getByText("Have an account?")).toHaveCount(0);
+  await expect(hero.getByText(/^diogomota\.com\//)).toHaveCount(0);
 
   // A section per app, by its name: its icon, headline, what it does, and Open.
   expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows", "Recipes"]);
@@ -81,8 +82,9 @@ test("logged out, home is the website's front page: what the site is, the apps, 
     main.getByRole("region", { name: "Try it now and join the community" }).getByRole("link", { name: "Sign up" }),
   ).toHaveAttribute("href", "/signup");
 
-  // Only the year and build version remain in the footer.
+  // Only the year and build version remain in the footer, on the page's own gray (not a white band).
   const footer = page.getByRole("contentinfo");
+  await expect(footer).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(footer.getByRole("link")).toHaveCount(0);
   await expect(footer.locator("span")).toHaveCount(2);
   await expect(footer).toContainText(`© ${new Date().getFullYear()} Diogo Mota`);
@@ -159,7 +161,7 @@ test("the website's header: the mark goes home, Apps opens a menu of them, then 
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
-  test("the header is the mark, Sign up and Menu, which has the rest; Log in is under the hero's buttons", async ({
+  test("the header is the mark, Sign up and Menu, which has the rest; the apps' sections have no pictures", async ({
     page,
   }) => {
     await page.goto("/");
@@ -167,7 +169,15 @@ test.describe("on a phone", () => {
     await expect(siteNav(page)).toBeHidden();
     await expect(header.getByRole("link", { name: "Log in" })).toBeHidden();
     await expect(header.getByRole("link", { name: "Sign up" })).toBeVisible();
-    await expect(page.getByRole("main").getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
+    await expect(page.getByRole("main").getByRole("link", { name: "Login", exact: true })).toHaveAttribute(
+      "href",
+      "/login",
+    );
+    // Each app's section is its words only: its picture is for wider screens.
+    for (const app of apps) {
+      await expect(appSection(page, app.name).getByRole("heading", { name: app.name })).toBeVisible();
+      await expect(appSection(page, app.name).getByText(`diogomota.com${app.href}`)).toBeHidden();
+    }
 
     await header.getByRole("button", { name: "Menu" }).click();
     const menu = header.getByRole("navigation", { name: "Menu" });

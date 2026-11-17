@@ -12,8 +12,8 @@ import { LoginPrompt } from "./LoginPrompt";
 import styles from "./FrontPage.module.css";
 
 // The apps on the front page (home, logged out), a section each, by turns
-// picture then words and words then picture: the app in a window (AppWindow),
-// then its name and icon, its headline, what it does, and Open, which opens
+// picture then words and words then picture: the app in a window (AppWindow,
+// on a wider screen only: a phone has just the words), then its name and icon, its headline, what it does, and Open, which opens
 // its login prompt (its href is the login page, for new-tab clicks and clicks
 // that land before hydration). `prompted` is the href of an app whose prompt
 // is open from the start (`next`, from a protected page).

@@ -37,6 +37,8 @@ export const signUpLimit = rateLimit("signup", 5, 60 * MINUTE);
 export const passwordCheckLimit = rateLimit("password", 10, 15 * MINUTE);
 /** Live username availability checks, per authenticated user. */
 export const usernameCheckLimit = rateLimit("username-check", 60, MINUTE);
+/** Messages from /about's Get in touch form (that pass validation), per client IP: each one is an email to Diogo. */
+export const contactLimit = rateLimit("contact", 5, 60 * MINUTE);
 /** Password reset requests (that pass validation) per client IP. */
 export const resetRequestLimit = rateLimit("reset", 5, 60 * MINUTE);
 /** Password reset emails per address (lowercase), whether or not an account has it. */

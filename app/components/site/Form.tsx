@@ -63,6 +63,44 @@ export function Field({ label, hideLabel = false, hint, error, ...input }: Field
   );
 }
 
+type TextAreaFieldProps = Omit<React.ComponentProps<"textarea">, "id" | "className"> & {
+  label: string;
+  name: string;
+  hint?: string;
+  error?: string;
+};
+
+// Field's several-line sibling (a message): the same label, hint and error.
+export function TextAreaField({ label, hint, error, ...textarea }: TextAreaFieldProps) {
+  const id = useId();
+  const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+  return (
+    <div className={styles.field}>
+      <label htmlFor={id} className={styles.label}>
+        {label}
+      </label>
+      <textarea
+        id={id}
+        className={`${styles.input} ${styles.textarea}`}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy}
+        {...textarea}
+      />
+      {error ? (
+        <p id={`${id}-error`} className={styles.error}>
+          {error}
+        </p>
+      ) : (
+        hint && (
+          <p id={`${id}-hint`} className={styles.hint}>
+            {hint}
+          </p>
+        )
+      )}
+    </div>
+  );
+}
+
 // The outcome of the last submit: an error, or a confirmation that it was saved.
 export function FormMessage({ error, success }: { error?: string; success?: string }) {
   return (

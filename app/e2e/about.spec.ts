@@ -1,7 +1,10 @@
-import { expect, newUser, signUp, test } from "./fixtures";
+import { emailsTo, expect, newUser, signUp, test } from "./fixtures";
 
 // /about: who runs the site, in the website's frame (docs/decisions/0016), as
-// the front page is: its header, the intro, what the site is, and its footer.
+// the front page is: its header, the intro, what the site is, Get in touch, and its footer.
+
+/** CONTACT_EMAIL on the tests' server (playwright.config.ts): where Get in touch sends. */
+const contactAddress = "contact@example.com";
 
 test("about is in the website's look: its header and footer, the intro, and what the site is", async ({ page }) => {
   await page.goto("/about");
@@ -10,12 +13,16 @@ test("about is in the website's look: its header and footer, the intro, and what
   await expect(page.locator("[data-theme]")).toHaveCSS("background-color", "rgb(230, 230, 230)");
   const main = page.getByRole("main");
   await expect(main.getByRole("heading", { level: 1 })).toHaveText("Diogo Mota");
-  await expect(main).toContainText("DevOps engineer at Richemont, based in Lisbon, Portugal.");
+  await expect(main).toContainText("DevOps engineer based in Lisbon, Portugal");
+  await expect(main).not.toContainText("Richemont");
   // No button to the apps: the header has them.
   await expect(page.getByRole("link", { name: "See the apps" })).toHaveCount(0);
 
-  // What the site is, with a link to each app's section and to Privacy.
+  // What the site is, in Diogo's own words, with a link to each app's section and to Privacy.
   const site = main.getByRole("region", { name: "This site" });
+  await expect(site).toContainText("diogomota.com is where I build small apps");
+  await expect(site).toContainText("I make them for my friends and family");
+  await expect(site).not.toContainText("Diogo makes");
   await expect(site).toContainText(
     "Shared, a calendar for two, Shows, a watchlist with your friends, and Recipes, a recipe box with a shopping list.",
   );
@@ -31,13 +38,46 @@ test("about is in the website's look: its header and footer, the intro, and what
   await expect(page.getByRole("contentinfo")).toContainText(`\u00a9 ${new Date().getFullYear()} Diogo Mota`);
 });
 
-test("about links to Richemont, in a new tab", async ({ page }) => {
+test("Get in touch is a form that emails Diogo, without showing his address", async ({ page, request }) => {
   await page.goto("/about");
-  const richemont = page.getByRole("link", { name: "Richemont" });
-  await expect(richemont).toHaveAttribute("href", "https://www.richemont.com/");
-  await expect(richemont).toHaveAttribute("target", "_blank");
-  await expect(richemont).toHaveAttribute("rel", "noopener noreferrer");
-  await expect(richemont).toHaveAccessibleName("Richemont (opens in a new tab)");
+  const contact = page.getByRole("main").getByRole("region", { name: "Get in touch" });
+  // The address is nowhere on the page, nor in what was sent to the browser.
+  expect(await page.content()).not.toContain(contactAddress);
+  await expect(page.locator("a[href^='mailto:']")).toHaveCount(0);
+
+  // Empty, each field says what it needs, and nothing is sent.
+  const send = contact.getByRole("button", { name: "Send message" });
+  await send.click();
+  await expect(contact.getByLabel("Your name")).toHaveAttribute("aria-invalid", "true");
+  await expect(contact).toContainText("Enter your name.");
+  await expect(contact).toContainText("Enter your email.");
+  await expect(contact).toContainText("Write your message.");
+
+  // Filled in, it goes to CONTACT_EMAIL, with the sender to reply to; the fields empty.
+  const message = `Hello from the tests ${Date.now()}.
+A second line.`;
+  await contact.getByLabel("Your name").fill("Ana Test");
+  await contact.getByLabel("Your email").fill("ana@example.com");
+  await contact.getByLabel("Message").fill(message);
+  await send.click();
+  await expect(contact.getByRole("status")).toHaveText(
+    "Thanks! Your message is on its way, and I'll reply to the email you gave.",
+  );
+  await expect(contact.getByLabel("Message")).toHaveValue("");
+  const sent = (await emailsTo(request, contactAddress, "Message from Ana Test on diogomota.com")).filter((email) =>
+    email.text.includes(message),
+  );
+  expect(sent).toHaveLength(1);
+  expect(sent[0].replyTo).toBe("ana@example.com");
+  expect(sent[0].text).toContain("From: Ana Test <ana@example.com>");
+});
+
+test("Privacy sends questions to About's form, not to an address", async ({ page }) => {
+  await page.goto("/privacy");
+  await expect(page.locator("a[href^='mailto:']")).toHaveCount(0);
+  await page.getByRole("main").getByRole("link", { name: "About" }).click();
+  await expect(page).toHaveURL("/about#contact");
+  await expect(page.getByRole("region", { name: "Get in touch" })).toBeInViewport();
 });
 
 test("about has a title, the intro as its description and its own preview image", async ({ page }) => {
@@ -45,7 +85,10 @@ test("about has a title, the intro as its description and its own preview image"
   await expect(page).toHaveTitle("about · diogo mota");
 
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
-  await expect(meta("name", "description")).toHaveAttribute("content", /DevOps engineer at Richemont/);
+  await expect(meta("name", "description")).toHaveAttribute(
+    "content",
+    "Diogo Mota, DevOps engineer based in Lisbon, Portugal.",
+  );
   await expect(meta("property", "og:title")).toHaveAttribute("content", "diogo mota");
   await expect(meta("property", "og:description")).toHaveAttribute("content", /Lisbon, Portugal/);
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com/about");
@@ -71,7 +114,11 @@ test("about is in the system font, as the rest of the site, with nothing from ot
     .getByRole("heading", { level: 1 })
     .evaluate((h1) => getComputedStyle(h1).fontFamily.split(",")[0].trim());
   expect(family).toBe("system-ui");
-  expect(requests.filter((url) => /\.(woff2?|ttf|otf)$/.test(url.pathname)).map(String)).toEqual([]);
+  // Not counting the dev server's own tools: their badge loads a font while it says "Compiling".
+  const fonts = requests.filter(
+    (url) => /\.(woff2?|ttf|otf)$/.test(url.pathname) && !url.pathname.startsWith("/__nextjs"),
+  );
+  expect(fonts.map(String)).toEqual([]);
   const origin = new URL(baseURL!).origin;
   expect(requests.filter((url) => url.origin !== origin).map(String)).toEqual([]);
 });

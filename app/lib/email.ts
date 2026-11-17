@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import { testHooksEnabled } from "./test-hooks";
 
-export type Email = { to: string; subject: string; text: string; html: string };
+export type Email = { to: string; subject: string; text: string; html: string; replyTo?: string };
 
 // With test hooks on, emails land here instead of being sent; the e2e tests read
 // them from /api/test/outbox. One list across dev hot reloads, like the pg pool.

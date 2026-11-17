@@ -6,7 +6,7 @@ import { defaultTheme, themeBackground } from "@/lib/themes";
 // Link preview of /about, rendered once at build time, as the page: the >_
 // mark and diogomota, then the name, the work and the city, on the Light
 // theme's gray.
-export const alt = "Diogo Mota, DevOps engineer at Richemont, based in Lisbon, Portugal";
+export const alt = "Diogo Mota, DevOps engineer based in Lisbon, Portugal";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -36,7 +36,7 @@ export default function OpenGraphImage() {
         Diogo Mota
       </div>
       <div style={{ display: "flex", flexDirection: "column", marginTop: 24, fontSize: 44, color: "#4e4e58" }}>
-        <span>DevOps engineer at Richemont</span>
+        <span>DevOps engineer</span>
         <span>Based in Lisbon, Portugal</span>
       </div>
     </div>,
