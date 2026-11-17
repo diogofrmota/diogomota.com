@@ -97,6 +97,19 @@ export const apps: readonly AppInfo[] = [
     ],
     logo: "/logos/benfica.svg",
   },
+  {
+    name: "Social",
+    href: "/social",
+    description: "Friends, reading and watching, together",
+    summary: "a place to keep up with friends",
+    tagline: "See what your friends are reading and watching",
+    features: [
+      "Find friends by name or username",
+      "Share your Books and Shows profiles with accepted friends",
+      "Keep up with friends' reading and watching activity",
+    ],
+    logo: "/logos/social.svg",
+  },
 ];
 
 /** "Shared, Shows, and Recipes". */

@@ -5,7 +5,8 @@
 export type AppViewState = { view: string; panels: readonly string[] };
 
 export const sharedViews = ["calendar", "tasks", "settings"] as const;
-export const showsViews = ["library", "discover", "profile"] as const;
+export const showsViews = ["library", "discover"] as const;
+export const socialViews = ["activity", "friends", "profile"] as const;
 export const recipesViews = ["recipes", "favourites", "shopping"] as const;
 export const fitnessViews = ["today", "workouts", "progress"] as const;
 export const booksViews = ["want-to-read", "currently-reading", "finished"] as const;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Avatar } from "@/components/common/Avatar";
 import ui from "@/components/common/ui.module.css";
 import { groupActivity, type ActivityItem } from "@/lib/activity-types";
@@ -47,6 +48,24 @@ function sentence(item: ActivityItem, title: React.ReactNode, viewer?: string): 
       return `added ${item.data.title} to ${item.data.list}`;
     case "task-done":
       return `ticked off ${item.data.title}`;
+    case "book-planned":
+      return (
+        <>
+          wants to read <Link href={`/social/profile/${item.person.id}#books`}>{item.data.title}</Link>
+        </>
+      );
+    case "book-reading":
+      return (
+        <>
+          started reading <Link href={`/social/profile/${item.person.id}#books`}>{item.data.title}</Link>
+        </>
+      );
+    case "book-finished":
+      return (
+        <>
+          finished reading <Link href={`/social/profile/${item.person.id}#books`}>{item.data.title}</Link>
+        </>
+      );
     case "watching":
       return <>started watching {title}</>;
     case "planned":
@@ -101,6 +120,7 @@ export function ActivityFeed({
   onOpenTitle,
   viewer,
   limit,
+  social = false,
 }: {
   items: ActivityItem[];
   empty: string;
@@ -108,6 +128,7 @@ export function ActivityFeed({
   /** The user's username: something done to them reads "to you". */
   viewer?: string;
   limit?: number;
+  social?: boolean;
 }) {
   const [all, setAll] = useState(false);
   if (!items.length) return <p className={styles.empty}>{empty}</p>;
@@ -136,7 +157,13 @@ export function ActivityFeed({
                 className={styles.avatar}
               />
               <p>
-                <strong>{memberName(item.person)}</strong>{" "}
+                {social ? (
+                  <Link href={`/social/profile/${item.person.id}`}>
+                    <strong>{memberName(item.person)}</strong>
+                  </Link>
+                ) : (
+                  <strong>{memberName(item.person)}</strong>
+                )}{" "}
                 {run.length > 1 ? runSentence(run) : sentence(item, title, viewer)}
                 <time dateTime={item.createdAt} className={styles.when}>
                   {timeAgo(item.createdAt)}

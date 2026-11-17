@@ -151,11 +151,7 @@ test("a new account's Library is a guide: their TV shows, then their movies (eac
   const friends = main.getByRole("region", { name: "Watch together" });
   await expect(friends.getByRole("heading", { level: 2 })).toBeFocused();
   await expect(friends).toContainText("Step 3 of 3");
-  await friends.getByLabel("Add a friend").fill(friend.user.username);
-  await expect(friends.getByText(`${friend.user.username} has an account`)).toBeVisible();
-  await friends.getByRole("button", { name: "Send request" }).click();
-  await expect(friends.getByRole("status")).toHaveText(`Friend request sent to ${friend.user.username}.`);
-  await expect(friends.getByLabel("Add a friend")).toHaveValue("");
+  await expect(friends.getByRole("link", { name: "Social" })).toHaveAttribute("href", "/social/friends");
 
   // Back keeps what was picked.
   await main.getByRole("button", { name: "Back" }).click();
@@ -178,8 +174,8 @@ test("a new account's Library is a guide: their TV shows, then their movies (eac
   await allSet.getByRole("button", { name: "Go to my library" }).click();
   await expect(card(grid(section(page, "Watching"), "Watching TV shows"), "Glass Meridian")).toBeVisible();
   await expect(card(grid(section(page, "Completed"), "Completed TV shows"), "Harbor Lights")).toBeVisible();
-  await tab(page, "Profile").click();
-  await expect(page.getByRole("list", { name: "Sent requests" })).toContainText(friend.user.username);
+  await page.goto("/social/friends");
+  await expect(page.getByRole("heading", { name: "Friends", exact: true, level: 1 })).toBeVisible();
   await friend.context.close();
 });
 

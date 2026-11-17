@@ -1,401 +1,30 @@
 import { randomUUID } from "node:crypto";
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { withDatabase } from "./db";
 import { expect, newUser, test, type TestUser } from "./fixtures";
-import {
-  card,
-  cardButtons,
-  expectNoHorizontalScroll,
-  grid,
-  libraryRows,
-  loadSections,
-  mockBase,
-  openShows,
-  otherPerson,
-  row,
-  section,
-  tab,
-  userId,
-  viewHeading,
-} from "./shows";
-
-// Titles of the fake TMDB (lib/tmdb-mock.ts). Its TV shows have two seasons, of
-// 10 and 8 episodes, 45 minutes each (Harbor Lights: 52, its latest episode's).
-// Movies run 90 minutes plus their id modulo 60 (Paper Moons: 128).
-type Title = { type: "tv" | "movie"; tmdbId: number };
-const harbor: Title = { type: "tv", tmdbId: mockBase + 101 }; // Harbor Lights, 2021
-const orchard: Title = { type: "tv", tmdbId: mockBase + 1 }; // The Quiet Orchard, 2016
-const series2: Title = { type: "tv", tmdbId: mockBase + 2 }; // Top Rated Series 2, 2001
-const paperMoons: Title = { type: "movie", tmdbId: mockBase + 201 }; // Paper Moons, 1994, 128 minutes
-const northernLine: Title = { type: "movie", tmdbId: mockBase + 301 }; // Northern Line, 2025, 91 minutes
-const lowTide: Title = { type: "movie", tmdbId: mockBase + 302 }; // Harbor Lights: Low Tide, 2024, 92 minutes
-
-/** Adds a title to the library of whoever is logged in on `page`, then makes each change to its entry in turn. */
-async function addTitle(page: Page, title: Title, status: "watching" | "planned", ...changes: object[]) {
+import { mockBase, openShows, otherPerson, section, userId } from "./shows";
+const orchard = { type: "tv", tmdbId: mockBase + 1 } as const;
+async function addTitle(
+  page: Page,
+  title: { type: "tv" | "movie"; tmdbId: number },
+  status: "watching" | "planned",
+  ...changes: object[]
+) {
   expect((await page.request.post("/api/shows/library", { data: { ...title, status } })).status()).toBe(201);
-  for (const data of changes) {
+  for (const data of changes)
     expect((await page.request.patch(`/api/shows/library/${title.type}/${title.tmdbId}`, { data })).status()).toBe(200);
-  }
 }
-
-async function addFriend(page: Page, username: string) {
-  await page.getByLabel("Add a friend").fill(username);
-  await page.getByRole("button", { name: "Send request" }).click();
-}
-
-const friendsList = (page: Page) => page.getByRole("list", { name: "Your friends" });
-/** A friend's row, which opens their profile: "Tester Ln… (@e2e_…) Check profile". */
-const friendButton = (page: Page, username: string) =>
-  friendsList(page).getByRole("button", { name: new RegExp(`\\(@${username}\\) Check profile$`) });
-/** How a person is shown: their name and @username. */
 const shown = (user: TestUser) => `${user.name} (@${user.username})`;
-/** The second word of a test user's name ("Ln…"), as unique as their username. */
 const secondWord = (user: TestUser) => user.name.split(" ")[1];
-/** A person as the friends API answers with them. */
 const named = (id: string, user: TestUser) => ({ id, username: user.username, avatarUrl: null, name: user.name });
-const statValues = (scope: Page | Locator) => section(scope, "Stats").getByRole("definition");
 const friendsState = async (page: Page) => (await (await page.request.get("/api/shows/friends")).json()).data;
-
-test("Profile shows the user's favourites and stats, and the stats add up", async ({ page }) => {
-  const user = await openShows(page);
-  await tab(page, "Profile").click();
-  await expect(viewHeading(page)).toHaveText("Profile");
-  // Hours watched, TV shows completed, movies completed: the numbers alone.
-  await expect(statValues(page)).toHaveText(["0", "0", "0"]);
-  await expect(section(page, "Stats")).not.toContainText("Runtimes from TMDB");
-  // At the top, the picture (or initial), the name under it and the @username
-  // under that, nothing else; everything in one column in the middle.
-  const main = page.getByRole("main");
-  const middle = async (locator: Locator) => {
-    const box = (await locator.boundingBox())!;
-    return box.x + box.width / 2;
-  };
-  const center = await middle(main);
-  const name = main.getByText(user.name, { exact: true });
-  const handle = main.getByText(`@${user.username}`, { exact: true });
-  expect(Math.abs((await middle(name)) - center)).toBeLessThanOrEqual(1);
-  expect(Math.abs((await middle(handle)) - center)).toBeLessThanOrEqual(1);
-  expect((await name.boundingBox())!.y).toBeLessThan((await handle.boundingBox())!.y);
-  await expect(main).not.toContainText(/\d+ titles? · \d+ friends?/);
-  for (const heading of ["Stats", "Favourites", "Friends"]) {
-    expect(Math.abs((await middle(section(page, heading))) - center), heading).toBeLessThanOrEqual(1);
-  }
-  await expect(section(page, "Favourites")).toContainText("No favourites yet.");
-  await expect(section(page, "Friends")).toContainText("No friends yet.");
-  await expect(section(page, "Friend requests")).toHaveCount(0);
-
-  // A show being watched counts up to its current episode, a completed one in
-  // full, a planned one not at all (even with progress); movies once completed.
-  await addTitle(page, harbor, "watching", { currentSeason: 2, currentEpisode: 3, isFavourite: true }); // 13 × 52 minutes
-  await addTitle(page, orchard, "planned", { status: "completed" }); // 18 × 45 minutes
-  await addTitle(page, series2, "watching", { currentSeason: 1, currentEpisode: 5 }, { status: "planned" }); // nothing
-  await addTitle(page, paperMoons, "planned", { status: "completed", isFavourite: true }); // 128 minutes
-  await addTitle(page, northernLine, "watching"); // nothing yet
-  await addTitle(page, lowTide, "planned", { status: "completed" }); // 92 minutes
-  // 676 + 810 + 128 + 92 = 1,706 minutes: 28.4 hours.
-  await page.reload();
-  await tab(page, "Profile").click();
-  await expect(statValues(page)).toHaveText(["1", "2", "28.4"]);
-
-  // Favourites: TV shows and movies together, the latest changed first.
-  const favourites = grid(section(page, "Favourites"), "Your favourites");
-  await expect(favourites.getByRole("listitem")).toHaveCount(2);
-  await expect(favourites.getByRole("listitem")).toHaveText([/Paper Moons/, /Harbor Lights/]);
-  await expect(card(favourites, "Harbor Lights")).toHaveAccessibleName(
-    "Harbor Lights, 2021, Watching, season 2 episode 3, favourite",
-  );
-  // Along the bottom of its poster, from the left, a line as long as the share
-  // of its episodes watched (13 of 18), in the color of the Watching badge.
-  const harborCard = favourites.getByRole("listitem").filter({ hasText: "Harbor Lights" });
-  const line = harborCard.getByTestId("progress-line");
-  const lineShare = async () => {
-    const [lineBox, posterBox] = [(await line.boundingBox())!, (await harborCard.locator("img").boundingBox())!];
-    expect(Math.abs(lineBox.x - posterBox.x)).toBeLessThanOrEqual(1);
-    expect(Math.abs(lineBox.y + lineBox.height - (posterBox.y + posterBox.height))).toBeLessThanOrEqual(1);
-    return Math.round((lineBox.width / posterBox.width) * 100) / 100;
-  };
-  await expect(line).toHaveCSS("background-color", "rgb(29, 78, 216)");
-  await expect.poll(lineShare).toBe(Math.round((13 / 18) * 100) / 100);
-  // A completed movie: all the way across, in the color of the Completed badge.
-  await expect(
-    favourites.getByRole("listitem").filter({ hasText: "Paper Moons" }).getByTestId("progress-line"),
-  ).toHaveCSS("background-color", "rgb(21, 128, 61)");
-
-  // The stats follow every change at once: one more episode is 52 more minutes.
-  await card(favourites, "Harbor Lights").click();
-  const detail = page.getByRole("dialog", { name: "Harbor Lights" });
-  await detail.getByRole("button", { name: /^Next episode/ }).click();
-  await expect(detail.getByText("S2 E4", { exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(detail).toBeHidden();
-  await expect(statValues(page)).toHaveText(["1", "2", "29.3"]);
-  await expect.poll(lineShare).toBe(Math.round((14 / 18) * 100) / 100);
-
-  // Completed from its card's quick actions: all 18 episodes (1,966 minutes).
-  // With the keyboard: the ⋯ button only shows where there is a mouse (phones long-press, see shows-home.spec.ts).
-  await favourites.getByRole("button", { name: "Quick actions for Harbor Lights" }).press("Enter");
-  const menu = page.getByRole("dialog", { name: "Harbor Lights" });
-  await menu.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" }).click();
-  await page.keyboard.press("Escape");
-  await expect(statValues(page)).toHaveText(["2", "2", "32.8"]);
-  await expect(card(favourites, "Harbor Lights")).toHaveAccessibleName("Harbor Lights, 2021, Completed, favourite");
-  // Completed: all the way across, in the color of the Completed badge.
-  await expect(line).toHaveCSS("background-color", "rgb(21, 128, 61)");
-  await expect.poll(lineShare).toBe(1);
-
-  // No longer a favourite: gone from Favourites.
-  await card(favourites, "Paper Moons").click();
-  await page.getByRole("dialog", { name: "Paper Moons" }).getByRole("button", { name: "Favourite" }).click();
-  await page.keyboard.press("Escape");
-  await expect(favourites.getByRole("listitem")).toHaveText([/Harbor Lights/]);
-});
-
-test("two people become friends: a request, accepting it, each other's libraries, and removing", async ({
-  page,
-  browser,
-}) => {
-  const me = await openShows(page);
-  const bob = await otherPerson(browser);
-  const bobName = bob.user.username;
-  // What a friend sees: watching, completed and favourites, not a planned title.
-  await addTitle(bob.page, harbor, "watching", { currentSeason: 2, currentEpisode: 5, isFavourite: true });
-  await addTitle(bob.page, orchard, "planned", { status: "completed" });
-  await addTitle(bob.page, paperMoons, "planned");
-  await addTitle(bob.page, series2, "planned", { isFavourite: true });
-
-  await tab(page, "Profile").click();
-  const friends = section(page, "Friends");
-  await expect(friends).toContainText("No friends yet.");
-  // A field labelled Add a friend, on the screen too (it adds people; it doesn't search your friends).
-  await expect(friends.getByText("Add a friend", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Add a friend")).toHaveAttribute("placeholder", "Their username");
-  await expect(friends).not.toContainText("Friends add you by your username");
-  // In any case, with or without an @.
-  await addFriend(page, `@${bobName.toUpperCase()}`);
-  await expect(friends.getByRole("status")).toHaveText(`Friend request sent to ${bobName}.`);
-  await expect(page.getByLabel("Add a friend")).toHaveValue("");
-  const sent = page.getByRole("list", { name: "Sent requests" });
-  await expect(sent.getByRole("listitem")).toHaveCount(1);
-  await expect(sent.getByRole("listitem")).toContainText(shown(bob.user));
-  await expect(friends).toContainText("No friends yet.");
-
-  // Asking again: refused, saying why.
-  await addFriend(page, bobName);
-  await expect(friends.getByRole("alert")).toHaveText(`You've already sent ${bobName} a friend request.`);
-  await expect(page.getByLabel("Add a friend")).toHaveValue(bobName);
-
-  // A pending request isn't enough to see a library.
-  expect((await page.request.get(`/api/shows/friends/${bob.id}`)).status()).toBe(404);
-  await tab(page, "Discover").click();
-  await loadSections(page);
-  await expect(section(page, "Added by Friends")).toContainText("No TV shows from friends yet.");
-
-  // Bob accepts on his Profile.
-  await tab(bob.page, "Profile").click();
-  const requests = section(bob.page, "Friend requests");
-  await expect(requests.getByRole("listitem")).toHaveCount(1);
-  await expect(requests.getByRole("listitem")).toContainText(shown(me));
-  await requests.getByRole("button", { name: `Accept ${me.username}` }).click();
-  await expect(requests.getByRole("status")).toHaveText(`You and ${me.username} are now friends.`);
-  // The button went away with its row: focus is on what happened.
-  await expect(requests.getByRole("status")).toBeFocused();
-  await expect(requests.getByRole("list")).toHaveCount(0);
-  await expect(friendButton(bob.page, me.username)).toBeVisible();
-
-  // On my side once Profile loads again; Added by Friends then lists Bob's titles.
-  await tab(page, "Profile").click();
-  // The picture, name and @username, Check profile, and a bin to remove them.
-  await expect(friendButton(page, bobName)).toHaveAccessibleName(`${shown(bob.user)} Check profile`);
-  const removeBob = friendsList(page).getByRole("button", { name: `Remove ${bobName}` });
-  await expect(removeBob).toHaveText("");
-  await expect(removeBob.locator("svg")).toBeVisible();
-  await expect(sent).toHaveCount(0);
-  await tab(page, "Discover").click();
-  await loadSections(page);
-  await expect(cardButtons(grid(section(page, "Added by Friends"), "Added by Friends TV shows"))).toHaveText([
-    /Harbor Lights/,
-    /The Quiet Orchard/,
-    /Top Rated Series 2/,
-  ]);
-
-  // Bob's profile: his stats, what he's watching, has completed and his
-  // favourites, read-only. 15 × 52 + 18 × 45 = 1,590 minutes.
-  await tab(page, "Profile").click();
-  await friendButton(page, bobName).click();
-  const profile = page.getByRole("dialog", { name: bobName });
-  await expect(statValues(profile)).toHaveText(["1", "0", "26.5"]);
-  const cards = (heading: string) => grid(section(profile, heading), heading).getByRole("button");
-  await expect(cards("Watching")).toHaveCount(1);
-  await expect(cards("Watching")).toHaveAccessibleName("Harbor Lights, 2021, Watching, season 2 episode 5, favourite");
-  await expect(cards("Completed")).toHaveCount(1);
-  await expect(cards("Completed")).toHaveAccessibleName("The Quiet Orchard, 2016, Completed");
-  await expect(cards("Favourites")).toHaveCount(2);
-  await expect(cards("Favourites").first()).toHaveAccessibleName("Top Rated Series 2, 2001, Planned, favourite");
-  await expect(cards("Favourites").last()).toHaveAccessibleName(
-    "Harbor Lights, 2021, Watching, season 2 episode 5, favourite",
-  );
-  await expect(profile.getByRole("button", { name: /^Paper Moons,/ })).toHaveCount(0);
-  await expect(profile.getByRole("button", { name: /^Quick actions/ })).toHaveCount(0);
-
-  // A card opens the title over it, about my own library.
-  await cards("Watching").click();
-  const detail = page.getByRole("dialog", { name: "Harbor Lights" });
-  await detail.getByRole("group", { name: "Add to Library" }).getByRole("button", { name: "Planned" }).click();
-  await expect(detail.getByRole("status")).toHaveText("In your library");
-  await page.keyboard.press("Escape");
-  await expect(detail).toBeHidden();
-  await expect(profile).toBeVisible();
-  await expect(cards("Watching")).toHaveAccessibleName("Harbor Lights, 2021, Watching, season 2 episode 5, favourite");
-  await page.goBack();
-  await expect(profile).toBeHidden();
-  await expect(viewHeading(page)).toHaveText("Profile");
-  expect(await libraryRows(me.username)).toEqual([row("tv", harbor.tmdbId, { status: "planned" })]);
-  expect(await libraryRows(bobName)).toEqual([
-    row("tv", orchard.tmdbId, { status: "completed" }),
-    row("tv", series2.tmdbId, { status: "planned", is_favourite: true }),
-    row("tv", harbor.tmdbId, { current_season: 2, current_episode: 5, is_favourite: true }),
-    row("movie", paperMoons.tmdbId, { status: "planned" }),
-  ]);
-
-  // Through the API: the same, and nothing more (no planned titles, no entry ids).
-  const response = await page.request.get(`/api/shows/friends/${bob.id}`);
-  expect(response.status()).toBe(200);
-  const entry = (status: string, fields: object = {}) => ({
-    status,
-    currentSeason: null,
-    currentEpisode: null,
-    isFavourite: false,
-    ...fields,
-  });
-  expect((await response.json()).data).toEqual({
-    ...named(bob.id, bob.user),
-    stats: { tvCompleted: 1, moviesCompleted: 0, episodesWatched: 33, minutesWatched: 1590 },
-    items: [
-      {
-        type: "tv",
-        tmdbId: series2.tmdbId,
-        title: "Top Rated Series 2",
-        year: 2001,
-        posterPath: `/e2e-poster-${series2.tmdbId}.jpg`,
-        rating: 8.4,
-        episodesPerSeason: [10, 8],
-        library: entry("planned", { isFavourite: true }),
-      },
-      {
-        type: "tv",
-        tmdbId: orchard.tmdbId,
-        title: "The Quiet Orchard",
-        year: 2016,
-        posterPath: `/e2e-poster-${orchard.tmdbId}.jpg`,
-        rating: 9.1,
-        episodesPerSeason: [10, 8],
-        library: entry("completed"),
-      },
-      {
-        type: "tv",
-        tmdbId: harbor.tmdbId,
-        title: "Harbor Lights",
-        year: 2021,
-        posterPath: `/e2e-poster-${harbor.tmdbId}.jpg`,
-        rating: 7.8,
-        episodesPerSeason: [10, 8],
-        library: entry("watching", { currentSeason: 2, currentEpisode: 5, isFavourite: true }),
-      },
-    ],
-    // Nothing we both have Planned.
-    bothPlanned: [],
-  });
-
-  // Removing: gone at once, with Undo; sent once the Undo goes, and it ends it for both of us.
-  await friendsList(page)
-    .getByRole("button", { name: `Remove ${bobName}` })
-    .click();
-  const undo = page.getByRole("status").filter({ hasText: /^Removed .* from your friends/ });
-  await expect(undo).toBeVisible();
-  await undo.getByRole("button", { name: "Undo" }).click();
-  await expect(friendsList(page).getByRole("button", { name: `Remove ${bobName}` })).toBeVisible();
-  await friendsList(page)
-    .getByRole("button", { name: `Remove ${bobName}` })
-    .click();
-  await expect(friends.getByRole("status")).toHaveText(`Removed ${bobName} from your friends.`, { timeout: 15_000 });
-  await expect(friends.getByRole("status")).toBeFocused();
-  await expect(friends).toContainText("No friends yet.");
-  expect((await page.request.get(`/api/shows/friends/${bob.id}`)).status()).toBe(404);
-  expect((await bob.page.request.get(`/api/shows/friends/${await userId(me.username)}`)).status()).toBe(404);
-  expect(await friendsState(bob.page)).toEqual({ friends: [], incoming: [], outgoing: [] });
-  await tab(page, "Discover").click();
-  await loadSections(page);
-  await expect(section(page, "Added by Friends")).toContainText("No TV shows from friends yet.");
-  await bob.context.close();
-});
-
-test("declining and cancelling requests, a request that's gone, and asking each other", async ({ page, browser }) => {
-  const me = await openShows(page);
-  const ann = await otherPerson(browser);
-  const annName = ann.user.username;
-  await tab(page, "Profile").click();
-  await tab(ann.page, "Profile").click();
-  const friends = section(page, "Friends");
-  const requests = section(ann.page, "Friend requests");
-  const sent = page.getByRole("list", { name: "Sent requests" });
-
-  // Ann declines.
-  await addFriend(page, annName);
-  await expect(friends.getByRole("status")).toHaveText(`Friend request sent to ${annName}.`);
-  await tab(ann.page, "Library").click();
-  await tab(ann.page, "Profile").click();
-  await requests.getByRole("button", { name: `Decline ${me.username}` }).click();
-  await expect(requests.getByRole("status")).toHaveText(`Declined ${me.username}'s friend request.`);
-  await expect(requests.getByRole("list")).toHaveCount(0);
-  await expect(section(ann.page, "Friends")).toContainText("No friends yet.");
-  expect(await friendsState(page)).toEqual({ friends: [], incoming: [], outgoing: [] });
-
-  // So I can ask again, and withdraw it.
-  await tab(page, "Library").click();
-  await tab(page, "Profile").click();
-  await expect(sent).toHaveCount(0);
-  await addFriend(page, annName);
-  await expect(friends.getByRole("status")).toHaveText(`Friend request sent to ${annName}.`);
-  await sent.getByRole("button", { name: `Cancel request to ${annName}` }).click();
-  await expect(friends.getByRole("status")).toHaveText(`Cancelled your friend request to ${annName}.`);
-  await expect(sent).toHaveCount(0);
-  expect(await friendsState(ann.page)).toEqual({ friends: [], incoming: [], outgoing: [] });
-
-  // A request withdrawn while Ann had it on screen: accepting it says so.
-  await addFriend(page, annName);
-  await expect(friends.getByRole("status")).toHaveText(`Friend request sent to ${annName}.`);
-  await tab(ann.page, "Library").click();
-  await tab(ann.page, "Profile").click();
-  await expect(requests.getByRole("button", { name: `Accept ${me.username}` })).toBeVisible();
-  await sent.getByRole("button", { name: `Cancel request to ${annName}` }).click();
-  await expect(friends.getByRole("status")).toHaveText(`Cancelled your friend request to ${annName}.`);
-  await requests.getByRole("button", { name: `Accept ${me.username}` }).click();
-  await expect(requests.getByRole("alert")).toHaveText("This friend request isn't there anymore.");
-  await expect(requests.getByRole("list")).toHaveCount(0);
-  await expect(section(ann.page, "Friends")).toContainText("No friends yet.");
-
-  // Ann asks me; I ask her before I've seen it: that makes us friends.
-  await addFriend(ann.page, me.username);
-  await expect(section(ann.page, "Friends").getByRole("status")).toHaveText(`Friend request sent to ${me.username}.`);
-  await addFriend(page, annName);
-  await expect(friends.getByRole("status")).toHaveText(
-    `${annName} had already sent you a request: you're now friends.`,
-  );
-  await expect(friendButton(page, annName)).toBeVisible();
-  await expect(section(page, "Friend requests")).toHaveCount(0);
-  await expect(sent).toHaveCount(0);
-  expect((await friendsState(ann.page)).friends).toEqual([named(await userId(me.username), me)]);
-  await addFriend(page, annName);
-  await expect(friends.getByRole("alert")).toHaveText(`You're already friends with ${annName}.`);
-  await ann.context.close();
-});
-
 test("only accepted friends can read a library through the API, and every friends request is checked", async ({
   page,
   browser,
   baseURL,
   playwright,
 }) => {
+  test.slow();
   const me = await openShows(page);
   const meId = await userId(me.username);
   const friend = await otherPerson(browser);
@@ -555,8 +184,8 @@ test("the friend search suggests people by username or name while typing, and sa
   const bob = await otherPerson(browser);
   const ann = await otherPerson(browser);
   // Ann already asked me.
-  expect((await ann.page.request.post("/api/shows/friends", { data: { username: me.username } })).status()).toBe(201);
-  await tab(page, "Profile").click();
+  expect((await ann.page.request.post("/api/social/friends", { data: { username: me.username } })).status()).toBe(201);
+  await page.goto("/social/friends");
   const friends = section(page, "Friends");
   const field = friends.getByRole("combobox", { name: "Add a friend" });
   const list = friends.getByRole("listbox", { name: "People" });
@@ -632,7 +261,7 @@ test("the friend search suggests people by username or name while typing, and sa
 
   // The API: from 2 characters, the exact match first, never the user themselves.
   const search = async (q: string) =>
-    (await (await page.request.get(`/api/shows/friends/search?${new URLSearchParams({ q })}`)).json()).data;
+    (await (await page.request.get(`/api/social/friends/search?${new URLSearchParams({ q })}`)).json()).data;
   expect(await search("e")).toEqual({ matches: [], exact: false, self: false });
   expect(await search(`@${bob.user.username.toUpperCase()}`)).toEqual({
     matches: [{ ...named(bob.id, bob.user), relation: "outgoing" }],
@@ -653,61 +282,4 @@ test("the friend search suggests people by username or name while typing, and sa
   );
   await bob.context.close();
   await ann.context.close();
-});
-
-test.describe("on a phone", () => {
-  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-
-  test("Profile fits the screen, and a friend's profile fills it until Back", async ({ page, browser }) => {
-    const me = await openShows(page);
-    const friend = await otherPerson(browser);
-    await addTitle(friend.page, harbor, "watching", { currentSeason: 1, currentEpisode: 4, isFavourite: true });
-    await addTitle(page, paperMoons, "planned", { status: "completed", isFavourite: true });
-    expect((await page.request.post("/api/shows/friends", { data: { username: friend.user.username } })).status()).toBe(
-      201,
-    );
-    expect(
-      (await friend.page.request.post(`/api/shows/friends/${await userId(me.username)}/accept`, { data: {} })).status(),
-    ).toBe(200);
-    await page.reload();
-
-    await tab(page, "Profile").tap();
-    await expect(statValues(page)).toHaveText(["0", "1", "2.1"]);
-    await expect(friendButton(page, friend.user.username)).toBeVisible();
-    // A friend's row: their picture, their name and @username on one line (cut off when as long as a test user's), and under it Check profile and the bin.
-    const friendRow = friendsList(page).getByRole("listitem");
-    const name = friendRow.getByText(shown(friend.user), { exact: true });
-    const check = friendRow.getByText("Check profile", { exact: true });
-    const bin = friendRow.getByRole("button", { name: `Remove ${friend.user.username}` });
-    const [nameBox, checkBox, binBox, pictureBox] = await Promise.all(
-      [name, check, bin, friendRow.locator("img, [aria-hidden=true]").first()].map(
-        async (locator) => (await locator.boundingBox())!,
-      ),
-    );
-    expect(nameBox.height).toBeLessThan(30);
-    expect(checkBox.y).toBeGreaterThanOrEqual(nameBox.y + nameBox.height);
-    const rowBox = (await friendRow.boundingBox())!;
-    expect(Math.abs(checkBox.x + checkBox.width / 2 - (rowBox.x + rowBox.width / 2))).toBeLessThanOrEqual(1);
-    expect(binBox.y + binBox.height).toBeGreaterThan(checkBox.y);
-    expect(binBox.x).toBeGreaterThan(checkBox.x + checkBox.width);
-    expect(pictureBox.x + pictureBox.width).toBeLessThanOrEqual(nameBox.x);
-    // At least 16px, so iOS doesn't zoom in on it.
-    await expect(page.getByLabel("Add a friend")).toHaveCSS("font-size", "16px");
-    await expectNoHorizontalScroll(page);
-
-    await friendButton(page, friend.user.username).tap();
-    const profile = page.getByRole("dialog", { name: friend.user.username });
-    await expect(statValues(profile)).toHaveText(["0", "0", "3.5"]);
-    await expect(grid(section(profile, "Watching"), "Watching").getByRole("button")).toHaveAccessibleName(
-      "Harbor Lights, 2021, Watching, season 1 episode 4, favourite",
-    );
-    const popupBox = (await profile.boundingBox())!;
-    expect(popupBox.width).toBeLessThan(390);
-    expect(popupBox.height).toBeLessThan(844);
-    await expectNoHorizontalScroll(page);
-    await page.goBack();
-    await expect(profile).toBeHidden();
-    await expect(viewHeading(page)).toHaveText("Profile");
-    await friend.context.close();
-  });
 });

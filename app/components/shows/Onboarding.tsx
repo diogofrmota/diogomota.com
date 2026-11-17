@@ -1,17 +1,16 @@
 "use client";
-import { Button, Notice } from "@/components/common/ui";
+import { Button } from "@/components/common/ui";
 import { useEffect, useId, useRef, useState } from "react";
 import { CheckIcon, SearchIcon } from "@/components/common/icons";
 import {
   libraryStatuses,
   statusNames,
   titleKey,
-  type FriendsState,
   type LibraryItem,
   type MediaType,
   type TitleSummary,
 } from "@/lib/show-types";
-import { AddFriend, requestSentText } from "./AddFriend";
+import Link from "next/link";
 import {
   AddMark,
   ProgressLine,
@@ -22,7 +21,7 @@ import {
   useTitleStatus,
 } from "./AddToLibrary";
 import { useLibrary } from "./library";
-import { forgetShowsData, showsRequest, useDebounced, useShowsClient, useShowsData } from "./shows-data";
+import { useDebounced, useShowsData } from "./shows-data";
 import { cardSizes, LoadError, Poster, SkeletonGrid, titleFacts } from "./TitleGrid";
 import styles from "./Shows.module.css";
 
@@ -189,38 +188,13 @@ function Titles({ step }: { step: TitlesStep }) {
   );
 }
 
-// The friends step: friend requests, with what each one did.
+// The friends step points to Social, the home of friend management.
 function Friends() {
-  const client = useShowsClient();
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
-
-  async function add(value: string): Promise<boolean> {
-    setBusy(true);
-    setNotice(null);
-    try {
-      const next = await showsRequest<FriendsState>("/friends", { method: "POST", body: { username: value } });
-      // Added by Friends in Discover loads again when next shown.
-      forgetShowsData(client, (path) => path.endsWith("/friends"));
-      setNotice({ text: requestSentText(next, value) });
-      return true;
-    } catch (err) {
-      setNotice({ text: (err as Error).message, error: true });
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
-    <div className={styles.onboardingFriends}>
-      <AddFriend busy={busy} onAdd={add} />
-      {notice && (
-        <Notice error={notice.error} className={styles.notice}>
-          {notice.text}
-        </Notice>
-      )}
-    </div>
+    <p className={styles.empty}>
+      Find friends in <Link href="/social/friends">Social</Link> to share your watching and reading. Their shows still
+      appear in Discover.
+    </p>
   );
 }
 

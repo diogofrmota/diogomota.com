@@ -5,9 +5,10 @@ import { Avatar } from "@/components/common/Avatar";
 import { CheckIcon } from "@/components/common/icons";
 import { PersonName } from "@/components/common/PersonName";
 import { NAME_MAX, usernameHint, USERNAME_MAX } from "@/lib/account-rules";
-import type { FriendsState, PeopleSearch, PersonMatch } from "@/lib/show-types";
-import { showsRequest, useDebounced } from "./shows-data";
-import styles from "./Shows.module.css";
+import type { FriendsState, PeopleSearch, PersonMatch } from "@/lib/social-types";
+import { useDebounced } from "../shows/shows-data";
+import { socialRequest } from "./social-data";
+import styles from "../shows/Shows.module.css";
 
 // Suggestions are asked for once typing pauses this long, from 2 characters
 // to a name's length (lib/friends.ts, searchPeople).
@@ -95,7 +96,7 @@ export function AddFriend({ busy, onAdd }: { busy: boolean; onAdd: (username: st
   useEffect(() => {
     if (!query) return;
     const controller = new AbortController();
-    showsRequest<PeopleSearch>(`/friends/search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
+    socialRequest<PeopleSearch>(`/friends/search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
       .then((data) => {
         setResult({ query, data });
         setSearchError("");

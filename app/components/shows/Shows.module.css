@@ -1590,6 +1590,7 @@ div.people {
   text-box: trim-both cap alphabetic;
 }
 .view .personLink {
+  text-decoration: none;
   display: flex;
   flex: 1;
   align-items: center;
@@ -2291,6 +2292,7 @@ div.people {
     display: block;
   }
   .view .personLink {
+    text-decoration: none;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;

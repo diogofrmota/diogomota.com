@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { Dialog } from "@/components/common/Dialog";
 import { Avatar } from "@/components/common/Avatar";
@@ -137,7 +138,9 @@ function FriendsWithIt({ friends }: { friends: TitleDetail["friends"] }) {
               className={styles.friendAvatar}
             />
             <span>
-              <PersonName person={friend} />
+              <Link href={`/social/profile/${friend.id}`}>
+                <PersonName person={friend} />
+              </Link>
               <span className={styles.friendStatus}>{statusWords[friend.status]}</span>
             </span>
           </li>
@@ -189,7 +192,9 @@ function RecommendToFriend({ title }: { title: Pick<TitleSummary, "type" | "tmdb
         ) : friends.error ? (
           <LoadError message={friends.error} onRetry={friends.retry} />
         ) : !friends.data?.friends.length ? (
-          <p className={ui.muted}>Add friends in Profile to recommend titles to them.</p>
+          <p className={ui.muted}>
+            Add friends in <Link href="/social/friends">Social</Link> to recommend titles to them.
+          </p>
         ) : (
           <ul className={styles.recommendList}>
             {friends.data.friends.map((friend) => (
@@ -200,7 +205,9 @@ function RecommendToFriend({ title }: { title: Pick<TitleSummary, "type" | "tmdb
                   url={friend.avatarUrl}
                   className={styles.friendAvatar}
                 />
-                <PersonName person={friend} />
+                <Link href={`/social/profile/${friend.id}`}>
+                  <PersonName person={friend} />
+                </Link>
                 <Button busy={busy === friend.id} disabled={sent.has(friend.id)} onClick={() => void send(friend)}>
                   {sent.has(friend.id) ? "Sent" : "Send"}
                 </Button>

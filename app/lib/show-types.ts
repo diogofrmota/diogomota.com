@@ -1,6 +1,9 @@
 // Types and helpers of the Shows app, for both the server and the browser.
 
 import type { Named } from "./names";
+import type { Person } from "./social-types";
+// Compatibility exports for existing Shows consumers; Social owns these types.
+export type { PersonMatch, PeopleSearch, Person, FriendsState } from "./social-types";
 
 export type MediaType = "tv" | "movie";
 export const mediaTypes: readonly MediaType[] = ["tv", "movie"];
@@ -120,16 +123,6 @@ export const discoverSections: Record<MediaType, readonly { id: DiscoverSection;
     { id: "sci-fi", heading: "Science Fiction" },
   ],
 };
-
-/** Someone suggested in the friend search, and how they and the user are connected. */
-export type PersonMatch = Person & { relation: "none" | "friend" | "incoming" | "outgoing" };
-
-/**
- * People whose username or name starts with what was typed (`matches`),
- * whether another account has exactly it as its username (`exact`), and
- * whether it is the user's own (`self`).
- */
-export type PeopleSearch = { matches: PersonMatch[]; exact: boolean; self: boolean };
 
 /** Key of a title in panel ids and lists, e.g. "tv:1399". */
 export const titleKey = (title: Pick<TitleSummary, "type" | "tmdbId">) => `${title.type}:${title.tmdbId}`;
@@ -253,15 +246,6 @@ export function libraryStats(items: readonly StatsItem[]): LibraryStats {
 /** Hours with at most one decimal, e.g. "1,234.5". */
 export const formatHours = (minutes: number) =>
   (Math.round(minutes / 6) / 10).toLocaleString("en-GB", { maximumFractionDigits: 1 });
-
-/**
- * A friend, a request someone sent the user, or one the user sent: with their
- * profile picture and names, if they have them (lib/names.ts).
- */
-export type Person = Named & { id: string; avatarUrl: string | null };
-
-/** The user's friends and pending friend requests, each by username. */
-export type FriendsState = { friends: Person[]; incoming: Person[]; outgoing: Person[] };
 
 /** A friend's profile: what they're watching, what they've completed, their favourites and their stats. */
 export type FriendProfile = Person & {

@@ -276,12 +276,17 @@ export function readLibrary(userId: string): Promise<LibraryItem[]> {
 
 /**
  * What a friend sees of a user's library: the titles they're watching or have
- * completed and their favourites (planned titles stay out unless they are
- * favourites), with the stats of the whole library. Planned titles add nothing
- * to the stats, so these titles are enough to work them out.
+ * completed and their favourites, with the stats of the whole library.
+ * Social includes planned titles too; the legacy Shows API keeps its original subset.
  */
-export async function sharedLibrary(userId: string): Promise<{ stats: LibraryStats; items: FriendItem[] }> {
-  const items = await libraryItems(userId, "us.status IN ('watching', 'completed') OR us.is_favourite");
+export async function sharedLibrary(
+  userId: string,
+  includePlanned = false,
+): Promise<{ stats: LibraryStats; items: FriendItem[] }> {
+  const items = await libraryItems(
+    userId,
+    includePlanned ? undefined : "us.status IN ('watching', 'completed') OR us.is_favourite",
+  );
   return {
     stats: libraryStats(items),
     // Only these fields: the entry's id stays private.

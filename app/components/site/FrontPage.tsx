@@ -10,7 +10,10 @@ import styles from "./FrontPage.module.css";
 const steps = [
   ["Sign up", "Your name, a username, your email and a password. Then confirm your email."],
   ["Pick an app", "Every app is there from the start, on your phone or your computer."],
-  ["Bring your people", "Invite your partner to your Shared space, or add friends in Shows to see what they watch."],
+  [
+    "Bring your people",
+    "Invite your partner to your Shared space, or add friends in Social to share what you read and watch.",
+  ],
 ] as const;
 
 const questions: { question: string; answer: React.ReactNode }[] = [
@@ -35,7 +38,7 @@ const questions: { question: string; answer: React.ReactNode }[] = [
   {
     question: "Can I use it on my phone?",
     answer:
-      "Yes. Add it to your home screen and it opens like an app of its own, and it keeps working when you're offline.",
+      "Yes. Add it to your home screen and it opens like an app of its own, and your personal libraries keep working offline. Social needs a connection.",
   },
   {
     question: "Can I take my data with me?",

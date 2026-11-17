@@ -14,6 +14,7 @@ type Record_<Kind extends ActivityKind> = {
   kind: Kind;
   spaceId?: string;
   showId?: string;
+  bookId?: string;
   /** What it is about (an event's id, say): with `mergeWithin`, one line per thing. */
   key?: string;
 } & (ActivityData[Kind] extends Record<string, never> ? { data?: ActivityData[Kind] } : { data: ActivityData[Kind] });
@@ -25,7 +26,7 @@ type Record_<Kind extends ActivityKind> = {
  */
 export async function recordActivity<Kind extends ActivityKind>(
   db: PoolClient | null,
-  { userId, kind, spaceId, showId, key, data }: Record_<Kind>,
+  { userId, kind, spaceId, showId, bookId, key, data }: Record_<Kind>,
 ): Promise<void> {
   const client = db ?? getPool();
   const stored = { ...(data ?? {}), ...(key ? { key } : {}) };
@@ -36,13 +37,10 @@ export async function recordActivity<Kind extends ActivityKind>(
       [userId, key],
     );
   }
-  await client.query("INSERT INTO activity (user_id, space_id, show_id, kind, data) VALUES ($1, $2, $3, $4, $5)", [
-    userId,
-    spaceId ?? null,
-    showId ?? null,
-    kind,
-    stored,
-  ]);
+  await client.query(
+    "INSERT INTO activity (user_id, space_id, show_id, kind, data, book_id) VALUES ($1, $2, $3, $4, $5, $6)",
+    [userId, spaceId ?? null, showId ?? null, kind, stored, bookId ?? null],
+  );
   // Now and then, what is older than keepFor goes.
   if (Math.random() < 0.02) await client.query(`DELETE FROM activity WHERE created_at < now() - interval '${keepFor}'`);
 }
@@ -84,6 +82,25 @@ export async function friendsActivity(userId: string, limit = 30): Promise<Activ
      )
      SELECT ${itemColumns} FROM activity a JOIN users u ON u.id = a.user_id JOIN shows s ON s.id = a.show_id
      WHERE a.user_id IN (SELECT id FROM friends) AND a.created_at > now() - interval '${keepFor}'
+     ORDER BY a.created_at DESC, a.id LIMIT $2`,
+    [userId, limit],
+  );
+  return toItems(rows);
+}
+
+/** Accepted friends' Shows and Books activity only; never Shared activity. */
+export async function socialActivity(userId: string, limit = 30): Promise<ActivityItem[]> {
+  const { rows } = await getPool().query<Row>(
+    `WITH friends AS (
+       SELECT friend_id AS id FROM friendships WHERE user_id = $1 AND status = 'accepted'
+       UNION ALL SELECT user_id FROM friendships WHERE friend_id = $1 AND status = 'accepted'
+     )
+     SELECT ${itemColumns} FROM activity a JOIN users u ON u.id = a.user_id
+       LEFT JOIN shows s ON s.id = a.show_id LEFT JOIN books b ON b.id = a.book_id AND b.user_id = a.user_id
+     WHERE a.user_id IN (SELECT id FROM friends) AND a.space_id IS NULL
+       AND ((s.id IS NOT NULL AND a.kind IN ('watching', 'planned', 'completed', 'favourite', 'recommended'))
+         OR (b.id IS NOT NULL AND a.kind IN ('book-planned', 'book-reading', 'book-finished')))
+       AND a.created_at > now() - interval '${keepFor}'
      ORDER BY a.created_at DESC, a.id LIMIT $2`,
     [userId, limit],
   );

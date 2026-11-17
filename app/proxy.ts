@@ -24,6 +24,8 @@ export const config = {
     "/api/books/:path*",
     "/shared/:path*",
     "/shows/:path*",
+    "/social/:path*",
+    "/api/social/:path*",
     "/recipes/:path*",
     "/fitness/:path*",
     "/account/:path*",

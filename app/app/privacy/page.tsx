@@ -46,15 +46,16 @@ export default async function PrivacyPage() {
           space sees and changes.
         </li>
         <li>
-          <strong>Shows:</strong> your library (what you watch, plan and finished, and your progress), your friends, and
-          what you recommend to them. Only friends you accepted see your library.
+          <strong>Shows:</strong> your library (what you watch, plan and finished, and your progress), and what you
+          recommend to friends. Only friends you accepted see your library through Social.
         </li>
         <li>
           <strong>Recipes:</strong> your recipes (their ingredients, steps, notes, tags and links), their photos (made
           smaller, without their location or other metadata), your favourites and your shopping list. Only you see them.
         </li>
         <li>
-          <strong>Books:</strong> your books, reading shelves and page progress. Only you see them.
+          <strong>Books:</strong> your books, reading shelves and page progress. You and your accepted friends can see
+          them in Social.
         </li>
         <li>
           <strong>Benfica:</strong> your home fixtures, attendance plans, ticket status and calendar reminder choices.
@@ -65,8 +66,12 @@ export default async function PrivacyPage() {
           steps, water, body weight and supplements you log each day, with your daily goals. Only you see them.
         </li>
         <li>
-          <strong>Activity:</strong> what you did lately (an event added, a show finished), shown to your space or your
-          friends for 60 days.
+          <strong>Social:</strong> your friends and requests. Your profile shares Books and Shows statistics, plans and
+          progress with accepted friends only.
+        </li>
+        <li>
+          <strong>Activity:</strong> what you did lately (an event added, a show or book finished), shown to your space
+          or your friends for 60 days.
         </li>
         <li>
           <strong>Sessions:</strong> a cookie that keeps you logged in, and which devices are logged in (their IP

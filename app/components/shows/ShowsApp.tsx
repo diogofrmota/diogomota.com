@@ -1,6 +1,6 @@
 "use client";
 import { AppShell } from "@/components/common/AppShell";
-import { CompassIcon, LibraryIcon, UserIcon } from "@/components/common/icons";
+import { CompassIcon, LibraryIcon } from "@/components/common/icons";
 import { QueryProvider } from "@/components/common/QueryProvider";
 import { useAppView } from "@/hooks/useAppView";
 import type { AppViewState } from "@/lib/app-views";
@@ -8,9 +8,7 @@ import type { Named } from "@/lib/names";
 import { parseTitleKey } from "@/lib/show-types";
 import type { Theme } from "@/lib/themes";
 import { Discover } from "./Discover";
-import { FriendDialog } from "./FriendDialog";
 import { LibraryProvider, setupShows } from "./library";
-import { Profile } from "./Profile";
 import { QuickActions } from "./QuickActions";
 import { SearchDialog } from "./SearchDialog";
 import { TitleDialog } from "./TitleDialog";
@@ -23,18 +21,16 @@ function Panels() {
   const top = panels.at(-1);
   const title = top?.startsWith("title:") ? parseTitleKey(top.slice(6)) : null;
   const actions = top?.startsWith("actions:") ? parseTitleKey(top.slice(8)) : null;
-  const friend = panels.find((panel) => panel.startsWith("friend:"))?.slice(7);
   return (
     <>
       {panels.includes("search") && <SearchDialog />}
-      {friend && <FriendDialog key={friend} id={friend} />}
       {title && <TitleDialog key={top} title={title} onClose={closePanel} />}
       {actions && <QuickActions key={top} title={actions} />}
     </>
   );
 }
 
-// Library (what you're watching, planned and completed), Discover and Profile,
+// Library (what you're watching, planned and completed) and Discover,
 // as tabs. The view and its open panels are in the URL: /shows/discover?p=title:tv:1396.
 export function ShowsApp({
   user,
@@ -60,7 +56,6 @@ export function ShowsApp({
           tabs={[
             { id: "library", label: "Library", icon: <LibraryIcon />, view: <Watchlist /> },
             { id: "discover", label: "Discover", icon: <CompassIcon />, view: <Discover /> },
-            { id: "profile", label: "Profile", icon: <UserIcon />, view: <Profile user={user} /> },
           ]}
         >
           <Panels />

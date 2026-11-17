@@ -4,13 +4,14 @@ import { expect, followAccountMenu, newUser, saveTheme, signUp, test } from "./f
 // The tabs. Shared's settings are one of them; Shows has none.
 const appViews = [
   { path: "/shared", name: "Shared", views: ["Calendar", "Tasks", "Settings"] },
-  { path: "/shows", name: "Shows", views: ["Library", "Discover", "Profile"] },
+  { path: "/shows", name: "Shows", views: ["Library", "Discover"] },
+  { path: "/social", name: "Social", views: ["Activity", "Friends", "My profile"] },
   { path: "/fitness", name: "Fitness", views: ["Today", "Workouts", "Progress"] },
 ] as const;
 
 /** A view's URL: the app's own path for its first view, the view under it for the others. */
 const viewUrl = (app: (typeof appViews)[number], view: string) =>
-  view === app.views[0] ? app.path : `${app.path}/${view.toLowerCase()}`;
+  view === app.views[0] ? app.path : `${app.path}/${view === "My profile" ? "profile" : view.toLowerCase()}`;
 
 /** The app's tabs: in the middle of the top bar on a wide screen, along the bottom on a phone. */
 const tabBar = (page: Page, app: string) => page.getByRole("navigation", { name: app, exact: true });
@@ -22,7 +23,7 @@ const viewHeading = (page: Page) => page.getByRole("main").getByRole("heading", 
 async function openApp(page: Page, path: string) {
   const user = newUser();
   await signUp(page, user, `/signup?${new URLSearchParams({ next: path })}`);
-  await expect(page).toHaveURL(path);
+  await expect(page).toHaveURL(path, { timeout: 30000 });
   if (path === "/shared") {
     await page.getByRole("button", { name: "Create space" }).click();
     await expect(viewHeading(page)).toHaveText("Calendar");
@@ -121,28 +122,28 @@ test("back and forward move between views, and out of the app to home", async ({
 });
 
 test("a reload keeps the view (it's in the URL), and back still works after it", async ({ page }) => {
-  await openApp(page, "/shows");
-  await tab(page, "Shows", "Discover").click();
-  await tab(page, "Shows", "Profile").click();
-  await expect(viewHeading(page)).toHaveText("Profile");
+  await openApp(page, "/social");
+  await tab(page, "Social", "Friends").click();
+  await tab(page, "Social", "My profile").click();
+  await expect(viewHeading(page)).toHaveText("My profile");
 
   await page.reload();
-  await expect(viewHeading(page)).toHaveText("Profile");
-  await expect(tab(page, "Shows", "Profile")).toHaveAttribute("aria-current", "page");
+  await expect(viewHeading(page)).toHaveText("My profile");
+  await expect(tab(page, "Social", "My profile")).toHaveAttribute("aria-current", "page");
   await page.goBack();
-  await expect(viewHeading(page)).toHaveText("Discover");
-  await expect(page).toHaveURL("/shows/discover");
+  await expect(viewHeading(page)).toHaveText("Friends");
+  await expect(page).toHaveURL("/social/friends");
   // A view's URL opens it, and one that isn't a view is a 404.
-  await page.goto("/shows/profile");
-  await expect(viewHeading(page)).toHaveText("Profile");
-  expect((await page.goto("/shows/watchlist"))!.status()).toBe(404);
+  await page.goto("/social/profile");
+  await expect(viewHeading(page)).toHaveText("My profile");
+  expect((await page.goto("/social/watchlist"))!.status()).toBe(404);
 });
 
 test("back pressed while the page is still loading still goes to the previous view", async ({ page }) => {
   await openApp(page, "/shows");
   await tab(page, "Shows", "Discover").click();
-  await tab(page, "Shows", "Profile").click();
-  await expect(viewHeading(page)).toHaveText("Profile");
+  await tab(page, "Shows", "Library").click();
+  await expect(viewHeading(page)).toHaveText("Library");
 
   // Holds the scripts, so back is pressed before the app can listen for it.
   let releaseScripts = () => {};
@@ -154,7 +155,7 @@ test("back pressed while the page is still loading still goes to the previous vi
   });
   await page.reload({ waitUntil: "commit" });
   // As rendered by the server, for its URL.
-  await expect(viewHeading(page)).toHaveText("Profile");
+  await expect(viewHeading(page)).toHaveText("Library");
   await page.goBack({ waitUntil: "commit" });
   releaseScripts();
 

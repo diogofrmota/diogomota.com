@@ -3,12 +3,13 @@ import { DatabaseError } from "pg";
 import { NAME_MAX, USERNAME_MAX, usernameError, usernameHint } from "./account-rules";
 import { query } from "./db";
 import { friendRequestLimit, userSearchLimit } from "./rate-limit";
-import type { FriendProfile, FriendsState, PeopleSearch, Person, PersonMatch } from "./show-types";
+import type { FriendProfile } from "./show-types";
+import type { FriendsState, PeopleSearch, Person, PersonMatch } from "./social-types";
 import { HttpError } from "./http";
 import { bothPlanned, sharedLibrary } from "./shows";
 import { avatarUrlSql } from "./users";
 
-// Friendships of the Shows app: one row per pair of users (001_initial.sql),
+// Site-wide friendships, managed in Social: one row per pair of users (001_initial.sql),
 // user_id sent the request and friend_id received it. Pending until the
 // receiver accepts; declining, cancelling and removing delete the row, so either
 // can ask again later. Only accepted friends see each other's libraries.

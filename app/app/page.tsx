@@ -17,6 +17,7 @@ import {
   recipesViews,
   sharedViews,
   showsViews,
+  socialViews,
 } from "@/lib/app-views";
 import { appViewport, apps } from "@/lib/apps";
 import { homeBadges } from "@/lib/badges";
@@ -39,6 +40,7 @@ const views: Record<string, readonly string[]> = {
   "/books": booksViews,
   "/shared": sharedViews,
   "/shows": showsViews,
+  "/social": socialViews,
   "/recipes": recipesViews,
   "/fitness": fitnessViews,
 };
@@ -79,6 +81,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const [badges, jar] = await Promise.all([homeBadges(user.id), cookies()]);
   const counts: Record<string, [number, string]> = {
     "/shared": [badges.shared, plural(badges.shared, "task due", "tasks due")],
+    "/social": [badges.social, plural(badges.social, "friend request", "friend requests")],
     "/shows": [badges.shows, `${badges.shows} new`],
     "/recipes": [badges.recipes, `${badges.recipes} to buy`],
     "/fitness": [badges.fitness, plural(badges.fitness, "supplement to take", "supplements to take")],

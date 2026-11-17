@@ -14,6 +14,10 @@ export type ActivityData = {
   "list-added": { name: string };
   "task-added": { title: string; list: string };
   "task-done": { title: string; list: string };
+  // Books, seen by accepted friends in Social.
+  "book-planned": { title: string };
+  "book-reading": { title: string };
+  "book-finished": { title: string };
   // Shows, seen by the user's friends.
   watching: Record<string, never>;
   planned: Record<string, never>;

@@ -2,33 +2,26 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Avatar } from "@/components/common/Avatar";
 import { useQueryClient } from "@tanstack/react-query";
-import { ActivityFeed } from "@/components/common/ActivityFeed";
 import { TrashIcon } from "@/components/common/icons";
 import { PersonName } from "@/components/common/PersonName";
 import { Button, Notice as NoticeText } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
 import { UndoToast, useUndo } from "@/components/common/Undo";
-import type { ActivityItem } from "@/lib/activity-types";
 import { ApiError } from "@/lib/api-request";
-import type { Named } from "@/lib/names";
-import { libraryStats, type FriendsState, type Person } from "@/lib/show-types";
+import type { FriendsState, Person } from "@/lib/social-types";
+import Link from "next/link";
 import { AddFriend, requestSentText } from "./AddFriend";
-import { useOpenFriend } from "./FriendDialog";
-import { ChangeError, useLibrary } from "./library";
-import { LibrarySection } from "./LibraryGrid";
-import { forgetShowsData, showsRequest, useOpenTitle, useShowsData } from "./shows-data";
-import { StatsSection } from "./Stats";
-import { LoadError } from "./TitleGrid";
-import styles from "./Shows.module.css";
+import { socialRequest } from "./social-data";
+import { LoadError } from "../shows/TitleGrid";
+import styles from "../shows/Shows.module.css";
 
-// The user's friends and friend requests: loaded whenever Profile is shown
+// The user's friends and friend requests: loaded whenever Friends is shown
 // (effects stop while a view is hidden) or the page becomes visible again, and
 // replaced by the answer to every change. Requests go one at a time, in order.
 function useFriends() {
   const [state, setState] = useState<FriendsState | null>(null);
   const [loadError, setLoadError] = useState("");
   const queue = useRef<Promise<unknown>>(null);
-  const friendIds = useRef<string | null>(null);
   const client = useQueryClient();
 
   const enqueue = useCallback(<T,>(job: () => Promise<T>): Promise<T> => {
@@ -40,11 +33,7 @@ function useFriends() {
     (next: FriendsState) => {
       setState(next);
       setLoadError("");
-      // Added by Friends in Discover lists their titles: it loads again when next shown.
-      const ids = next.friends.map((friend) => friend.id).join();
-      if (ids !== friendIds.current)
-        forgetShowsData(client, (path) => path.endsWith("/friends") || path === "/activity");
-      friendIds.current = ids;
+      void client.invalidateQueries({ queryKey: ["social"] });
     },
     [client],
   );
@@ -52,7 +41,7 @@ function useFriends() {
     () =>
       void enqueue(async () => {
         try {
-          show(await showsRequest<FriendsState>("/friends"));
+          show(await socialRequest<FriendsState>("/friends"));
         } catch (err) {
           setLoadError((err as Error).message);
         }
@@ -64,7 +53,7 @@ function useFriends() {
     (path: string, method: string, body?: object) =>
       enqueue(async () => {
         try {
-          const next = await showsRequest<FriendsState>(path, { method, body });
+          const next = await socialRequest<FriendsState>(path, { method, body });
           show(next);
           return next;
         } catch (err) {
@@ -101,16 +90,15 @@ function NoticeLine({ notice }: { notice: Notice }) {
 }
 
 function FriendRow({ person, onRemove }: { person: Person; onRemove: () => void }) {
-  const openFriend = useOpenFriend();
   return (
     <li>
       <div className={styles.personRow}>
         {/* The whole row opens their profile; "Check profile" on its right says so. */}
-        <button type="button" className={styles.personLink} onClick={() => openFriend(person)}>
+        <Link className={styles.personLink} href={`/social/profile/${person.id}`}>
           <Avatar username={person.username} name={person.name} url={person.avatarUrl} className={styles.avatar} />
           <PersonName person={person} className={styles.personName} />{" "}
           <span className={styles.checkProfile}>Check profile</span>
-        </button>
+        </Link>
         <button type="button" className={styles.removeIcon} aria-label={`Remove ${person.username}`} onClick={onRemove}>
           <TrashIcon />
         </button>
@@ -119,46 +107,14 @@ function FriendRow({ person, onRemove }: { person: Person; onRemove: () => void 
   );
 }
 
-/** What the user's friends did lately in Shows: started, finished, loved or recommended a title. */
-function FriendsActivity({ username }: { username: string }) {
-  const id = useId();
-  const openTitle = useOpenTitle();
-  const { data, error, loading, retry } = useShowsData<ActivityItem[]>("/activity", false);
-  return (
-    <section className={styles.section} aria-labelledby={id} aria-busy={loading}>
-      <h2 id={id}>Friends&rsquo; activity</h2>
-      {loading ? (
-        <p role="status" className={ui.muted}>
-          Loading…
-        </p>
-      ) : error ? (
-        <LoadError message={error} onRetry={retry} />
-      ) : (
-        <ActivityFeed
-          items={data ?? []}
-          empty="Nothing yet: what your friends start, finish and love shows up here."
-          onOpenTitle={openTitle}
-          viewer={username}
-        />
-      )}
-    </section>
-  );
-}
-
-/**
- * The Profile view, one column in the middle of the page: whose it is (their
- * picture, name and @username), friend requests, stats, favourites and friends.
- */
-export function Profile({ user }: { user: Named & { avatarUrl: string | null } }) {
-  const { username, name, avatarUrl } = user;
-  const library = useLibrary();
+/** Friends, incoming requests, and search, now shared across apps. */
+export function Friends() {
   const { state, loadError, load, send } = useFriends();
   const requestsId = useId();
   const sentId = useId();
   const friendsId = useId();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [busy, setBusy] = useState(false);
-  const items = library.items;
   // A friend removed, until their Undo goes (only then is it sent).
   const undo = useUndo();
   const removing = undo.pending?.id;
@@ -190,20 +146,7 @@ export function Profile({ user }: { user: Named & { avatarUrl: string | null } }
   const incoming = state?.incoming ?? [];
   return (
     <div className={`${styles.view} ${styles.profile}`}>
-      {/* The Profile tab in the top bar shows which view this is; the page shows whose. */}
-      <h1 className={ui.srOnly}>Profile</h1>
-      <div className={styles.profileHeader}>
-        <Avatar
-          username={username}
-          name={name}
-          url={avatarUrl}
-          className={`${styles.avatar} ${styles.profileAvatar}`}
-        />
-        {name && <p className={styles.profileName}>{name}</p>}
-        <p className={name ? styles.profileUsername : styles.profileName}>@{username}</p>
-      </div>
-      <ChangeError className={styles.viewError} />
-
+      <h1 className={ui.heading}>Friends</h1>
       {(incoming.length > 0 || notice?.where === "requests") && (
         <section className={styles.section} aria-labelledby={requestsId}>
           <h2 id={requestsId}>Friend requests</h2>
@@ -257,27 +200,6 @@ export function Profile({ user }: { user: Named & { avatarUrl: string | null } }
           )}
         </section>
       )}
-
-      {library.loadError && (
-        <div className={styles.section}>
-          <LoadError message={library.loadError} onRetry={library.reload} />
-        </div>
-      )}
-      {/* A library kept from before stays shown under the error. */}
-      {(items || !library.loadError) && (
-        <>
-          <StatsSection stats={items && libraryStats(items)} />
-          <LibrarySection
-            heading="Favourites"
-            label="Your favourites"
-            loadingLabel="Loading your favourites…"
-            items={items && items.filter((item) => item.library.isFavourite)}
-            empty="No favourites yet. Open a title in your library and tap Favourite."
-          />
-        </>
-      )}
-
-      <FriendsActivity username={username} />
 
       <section className={styles.section} aria-labelledby={friendsId} aria-busy={!state && !loadError}>
         <div className={styles.sectionHeader}>

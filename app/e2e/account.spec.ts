@@ -266,7 +266,7 @@ test("username availability requires login, validates input and limits checks", 
   expect((await page.request.get(`${endpoint}?username=${user.username}`)).status()).toBe(429);
 });
 
-test("Name sets the name, one word or more, which Shows' Profile shows over the @username", async ({ page }) => {
+test("Name sets the name, one word or more, which Social's profile shows over the @username", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/");
@@ -299,11 +299,7 @@ test("Name sets the name, one word or more, which Shows' Profile shows over the 
   await openSetting(page, "Name");
   await expect(field).toHaveValue("Ana Sofia Reis");
 
-  await page.goto("/shows");
-  await page
-    .getByRole("navigation", { name: "Shows", exact: true })
-    .getByRole("button", { name: "Profile", exact: true })
-    .click();
+  await page.goto("/social/profile");
   const main = page.getByRole("main");
   await expect(main.getByText("Ana Sofia Reis", { exact: true })).toBeVisible();
   await expect(main.getByText(`@${user.username}`, { exact: true })).toBeVisible();

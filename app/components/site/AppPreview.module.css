@@ -348,3 +348,25 @@
   border-radius: 2px 2px 0 0;
   background: var(--accent);
 }
+
+.social {
+  display: grid;
+  gap: var(--space-2);
+  height: 100%;
+}
+.socialRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+}
+.socialAvatar {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+}

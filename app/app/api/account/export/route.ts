@@ -50,7 +50,7 @@ export async function GET() {
         [userId],
       ),
       query(
-        `SELECT kind, data - 'key' AS data, created_at AS "at" FROM activity WHERE user_id = $1 ORDER BY created_at DESC`,
+        `SELECT kind, data - 'key' AS data, book_id AS "bookId", created_at AS "at" FROM activity WHERE user_id = $1 ORDER BY created_at DESC`,
         [userId],
       ),
       readSpace(userId),
@@ -73,6 +73,7 @@ export async function GET() {
     exportedAt: new Date().toISOString(),
     account: account.rows[0],
     shows: { library: library.rows, friends: friends.rows, recommendations: recommendations.rows },
+    social: { friends: friends.rows },
     shared,
     recipes: {
       recipes: recipes.map(({ photos, ...recipe }) => ({

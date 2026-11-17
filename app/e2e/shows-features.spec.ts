@@ -123,8 +123,8 @@ test("a title's panel: its genres, the friends who have it, More like this, Reco
     await expect(recommended).toContainText(`From ${me.name}`);
 
     // Her Profile has what her friends did: I started watching The Quiet Orchard, and recommended Harbor Lights.
-    await ana.page.goto("/shows/profile");
-    const activity = section(ana.page, "Friends’ activity");
+    await ana.page.goto("/social");
+    const activity = section(ana.page, "Activity");
     await expect(activity).toContainText(`${me.name} started watching The Quiet Orchard`);
     // Recommended to her: "to you", in her own feed.
     await expect(activity).toContainText(`${me.name} recommended Harbor Lights to you`);
@@ -147,9 +147,9 @@ test("a friend's profile has what you both want to watch", async ({ page, browse
     await add(ana.page, harbor, "planned");
     await add(page, orchard, "planned");
     await page.goto(`/shows/profile?p=friend:${ana.id}`);
-    const together = page.getByRole("dialog").getByRole("region", { name: "You both want to watch" });
-    await expect(card(together, "Harbor Lights")).toBeVisible();
-    await expect(card(together, "The Quiet Orchard")).toHaveCount(0);
+    const together = page.getByRole("region", { name: "You both want to watch" });
+    await expect(together.getByRole("link", { name: "Harbor Lights" })).toBeVisible();
+    await expect(together.getByRole("link", { name: "The Quiet Orchard" })).toHaveCount(0);
   } finally {
     await ana.context.close();
   }
