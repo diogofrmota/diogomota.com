@@ -51,19 +51,19 @@ function sentence(item: ActivityItem, title: React.ReactNode, viewer?: string): 
     case "book-planned":
       return (
         <>
-          wants to read <Link href={`/social/profile/${item.person.id}#books`}>{item.data.title}</Link>
+          wants to read <Link href={`/books/profile/${item.person.id}`}>{item.data.title}</Link>
         </>
       );
     case "book-reading":
       return (
         <>
-          started reading <Link href={`/social/profile/${item.person.id}#books`}>{item.data.title}</Link>
+          started reading <Link href={`/books/profile/${item.person.id}`}>{item.data.title}</Link>
         </>
       );
     case "book-finished":
       return (
         <>
-          finished reading <Link href={`/social/profile/${item.person.id}#books`}>{item.data.title}</Link>
+          finished reading <Link href={`/books/profile/${item.person.id}`}>{item.data.title}</Link>
         </>
       );
     case "watching":
@@ -120,7 +120,7 @@ export function ActivityFeed({
   onOpenTitle,
   viewer,
   limit,
-  social = false,
+  social,
 }: {
   items: ActivityItem[];
   empty: string;
@@ -128,7 +128,8 @@ export function ActivityFeed({
   /** The user's username: something done to them reads "to you". */
   viewer?: string;
   limit?: number;
-  social?: boolean;
+  /** The app whose profiles a name opens ("/shows"); without it a name is not a link. */
+  social?: "/shows" | "/books";
 }) {
   const [all, setAll] = useState(false);
   if (!items.length) return <p className={styles.empty}>{empty}</p>;
@@ -158,7 +159,7 @@ export function ActivityFeed({
               />
               <p>
                 {social ? (
-                  <Link href={`/social/profile/${item.person.id}`}>
+                  <Link href={`${social}/profile/${item.person.id}`}>
                     <strong>{memberName(item.person)}</strong>
                   </Link>
                 ) : (

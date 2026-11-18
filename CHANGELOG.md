@@ -4,6 +4,9 @@ Each deploy publishes a GitHub Release (`vX.Y.Z`) listing its commits (`.github/
 
 ## Unreleased
 
+- Social is gone as an app: Shows and Books each have a **Profile** tab with your profile for that app, your friends' activity there (watching in Shows, reading in Books) and Friends (search, requests, removal with Undo). A friend's profile is `/shows/profile/<id>` or `/books/profile/<id>`, inside the app. Old `/social` links redirect to Shows' Profile. Friend requests now count on Shows' home icon.
+- Shared: Settings has **Import calendars**, for now with Benfica games: Benfica's upcoming games from football-data.org, added to the calendar as two-hour events for the whole space, never twice. The calendar opens on the month, on a phone too.
+
 - Books has a Discover tab with Trending, Popular today and Top rated lists from Open Library, with shelf selection when adding a book and Added indicators across lists. No additional API key is required.
 
 - **Benfica**, the sixth app: private home fixtures with Lisbon kickoff times, attendance plans, ticket status and calendar reminders. Stadium days shows Going and Maybe plans by month. Export one match or upcoming plans as `.ics` with reminder alarms for calendar apps. Includes search, edits, removal with Undo, home and front-page integration, Privacy and Download my data. Migration 026 adds `benfica_fixtures`.

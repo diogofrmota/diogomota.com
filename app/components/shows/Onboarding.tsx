@@ -188,12 +188,12 @@ function Titles({ step }: { step: TitlesStep }) {
   );
 }
 
-// The friends step points to Social, the home of friend management.
+// The friends step points to the Profile tab, the home of friend management.
 function Friends() {
   return (
     <p className={styles.empty}>
-      Find friends in <Link href="/social/friends">Social</Link> to share your watching and reading. Their shows still
-      appear in Discover.
+      Find friends in <Link href="/shows/profile">your profile</Link> to share your watching and reading. Their shows
+      still appear in Discover.
     </p>
   );
 }

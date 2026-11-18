@@ -45,7 +45,7 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   await expect(hero.getByText(/^diogomota\.com\//)).toHaveCount(0);
 
   // A section per app, by its name: its icon, headline, what it does, and Open.
-  expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows", "Recipes", "Fitness", "Books", "Benfica", "Social"]);
+  expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows", "Books", "Recipes", "Fitness", "Benfica"]);
   for (const app of apps) {
     const section = appSection(page, app.name);
     await expect(section).toHaveAttribute("id", app.href.slice(1));
@@ -56,14 +56,14 @@ test("logged out, home is the website's front page: what the site is, the apps, 
     expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     await expect(section.getByRole("link", { name: `Open ${app.name}` })).toBeVisible();
   }
-  // Side by side, by turns: Shared's picture on the left, Shows' on the right, Recipes' on the left, Fitness' on the right.
+  // Side by side, by turns: the first app's picture on the left (Shared), the next one's on the right (Shows), and so on.
   const pictureX = async (name: string) =>
     (await appSection(page, name).locator("[aria-hidden='true']").first().boundingBox())!.x;
   const wordsX = async (name: string) => (await appSection(page, name).getByRole("heading").boundingBox())!.x;
-  expect(await pictureX("Shared")).toBeLessThan(await wordsX("Shared"));
-  expect(await pictureX("Shows")).toBeGreaterThan(await wordsX("Shows"));
-  expect(await pictureX("Recipes")).toBeLessThan(await wordsX("Recipes"));
-  expect(await pictureX("Fitness")).toBeGreaterThan(await wordsX("Fitness"));
+  for (const [i, app] of apps.slice(0, 4).entries()) {
+    if (i % 2) expect(await pictureX(app.name), app.name).toBeGreaterThan(await wordsX(app.name));
+    else expect(await pictureX(app.name), app.name).toBeLessThan(await wordsX(app.name));
+  }
 
   // How it works, in three steps; Questions, with the way to About and Privacy.
   await expect(main.getByRole("region", { name: "How it works" }).getByRole("listitem")).toHaveCount(3);
@@ -96,7 +96,7 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
   await expect(meta("name", "description")).toHaveAttribute(
     "content",
-    "Small apps to share with friends: Shared, Shows, Recipes, Fitness, Books, Benfica, and Social.",
+    "Small apps to share with friends: Shared, Shows, Books, Recipes, Fitness, and Benfica.",
   );
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com");
   const image = await page.request.get("/opengraph-image");
@@ -324,7 +324,6 @@ test("logged in, / is the user's apps: their icons, no tab bar, and the email no
   await expect(account.locator("img")).toHaveAttribute("src", "/logos/account.svg");
   await expect(main.locator("ul > li > a")).toHaveText([
     "Account",
-    "Social",
     "Shared",
     "Shows",
     "Books",
@@ -448,7 +447,7 @@ test("badges: Shared's tasks due for you, Shows' friend requests and new recomme
   const friend = await otherPerson(browser);
   expect((await friend.page.request.post("/api/shows/friends", { data: { username: me.username } })).ok()).toBe(true);
   await page.reload();
-  await expect(icon("Social")).toHaveAccessibleName("Social, 1 friend request");
+  await expect(icon("Shows")).toHaveAccessibleName("Shows, 1 new");
 
   expect((await page.request.post("/api/shows/friends", { data: { username: friend.user.username } })).ok()).toBe(true);
   const recommended = await friend.page.request.post("/api/shows/recommendations", {

@@ -266,7 +266,7 @@ test("username availability requires login, validates input and limits checks", 
   expect((await page.request.get(`${endpoint}?username=${user.username}`)).status()).toBe(429);
 });
 
-test("Name sets the name, one word or more, which Social's profile shows over the @username", async ({ page }) => {
+test("Name sets the name, one word or more, which the Shows profile shows over the @username", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/");
@@ -299,7 +299,7 @@ test("Name sets the name, one word or more, which Social's profile shows over th
   await openSetting(page, "Name");
   await expect(field).toHaveValue("Ana Sofia Reis");
 
-  await page.goto("/social/profile");
+  await page.goto("/shows/profile");
   const main = page.getByRole("main");
   await expect(main.getByText("Ana Sofia Reis", { exact: true })).toBeVisible();
   await expect(main.getByText(`@${user.username}`, { exact: true })).toBeVisible();
@@ -610,7 +610,7 @@ test.describe("at 320px wide", () => {
 
     // Three icons to a row, all of each on the screen, even this narrow.
     const main = page.getByRole("main");
-    const icons = ["Shared", "Shows", "Recipes"].map((name) => main.getByRole("link", { name, exact: true }));
+    const icons = ["Books", "Recipes", "Fitness"].map((name) => main.getByRole("link", { name, exact: true }));
     for (const icon of icons) await expect(icon).toBeInViewport({ ratio: 1 });
     const tops = await Promise.all(icons.map(async (icon) => (await icon.boundingBox())!.y));
     expect(new Set(tops).size).toBe(1);

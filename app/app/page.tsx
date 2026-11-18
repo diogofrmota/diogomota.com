@@ -59,8 +59,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const badges = await homeBadges(user.id);
   const counts: Record<string, [number, string]> = {
     "/shared": [badges.shared, plural(badges.shared, "task due", "tasks due")],
-    "/social": [badges.social, plural(badges.social, "friend request", "friend requests")],
-    "/shows": [badges.shows, `${badges.shows} new`],
+    "/shows": [badges.shows + badges.social, `${badges.shows + badges.social} new`],
     "/recipes": [badges.recipes, `${badges.recipes} to buy`],
     "/fitness": [badges.fitness, plural(badges.fitness, "supplement to take", "supplements to take")],
   };

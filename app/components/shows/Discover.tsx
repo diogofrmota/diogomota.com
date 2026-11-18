@@ -59,7 +59,7 @@ function Section({ type, section, heading }: { type: MediaType; section: Discove
   const [ref, near] = useNearScreen<HTMLElement>();
   const { data, error, loading, retry } = useShowsData<TitleSummary[]>(
     near ? `/discover/${type}/${section}` : null,
-    // Friendships are managed in Social and can change outside this query client.
+    // Friendships are managed in the Profile tab and can change outside this query client.
     // Both friend sections load again when opened, and when the page regains focus.
     section !== "recommended" && section !== "friends",
   );

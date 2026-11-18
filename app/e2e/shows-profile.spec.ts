@@ -185,7 +185,7 @@ test("the friend search suggests people by username or name while typing, and sa
   const ann = await otherPerson(browser);
   // Ann already asked me.
   expect((await ann.page.request.post("/api/social/friends", { data: { username: me.username } })).status()).toBe(201);
-  await page.goto("/social/friends");
+  await page.goto("/shows/profile");
   const friends = section(page, "Friends");
   const field = friends.getByRole("combobox", { name: "Add a friend" });
   const list = friends.getByRole("listbox", { name: "People" });

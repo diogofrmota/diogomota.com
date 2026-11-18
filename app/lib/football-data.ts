@@ -39,9 +39,31 @@ async function loadSchedule(): Promise<BenficaSchedule> {
   }
 }
 
+/**
+ * The e2e tests' schedule (the Benfica app's tests mock it in the browser): two
+ * games, at the same times all day, so importing them twice finds them there.
+ */
+function testSchedule(): BenficaSchedule {
+  const day = (days: number, hour: number) => {
+    const date = new Date();
+    date.setUTCHours(hour, 0, 0, 0);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString();
+  };
+  const match = { confirmedTime: true, competition: "Liga Portugal" };
+  return {
+    matches: [
+      { ...match, id: 1, kickoff: day(2, 20), home: true, homeTeam: "Benfica", awayTeam: "Sporting CP" },
+      { ...match, id: 2, kickoff: day(9, 18), home: false, homeTeam: "FC Porto", awayTeam: "Benfica" },
+    ],
+    updatedAt: new Date().toISOString(),
+    stale: false,
+  };
+}
+
 /** One shared cache and in-flight request for all accounts; the token stays on the server. */
 export function benficaSchedule(): Promise<BenficaSchedule> {
-  if (testHooksEnabled()) return Promise.resolve({ matches: [], updatedAt: new Date().toISOString(), stale: false });
+  if (testHooksEnabled()) return Promise.resolve(testSchedule());
   const age = cached ? Date.now() - Date.parse(cached.updatedAt) : Infinity;
   if (cached && age < ttl) return Promise.resolve(cached);
   if (Date.now() < retryAfter) {

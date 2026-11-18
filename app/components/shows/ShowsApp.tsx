@@ -1,12 +1,14 @@
 "use client";
 import { AppShell } from "@/components/common/AppShell";
-import { CompassIcon, LibraryIcon } from "@/components/common/icons";
+import { CompassIcon, LibraryIcon, UserIcon } from "@/components/common/icons";
 import { QueryProvider } from "@/components/common/QueryProvider";
 import { useAppView } from "@/hooks/useAppView";
 import type { AppViewState } from "@/lib/app-views";
 import type { Named } from "@/lib/names";
-import { parseTitleKey } from "@/lib/show-types";
+import { parseTitleKey, titleKey } from "@/lib/show-types";
 import type { Theme } from "@/lib/themes";
+import { FriendProfile } from "@/components/social/FriendProfile";
+import { Profile } from "@/components/social/Profile";
 import { Discover } from "./Discover";
 import { LibraryProvider, setupShows } from "./library";
 import { QuickActions } from "./QuickActions";
@@ -30,6 +32,12 @@ function Panels() {
   );
 }
 
+// Your profile, whose titles open their panel here, as the rest of Shows does.
+function MyProfile({ username }: { username: string }) {
+  const { openPanel } = useAppView();
+  return <Profile app="shows" own username={username} onOpenTitle={(title) => openPanel(`title:${titleKey(title)}`)} />;
+}
+
 // Library (what you're watching, planned and completed) and Discover,
 // as tabs. The view and its open panels are in the URL: /shows/discover?p=title:tv:1396.
 export function ShowsApp({
@@ -37,12 +45,30 @@ export function ShowsApp({
   theme,
   initial,
   version,
+  profileId,
 }: {
   user: Named & { id: string; avatarUrl: string | null };
   theme: Theme;
   initial: AppViewState;
   version: string;
+  /** A friend's profile (/shows/profile/id), in the app's frame. */
+  profileId?: string;
 }) {
+  if (profileId)
+    return (
+      <FriendProfile
+        app="shows"
+        name="Shows"
+        tabs={[
+          { id: "library", label: "Library", icon: <LibraryIcon /> },
+          { id: "discover", label: "Discover", icon: <CompassIcon /> },
+          { id: "profile", label: "Profile", icon: <UserIcon /> },
+        ]}
+        user={user}
+        theme={theme}
+        profileId={profileId}
+      />
+    );
   return (
     <QueryProvider userId={user.id} version={version} setup={setupShows}>
       <LibraryProvider>
@@ -56,6 +82,12 @@ export function ShowsApp({
           tabs={[
             { id: "library", label: "Library", icon: <LibraryIcon />, view: <Watchlist /> },
             { id: "discover", label: "Discover", icon: <CompassIcon />, view: <Discover /> },
+            {
+              id: "profile",
+              label: "Profile",
+              icon: <UserIcon />,
+              view: <MyProfile username={user.username} />,
+            },
           ]}
         >
           <Panels />

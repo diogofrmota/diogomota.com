@@ -167,6 +167,45 @@ function ActivityCard() {
   );
 }
 
+/** Calendars that can be imported into this one: for now, just Benfica's games. */
+function ImportCalendarsCard() {
+  const client = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
+  async function importBenfica() {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const { added } = await sharedRequest<{ added: number; skipped: number }>("/import/benfica", { method: "POST" });
+      void client.invalidateQueries({ queryKey: sharedKeys.events });
+      setNotice({
+        text: added
+          ? `Added ${added} Benfica ${added === 1 ? "game" : "games"} to your calendar.`
+          : "Your calendar already has all of Benfica's upcoming games.",
+      });
+    } catch (error) {
+      setNotice({ text: (error as Error).message, error: true });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className={ui.card} aria-labelledby="import-heading">
+      <h2 id="import-heading" className={ui.cardHeading}>
+        Import calendars
+      </h2>
+      <p className={ui.muted}>Add events from another calendar to yours. Games already there are not added twice.</p>
+      <div className={ui.actions}>
+        <Button onClick={importBenfica} busy={busy}>
+          <CalendarIcon />
+          Benfica games
+        </Button>
+      </div>
+      {notice && <Notice error={notice.error}>{notice.text}</Notice>}
+    </section>
+  );
+}
+
 function SpaceCards({
   space,
   userId,
@@ -231,6 +270,7 @@ function SpaceCards({
         <p className={ui.muted}>Share an invite with someone else. It expires in 24 hours!</p>
         <InviteLink space={space} />
       </section>
+      <ImportCalendarsCard />
       <CalendarFeedCard />
       <ActivityCard />
       {/* Leaving: a button after the cards. It can be undone for a few seconds;

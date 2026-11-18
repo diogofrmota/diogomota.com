@@ -47,7 +47,7 @@ export default async function PrivacyPage() {
         </li>
         <li>
           <strong>Shows:</strong> your library (what you watch, plan and finished, and your progress), and what you
-          recommend to friends. Only friends you accepted see your library through Social.
+          recommend to friends. Only friends you accepted see your library on your Shows profile.
         </li>
         <li>
           <strong>Recipes:</strong> your recipes (their ingredients, steps, notes, tags and links), their photos (made
@@ -55,7 +55,7 @@ export default async function PrivacyPage() {
         </li>
         <li>
           <strong>Books:</strong> your books, reading shelves and page progress. You and your accepted friends can see
-          them in Social.
+          them on your Books profile.
         </li>
         <li>
           <strong>Benfica:</strong> your home fixtures, attendance plans, ticket status and calendar reminder choices.
@@ -66,7 +66,7 @@ export default async function PrivacyPage() {
           steps, water, body weight and supplements you log each day, with your daily goals. Only you see them.
         </li>
         <li>
-          <strong>Social:</strong> your friends and requests. Your profile shares Books and Shows statistics, plans and
+          <strong>Friends:</strong> your friends and requests. Your Shows and Books profiles share statistics, plans and
           progress with accepted friends only.
         </li>
         <li>

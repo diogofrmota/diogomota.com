@@ -123,8 +123,8 @@ test("a title's panel: its genres, the friends who have it, More like this, Reco
     await expect(recommended).toContainText(`From ${me.name}`);
 
     // Her Profile has what her friends did: I started watching The Quiet Orchard, and recommended Harbor Lights.
-    await ana.page.goto("/social");
-    const activity = section(ana.page, "Activity");
+    await ana.page.goto("/shows/profile");
+    const activity = section(ana.page, "Friends’ activity");
     await expect(activity).toContainText(`${me.name} started watching The Quiet Orchard`);
     // Recommended to her: "to you", in her own feed.
     await expect(activity).toContainText(`${me.name} recommended Harbor Lights to you`);

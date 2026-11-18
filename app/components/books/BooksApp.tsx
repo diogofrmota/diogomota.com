@@ -3,7 +3,9 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/common/AppShell";
-import { BookIcon, CompassIcon } from "@/components/common/icons";
+import { FriendProfile } from "@/components/social/FriendProfile";
+import { Profile } from "@/components/social/Profile";
+import { BookIcon, CompassIcon, UserIcon } from "@/components/common/icons";
 import { QueryProvider } from "@/components/common/QueryProvider";
 import { Dialog } from "@/components/common/Dialog";
 import { Alert, Button } from "@/components/common/ui";
@@ -508,19 +510,43 @@ export function BooksApp({
   theme,
   initial,
   version,
+  profileId,
 }: {
   user: { id: string; username: string; avatarUrl: string | null };
   theme: Theme;
   initial: AppViewState;
   version: string;
+  /** A friend's profile (/books/profile/id), in the app's frame. */
+  profileId?: string;
 }) {
   const tabs = useMemo(
     () => [
       { id: "library", label: "Books", icon: <BookIcon />, view: <BooksLibrary /> },
       { id: "discover", label: "Discover", icon: <CompassIcon />, view: <BooksDiscover /> },
+      {
+        id: "profile",
+        label: "Profile",
+        icon: <UserIcon />,
+        view: <Profile app="books" own username={user.username} />,
+      },
     ],
-    [],
+    [user.username],
   );
+  if (profileId)
+    return (
+      <FriendProfile
+        app="books"
+        name="Books"
+        tabs={[
+          { id: "library", label: "Books", icon: <BookIcon /> },
+          { id: "discover", label: "Discover", icon: <CompassIcon /> },
+          { id: "profile", label: "Profile", icon: <UserIcon /> },
+        ]}
+        user={user}
+        theme={theme}
+        profileId={profileId}
+      />
+    );
   return (
     <QueryProvider userId={user.id} version={version}>
       <AppShell

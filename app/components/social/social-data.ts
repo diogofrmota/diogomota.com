@@ -2,6 +2,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api-request";
 
+/** The app a profile or friends list is shown in. */
+export type SocialApp = "shows" | "books";
+
 export function socialRequest<T>(path: string, options: { method?: string; body?: object; signal?: AbortSignal } = {}) {
   return apiRequest<T>(`/api/social${path}`, { ...options, fallback: "Could not load Social. Try again." });
 }

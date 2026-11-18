@@ -315,34 +315,31 @@ test("Shows: every view and dialog, each closed with Back", async ({ page, brows
       })
     ).ok(),
   ).toBe(true);
-  await page.goto("/social/friends");
+  await page.goto("/shows/profile");
   await expect(page.getByRole("button", { name: `Accept ${asker.user.username}` })).toBeVisible();
   const friendLink = page
     .getByRole("list", { name: "Your friends" })
     .getByRole("link", { name: new RegExp(friend.user.username) });
   await expect(friendLink).toBeVisible();
-  await checkView(page, "Social Friends");
+  await checkView(page, "Shows Profile friends");
   await page.getByLabel("Add a friend").fill(asker.user.username.slice(0, 10));
   await expect(
     page.getByRole("listbox", { name: "People" }).getByRole("option", { name: new RegExp(asker.user.username) }),
   ).toBeVisible();
-  await checkView(page, "Social search suggestions");
+  await checkView(page, "Shows Profile search suggestions");
   await page.getByLabel("Add a friend").fill("");
   await friendLink.click();
   const profile = page.getByRole("main");
   await expect(profile.getByRole("link", { name: /Harbor Lights/ })).toBeVisible();
-  await checkView(page, "Social friend's profile");
+  await checkView(page, "Shows friend's profile");
   await page.goBack();
   await expect(friendLink).toBeVisible();
-  await page
-    .getByRole("navigation", { name: "Social", exact: true })
-    .getByRole("button", { name: "My profile" })
-    .click();
+  await page.goto(`/books/profile/${friend.id}`);
+  await expect(page.getByRole("main")).toContainText("A friend's current book");
+  await checkView(page, "Books friend's profile");
+  await page.getByRole("navigation", { name: "Books", exact: true }).getByRole("button", { name: "Profile" }).click();
   await expect(page.getByRole("heading", { name: "My profile" })).toBeVisible();
-  await checkView(page, "Social My profile");
-  await page.getByRole("navigation", { name: "Social", exact: true }).getByRole("button", { name: "Activity" }).click();
-  await expect(page.getByRole("heading", { name: "Activity", exact: true })).toBeVisible();
-  await checkView(page, "Social Activity");
+  await checkView(page, "Books Profile");
   await friend.context.close();
   await asker.context.close();
 });
@@ -633,6 +630,6 @@ test("a load that fails says so, and Retry loads it again", async ({ page }) => 
     "Discover",
   );
   await expect(grid(page, "Top Rated TV shows").getByRole("listitem").first()).toBeVisible();
-  await failing("**/api/social/friends", () => page.goto("/social/friends").then(() => {}), "Social Friends");
+  await failing("**/api/social/friends", () => page.goto("/shows/profile").then(() => {}), "Shows Profile friends");
   await expect(page.getByText("No friends yet.", { exact: false })).toBeVisible();
 });

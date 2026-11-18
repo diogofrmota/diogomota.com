@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import type { z } from "zod";
 import { recordActivity } from "./activity";
 import { localParts, type CalendarEvent } from "./calendar";
+import type { BenficaMatch } from "./football-types";
 import { HttpError } from "./http";
 import type { eventInput } from "./schemas";
 import { isUuid } from "./schemas";
@@ -130,4 +131,42 @@ export async function deleteEvent(db: PoolClient, space: Space, userId: string, 
     data: { title: event.title },
   });
   return null;
+}
+
+/** A match's length on the calendar: about two hours of football and the walk in. */
+const matchMinutes = 120;
+
+/**
+ * Adds Benfica's games to the space's calendar as events for the whole group,
+ * skipping any already there (same title and kickoff), so importing twice adds
+ * nothing new.
+ */
+export async function importBenficaGames(
+  db: PoolClient,
+  space: Space,
+  userId: string,
+  matches: BenficaMatch[],
+): Promise<{ added: number; skipped: number }> {
+  let added = 0;
+  for (const match of matches) {
+    const title = `${match.homeTeam} vs ${match.awayTeam}`;
+    const startsAt = new Date(match.kickoff);
+    const endsAt = new Date(startsAt.getTime() + matchMinutes * 60_000);
+    const { rowCount } = await db.query("SELECT 1 FROM events WHERE space_id = $1 AND title = $2 AND starts_at = $3", [
+      space.id,
+      title,
+      startsAt,
+    ]);
+    if (rowCount) continue;
+    await createEvent(db, space, userId, {
+      title,
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
+      allDay: false,
+      isGroup: true,
+      assigneeIds: [],
+    });
+    added++;
+  }
+  return { added, skipped: matches.length - added };
 }

@@ -109,7 +109,7 @@ test("task Who? saves multiple people, keeps pictures after reload, and removes 
   }
 });
 
-test("a phone opens on the agenda and can switch to month", async ({ page }) => {
+test("a phone opens on the month and can switch to the agenda", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const { space } = await setup(page);
   for (const [title, day, time] of [
@@ -122,6 +122,8 @@ test("a phone opens on the agenda and can switch to month", async ({ page }) => 
     expect(created.status()).toBe(201);
   }
   await page.reload();
+  await expect(page.getByRole("region", { name: "month calendar" })).toBeVisible();
+  await page.getByRole("button", { name: "Agenda", exact: true }).click();
   const agenda = page.getByRole("region", { name: "agenda calendar" });
   await expect(agenda).toBeVisible();
   await expect(page.getByRole("button", { name: "Month", exact: true })).toBeVisible();
@@ -289,6 +291,31 @@ test("the calendar loads a period at a time: the API takes a range", async ({ pa
   expect((await range("2026-07-01", "2026-08-01")).status()).toBe(400);
   expect((await range(at("2026-01-01", "00:00"), at("2027-06-01", "00:00"))).status()).toBe(400);
   expect((await (await page.request.get(events)).json()).data).toHaveLength(2);
+});
+
+test("Settings imports Benfica's games into the calendar, once each, for the whole space", async ({ page }) => {
+  await setup(page);
+  await openSpaceSettings(page);
+  const card = page.getByRole("region", { name: "Import calendars" });
+  await card.getByRole("button", { name: "Benfica games", exact: true }).click();
+  await expect(card.getByRole("status")).toHaveText("Added 2 Benfica games to your calendar.");
+  const imported = (await (await page.request.get(events)).json()).data as CalendarEvent[];
+  expect(imported.map((event) => event.title)).toEqual(["Benfica vs Sporting CP", "FC Porto vs Benfica"]);
+  for (const event of imported) {
+    expect(event).toMatchObject({ isGroup: true, allDay: false, assigneeIds: [] });
+    expect(Date.parse(event.endsAt) - Date.parse(event.startsAt)).toBe(2 * 60 * 60_000);
+  }
+  // Again: nothing new.
+  await card.getByRole("button", { name: "Benfica games", exact: true }).click();
+  await expect(card.getByRole("status")).toHaveText("Your calendar already has all of Benfica's upcoming games.");
+  expect((await (await page.request.get(events)).json()).data).toHaveLength(2);
+  // And the calendar, which opens on the month, has them.
+  await sharedTab(page, "Calendar").click();
+  await expect(page.getByRole("region", { name: "month calendar" })).toBeVisible();
+  await page.getByRole("button", { name: "Agenda", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "agenda calendar" }).getByRole("button", { name: /^Benfica vs Sporting CP,/ }),
+  ).toBeVisible();
 });
 
 test("Settings has a calendar link that calendar apps subscribe to; a new link stops the old one", async ({

@@ -11,16 +11,16 @@ export const metadata: Metadata = { title: "Shows", robots: { index: false } };
 
 export const viewport = appViewport;
 
-// /shows, /shows/discover, /shows/profile, with the open panels in ?p=
+// /shows, /shows/discover, /shows/profile (a friend's: /shows/profile/id), with the open panels in ?p=
 // (hooks/useAppView.ts): the server renders the view and panels of the URL.
 export default async function ShowsPage({ params, searchParams }: PageProps<"/shows/[[...view]]">) {
   const [{ view }, { p }] = await Promise.all([params, searchParams]);
+  // Old links to a friend's panel: their profile is a page of its own now.
   const friend = [p ?? []]
     .flat()
     .find((panel) => panel.startsWith("friend:"))
     ?.slice(7);
-  if (friend) redirect(`/social/profile/${encodeURIComponent(friend)}`);
-  if (view?.length === 1 && view[0] === "profile") redirect("/social/profile");
+  if (friend) redirect(`/shows/profile/${encodeURIComponent(friend)}`);
   const initial = viewFromParams(showsViews, view, p);
   if (!initial) notFound();
   const { id } = await requireUser(view ? `/shows/${view.join("/")}` : "/shows");

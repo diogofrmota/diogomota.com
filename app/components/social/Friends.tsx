@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api-request";
 import type { FriendsState, Person } from "@/lib/social-types";
 import Link from "next/link";
 import { AddFriend, requestSentText } from "./AddFriend";
-import { socialRequest } from "./social-data";
+import { socialRequest, type SocialApp } from "./social-data";
 import { LoadError } from "../shows/TitleGrid";
 import styles from "../shows/Shows.module.css";
 
@@ -89,12 +89,12 @@ function NoticeLine({ notice }: { notice: Notice }) {
   );
 }
 
-function FriendRow({ person, onRemove }: { person: Person; onRemove: () => void }) {
+function FriendRow({ person, app, onRemove }: { person: Person; app: SocialApp; onRemove: () => void }) {
   return (
     <li>
       <div className={styles.personRow}>
         {/* The whole row opens their profile; "Check profile" on its right says so. */}
-        <Link className={styles.personLink} href={`/social/profile/${person.id}`}>
+        <Link className={styles.personLink} href={`/${app}/profile/${person.id}`}>
           <Avatar username={person.username} name={person.name} url={person.avatarUrl} className={styles.avatar} />
           <PersonName person={person} className={styles.personName} />{" "}
           <span className={styles.checkProfile}>Check profile</span>
@@ -108,7 +108,7 @@ function FriendRow({ person, onRemove }: { person: Person; onRemove: () => void 
 }
 
 /** Friends, incoming requests, and search, now shared across apps. */
-export function Friends() {
+export function Friends({ app }: { app: SocialApp }) {
   const { state, loadError, load, send } = useFriends();
   const requestsId = useId();
   const sentId = useId();
@@ -146,7 +146,6 @@ export function Friends() {
   const incoming = state?.incoming ?? [];
   return (
     <div className={`${styles.view} ${styles.profile}`}>
-      <h1 className={ui.heading}>Friends</h1>
       {(incoming.length > 0 || notice?.where === "requests") && (
         <section className={styles.section} aria-labelledby={requestsId}>
           <h2 id={requestsId}>Friend requests</h2>
@@ -235,6 +234,7 @@ export function Friends() {
                     <FriendRow
                       key={person.id}
                       person={person}
+                      app={app}
                       onRemove={() =>
                         undo.schedule({
                           id: person.id,

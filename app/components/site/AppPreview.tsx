@@ -146,7 +146,6 @@ const previews: Record<string, () => React.ReactNode> = {
   "/books": BooksPreview,
   "/shared": SharedPreview,
   "/shows": ShowsPreview,
-  "/social": SocialPreview,
   "/recipes": RecipesPreview,
   "/fitness": FitnessPreview,
 };
@@ -198,19 +197,6 @@ export function AppPreview({ href, className = "" }: { href: string; className?:
   return (
     <span className={`${styles.preview} ${className}`} aria-hidden="true">
       <Preview />
-    </span>
-  );
-}
-
-function SocialPreview() {
-  return (
-    <span className={styles.social}>
-      {[0, 1, 2].map((i) => (
-        <span className={styles.socialRow} key={i}>
-          <span className={styles.socialAvatar} />
-          <span className={styles.line} style={{ width: `${[65, 80, 55][i]}%` }} />
-        </span>
-      ))}
     </span>
   );
 }

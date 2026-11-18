@@ -138,7 +138,7 @@ function FriendsWithIt({ friends }: { friends: TitleDetail["friends"] }) {
               className={styles.friendAvatar}
             />
             <span>
-              <Link href={`/social/profile/${friend.id}`}>
+              <Link href={`/shows/profile/${friend.id}`}>
                 <PersonName person={friend} />
               </Link>
               <span className={styles.friendStatus}>{statusWords[friend.status]}</span>
@@ -193,7 +193,7 @@ function RecommendToFriend({ title }: { title: Pick<TitleSummary, "type" | "tmdb
           <LoadError message={friends.error} onRetry={friends.retry} />
         ) : !friends.data?.friends.length ? (
           <p className={ui.muted}>
-            Add friends in <Link href="/social/friends">Social</Link> to recommend titles to them.
+            Add friends in <Link href="/shows/profile">your profile</Link> to recommend titles to them.
           </p>
         ) : (
           <ul className={styles.recommendList}>
@@ -205,7 +205,7 @@ function RecommendToFriend({ title }: { title: Pick<TitleSummary, "type" | "tmdb
                   url={friend.avatarUrl}
                   className={styles.friendAvatar}
                 />
-                <Link href={`/social/profile/${friend.id}`}>
+                <Link href={`/shows/profile/${friend.id}`}>
                   <PersonName person={friend} />
                 </Link>
                 <Button busy={busy === friend.id} disabled={sent.has(friend.id)} onClick={() => void send(friend)}>

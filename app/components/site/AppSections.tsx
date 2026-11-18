@@ -36,7 +36,7 @@ export function AppSections({ prompted: initiallyPrompted }: { prompted?: string
             <AppWindow href={app.href} className={styles.appWindow} />
             <div className={styles.appCopy}>
               <h3 id={`${slug}-name`} className={styles.appName}>
-                <Image src={app.logo} alt="" width={36} height={36} />
+                <Image unoptimized src={app.logo} alt="" width={36} height={36} />
                 {app.name}
               </h3>
               <p className={styles.tagline}>{app.tagline}</p>

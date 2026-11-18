@@ -12,7 +12,7 @@ const steps = [
   ["Pick an app", "Every app is there from the start, on your phone or your computer."],
   [
     "Bring your people",
-    "Invite your partner to your Shared space, or add friends in Social to share what you read and watch.",
+    "Invite your partner to your Shared space, or add friends in Shows or Books to share what you read and watch.",
   ],
 ] as const;
 
@@ -38,7 +38,7 @@ const questions: { question: string; answer: React.ReactNode }[] = [
   {
     question: "Can I use it on my phone?",
     answer:
-      "Yes. Add it to your home screen and it opens like an app of its own, and your personal libraries keep working offline. Social needs a connection.",
+      "Yes. Add it to your home screen and it opens like an app of its own, and your personal libraries keep working offline. Profiles and friends need a connection.",
   },
   {
     question: "Can I take my data with me?",

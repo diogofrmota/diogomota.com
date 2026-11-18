@@ -71,7 +71,7 @@ function monday(date: string) {
 }
 const today = () => localParts(new Date()).date;
 
-// A phone opens on the agenda; larger screens open on the month.
+// A phone's month is laid out differently from a larger screen's.
 const phoneQuery = "(max-width: 47.99rem)";
 function subscribePhone(onChange: () => void) {
   const media = window.matchMedia(phoneQuery);
@@ -174,9 +174,9 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
   const now = today();
   // The month shown, by one of its days; the agenda starts on it (today at first).
   const [date, setDate] = useState(now);
-  // Null: the device's own, the agenda on a phone and the month otherwise.
+  // Null: the month, until the agenda is picked.
   const [mode, setMode] = useState<Mode | null>(null);
-  const view: Mode = mode ?? (phone ? "agenda" : "month");
+  const view: Mode = mode ?? "month";
   const [agendaCount, setAgendaCount] = useState(agendaPage);
   // The day picked in a phone's month: its events are listed under the month.
   const [picked, setPicked] = useState<string | null>(null);

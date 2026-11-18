@@ -4,14 +4,15 @@ import { expect, followAccountMenu, newUser, saveTheme, signUp, test } from "./f
 // The tabs. Shared's settings are one of them; Shows has none.
 const appViews = [
   { path: "/shared", name: "Shared", views: ["Calendar", "Tasks", "Settings"] },
-  { path: "/shows", name: "Shows", views: ["Library", "Discover"] },
-  { path: "/social", name: "Social", views: ["Activity", "Friends", "My profile"] },
+  { path: "/shows", name: "Shows", views: ["Library", "Discover", "Profile"] },
   { path: "/fitness", name: "Fitness", views: ["Today", "Workouts", "Progress"] },
 ] as const;
 
 /** A view's URL: the app's own path for its first view, the view under it for the others. */
 const viewUrl = (app: (typeof appViews)[number], view: string) =>
-  view === app.views[0] ? app.path : `${app.path}/${view === "My profile" ? "profile" : view.toLowerCase()}`;
+  view === app.views[0] ? app.path : `${app.path}/${view.toLowerCase()}`;
+/** A view's heading: its tab's name, but your own profile is "My profile". */
+const headingOf = (view: string) => (view === "Profile" ? "My profile" : view);
 
 /** The app's tabs: in the middle of the top bar on a wide screen, along the bottom on a phone. */
 const tabBar = (page: Page, app: string) => page.getByRole("navigation", { name: app, exact: true });
@@ -66,7 +67,7 @@ for (const app of appViews) {
 
     for (const view of [...app.views.slice(1), app.views[0]]) {
       await tab(page, app.name, view).click();
-      await expect(viewHeading(page)).toHaveText(view);
+      await expect(viewHeading(page)).toHaveText(headingOf(view));
       await expect(tab(page, app.name, view)).toHaveAttribute("aria-current", "page");
       await expect(tabBar(page, app.name).locator("[aria-current]")).toHaveCount(1);
       await expect(page).toHaveURL(viewUrl(app, view));
@@ -122,21 +123,21 @@ test("back and forward move between views, and out of the app to home", async ({
 });
 
 test("a reload keeps the view (it's in the URL), and back still works after it", async ({ page }) => {
-  await openApp(page, "/social");
-  await tab(page, "Social", "Friends").click();
-  await tab(page, "Social", "My profile").click();
+  await openApp(page, "/books");
+  await tab(page, "Books", "Discover").click();
+  await tab(page, "Books", "Profile").click();
   await expect(viewHeading(page)).toHaveText("My profile");
 
   await page.reload();
   await expect(viewHeading(page)).toHaveText("My profile");
-  await expect(tab(page, "Social", "My profile")).toHaveAttribute("aria-current", "page");
+  await expect(tab(page, "Books", "Profile")).toHaveAttribute("aria-current", "page");
   await page.goBack();
-  await expect(viewHeading(page)).toHaveText("Friends");
-  await expect(page).toHaveURL("/social/friends");
+  await expect(viewHeading(page)).toHaveText("Discover books");
+  await expect(page).toHaveURL("/books/discover");
   // A view's URL opens it, and one that isn't a view is a 404.
-  await page.goto("/social/profile");
+  await page.goto("/books/profile");
   await expect(viewHeading(page)).toHaveText("My profile");
-  expect((await page.goto("/social/watchlist"))!.status()).toBe(404);
+  expect((await page.goto("/books/watchlist"))!.status()).toBe(404);
 });
 
 test("back pressed while the page is still loading still goes to the previous view", async ({ page }) => {

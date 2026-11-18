@@ -18,7 +18,7 @@ async function setup(page: Page) {
   await page.getByRole("region", { name: "Invite your partner" }).getByRole("button", { name: "Not now" }).click();
   return { user, space: (await (await page.request.get("/api/shared/spaces")).json()).data as Space };
 }
-/** The month (a phone opens on the agenda). */
+/** The month (the calendar opens on it). */
 async function showMonth(page: Page) {
   const toggle = page.getByRole("button", { name: "Month", exact: true });
   await toggle.click();

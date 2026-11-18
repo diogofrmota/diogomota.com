@@ -8,12 +8,13 @@ test.beforeEach(() => test.slow());
 
 const state = async (page: Page) => (await (await page.request.get("/api/social/friends")).json()).data;
 const profile = (page: Page, id: string) => page.request.get(`/api/social/profiles/${id}`);
-const socialTab = (page: Page, name: string) =>
-  page.getByRole("navigation", { name: "Social", exact: true }).getByRole("button", { name, exact: true });
-async function openSocial(page: Page) {
+const appTab = (page: Page, app: "Shows" | "Books", name: string) =>
+  page.getByRole("navigation", { name: app, exact: true }).getByRole("button", { name, exact: true });
+// Friends, profiles and friends' activity are in the Profile tab of Shows and of Books.
+async function openProfile(page: Page, app: "shows" | "books" = "books") {
   const me = newUser();
-  await signUp(page, me, "/signup?next=/social");
-  await expect(page).toHaveURL("/social", { timeout: 30000 });
+  await signUp(page, me, `/signup?next=/${app}/profile`);
+  await expect(page).toHaveURL(`/${app}/profile`, { timeout: 30000 });
   return { ...me, id: await userId(me.username) };
 }
 async function book(page: Page, title: string, shelf = "want-to-read", pagesRead = 0, totalPages: number | null = 200) {
@@ -24,14 +25,13 @@ async function book(page: Page, title: string, shelf = "want-to-read", pagesRead
   return (await response.json()).data;
 }
 
-test("Social friend lifecycle: requests, decline, cancellation, crossed requests and removal with Undo", async ({
+test("friend lifecycle in the Books profile: requests, decline, cancellation, crossed requests and removal with Undo", async ({
   page,
   browser,
 }) => {
-  const me = await openSocial(page);
+  const me = await openProfile(page);
   const friend = await otherPerson(browser);
   try {
-    await socialTab(page, "Friends").click();
     await page.getByLabel("Add a friend").fill(friend.user.username);
     await expect(page.getByText(`${friend.user.username} has an account`, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Send request" }).click();
@@ -78,12 +78,12 @@ test("Social friend lifecycle: requests, decline, cancellation, crossed requests
   }
 });
 
-test("profiles share all shelves, planned shows, stats and progress only with accepted friends", async ({
+test("Shows and Books profiles share planned shows, shelves, stats and progress only with accepted friends", async ({
   page,
   browser,
   playwright,
 }) => {
-  const me = await openSocial(page);
+  const me = await openProfile(page);
   const friend = await otherPerson(browser);
   const stranger = await otherPerson(browser);
   try {
@@ -101,7 +101,8 @@ test("profiles share all shelves, planned shows, stats and progress only with ac
       data: { currentSeason: 1, currentEpisode: 2, isFavourite: true },
     });
     expect((await profile(page, friend.id)).status()).toBe(404);
-    expect((await page.goto(`/social/profile/${friend.id}`))?.status()).toBe(404);
+    expect((await page.goto(`/shows/profile/${friend.id}`))?.status()).toBe(404);
+    expect((await page.goto(`/books/profile/${friend.id}`))?.status()).toBe(404);
     await page.request.post("/api/social/friends", { data: { username: friend.user.username } });
     expect((await profile(page, friend.id)).status()).toBe(404);
     await friend.page.request.post(`/api/social/friends/${me.id}/accept`, { data: {} });
@@ -128,35 +129,48 @@ test("profiles share all shelves, planned shows, stats and progress only with ac
     const anonymous = await playwright.request.newContext({ baseURL: test.info().project.use.baseURL });
     expect((await anonymous.get(`/api/social/profiles/${friend.id}`)).status()).toBe(401);
     await anonymous.dispose();
-    // Old links resolve to the new full profile.
+    // Old links (a friend's panel in Shows, and Social's pages) open the Shows profile.
     await page.goto(`/shows/profile?p=friend:${friend.id}`);
-    await expect(page).toHaveURL(`/social/profile/${friend.id}`);
+    await expect(page).toHaveURL(`/shows/profile/${friend.id}`);
+    await page.goto(`/social/profile/${friend.id}`);
+    await expect(page).toHaveURL(`/shows/profile/${friend.id}`);
     await expect(page.getByRole("heading", { name: friend.user.name, level: 1 })).toBeVisible();
-    await page.screenshot({ path: test.info().outputPath("social-profile.png"), fullPage: true });
+    await page.screenshot({ path: test.info().outputPath("shows-profile.png"), fullPage: true });
+    // Shows' profile has their shows, not their books.
     await expect(
       page.getByRole("region", { name: "Planned", exact: true }).getByRole("link", { name: /The Quiet Orchard/ }),
     ).toBeVisible();
-    await expect(page.getByRole("region", { name: "Currently Reading", exact: true })).toContainText("40 / 200 pages");
-    await expect(page.getByRole("progressbar", { name: "Reading progress for Reading now" })).toHaveAttribute(
-      "value",
-      "20",
-    );
+    await expect(page.getByRole("region", { name: "Books", exact: true })).toHaveCount(0);
     await page
       .getByRole("region", { name: "Watching", exact: true })
       .getByRole("link", { name: /Harbor Lights/ })
       .click();
     await expect(page.getByRole("dialog", { name: "Harbor Lights" })).toBeVisible();
     await page.goBack();
-    await expect(page).toHaveURL(`/social/profile/${friend.id}`);
-    await socialTab(page, "My profile").click();
-    await expect(page).toHaveURL("/social/profile");
+    await expect(page).toHaveURL(`/shows/profile/${friend.id}`);
+    await appTab(page, "Shows", "Profile").click();
+    await expect(page).toHaveURL("/shows/profile");
     await expect(page.getByRole("heading", { name: "My profile" })).toBeVisible();
-    await page.goto("/shows/profile");
-    await expect(page).toHaveURL("/social/profile");
+    await page.goto("/social");
+    await expect(page).toHaveURL("/shows/profile");
+
+    // Books' profile has their books, not their shows.
+    await page.goto(`/books/profile/${friend.id}`);
+    await expect(page.getByRole("heading", { name: friend.user.name, level: 1 })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Currently Reading", exact: true })).toContainText("40 / 200 pages");
+    await expect(page.getByRole("progressbar", { name: "Reading progress for Reading now" })).toHaveAttribute(
+      "value",
+      "20",
+    );
+    await expect(page.getByRole("region", { name: "Shows", exact: true })).toHaveCount(0);
+    await appTab(page, "Books", "Profile").click();
+    await expect(page).toHaveURL("/books/profile");
+    await expect(page.getByRole("heading", { name: "My profile" })).toBeVisible();
+    // Profiles are never kept for offline use.
     expect(await page.evaluate(() => Object.values(localStorage).some((value) => value.includes("Reading now")))).toBe(
       false,
     );
-    await page.goto(`/social/profile/${friend.id}`);
+    await page.goto(`/books/profile/${friend.id}`);
     await expect(page.getByRole("region", { name: "Books", exact: true })).toContainText("Reading now");
     await friend.page.request.delete(`/api/social/friends/${me.id}`);
     const revoked = page.waitForResponse(
@@ -176,7 +190,7 @@ test("Books activity follows shelf changes, stays private, exports, and cascades
   page,
   browser,
 }) => {
-  const me = await openSocial(page);
+  const me = await openProfile(page);
   const friend = await otherPerson(browser);
   try {
     const saved = await book(friend.page, "Feed book");
@@ -185,7 +199,7 @@ test("Books activity follows shelf changes, stays private, exports, and cascades
     await page.request.post("/api/social/friends", { data: { username: friend.user.username } });
     await friend.page.request.post(`/api/social/friends/${me.id}/accept`, { data: {} });
     expect((await feed()).map((item: { kind: string }) => item.kind)).toEqual(["book-planned"]);
-    // A private Shared-style activity row must never appear in Social, even for a friend.
+    // A private Shared-style activity row must never appear in friends' activity.
     await withDatabase((db) =>
       db.query("INSERT INTO activity (user_id, kind, data) VALUES ($1, 'event-added', $2)", [
         friend.id,
@@ -202,11 +216,17 @@ test("Books activity follows shelf changes, stays private, exports, and cascades
     expect((await patch({ shelf: "finished" })).ok()).toBe(true);
     expect((await feed()).map((item: { kind: string }) => item.kind)).toEqual(["book-finished"]);
     await page.reload();
-    await expect(page.getByRole("region", { name: "Activity", exact: true })).toContainText(
+    await expect(page.getByRole("region", { name: "Friends’ activity", exact: true })).toContainText(
       `${friend.user.name} finished reading Feed book`,
     );
+    // Shows' profile has friends' watching, not their reading.
+    await page.goto("/shows/profile");
+    await expect(page.getByRole("region", { name: "Friends’ activity", exact: true })).toContainText(
+      "Nothing yet. Add friends to keep up with their watching.",
+    );
+    await page.goto("/books/profile");
     await page.getByRole("link", { name: "Feed book", exact: true }).click();
-    await expect(page).toHaveURL(`/social/profile/${friend.id}#books`);
+    await expect(page).toHaveURL(`/books/profile/${friend.id}`);
     await expect(page.getByRole("region", { name: "Books", exact: true })).toContainText("Feed book");
     const exported = await friend.page.request.get("/api/account/export");
     const archive = await exported.json();
@@ -225,7 +245,7 @@ test("Books activity follows shelf changes, stays private, exports, and cascades
 });
 
 test("a failed Books activity write rolls back the shelf change and preserves earlier activity", async ({ page }) => {
-  const me = await openSocial(page);
+  const me = await openProfile(page);
   const saved = await book(page, "Keep my shelf");
   const suffix = randomUUID().replaceAll("-", "");
   const trigger = `e2e_social_${suffix}`;
@@ -254,8 +274,8 @@ test("a failed Books activity write rolls back the shelf change and preserves ea
   }
 });
 
-test("Shows refreshes friend discovery after friendships change through Social", async ({ page, browser }) => {
-  const me = await openSocial(page);
+test("Shows refreshes friend discovery after friendships change", async ({ page, browser }) => {
+  const me = await openProfile(page);
   const friend = await otherPerson(browser);
   try {
     await friend.page.request.post("/api/shows/library", {
