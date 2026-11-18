@@ -146,7 +146,9 @@ Changes show at once and are sent one at a time, in the order they were made (Ta
 
 `/books` shows your private Want to Read, Currently Reading and Finished shelves together on one page, with one search across them. Old shelf URLs redirect here. Search by title, author or ISBN through Open Library, or add a book manually. Catalogue results include covers and an optional page count, editable to match your edition. Open a book to change its shelf or log pages read. Reaching its total moves it to Finished; moving back to Want to Read resets progress. Remove offers Undo.
 
-The authenticated `/api/books` API lists and adds books, `/api/books/:id` updates or deletes your own entry, and `/api/books/search?q=` searches the catalogue. Migration 025 adds `books`, with ownership, page-count constraints and a unique catalogue work per user. Books are included in Download my data and deleted with the account. Cached shelves are readable offline; changes require a connection. No catalogue API key is needed.
+`/books/discover` has Trending, Popular today and Top rated lists from Open Library. Trending measures rising interest, Popular today uses activity over the last 24 hours, and Top rated uses Open Library's rating ranking with at least 20 ratings. Each list loads independently with retry and empty states, and catalogue responses are cached for an hour. Add to shelves opens the existing shelf and progress form; saved books show Added across lists. The open form is in the URL and can be reloaded while the book remains in the list.
+
+The authenticated `/api/books` API lists and adds books, `/api/books/:id` updates or deletes your own entry, `/api/books/search?q=` searches the catalogue, and `/api/books/discover?list=trending|popular|top-rated` returns a discovery list (up to 12 books). Migration 025 adds `books`, with ownership, page-count constraints and a unique catalogue work per user. Books are included in Download my data and deleted with the account. Cached shelves are readable offline; changes require a connection. No catalogue API key is needed.
 
 ## Accounts, email and profile pictures
 

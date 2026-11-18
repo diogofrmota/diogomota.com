@@ -61,6 +61,12 @@
   text-align: left;
   cursor: pointer;
 }
+.discoverBook {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
 .cover {
   display: flex;
   align-items: center;

@@ -4,6 +4,8 @@ Each deploy publishes a GitHub Release (`vX.Y.Z`) listing its commits (`.github/
 
 ## Unreleased
 
+- Books has a Discover tab with Trending, Popular today and Top rated lists from Open Library, with shelf selection when adding a book and Added indicators across lists. No additional API key is required.
+
 - **Benfica**, the sixth app: private home fixtures with Lisbon kickoff times, attendance plans, ticket status and calendar reminders. Stadium days shows Going and Maybe plans by month. Export one match or upcoming plans as `.ics` with reminder alarms for calendar apps. Includes search, edits, removal with Undo, home and front-page integration, Privacy and Download my data. Migration 026 adds `benfica_fixtures`.
 
 - **Books**, the fifth app: `/books` searches Open Library or adds books manually, with Want to Read, Currently Reading and Finished shelves. Page progress is saved per account; reaching the last page finishes a book. Removal offers Undo. Books joins the home screen, front page, Privacy and Download my data. Migration 025 adds the private `books` table.

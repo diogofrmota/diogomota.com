@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/common/AppShell";
-import { BookIcon } from "@/components/common/icons";
+import { BookIcon, CompassIcon } from "@/components/common/icons";
 import { QueryProvider } from "@/components/common/QueryProvider";
 import { Dialog } from "@/components/common/Dialog";
 import { Alert, Button } from "@/components/common/ui";
@@ -23,6 +23,7 @@ import {
 } from "@/lib/book-types";
 import type { AppViewState } from "@/lib/app-views";
 import type { Theme } from "@/lib/themes";
+import { bookLists, bookListDetails, type BookList } from "@/lib/book-discovery";
 import styles from "./Books.module.css";
 
 const booksKey = ["books"];
@@ -53,6 +54,97 @@ function Cover({ book }: { book: Pick<CatalogBook, "coverId" | "title"> }) {
       ) : (
         <BookIcon />
       )}
+    </div>
+  );
+}
+
+function useBookList(list: BookList) {
+  return useQuery({
+    queryKey: ["book-discover", list],
+    queryFn: ({ signal }) => request<CatalogBook[]>(`/api/books/discover?list=${list}`, { signal }),
+    staleTime: 60 * 60 * 1000,
+    retry: false,
+  });
+}
+
+function DiscoverList({ list, books }: { list: BookList; books: readonly Book[] }) {
+  const query = useBookList(list);
+  const { openPanel } = useAppView();
+  const details = bookListDetails[list];
+  const added = new Set(books.map((book) => book.catalogId));
+  return (
+    <section className={styles.shelf} aria-labelledby={`discover-${list}`}>
+      <div className={styles.shelfHeading}>
+        <h2 id={`discover-${list}`}>{details.title}</h2>
+      </div>
+      <p className={styles.muted}>{details.description}</p>
+      {query.isPending && <p role="status">Loading {details.title.toLowerCase()} books…</p>}
+      {query.error && <Alert onRetry={() => void query.refetch()}>{query.error.message}</Alert>}
+      {query.isSuccess && query.data.length === 0 && <p>No books available in this list yet.</p>}
+      <ul className={styles.grid}>
+        {query.data?.map((book) => (
+          <li key={book.catalogId} className={styles.card}>
+            <div className={styles.discoverBook}>
+              <Cover book={book} />
+              <div className={styles.resultText}>
+                <strong>{book.title}</strong>
+                <span className={styles.muted}>{book.author || "Unknown author"}</span>
+              </div>
+            </div>
+            <div className={styles.details}>
+              <Button disabled={added.has(book.catalogId)} onClick={() => openPanel(`pick:${list}:${book.catalogId}`)}>
+                {added.has(book.catalogId) ? "Added" : "Add to shelves"}
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function BooksDiscover() {
+  const books = useBooks();
+  const { openPanel } = useAppView();
+  return (
+    <div className={styles.view}>
+      <div className={styles.toolbar}>
+        <h1 className={ui.heading}>Discover books</h1>
+        <Button onClick={() => openPanel("search")}>Search books</Button>
+      </div>
+      <p className={styles.muted}>
+        Find your next read with{" "}
+        <a href="https://openlibrary.org" target="_blank" rel="noreferrer">
+          Open Library
+        </a>
+        .
+      </p>
+      {books.error && <Alert onRetry={() => void books.refetch()}>{books.error.message}</Alert>}
+      {bookLists.map((list) => (
+        <DiscoverList key={list} list={list} books={books.data ?? []} />
+      ))}
+    </div>
+  );
+}
+
+function CatalogPanel({ list, id }: { list: BookList; id: string }) {
+  const query = useBookList(list);
+  const books = useBooks();
+  const { closePanel } = useAppView();
+  const catalog = query.data?.find((book) => book.catalogId === id);
+  const existing = books.data?.find((book) => book.catalogId === id);
+  if (existing) return <BookForm book={existing} onSaved={closePanel} />;
+  if (catalog) return <BookForm catalog={catalog} onSaved={closePanel} />;
+  return (
+    <div className={styles.form}>
+      {query.isPending ? (
+        <p role="status">Loading book…</p>
+      ) : query.error ? (
+        <Alert onRetry={() => void query.refetch()}>{query.error.message}</Alert>
+      ) : (
+        <p>This book is no longer in this list. Search for it to add it to your shelves.</p>
+      )}
+      <Button onClick={closePanel}>Close</Button>
     </div>
   );
 }
@@ -378,6 +470,8 @@ function Panels() {
   if (!panel) return null;
   const bookId = panel.startsWith("book:") ? panel.slice(5) : null;
   const book = books.data?.find((entry) => entry.id === bookId);
+  const [, pickList, pickId] = panel.split(":");
+  const list = panel.startsWith("pick:") ? bookLists.find((entry) => entry === pickList) : undefined;
   return (
     <Dialog
       key={panel}
@@ -385,7 +479,9 @@ function Panels() {
       aria-label={panel === "search" ? "Find a book" : bookId ? "Edit book" : "Add book"}
       onClose={closePanel}
     >
-      {panel === "search" ? (
+      {list && /^OL\d+W$/.test(pickId ?? "") ? (
+        <CatalogPanel list={list} id={pickId} />
+      ) : panel === "search" ? (
         <SearchBooks />
       ) : panel === "new" ? (
         <BookForm onSaved={closePanel} />
@@ -418,7 +514,13 @@ export function BooksApp({
   initial: AppViewState;
   version: string;
 }) {
-  const tabs = useMemo(() => [{ id: "library", label: "Books", icon: <BookIcon />, view: <BooksLibrary /> }], []);
+  const tabs = useMemo(
+    () => [
+      { id: "library", label: "Books", icon: <BookIcon />, view: <BooksLibrary /> },
+      { id: "discover", label: "Discover", icon: <CompassIcon />, view: <BooksDiscover /> },
+    ],
+    [],
+  );
   return (
     <QueryProvider userId={user.id} version={version}>
       <AppShell

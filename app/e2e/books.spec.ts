@@ -1,6 +1,50 @@
 import { expect, newUser, signUp, test } from "./fixtures";
 import { checkView } from "./checks";
 
+test("books discovery: lists, retry, shelf selection and saved panel links", async ({ page }) => {
+  await signUp(page, newUser(), "/signup?next=%2Fbooks");
+  await expect(page).toHaveURL("/books");
+  let popularFailed = true;
+  await page.route("**/api/books/discover?*", (route) => {
+    const list = new URL(route.request().url()).searchParams.get("list");
+    if (list === "popular" && popularFailed)
+      return route.fulfill({ status: 502, json: { error: "This book list is unavailable. Please try again." } });
+    return route.fulfill({
+      json: {
+        data:
+          list === "top-rated"
+            ? []
+            : [{ catalogId: "OL893415W", title: "Dune", author: "Frank Herbert", coverId: null, totalPages: 400 }],
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Discover", exact: true }).click();
+  await expect(page).toHaveURL("/books/discover");
+  const trending = page.getByRole("region", { name: "Trending", exact: true });
+  const popular = page.getByRole("region", { name: "Popular today", exact: true });
+  await expect(trending.getByText("Dune", { exact: true })).toBeVisible();
+  await expect(popular.getByRole("alert")).toContainText("unavailable");
+  await expect(page.getByRole("region", { name: "Top rated", exact: true })).toContainText("No books available");
+  popularFailed = false;
+  await popular.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(popular.getByText("Dune", { exact: true })).toBeVisible();
+  await trending.getByRole("button", { name: "Add to shelves" }).click();
+  await page.reload();
+  const form = page.getByRole("dialog", { name: "Add book", exact: true });
+  await expect(form.getByLabel("Title", { exact: true })).toHaveValue("Dune");
+  await form.getByLabel("Shelf", { exact: true }).selectOption("currently-reading");
+  await form.getByLabel("Pages read").fill("50");
+  await form.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(form).toBeHidden();
+  await expect(trending.getByRole("button", { name: "Added", exact: true })).toBeDisabled();
+  await expect(popular.getByRole("button", { name: "Added", exact: true })).toBeDisabled();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await checkView(page, "Books discovery");
+  await page.getByRole("button", { name: "Books", exact: true }).click();
+  await expect(page.getByText("50 of 400 pages · 13%")).toBeVisible();
+  expect((await page.request.get("/api/books/discover?list=invalid")).status()).toBe(400);
+});
+
 test("books: add manually, save progress across reloads, finish and undo removal", async ({ page }) => {
   await signUp(page, newUser(), "/signup?next=%2Fbooks");
   await expect(page).toHaveURL("/books");
