@@ -5,6 +5,7 @@ import { expect, followAccountMenu, newUser, saveTheme, signUp, test } from "./f
 const appViews = [
   { path: "/shared", name: "Shared", views: ["Calendar", "Tasks", "Settings"] },
   { path: "/shows", name: "Shows", views: ["Library", "Discover", "Profile"] },
+  { path: "/books", name: "Books", views: ["Library", "Discover", "Profile"] },
   { path: "/fitness", name: "Fitness", views: ["Today", "Workouts", "Progress"] },
 ] as const;
 
@@ -132,7 +133,7 @@ test("a reload keeps the view (it's in the URL), and back still works after it",
   await expect(viewHeading(page)).toHaveText("My profile");
   await expect(tab(page, "Books", "Profile")).toHaveAttribute("aria-current", "page");
   await page.goBack();
-  await expect(viewHeading(page)).toHaveText("Discover books");
+  await expect(viewHeading(page)).toHaveText("Discover");
   await expect(page).toHaveURL("/books/discover");
   // A view's URL opens it, and one that isn't a view is a 404.
   await page.goto("/books/profile");

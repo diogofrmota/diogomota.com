@@ -18,8 +18,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/benfica/:path*",
-    "/api/benfica/:path*",
     "/books/:path*",
     "/api/books/:path*",
     "/shared/:path*",

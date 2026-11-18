@@ -136,8 +136,9 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
 /**
  * A recipe's form: New recipe (panel "new"), or Edit recipe (edit:<id>) over its
- * page. Title, Serves, Ingredients and Method (one a line), Tags, Source link
- * and Notes; Save checks them as the API does, saves (at once on screen, and
+ * page. Title, Ingredients and Method (one a line), Tags, Source link and
+ * Notes; Edit also has Serves (a new recipe serves the default, its page
+ * scales it). Save checks them as the API does, saves (at once on screen, and
  * when there's a connection on the server), and closes: a new recipe's page
  * then opens, where its photos are added.
  */
@@ -174,7 +175,7 @@ export function RecipeForm({ id }: { id?: string }) {
     const text = (name: string) => String(data.get(name) ?? "");
     const fields: RecipeFields = {
       title: text("title").replace(/\s+/g, " ").trim(),
-      servings: Number(text("servings")),
+      servings: recipe ? Number(text("servings")) : defaultServings,
       ingredients: ingredientsOf(text("ingredients")),
       steps: stepsOf(text("steps")),
       notes: text("notes").trim(),
@@ -226,7 +227,7 @@ export function RecipeForm({ id }: { id?: string }) {
     <Sheet title={recipe ? "Edit recipe" : "New recipe"} onClose={closePanel}>
       <form ref={form} className={styles.form} onSubmit={save} noValidate>
         {failed && <Alert>Check the fields marked below.</Alert>}
-        <div className={styles.titleRow}>
+        <div className={recipe ? styles.titleRow : undefined}>
           <label>
             Title
             <input
@@ -240,21 +241,23 @@ export function RecipeForm({ id }: { id?: string }) {
             />
             {title.error}
           </label>
-          <label className={styles.serves}>
-            Serves
-            <input
-              name="servings"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={recipeLimits.servings}
-              step={1}
-              required
-              defaultValue={recipe?.servings ?? defaultServings}
-              {...servings.props}
-            />
-            {servings.error}
-          </label>
+          {recipe && (
+            <label className={styles.serves}>
+              Serves
+              <input
+                name="servings"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={recipeLimits.servings}
+                step={1}
+                required
+                defaultValue={recipe.servings}
+                {...servings.props}
+              />
+              {servings.error}
+            </label>
+          )}
         </div>
         <label>
           Ingredients

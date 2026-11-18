@@ -10,7 +10,12 @@ const windows = (globalForLimits.rateLimitWindows ??= new Map());
 const MINUTE = 60_000;
 
 export const booksRequestLimit = rateLimit("books", 120, MINUTE);
-export const bookSearchLimit = rateLimit("book-search", 20, MINUTE);
+/**
+ * Open Library through Books (searches as typing pauses, Discover's lists, a
+ * book's page), per authenticated user; the answers are cached on the server
+ * (an hour, a day for a book's page), so most of these don't reach it.
+ */
+export const bookSearchLimit = rateLimit("book-search", 60, MINUTE);
 
 // Returns a function that records one attempt for `key` and says whether it is
 // within `limit` attempts per `windowMs`.
@@ -66,7 +71,6 @@ export const recipesRequestLimit = rateLimit("recipes", 240, MINUTE);
 export const recipePhotoUploadLimit = rateLimit("recipe-photo", 30, 15 * MINUTE);
 /** Fitness API requests, per authenticated user: a workout being logged sends a change for each set ticked off. */
 export const fitnessRequestLimit = rateLimit("fitness", 240, MINUTE);
-export const benficaRequestLimit = rateLimit("benfica", 240, MINUTE);
 
 // nginx sets X-Forwarded-For to exactly the client address (nginx/nginx.conf), so
 // in production its first entry can be trusted. In development it is whatever the

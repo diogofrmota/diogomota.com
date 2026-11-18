@@ -31,7 +31,7 @@ function emptyText(section: DiscoverSection, kind: string) {
  * Whether an element has come near the screen (within a screen's height of it),
  * once: a section's titles load then, not all of Discover's at once.
  */
-function useNearScreen<T extends Element>(): [React.RefObject<T | null>, boolean] {
+export function useNearScreen<T extends Element>(): [React.RefObject<T | null>, boolean] {
   const ref = useRef<T>(null);
   const [near, setNear] = useState(false);
   useEffect(() => {

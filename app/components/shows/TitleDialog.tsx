@@ -47,7 +47,7 @@ const posterSizes = "(min-width: 48rem) 208px, 104px";
 // The overview, cut to four lines with More to read the rest (and Less), when
 // it's longer: the actions stay near the top. ResizeObserver says whether it
 // is cut, once shown and whenever its width changes.
-function Overview({ text }: { text: string }) {
+export function Overview({ text }: { text: string }) {
   const id = useId();
   const ref = useRef<HTMLParagraphElement>(null);
   const [open, setOpen] = useState(false);

@@ -23,3 +23,4 @@ One short record per decision that shapes the site: what was chosen, why, and wh
 | [0017](0017-recipes.md) | Recipes, the third app: each user's own | unreleased |
 | [0018](0018-fitness.md) | Fitness, the fourth app: each user's own | unreleased |
 | [0019](0019-books.md) | Books, the fifth app: private shelves and page progress | unreleased |
+| [0020](0020-books-looks-like-shows.md) | Books looks like Shows, with Shows' styles | unreleased |

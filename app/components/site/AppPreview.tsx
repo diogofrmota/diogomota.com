@@ -142,27 +142,12 @@ function FitnessPreview() {
 }
 
 const previews: Record<string, () => React.ReactNode> = {
-  "/benfica": BenficaPreview,
   "/books": BooksPreview,
   "/shared": SharedPreview,
   "/shows": ShowsPreview,
   "/recipes": RecipesPreview,
   "/fitness": FitnessPreview,
 };
-
-function BenficaPreview() {
-  return (
-    <span className={styles.fixtureList}>
-      {[true, false, true].map((home, i) => (
-        <span key={i} className={styles.fixture} data-home={home || undefined}>
-          <span className={styles.fixtureBadge}>{home ? "Home" : "Away"}</span>
-          <span className={styles.line} style={{ width: `${75 - i * 10}%` }} />
-          <span className={styles.line} style={{ width: "40%" }} />
-        </span>
-      ))}
-    </span>
-  );
-}
 
 function BooksPreview() {
   return (

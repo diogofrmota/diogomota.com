@@ -50,7 +50,8 @@ test("a new recipe: its form, then its page, with the ingredients scaled and a p
   await expect(form.getByText("Enter a title.")).toBeVisible();
 
   await form.getByLabel("Title").fill("Pancakes");
-  await expect(form.getByLabel("Serves")).toHaveValue("4");
+  // No Serves when adding one: it serves 4 until edited, and its page scales it.
+  await expect(form.getByLabel("Serves")).toHaveCount(0);
   await form.getByLabel(/^Ingredients/).fill("For the batter:\n- 200 g flour\n- 2 eggs\n- 300 ml milk\nSalt, to taste");
   await form.getByLabel(/^Method/).fill("1. Whisk everything together.\n2. Fry in a hot pan.");
   // Enter adds a tag, and so does a comma; a tag typed but not added counts on Save.

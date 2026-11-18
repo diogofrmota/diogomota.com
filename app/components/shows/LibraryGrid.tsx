@@ -20,12 +20,12 @@ import styles from "./Shows.module.css";
 const longPressMs = 500;
 // A section shows whole rows of titles until "Show all": 3 rows when the grid
 // has 4 columns or fewer (a phone), 2 when it's wider; 12 until it's measured.
-const collapsedCount = (columns: number) => (!columns ? 12 : columns * (columns <= 4 ? 3 : 2));
+export const collapsedCount = (columns: number) => (!columns ? 12 : columns * (columns <= 4 ? 3 : 2));
 
 // Holding a finger (or pen) still on a card for half a second, or a right click,
 // calls onLongPress instead of the browser's own menu; the click that may follow
 // the long press is swallowed. Moving the finger (a scroll) cancels it.
-function useLongPress(onLongPress: (x: number, y: number) => void) {
+export function useLongPress(onLongPress: (x: number, y: number) => void) {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const start = useRef<{ x: number; y: number } | null>(null);
   const fired = useRef(false);

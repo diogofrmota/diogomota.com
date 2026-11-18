@@ -84,19 +84,6 @@ export const apps: readonly AppInfo[] = [
     ],
     logo: "/logos/fitness.svg",
   },
-  {
-    name: "Benfica",
-    href: "/benfica",
-    description: "Upcoming Benfica games, with home matches highlighted.",
-    summary: "your Benfica stadium days",
-    tagline: "Make room for match day",
-    features: [
-      "Upcoming fixtures fetched automatically from football-data.org",
-      "Home matches highlighted for your stadium days",
-      "Competitions and kickoff times in Lisbon time",
-    ],
-    logo: "/logos/benfica.webp",
-  },
 ];
 
 /** "Shared, Shows, and Recipes". */

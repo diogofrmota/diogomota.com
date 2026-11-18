@@ -1,190 +1,168 @@
-.view {
-  width: min(1100px, 100%);
-  margin: 0 auto;
-  padding: var(--space-6);
+/* Books looks as Shows does: its views, cards, rows, panels and pickers are
+   Shows.module.css's (components/books/BookParts.tsx). Here is only what is
+   Books' own: a cover without a picture, the pages read, and its forms. */
+
+/* A cover Open Library has no picture of: the title (drawn by Shows' .noPoster)
+   on a tint of the accent, as a plain book's cover. (span.: over Shows' own,
+   whichever stylesheet comes first.) */
+span.blankCover {
+  background: color-mix(in oklch, var(--accent) 10%, var(--surface));
+  color: var(--accent);
+  border-color: color-mix(in oklch, var(--accent) 22%, var(--border));
 }
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
+
+/* Library with nothing above its first shelf: no gap above it. */
+.library > h1 + section {
+  margin-top: 0;
 }
-.shelf {
-  margin-top: var(--space-8);
-}
-.shelfHeading {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-.shelfHeading h2 {
+
+/* The author, under the title in a book's panel. */
+.author {
   margin: 0;
-  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
 }
-.muted {
+
+/* Pages read: the number, "of 300" and Save on one line. 16px text, so iOS doesn't zoom in. */
+.pagesForm {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.pagesForm label {
   color: var(--muted);
   font-size: var(--text-sm);
-  overflow-wrap: anywhere;
 }
-.filter {
-  display: grid;
-  gap: var(--space-2);
-  max-width: 420px;
-  margin-bottom: var(--space-6);
+.pagesRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
 }
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--space-4);
-  padding: 0;
-  list-style: none;
-}
-.card {
+.pagesRow input {
+  width: 7rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: var(--surface);
-  min-width: 0;
+  border-radius: var(--radius-md);
 }
-.bookButton {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: var(--space-4);
-  gap: var(--space-4);
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
+.ofPages {
+  flex: 1;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
-.discoverBook {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4);
+.fieldError {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-sm);
 }
-.cover {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 72px;
-  height: 104px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in oklch, var(--accent) 12%, var(--surface));
-  overflow: hidden;
+.pagesRow [aria-invalid="true"],
+.form [aria-invalid="true"] {
+  border-color: var(--danger);
 }
-.cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+/* Quick actions: the pages under the shelf. */
+.pagesForm:not(:first-child) {
+  margin-top: 0.25rem;
 }
-.cover svg {
-  width: 32px;
-  height: 32px;
-  color: var(--accent);
+
+/* The blurred copy behind a panel's top is only ever a picture: not a cover
+   that failed to load, drawn as a card. */
+.backdropCover:not(img) {
+  display: none;
 }
-.details {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: 0 var(--space-4) var(--space-4);
-  min-width: 0;
-  overflow-wrap: anywhere;
+
+.addError {
+  margin-top: 0.75rem;
 }
-.bookButton .details {
-  padding: 0;
-}
-.details progress {
-  width: 100%;
-  height: 8px;
-  accent-color: var(--accent);
-}
-.actions {
+
+/* Edit details and Remove from shelves, apart at the end of the panel. */
+.bookActions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
+  gap: 0.5rem;
 }
-.empty {
-  display: grid;
-  justify-items: center;
-  gap: var(--space-4);
-  padding: var(--space-8) var(--space-4);
-  text-align: center;
+.bookActions svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
 }
-.empty > svg {
-  width: 48px;
-  height: 48px;
+
+/* Search's way to a book Open Library doesn't have. */
+.addYourself {
+  margin: 1.5rem 0 0;
   color: var(--muted);
 }
-.dialog {
-  width: min(560px, calc(100vw - 32px));
+.addYourself button {
+  padding-inline: 0.25rem;
+}
+
+/* Add a book and Edit details. (dialog.: over Shows' .dialog, whichever
+   stylesheet comes first.) On a phone, as wide as the screen as every popup is
+   (Dialog.module.css). */
+dialog.formDialog {
+  width: min(30rem, calc(100% - 2rem));
 }
 .form {
   display: grid;
   gap: var(--space-4);
-  padding: var(--space-6);
 }
-.form label {
+.form label,
+.field {
   display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.form input,
-.form select,
-.filter input {
-  width: 100%;
-  min-width: 0;
-  font-size: max(16px, var(--text-md));
-}
-.search {
-  display: flex;
-  align-items: end;
-  gap: var(--space-2);
-}
-.search label {
-  flex: 1;
-}
-.results {
-  display: grid;
-  gap: var(--space-4);
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.results li {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
-}
-.results .cover {
-  width: 44px;
-  height: 64px;
-}
-.resultText {
-  display: grid;
-  flex: 1;
   gap: var(--space-1);
   min-width: 0;
-  overflow-wrap: anywhere;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
 }
-@media (max-width: 600px) {
-  .view {
-    padding: var(--space-4);
+.form input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  font-size: max(16px, var(--text-md));
+  font-weight: normal;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.form .hint {
+  color: var(--muted);
+  font-weight: normal;
+}
+.field > :last-child {
+  margin: 0;
+}
+.fieldLabel {
+  display: block;
+}
+
+/* Quick actions: a little wider than Shows', for "Want to Read". (dialog.: over
+   Shows' .menuDialog, whichever stylesheet comes first; a phone's popups are
+   as wide as the screen, Dialog.module.css.) */
+dialog.menu {
+  width: min(24rem, calc(100% - 2rem));
+}
+
+/* On a narrow cover (a phone), the shelves over it are their words alone,
+   smaller, on two lines if they must, rather than cut off ("Want t…"). */
+@container (max-width: 9rem) {
+  div.shelfChooser button.shelfOption {
+    padding-inline: 0.25rem;
+    font-size: var(--text-xs);
+    line-height: 1.2;
   }
-  .toolbar {
-    align-items: start;
+  div.shelfChooser button.shelfOption svg {
+    display: none;
   }
-  .grid {
-    grid-template-columns: 1fr;
-  }
-  .form {
-    padding: var(--space-4);
+  div.shelfChooser button.shelfOption span {
+    white-space: normal;
+    text-overflow: clip;
   }
 }

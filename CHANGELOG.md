@@ -4,6 +4,10 @@ Each deploy publishes a GitHub Release (`vX.Y.Z`) listing its commits (`.github/
 
 ## Unreleased
 
+- **Benfica is no longer an app**: its games are imported into Shared's calendar from Shared's Settings (Import calendars), which is where `/benfica` now redirects. Home, the front page, About, Privacy and Download my data no longer have it, and its API (`/api/benfica/*`) is gone. Its table, `benfica_fixtures`, stays until a contract migration drops it.
+- **Books looks and works as Shows does**: Library has Currently Reading, Want to Read and Finished as grids of covers, with each book's progress on its card and cover, quick actions (⋯, a long press or a right click) for the shelf and the pages read, and a search past 6 books. Discover has a search field and Open Library's lists as rows that scroll sideways, with + on each cover to put it on a shelf. A book has a panel of its own, like a show's: its cover, author, first publication, subjects and description from Open Library (`/api/books/works/:id`), its shelf, its progress with Pages read, Edit details and Remove from shelves with Undo. Search finds books as you type, and Add a book yourself is there for one Open Library doesn't have. Open Library requests are limited to 60 a minute per user (from 20).
+- Recipes: a new recipe's form no longer asks how many it serves: it serves 4, which its page scales and Edit recipe changes.
+
 - Social is gone as an app: Shows and Books each have a **Profile** tab with your profile for that app, your friends' activity there (watching in Shows, reading in Books) and Friends (search, requests, removal with Undo). A friend's profile is `/shows/profile/<id>` or `/books/profile/<id>`, inside the app. Old `/social` links redirect to Shows' Profile. Friend requests now count on Shows' home icon.
 - Shared: Settings has **Import calendars**, for now with Benfica games: Benfica's upcoming games from football-data.org, added to the calendar as two-hour events for the whole space, never twice. The calendar opens on the month, on a phone too.
 

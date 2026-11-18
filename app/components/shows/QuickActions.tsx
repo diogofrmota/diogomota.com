@@ -12,7 +12,7 @@ import { StatusPicker } from "./LibraryControls";
 import { LoadError } from "./TitleGrid";
 import styles from "./Shows.module.css";
 
-type Anchor = Pick<DOMRect, "left" | "right" | "top" | "bottom">;
+export type Anchor = Pick<DOMRect, "left" | "right" | "top" | "bottom">;
 // Where each menu was opened from: the ⋯ button, or the point of a right click
 // or long press. A menu reopened with forward has none and is centered.
 const anchors = new Map<string, Anchor>();
@@ -28,7 +28,7 @@ export function useOpenActions() {
 
 // On a wide screen, the menu opens beside its anchor, towards the side with the
 // most room; on a phone it is a sheet from the bottom (Shows.module.css).
-function placement(anchor: Anchor | undefined): React.CSSProperties | undefined {
+export function placement(anchor: Anchor | undefined): React.CSSProperties | undefined {
   if (!anchor || !window.matchMedia("(min-width: 48rem)").matches) return undefined;
   const { innerWidth: width, innerHeight: height } = window;
   const gap = 4;

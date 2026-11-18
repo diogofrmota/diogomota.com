@@ -165,7 +165,7 @@ export function TitleGrid({
 // With a mouse, dragging a row scrolls it, as a swipe does on a touch screen,
 // and the click at the end of a drag doesn't open the card it ended on. Touch
 // scrolls natively.
-function useDragScroll() {
+export function useDragScroll() {
   const drag = useRef<{ x: number; left: number; pointer: number; moved: boolean } | null>(null);
   const swallowClick = useRef(false);
   function end(list: HTMLElement) {

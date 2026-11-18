@@ -780,3 +780,4 @@ Everything done, in the order it happened (moved here from the former `roadmap.m
 - [ ] Every month: the check in `docs/operations.md` (Monthly check)
 - [ ] DMARC: after a few weeks of clean reports, the TXT `_dmarc` record at Porkbun from `v=DMARC1; p=none;` to `v=DMARC1; p=quarantine; adkim=r; aspf=r;` (docs/operations.md, Email)
 - [ ] The next release after `v1.2.x`: a contract migration dropping `events.notes`, `users.password_hash`, `users.password_changed_at` (with the `accounts_sync_password` trigger and function), `password_resets` and `user_shows.rating`, with its `-- contract:` comment
+- [ ] A release after Benfica stopped being an app: a contract migration dropping `benfica_fixtures` (the first Benfica app's own fixtures, read by nothing since; `026_benfica.sql`), with its `-- contract:` comment

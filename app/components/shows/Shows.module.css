@@ -1,5 +1,6 @@
-/* The Shows app. The dialogs are rendered inside the AppShell, so its theme
-   variables reach them too. */
+/* The Shows app, and Books, which looks the same: its views, cards, rows,
+   panels and pickers are these classes too (components/books). The dialogs
+   are rendered inside the AppShell, so its theme variables reach them too. */
 /* The buttons, cards and messages have the apps' common look
    (components/common/ui.module.css); --danger is the
    theme's (components/common/themes.module.css). */

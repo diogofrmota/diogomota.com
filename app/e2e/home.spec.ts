@@ -45,7 +45,7 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   await expect(hero.getByText(/^diogomota\.com\//)).toHaveCount(0);
 
   // A section per app, by its name: its icon, headline, what it does, and Open.
-  expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows", "Books", "Recipes", "Fitness", "Benfica"]);
+  expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows", "Books", "Recipes", "Fitness"]);
   for (const app of apps) {
     const section = appSection(page, app.name);
     await expect(section).toHaveAttribute("id", app.href.slice(1));
@@ -96,7 +96,7 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
   await expect(meta("name", "description")).toHaveAttribute(
     "content",
-    "Small apps to share with friends: Shared, Shows, Books, Recipes, Fitness, and Benfica.",
+    "Small apps to share with friends: Shared, Shows, Books, Recipes, and Fitness.",
   );
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com");
   const image = await page.request.get("/opengraph-image");
@@ -322,15 +322,7 @@ test("logged in, / is the user's apps: their icons, no tab bar, and the email no
   await expect(account).toHaveAttribute("href", "/account");
   await expect(account).toHaveAccessibleDescription("Manage your profile and account settings");
   await expect(account.locator("img")).toHaveAttribute("src", "/logos/account.svg");
-  await expect(main.locator("ul > li > a")).toHaveText([
-    "Account",
-    "Shared",
-    "Shows",
-    "Books",
-    "Recipes",
-    "Fitness",
-    "Benfica",
-  ]);
+  await expect(main.locator("ul > li > a")).toHaveText(["Account", "Shared", "Shows", "Books", "Recipes", "Fitness"]);
   const launcherBox = (await heading.locator("..").boundingBox())!;
   expect(Math.abs(launcherBox.y + launcherBox.height / 2 - 400)).toBeLessThan(25);
   // Big icons, side by side in the middle of the page, under the heading (four to a row on a wide screen).

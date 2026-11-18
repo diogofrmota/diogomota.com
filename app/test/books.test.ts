@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { bookInput, normalizeProgress, progressPercent } from "@/lib/book-types";
+import { bookInput, normalizeProgress, pagesText, progressPercent, shareRead } from "@/lib/book-types";
 
 describe("reading progress", () => {
   const book = bookInput.parse({ title: "Dune", totalPages: 400, pagesRead: 120, shelf: "currently-reading" });
@@ -13,6 +13,14 @@ describe("reading progress", () => {
     expect(normalizeProgress({ ...book, shelf: "finished" }).pagesRead).toBe(400);
     expect(normalizeProgress({ ...book, pagesRead: 400 }).shelf).toBe("finished");
     expect(normalizeProgress({ ...book, totalPages: null, pagesRead: 400 }).shelf).toBe("currently-reading");
+  });
+  test("how far, for a cover's line and a card's words", () => {
+    expect(shareRead(book)).toBe(0.3);
+    expect(shareRead({ ...book, totalPages: null })).toBe(0);
+    expect(shareRead({ ...book, totalPages: null, shelf: "finished" })).toBe(1);
+    expect(pagesText(book)).toBe("120 of 400 pages · 30%");
+    expect(pagesText({ ...book, totalPages: null })).toBe("120 pages read");
+    expect(pagesText({ ...book, totalPages: null, pagesRead: 1 })).toBe("1 page read");
   });
   test("rejects impossible progress and invalid catalogue data", () => {
     for (const change of [

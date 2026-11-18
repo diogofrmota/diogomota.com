@@ -7,6 +7,12 @@ export const shelfLabels: Record<Shelf, string> = {
   "currently-reading": "Currently Reading",
   finished: "Finished",
 };
+/** Where room is short (a cover's shelf chooser, the shelf picker): "Reading". */
+export const shelfShortLabels: Record<Shelf, string> = {
+  "want-to-read": "Want to Read",
+  "currently-reading": "Reading",
+  finished: "Finished",
+};
 
 export const bookInput = z
   .object({
@@ -30,6 +36,25 @@ export const bookInput = z
 export type BookInput = z.output<typeof bookInput>;
 export type Book = BookInput & { id: string; createdAt: string; updatedAt: string };
 export type CatalogBook = Pick<BookInput, "catalogId" | "title" | "author" | "coverId" | "totalPages">;
+/** A catalogue book's page (/api/books/works/:id): its first publication, description and a few subjects. */
+export type CatalogBookDetail = CatalogBook & { year: number | null; description: string; subjects: string[] };
+
+/** An Open Library cover's URL, in its M (180px wide) or L size. */
+export const coverUrl = (coverId: number, size: "M" | "L") =>
+  `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg?default=false`;
+
+/** How far through the book, 0 to 1: all of it once finished, none without a page count. */
+export function shareRead(book: Pick<BookInput, "totalPages" | "pagesRead" | "shelf">): number {
+  if (book.shelf === "finished") return 1;
+  return book.totalPages ? Math.min(1, book.pagesRead / book.totalPages) : 0;
+}
+
+/** "75 of 200 pages · 38%", or "75 pages read" without a page count. */
+export function pagesText(book: Pick<BookInput, "totalPages" | "pagesRead" | "shelf">): string {
+  const percent = progressPercent(book);
+  if (!book.totalPages) return `${book.pagesRead} ${book.pagesRead === 1 ? "page" : "pages"} read`;
+  return `${book.pagesRead} of ${book.totalPages} pages${percent !== null ? ` · ${percent}%` : ""}`;
+}
 
 export function normalizeProgress(book: BookInput): BookInput {
   if (book.shelf === "want-to-read") return { ...book, pagesRead: 0 };

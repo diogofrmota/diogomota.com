@@ -1,4 +1,3 @@
-import { mockFixtures } from "./benfica";
 import { randomUUID } from "node:crypto";
 import type { Locator, Page } from "@playwright/test";
 import sharp from "sharp";
@@ -25,37 +24,48 @@ async function goBackTo(page: Page, view: string) {
   await expect(viewHeading(page)).toHaveText(view);
 }
 
-test("Benfica upcoming fixtures on one page", async ({ page, isMobile }) => {
-  await mockFixtures(page);
-  await signUp(page, newUser(), "/signup?next=%2Fbenfica");
-  await expect(page).toHaveURL("/benfica");
-  await expect(page.getByText("Home · Stadium day", { exact: true })).toBeVisible();
-  await checkView(page, "Benfica upcoming fixtures");
-  await page.screenshot({
-    path: test.info().outputPath(isMobile ? "benfica-phone.png" : "benfica-desktop.png"),
-    fullPage: true,
-  });
-});
-
-test("Books shelves and dialogs", async ({ page }) => {
+test("Books shelves and panels", async ({ page }) => {
   await signUp(page, newUser(), "/signup?next=%2Fbooks");
   await expect(page).toHaveURL("/books");
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText(["Want to Read", "Currently Reading", "Finished"]);
-  await checkView(page, "Books empty shelf");
-  await page.getByRole("button", { name: "Add book", exact: true }).click();
-  await checkView(page, "Books search dialog");
-  await page.getByRole("button", { name: "Add manually" }).click();
-  const form = page.getByRole("dialog", { name: "Add book", exact: true });
-  await form.getByLabel("Title", { exact: true }).fill("A book with a long title for a narrow shelf");
-  await form.getByLabel("Author", { exact: true }).fill("A. Reader");
-  await form.getByLabel("Total pages").fill("300");
-  await form.getByLabel("Shelf", { exact: true }).selectOption("currently-reading");
+  await expect(page.getByRole("heading", { name: "Start by discovering books!" })).toBeVisible();
+  await checkView(page, "Books empty library");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  const search = page.getByRole("dialog", { name: "Search books" });
+  await checkView(page, "Books search");
+  await search.getByRole("button", { name: "Add a book yourself" }).click();
+  const form = page.getByRole("dialog", { name: "Add a book" });
+  await form.getByLabel("Title").fill("A book with a long title for a narrow shelf");
+  await form.getByLabel("Author").fill("A. Reader");
+  await form.getByLabel(/^Number of pages/).fill("300");
+  await form.getByRole("group", { name: "Shelf" }).getByRole("button", { name: "Reading" }).click();
   await form.getByLabel("Pages read").fill("75");
-  await checkView(page, "Books progress form");
+  await checkView(page, "Books add a book");
   await form.getByRole("button", { name: "Save", exact: true }).click();
-  await page.getByRole("dialog", { name: "Find a book" }).getByRole("button", { name: "Close", exact: true }).click();
+  await expect(form).toBeHidden();
+  await search.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(search).toBeHidden();
   await expect(page.getByText("75 of 300 pages · 25%")).toBeVisible();
-  await checkView(page, "Books reading shelf");
+  await checkView(page, "Books library");
+
+  await page.getByRole("button", { name: /^A book with a long title for a narrow shelf,/ }).click();
+  const panel = page.getByRole("dialog", { name: "A book with a long title for a narrow shelf" });
+  await expect(panel.getByRole("group", { name: "Shelf" })).toBeVisible();
+  await checkView(page, "Books book panel");
+  await panel.getByRole("button", { name: "Edit details" }).click();
+  await checkView(page, "Books edit details");
+  await page.goBack();
+  await expect(panel).toBeVisible();
+  await page.goBack();
+  await expect(panel).toBeHidden();
+
+  await page
+    .getByRole("button", { name: "Quick actions for A book with a long title for a narrow shelf" })
+    .press("Enter");
+  const actions = page.getByRole("dialog", { name: "A book with a long title for a narrow shelf" });
+  await expect(actions.getByLabel("Pages read")).toBeVisible();
+  await checkView(page, "Books quick actions");
+  await page.goBack();
+  await expect(actions).toBeHidden();
 });
 
 /** A popup's text field starts focused with a mouse; on a touch screen it doesn't (the keyboard would cover the popup). */

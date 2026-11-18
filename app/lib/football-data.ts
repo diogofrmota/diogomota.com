@@ -40,7 +40,7 @@ async function loadSchedule(): Promise<BenficaSchedule> {
 }
 
 /**
- * The e2e tests' schedule (the Benfica app's tests mock it in the browser): two
+ * The e2e tests' schedule, which Shared's import of Benfica games reads: two
  * games, at the same times all day, so importing them twice finds them there.
  */
 function testSchedule(): BenficaSchedule {

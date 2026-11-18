@@ -1,7 +1,6 @@
 import { getSession } from "@/auth";
 import { query } from "@/lib/db";
 import { listBooks } from "@/lib/books";
-import { listFixtures } from "@/lib/benfica";
 import { listEvents } from "@/lib/events";
 import { readFitness } from "@/lib/fitness";
 import { listRecipes, listShopping } from "@/lib/recipes";
@@ -20,7 +19,7 @@ export async function GET() {
   if (!session) return Response.json({ error: "Please log in again." }, { status: 401 });
   const userId = session.user.id;
 
-  const [account, library, friends, recommendations, activity, space, recipes, shopping, fitness, books, benfica] =
+  const [account, library, friends, recommendations, activity, space, recipes, shopping, fitness, books] =
     await Promise.all([
       query(
         `SELECT username, name, email, email_verified AS "emailVerified", theme_preference AS theme,
@@ -58,7 +57,6 @@ export async function GET() {
       listShopping(userId),
       readFitness(userId),
       listBooks(userId),
-      listFixtures(userId),
     ]);
 
   const shared = space
@@ -84,7 +82,6 @@ export async function GET() {
     },
     fitness,
     books,
-    benfica,
     activity: activity.rows,
   };
   const day = new Date().toISOString().slice(0, 10);
