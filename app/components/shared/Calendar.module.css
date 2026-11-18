@@ -1195,13 +1195,21 @@
     font-size: var(--text-xs);
   }
 }
-@media (max-width: 24rem) {
+@media (min-width: 22.5rem) and (max-width: 30rem) {
+  .toolbar {
+    flex-wrap: nowrap;
+  }
+}
+@media (max-width: 25rem) {
   .toolbar,
   .toolbarEnd {
     gap: var(--space-1);
   }
   .period h2 {
     padding-inline: 2px;
+  }
+  .calendar .viewSwitch button {
+    padding-inline: var(--space-1);
   }
 }
 

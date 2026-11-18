@@ -406,7 +406,7 @@ test("a repeating task comes back with its next due date when ticked off", async
   await page.getByRole("checkbox", { name: "Bins out" }).check();
   // Back in the list, unticked, due a week later; not in Done.
   await expect
-    .poll(async () => ((await (await page.request.get("/api/shared/tasks")).json()).data as TaskList[])[0].tasks[0])
+    .poll(async () => ((await (await page.request.get("/api/shared/tasks")).json()).data as TaskList[])[0]?.tasks[0])
     .toMatchObject({ isComplete: false, dueDate: datePlus(due, 7), repeat: "weekly" });
   await expect(page.getByRole("checkbox", { name: "Bins out" })).not.toBeChecked();
   await expect(page.getByText(/^Done \(/)).toHaveCount(0);
