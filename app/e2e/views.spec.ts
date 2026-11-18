@@ -329,7 +329,10 @@ test("Shows: every view and dialog, each closed with Back", async ({ page, brows
   await checkView(page, "Shows Profile search suggestions");
   await page.getByLabel("Add a friend").fill("");
   await friendLink.click();
+  // Their own page (its first visit can take a while to load): your profile has Harbor Lights too.
+  await expect(page).toHaveURL(`/shows/profile/${friend.id}`);
   const profile = page.getByRole("main");
+  await expect(profile.getByRole("heading", { name: friend.user.name, level: 1 })).toBeVisible();
   await expect(profile.getByRole("link", { name: /Harbor Lights/ })).toBeVisible();
   await checkView(page, "Shows friend's profile");
   await page.goBack();

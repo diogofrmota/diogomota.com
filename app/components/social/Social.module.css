@@ -3,7 +3,15 @@
   margin: 0 auto;
   padding: var(--space-6) var(--space-4) var(--space-8);
   display: grid;
+  /* One column no wider than the page: names cut short with … (Friends) don't widen it. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-8);
+}
+/* Each part as wide as the column. Friends (Shows' .view) centres itself with
+   auto margins, which in a grid would size it to its content: the friends'
+   whole names, wider than a phone. */
+.view > * {
+  width: 100%;
 }
 .profileHeader {
   display: grid;
