@@ -9,6 +9,7 @@ deploy_key.pub
 # Dependencies and build output
 node_modules/
 .next/
+.next-e2e-production/
 out/
 build/
 dist/

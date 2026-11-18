@@ -6,6 +6,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth, getSession } from "@/auth";
 import { checkPassword } from "@/lib/accounts";
+import { deleteAccountData } from "@/lib/account-deletion";
+import { grantSessionTransition } from "@/lib/session-transition";
 import {
   emailError,
   formPassword,
@@ -127,7 +129,7 @@ export async function changePassword(_previous: FormState, formData: FormData): 
   // Every other device is logged out; this one too, by choice (plan.md). Logging
   // in with the new password comes back here.
   await auth.api.signOut({ headers: requestHeaders }).catch(() => {});
-  redirect(`/login?${new URLSearchParams({ password: "changed", next: "/account" })}`);
+  redirect(await grantSessionTransition(`/login?${new URLSearchParams({ password: "changed", next: "/account" })}`));
 }
 
 export async function saveTheme(_previous: FormState, formData: FormData): Promise<FormState> {
@@ -165,9 +167,10 @@ export async function deleteAccount(_previous: FormState, formData: FormData): P
   if (!passwordCheckLimit(userId)) return { error: tooManyAttempts };
   if (!(await checkPassword(userId, password))) return { fieldErrors: { password: "That isn't your password." } };
 
-  await auth.api.deleteUser({ body: { password }, headers: await headers() });
+  await deleteAccountData(userId);
+  await auth.api.signOut({ headers: await headers() }).catch(() => {});
   revalidatePath("/", "layout");
-  redirect("/?account=deleted");
+  redirect(await grantSessionTransition("/?account=deleted"));
 }
 
 // Called once the profile picture has changed (set or removed) through
@@ -181,5 +184,5 @@ export async function avatarChanged(): Promise<void> {
 
 export async function logOut(): Promise<void> {
   await auth.api.signOut({ headers: await headers() }).catch(() => {});
-  redirect("/");
+  redirect(await grantSessionTransition("/"));
 }

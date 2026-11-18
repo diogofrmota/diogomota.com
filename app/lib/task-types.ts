@@ -26,7 +26,7 @@ export type Task = {
 export type TaskList = { id: string; name: string; tasks: Task[] };
 export type TaskFields = Partial<
   Pick<Task, "title" | "notes" | "dueDate" | "assigneeId" | "assigneeIds" | "isComplete" | "repeat">
->;
+> & { expectedDueDate?: string | null };
 
 export function taskAssignees(task: Pick<Task, "assigneeId" | "assigneeIds">): string[] {
   return task.assigneeIds ?? (task.assigneeId ? [task.assigneeId] : []);
@@ -64,7 +64,10 @@ export function nextDue(repeat: Repeat, dueDate: string | null, today: string): 
  * due date on and leaves it to do. Used by the API and by the optimistic update.
  */
 export function applyTaskFields(task: Task, fields: TaskFields, today: string): Task {
-  const next = { ...task, ...fields };
+  const { expectedDueDate, ...changes } = fields;
+  if (fields.isComplete && task.repeat && expectedDueDate !== undefined && expectedDueDate !== task.dueDate)
+    return task;
+  const next = { ...task, ...changes };
   if (fields.assigneeIds !== undefined) {
     next.assigneeIds = [...new Set(fields.assigneeIds)];
     next.assigneeId = next.assigneeIds[0] ?? null;

@@ -55,15 +55,15 @@ What the symptoms usually mean:
 
 ## Restart
 
-| What | Command | Effect |
-|---|---|---|
-| The app | `docker compose restart app` | a few seconds of 502s |
-| The app, after editing `.env` | `docker compose up -d app` | recreates it with the new values |
-| nginx, after a config change | `docker compose exec nginx nginx -t && docker compose exec nginx nginx -s reload` | no downtime; a broken config is refused and the old one keeps serving |
-| nginx | `docker compose restart nginx` | a second or two without the site |
-| Postgres | `docker compose restart postgres` | errors for a few seconds; the app reconnects on its own |
-| Whatever is stopped or changed | `docker compose up -d` | starts stopped services, recreates changed ones |
-| The VPS | `ssh ubuntu@162.19.252.190`, then `sudo reboot` | about a minute; the containers come back on their own |
+| What                           | Command                                                                           | Effect                                                                |
+| ------------------------------ | --------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| The app                        | `docker compose restart app`                                                      | a few seconds of 502s                                                 |
+| The app, after editing `.env`  | `docker compose up -d app`                                                        | recreates it with the new values                                      |
+| nginx, after a config change   | `docker compose exec nginx nginx -t && docker compose exec nginx nginx -s reload` | no downtime; a broken config is refused and the old one keeps serving |
+| nginx                          | `docker compose restart nginx`                                                    | a second or two without the site                                      |
+| Postgres                       | `docker compose restart postgres`                                                 | errors for a few seconds; the app reconnects on its own               |
+| Whatever is stopped or changed | `docker compose up -d`                                                            | starts stopped services, recreates changed ones                       |
+| The VPS                        | `ssh ubuntu@162.19.252.190`, then `sudo reboot`                                   | about a minute; the containers come back on their own                 |
 
 A service stopped with `docker compose stop` stays stopped across reboots (`restart: unless-stopped`); `docker compose up -d` starts it again.
 
@@ -90,7 +90,7 @@ Every deploy's image stays on Docker Hub as `diogofrmota/diogomota-com:<short SH
 
 ## Backups
 
-[infra/backup.sh](../infra/backup.sh) runs from cron ([infra/crontab](../infra/crontab)) at 03:00 server time (UTC) every 3 days. It writes `backups/diogomota_YYYYMMDD-HHMMSS.sql.gz`: plain SQL without owners or grants, gzipped and tested. Beside it, `backups/avatars_YYYYMMDD-HHMMSS.tar.gz` has the profile pictures and `backups/recipe-photos_YYYYMMDD-HHMMSS.tar.gz` the recipes' photos (the `avatars` and `recipe-photos` folders of the app's `appdata` volume, read from the running app; each skipped, with a line in the log, while the app is down or before anything was written to it). Once the dump has succeeded, it deletes each kind older than 14 days, so there are about five of each on disk. A failing backup never deletes the old ones. The offsite backup copies only the dumps: the pictures and photos can be added again, the accounts, libraries and recipes can't.
+[infra/backup.sh](../infra/backup.sh) runs from cron ([infra/crontab](../infra/crontab)) at 03:00 server time (UTC) every 3 days. It writes `backups/diogomota_YYYYMMDD-HHMMSS.sql.gz`: plain SQL without owners or grants, gzipped and tested. Beside it, `backups/avatars_YYYYMMDD-HHMMSS.tar.gz` has the profile pictures and `backups/recipe-photos_YYYYMMDD-HHMMSS.tar.gz` the recipes' photos (the `avatars` and `recipe-photos` folders of the app's `appdata` volume, read from the running app; each skipped, with a line in the log, while the app is down or before anything was written to it). Each category is pruned independently, only after its verified replacement exists, retaining the replacement even if timestamps are unusual. Skipped or failed media backups retain previous archives and produce a DEGRADED/FAILED log entry and nonzero exit status; a successful database category still receives normal 14-day retention. The offsite backup copies only the dumps: the pictures and photos can be added again, the accounts, libraries and recipes can't.
 
 The dumps are on the VPS's own disk: if the VPS is lost, so are they. Set up the [offsite backup](#offsite-backup-optional), or copy one to your PC now and then.
 
@@ -213,12 +213,12 @@ The target is `OFFSITE_DEST`, at the top of the script, and the script refuses t
 
 Today's dumps are a few KB of gzipped SQL. Even at 10 MB each, 30 copies (90 days, one every 3 days) are 300 MB. List prices as of November 2026:
 
-| Where | Price | For these dumps |
-|---|---|---|
-| [Backblaze B2](https://www.backblaze.com/cloud-storage/pricing) | $6.95 per TB a month; the first 10 GB are free; downloads free up to 3× what's stored | free |
-| [Cloudflare R2](https://developers.cloudflare.com/r2/pricing/) | 10 GB-month free, then $0.015 per GB-month; no download fees | free |
-| [Hetzner Storage Box](https://www.hetzner.com/storage/storage-box/) BX11 (1 TB, SFTP) | €3.81 a month incl. VAT | €3.81 a month; worth it only if you'd use the space for more |
-| Your own PC or NAS, over SFTP | nothing | free, if it's on and reachable at 03:30 |
+| Where                                                                                 | Price                                                                                 | For these dumps                                              |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| [Backblaze B2](https://www.backblaze.com/cloud-storage/pricing)                       | $6.95 per TB a month; the first 10 GB are free; downloads free up to 3× what's stored | free                                                         |
+| [Cloudflare R2](https://developers.cloudflare.com/r2/pricing/)                        | 10 GB-month free, then $0.015 per GB-month; no download fees                          | free                                                         |
+| [Hetzner Storage Box](https://www.hetzner.com/storage/storage-box/) BX11 (1 TB, SFTP) | €3.81 a month incl. VAT                                                               | €3.81 a month; worth it only if you'd use the space for more |
+| Your own PC or NAS, over SFTP                                                         | nothing                                                                               | free, if it's on and reachable at 03:30                      |
 
 Use a provider other than OVH, so one incident can't take the VPS and its backups together.
 
@@ -240,6 +240,7 @@ Other providers differ only in step 1 and the storage type picked in `rclone con
    - `q` to quit.
 
    **Save both crypt passwords in your password manager now.** They are what decrypts the copies, and the only other place they exist is `~/.config/rclone/rclone.conf` on the VPS: lose the VPS without them and the offsite copies are unreadable. The dumps hold email addresses and password hashes, which is why they're encrypted before leaving the VPS, private bucket or not.
+
 3. Try it: `OFFSITE_DEST=offsite: bash infra/offsite-backup.sh`, then `rclone lsl offsite:` lists the copy under its real name. In Backblaze's web UI, both the name and the contents are scrambled.
 4. In the repo: set `OFFSITE_DEST="${OFFSITE_DEST:-offsite:}"` at the top of `infra/offsite-backup.sh` and uncomment the `offsite-backup.sh` line in `infra/crontab`. Commit and push, then on the VPS: `crontab infra/crontab` (and `crontab -l` to check).
 5. After the next backup day: `tail logs/offsite-backup.log`.
@@ -261,15 +262,15 @@ Then [dry run and restore](#restore-a-backup) as usual. On a new VPS, run `rclon
 
 Rotate a secret when it may have leaked (pasted somewhere, a lost laptop, an account compromised), or whenever you like. Each one is independent of the others.
 
-| Secret | In production | Also |
-|---|---|---|
-| `AUTH_SECRET` | VPS `.env` | local `.env` and `app/.env.local` have their own dev value |
-| `POSTGRES_PASSWORD` | VPS `.env`, and the Postgres role | the local one is a dev value |
-| `RESEND_API_KEY` | VPS `.env` | local `.env` and `app/.env.local`, if the key is the same |
-| `TMDB_READ_TOKEN` | VPS `.env` | local `.env` and `app/.env.local` |
-| Docker Hub `github-actions` (read & write) | GitHub secret `DOCKERHUB_TOKEN` | local `.env`, `DOCKERHUB_TOKEN` |
-| Docker Hub `vps-pull` (read-only) | `~/.docker/config.json` of `deploy` on the VPS | local `.env`, `DOCKERHUB_PULL_TOKEN` |
-| Deploy key | GitHub secret `VPS_SSH_KEY`; its public half in `~/.ssh/authorized_keys` of `deploy` | `C:\Users\diogo\.ssh\diogomota_deploy` |
+| Secret                                     | In production                                                                        | Also                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `AUTH_SECRET`                              | VPS `.env`                                                                           | local `.env` and `app/.env.local` have their own dev value |
+| `POSTGRES_PASSWORD`                        | VPS `.env`, and the Postgres role                                                    | the local one is a dev value                               |
+| `RESEND_API_KEY`                           | VPS `.env`                                                                           | local `.env` and `app/.env.local`, if the key is the same  |
+| `TMDB_READ_TOKEN`                          | VPS `.env`                                                                           | local `.env` and `app/.env.local`                          |
+| Docker Hub `github-actions` (read & write) | GitHub secret `DOCKERHUB_TOKEN`                                                      | local `.env`, `DOCKERHUB_TOKEN`                            |
+| Docker Hub `vps-pull` (read-only)          | `~/.docker/config.json` of `deploy` on the VPS                                       | local `.env`, `DOCKERHUB_PULL_TOKEN`                       |
+| Deploy key                                 | GitHub secret `VPS_SSH_KEY`; its public half in `~/.ssh/authorized_keys` of `deploy` | `C:\Users\diogo\.ssh\diogomota_deploy`                     |
 
 To change a value in the VPS `.env` by hand, use `nano .env`: a pasted value doesn't end up in the shell history. After any change there, `docker compose up -d app` recreates the app with the new values. The same goes for `CONTACT_EMAIL`, not a secret but never shown: where `/about`'s Get in touch form sends its messages (empty, `/about` has no form and `/privacy` says to ask Diogo).
 
@@ -422,3 +423,23 @@ df -h / && docker system df                                # disk use under abou
 Every few months, also copy the newest dump to your PC (see [Backups](#backups)) and do a [restore dry run](#2-dry-run) with it, so you know it loads.
 
 What grows on disk: the app images (the deployed one and two older ones), about five dumps, container logs (capped at 30 MB each) and the database. `docker image prune` removes dangling images and is always safe. `docker image prune -a` also removes the images kept for a quick rollback, which would then be downloaded again.
+
+## Remediation rollout and media cleanup
+
+The remediation and its acceptance results are recorded in the [audit remediation ledger](audit-2026-11-18.md#remediation-ledger). Local verification uses disposable resources; a push to `main` starts the normal deployment workflow.
+
+Before a future authorized rollout, take and verify normal database/media backups, apply additive migration `028_media_cleanup_jobs.sql` using the normal migration runner, and deploy the new image. Existing images ignore the new table, so database rollback compatibility is preserved. Do not drop legacy columns or the new outbox during image rollback.
+
+Account deletion now commits logical deletion, space departure/ownership transfer and a durable media cleanup job in one database transaction. File removal happens after commit. Inspect outstanding jobs with a read-only query of `media_cleanup_jobs`. After repairing file permissions or storage availability, retry up to 20 jobs per invocation in the correctly configured app container:
+
+```sh
+docker compose exec -T app node scripts/cleanup-media.mjs
+```
+
+The command reports the remaining count and exits nonzero while jobs remain. Repeat until zero; missing files are safe to retry. Do not re-create a deleted account to retry cleanup. This command is an operations instruction, not something to run against ordinary/production data during development tests.
+
+Browser rollout requires an additional boundary: close or refresh old-version app tabs before making further offline changes. The new client imports the legacy snapshot once per app and retains the original for recovery; an already-open old client does not understand the new journal format. Unsupported legacy recurring completions without cached occurrence evidence pause editing and offer **Download pending changes**. Do not clear browser storage, delete those journals, or manually replay recurring completions without reconciling their occurrence. Pending journals are not tied to APP_VERSION; disposable query snapshots are.
+
+Before rolling an image back past this fix, synchronize/export pending changes and preserve a recovery copy. The old image/client cannot read the new journals and may replay the retained legacy snapshot; do not use an old client to resume that snapshot blindly. The database migration is compatible with rollback, but the browser persistence protocol needs this explicit recovery procedure.
+
+nginx now retains method, sanitized route, status, byte counts and timing, omitting queries/referrers and redacting bearer path segments. Request error logs are suppressed because nginx cannot redact their appended raw request. Process/configuration errors remain in the main error log. Diagnose request failures using sanitized access status/timing and application logs; never temporarily enable raw request logging for real token-bearing traffic.

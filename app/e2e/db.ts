@@ -1,10 +1,9 @@
-import { existsSync } from "node:fs";
 import pg from "pg";
+import { assertTestIsolation } from "./isolation";
 
-// Runs `fn` with a connection to the app's database: DATABASE_URL, read from
-// .env.local when it isn't in the environment.
+// Runs only against the runner's explicit disposable database. No .env fallback.
 export async function withDatabase<T>(fn: (client: pg.Client) => Promise<T>): Promise<T> {
-  if (!process.env.DATABASE_URL && existsSync(".env.local")) process.loadEnvFile(".env.local");
+  assertTestIsolation();
 
   // Bounded, so a database that doesn't answer fails the test (or the teardown)
   // instead of holding up the run.

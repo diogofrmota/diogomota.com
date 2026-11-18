@@ -54,12 +54,20 @@ const refreshHours = 3;
 export async function feedCalendar(token: string): Promise<string | null> {
   if (!/^[A-Za-z0-9_-]{32}$/.test(token)) return null;
   return transaction(async (db) => {
-    const { rows } = await db.query<{ spaceId: string | null }>(
-      `SELECT u.space_id AS "spaceId" FROM calendar_feeds f JOIN users u ON u.id = f.user_id WHERE f.token = $1`,
+    const { rows } = await db.query<{ spaceId: string | null; userId: string }>(
+      `SELECT u.space_id AS "spaceId", u.id AS "userId" FROM calendar_feeds f JOIN users u ON u.id = f.user_id WHERE f.token = $1 FOR SHARE OF u`,
       [token],
     );
     if (!rows[0]) return null;
     const feed = { name: "Shared calendar", refreshHours };
+    if (rows[0].spaceId) await db.query("SELECT id FROM spaces WHERE id = $1 FOR SHARE", [rows[0].spaceId]);
+    // Match the application's user -> space lock order, then protect the
+    // token. Recheck rotation after acquiring membership authorization.
+    const tokenStillValid = await db.query("SELECT 1 FROM calendar_feeds WHERE user_id = $1 AND token = $2 FOR SHARE", [
+      rows[0].userId,
+      token,
+    ]);
+    if (!tokenStillValid.rowCount) return null;
     if (!rows[0].spaceId) return calendarIcs([], new Map(), feed);
     const members = await db.query<Space["members"][number]>(
       `SELECT id, username, name, ${avatarUrlSql()} AS "avatarUrl" FROM users WHERE space_id = $1`,

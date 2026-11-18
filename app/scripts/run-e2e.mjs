@@ -25,6 +25,9 @@ import { execFileSync, spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomBytes } from "node:crypto";
+import { mkdir, rm, cp } from "node:fs/promises";
+import os from "node:os";
 
 const e2ePort = 3100; // playwright.config.ts: the tests' own dev server.
 const playwrightLimit = 30 * 60_000; // playwright.config.ts: globalTimeout.
@@ -223,14 +226,114 @@ async function stopLeftovers() {
   return null;
 }
 
-const blocked = await stopLeftovers();
+const integration = process.argv.includes("--integration");
+const production = process.argv.includes("--production");
+const blocked = integration ? null : await stopLeftovers();
 if (blocked) {
   console.error(blocked);
   process.exit(1);
 }
 
-const cli = createRequire(import.meta.url).resolve("@playwright/test/cli");
-const playwright = spawn(process.execPath, [cli, "test", ...process.argv.slice(2)], { stdio: "inherit" });
+const require = createRequire(import.meta.url);
+const cli = integration
+  ? path.join(path.dirname(require.resolve("vitest/package.json")), "vitest.mjs")
+  : require.resolve("@playwright/test/cli");
+// Never inherit DATABASE_URL or media paths from the application. Each run owns
+// a fresh PostgreSQL container, with no host volume and a random loopback port.
+const run = randomBytes(12).toString("hex");
+const container = `diogomota-test-${run}`;
+const mediaRoot = path.resolve(os.tmpdir(), container);
+const database = `diogomota_test_${run}`;
+const password = randomBytes(24).toString("hex");
+function docker(args) {
+  return execFileSync("docker", args, { encoding: "utf8", windowsHide: true }).trim();
+}
+async function cleanup() {
+  try {
+    docker(["rm", "-f", "-v", container]);
+  } catch {
+    /* Already removed. */
+  }
+  if (mediaRoot !== path.resolve(os.tmpdir(), `diogomota-test-${run}`)) throw new Error("Unsafe media cleanup");
+  await rm(mediaRoot, { recursive: true, force: true });
+}
+try {
+  docker([
+    "run",
+    "--detach",
+    "--name",
+    container,
+    "--label",
+    `diogomota.test-run=${run}`,
+    "--tmpfs",
+    "/var/lib/postgresql/data",
+    "-p",
+    "127.0.0.1::5432",
+    "-e",
+    "POSTGRES_USER=test",
+    "-e",
+    `POSTGRES_PASSWORD=${password}`,
+    "-e",
+    `POSTGRES_DB=${database}`,
+    "postgres:16",
+  ]);
+  const mapping = docker(["port", container, "5432/tcp"]);
+  const dbPort = mapping.match(/127\.0\.0\.1:(\d+)/)?.[1];
+  if (!dbPort) throw new Error("Test database is not loopback-only");
+  Object.assign(process.env, {
+    E2E_RUN_ID: run,
+    DATABASE_URL: `postgresql://test:${password}@127.0.0.1:${dbPort}/${database}`,
+    AVATAR_DIR: path.join(mediaRoot, "avatars"),
+    RECIPE_PHOTO_DIR: path.join(mediaRoot, "recipe-photos"),
+    AUTH_SECRET: randomBytes(32).toString("hex"),
+    RESEND_API_KEY: "",
+    TMDB_READ_TOKEN: "",
+    FOOTBALL_DATA_TOKEN: "",
+    E2E_PRODUCTION: production ? "1" : "0",
+    AUTH_URL: "http://localhost:3100",
+    NEXT_TELEMETRY_DISABLED: "1",
+  });
+  await mkdir(mediaRoot, { recursive: true });
+  let ready = false;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    try {
+      docker(["exec", container, "pg_isready", "-h", "127.0.0.1", "-U", "test", "-d", database]);
+      ready = true;
+      break;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+  if (!ready) throw new Error("Isolated PostgreSQL did not start");
+  execFileSync(process.execPath, ["scripts/migrate.mjs"], { cwd: appDir, env: process.env, stdio: "inherit" });
+  console.log(`Isolated test resources: ${container}; media: ${mediaRoot}`);
+  if (production) {
+    execFileSync(process.execPath, [require.resolve("next/dist/bin/next"), "build"], {
+      cwd: appDir,
+      env: process.env,
+      stdio: "inherit",
+    });
+    const standalone = path.join(appDir, ".next-e2e-production", "standalone");
+    await cp(path.join(appDir, "public"), path.join(standalone, "public"), { recursive: true });
+    await cp(
+      path.join(appDir, ".next-e2e-production", "static"),
+      path.join(standalone, ".next-e2e-production", "static"),
+      { recursive: true },
+    );
+  }
+} catch (error) {
+  await cleanup();
+  throw error;
+}
+const args = integration
+  ? [
+      "run",
+      "--config",
+      "vitest.integration.config.ts",
+      ...process.argv.slice(2).filter((arg) => arg !== "--integration"),
+    ]
+  : ["test", ...process.argv.slice(2).filter((arg) => arg !== "--production")];
+const playwright = spawn(process.execPath, [cli, ...args], { stdio: "inherit" });
 
 // Ctrl+C reaches Playwright too (the same console): it stops its workers and its
 // server, then exits, and this cleans up after it. Other stops are passed on.
@@ -249,5 +352,6 @@ const deadline = setTimeout(() => {
 playwright.on("exit", async (code) => {
   clearTimeout(deadline);
   await stopWhatPlaywrightLeft(playwright.pid);
+  await cleanup();
   process.exit(code ?? 1);
 });

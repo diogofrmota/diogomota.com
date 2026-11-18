@@ -4,6 +4,10 @@ Each deploy publishes a GitHub Release (`vX.Y.Z`) listing its commits (`.github/
 
 ## Unreleased
 
+- **2.0.0 remediation:** pending offline changes survive app switching, reloads and releases; simultaneous tabs use separate journals, and unsupported queues offer recovery downloads. Books owner views reopen offline, and successful account transitions clear private cached data across tabs.
+- Shared task patches preserve concurrent edits, recurring completions identify their occurrence, calendar imports serialize, and exports/feeds keep membership authorization through their reads. Account deletion is atomic with retryable media cleanup (additive migration 028).
+- Photo uploads accept the advertised limit through nginx and Next.js. Logs redact bearer links, failed media backups retain older archives, and the main deployment gate runs isolated integration, full behavioral and production-mode regressions. See [rollout and rollback instructions](docs/operations.md#remediation-rollout-and-media-cleanup).
+
 - **Benfica is no longer an app**: its games are imported into Shared's calendar from Shared's Settings (Import calendars), which is where `/benfica` now redirects. Home, the front page, About, Privacy and Download my data no longer have it, and its API (`/api/benfica/*`) is gone. Its table, `benfica_fixtures`, stays until a contract migration drops it.
 - **Books looks and works as Shows does**: Library has Currently Reading, Want to Read and Finished as grids of covers, with each book's progress on its card and cover, quick actions (⋯, a long press or a right click) for the shelf and the pages read, and a search past 6 books. Discover has a search field and Open Library's lists as rows that scroll sideways, with + on each cover to put it on a shelf. A book has a panel of its own, like a show's: its cover, author, first publication, subjects and description from Open Library (`/api/books/works/:id`), its shelf, its progress with Pages read, Edit details and Remove from shelves with Undo. Search finds books as you type, and Add a book yourself is there for one Open Library doesn't have. Open Library requests are limited to 60 a minute per user (from 20).
 - Recipes: a new recipe's form no longer asks how many it serves: it serves 4, which its page scales and Edit recipe changes.
@@ -56,7 +60,7 @@ From the review in [update_UX.md](update_UX.md):
 
 ## v1.2.0 — 2026-11-13
 
-From the review in [report.md](report.md).
+From the v1.2.0 review.
 
 **Accounts**
 - Better Auth in place of Auth.js: database sessions, ended at once by logging out, a password change or deleting the account. Everyone logs in once more after the deploy; passwords stay the same.

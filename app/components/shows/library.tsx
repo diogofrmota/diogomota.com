@@ -47,6 +47,40 @@ const forgetForYou = (client: QueryClient) => forgetShowsData(client, (path) => 
  * the library loads again after a 404 or 409 (a title removed in another tab).
  */
 export function setupShows(client: QueryClient) {
+  client.setMutationDefaults(addKey, {
+    scope,
+    mutationFn: ({ title, status }: { title: TitleRef; status: LibraryStatus }) =>
+      showsRequest<TitleDetail>("/library", {
+        method: "POST",
+        body: { type: title.type, tmdbId: title.tmdbId, status },
+      }),
+    onSuccess: async (detail: TitleDetail) => {
+      await client.cancelQueries({ queryKey: libraryKey });
+      const item: LibraryItem = {
+        type: detail.type,
+        tmdbId: detail.tmdbId,
+        title: detail.title,
+        year: detail.year,
+        posterPath: detail.posterPath,
+        rating: detail.rating,
+        runtime: detail.runtime,
+        episodeRuntime: detail.episodeRuntime,
+        episodesPerSeason: detail.episodesPerSeason,
+        library: detail.library!,
+      };
+      // Not loaded yet (it failed): load it, with the new title.
+      if (client.getQueryData(libraryKey))
+        client.setQueryData<LibraryItem[]>(
+          libraryKey,
+          (current) => current && [item, ...current.filter((i) => !same(i, item))],
+        );
+      else void client.invalidateQueries({ queryKey: libraryKey });
+      forgetForYou(client);
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 409) void client.invalidateQueries({ queryKey: libraryKey });
+    },
+  });
   client.setMutationDefaults(changeKey, {
     mutationFn: (change: Change) =>
       showsRequest(entryPath(change.title), {
@@ -120,12 +154,6 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const { mutate } = useMutation<unknown, Error, Change>({ mutationKey: changeKey });
   const { mutateAsync: addTitle } = useMutation<TitleDetail, Error, { title: TitleRef; status: LibraryStatus }>({
     mutationKey: addKey,
-    scope,
-    mutationFn: ({ title, status }) =>
-      showsRequest<TitleDetail>("/library", {
-        method: "POST",
-        body: { type: title.type, tmdbId: title.tmdbId, status },
-      }),
   });
 
   const items = useMemo(() => query.data && pending.reduce(applyChange, query.data), [query.data, pending]);
@@ -143,27 +171,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       find: (title) => items?.find((item) => same(item, title)),
       add: async (title, status) => {
         try {
-          const detail = await addTitle({ title, status });
-          const item: LibraryItem = {
-            type: detail.type,
-            tmdbId: detail.tmdbId,
-            title: detail.title,
-            year: detail.year,
-            posterPath: detail.posterPath,
-            rating: detail.rating,
-            runtime: detail.runtime,
-            episodeRuntime: detail.episodeRuntime,
-            episodesPerSeason: detail.episodesPerSeason,
-            library: detail.library!,
-          };
-          // Not loaded yet (it failed): load it, with the new title.
-          if (client.getQueryData(libraryKey))
-            client.setQueryData<LibraryItem[]>(
-              libraryKey,
-              (current) => current && [item, ...current.filter((i) => !same(i, item))],
-            );
-          else void client.invalidateQueries({ queryKey: libraryKey });
-          forgetForYou(client);
+          await addTitle({ title, status });
           setDismissedAt(Date.now());
         } catch (err) {
           // Already there (added in another tab or device): load the library again to show it.

@@ -102,7 +102,7 @@ export function FitnessApp({
     [],
   );
   return (
-    <QueryProvider userId={user.id} version={version} setup={setupFitness}>
+    <QueryProvider app="fitness" userId={user.id} version={version} setup={setupFitness}>
       <FitnessProvider>
         <OpenAfterClose queuedRef={queuedRef}>
           <AppShell

@@ -68,7 +68,7 @@ export function RecipesApp({
     [],
   );
   return (
-    <QueryProvider userId={user.id} version={version} setup={setupRecipes}>
+    <QueryProvider app="recipes" userId={user.id} version={version} setup={setupRecipes}>
       <RecipesProvider>
         <AfterCloseContext value={openAfterClose}>
           <AppShell

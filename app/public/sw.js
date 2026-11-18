@@ -12,9 +12,36 @@
 // - Everything else, the APIs too, goes to the network as usual.
 // Logging out deletes the cache (clearOfflineData).
 
-const cacheName = "diogomota-offline-v1";
-const appPages = /^\/((shared|shows|recipes|fitness)(\/|$)|$)/;
+const cacheName = "diogomota-offline-v2";
+// Only the owner's Books shelves, never another member's profile document.
+const appPages = /^\/((shared|shows|recipes|fitness)(\/|$)|books(?:\/(?:library|discover|profile))?\/?$|$)/;
 const staticFiles = /^\/(_next\/static|icons|logos)\//;
+let generation = 0;
+const writes = new Set();
+const unavailable = () => new Response(
+  '<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>View unavailable offline</title><main><h1>This view is not available offline.</h1><p>Reconnect to open it, then it can be kept on this device.</p></main></html>',
+  { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } },
+);
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "CLEAR_ACCOUNT") return;
+  generation++;
+  event.waitUntil((async () => {
+    await Promise.allSettled([...writes]);
+    await Promise.all((await caches.keys()).filter((key) => key.startsWith("diogomota-")).map((key) => caches.delete(key)));
+    event.ports[0]?.postMessage({ cleared: true });
+  })());
+});
+
+function keep(event, key, response, started) {
+  const write = (async () => {
+    if (started !== generation) return;
+    const cache = await caches.open(cacheName);
+    if (started === generation) await cache.put(key, response);
+  })();
+  writes.add(write);
+  event.waitUntil(write.finally(() => writes.delete(write)));
+}
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -22,7 +49,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== cacheName).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith("diogomota-") && key !== cacheName).map((key) => caches.delete(key))))
       .then(() => self.clients.claim()),
   );
 });
@@ -31,6 +58,7 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
+  const started = generation;
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate" && appPages.test(url.pathname)) {
@@ -41,11 +69,11 @@ self.addEventListener("fetch", (event) => {
         .then((response) => {
           if (response.ok && !response.redirected) {
             const copy = response.clone();
-            void caches.open(cacheName).then((cache) => cache.put(key, copy));
+            keep(event, key, copy, started);
           }
           return response;
         })
-        .catch(async () => (await caches.match(key)) ?? Response.error()),
+        .catch(async () => started === generation ? (await (await caches.open(cacheName)).match(key)) ?? unavailable() : unavailable()),
     );
     return;
   }
@@ -58,7 +86,7 @@ self.addEventListener("fetch", (event) => {
           fetch(request).then((response) => {
             if (response.ok) {
               const copy = response.clone();
-              void caches.open(cacheName).then((cache) => cache.put(request, copy));
+              keep(event, request, copy, started);
             }
             return response;
           }),

@@ -70,7 +70,7 @@ export function ShowsApp({
       />
     );
   return (
-    <QueryProvider userId={user.id} version={version} setup={setupShows}>
+    <QueryProvider app="shows" userId={user.id} version={version} setup={setupShows}>
       <LibraryProvider>
         <AppShell
           name="Shows"

@@ -16,6 +16,7 @@ import {
 } from "@/lib/account-rules";
 import type { FormState } from "@/lib/form-state";
 import { safeNextPath } from "@/lib/next-path";
+import { grantSessionTransition } from "@/lib/session-transition";
 import { clientIp, signUpLimit } from "@/lib/rate-limit";
 
 // Signs up and logs straight in. A link to confirm the email is sent at the same
@@ -56,5 +57,5 @@ export async function signUp(_previous: FormState, formData: FormData): Promise<
       values,
     };
   }
-  redirect(safeNextPath(formData.get("next")) ?? "/");
+  redirect(await grantSessionTransition(safeNextPath(formData.get("next")) ?? "/", true));
 }

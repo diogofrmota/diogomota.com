@@ -87,7 +87,7 @@ export function SharedApp({
   version: string;
 }) {
   return (
-    <QueryProvider userId={user.id} version={version} setup={setupShared}>
+    <QueryProvider app="shared" userId={user.id} version={version} setup={setupShared}>
       <Shared user={user} initialSpace={initialSpace} initial={initial} />
     </QueryProvider>
   );

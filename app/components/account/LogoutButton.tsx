@@ -1,7 +1,6 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { clearOfflineData } from "@/components/common/QueryProvider";
 import { InlineSpinner, PendingOverlay } from "@/components/common/Spinner";
 
 /**
@@ -14,13 +13,7 @@ import { InlineSpinner, PendingOverlay } from "@/components/common/Spinner";
 export function LogoutButton({ className, icon }: { className: string; icon?: React.ReactNode }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      className={className}
-      disabled={pending}
-      aria-busy={pending || undefined}
-      onClick={clearOfflineData}
-    >
+    <button type="submit" className={className} disabled={pending} aria-busy={pending || undefined}>
       {icon !== undefined && (pending ? <InlineSpinner /> : icon)}
       Log out
       {icon === undefined && <PendingOverlay pending={pending} />}

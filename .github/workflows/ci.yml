@@ -1,7 +1,6 @@
 # Checks the app: formatting, lint, typecheck, the migration rules, unit tests and a
-# build, then the Playwright tests against a Postgres service. Runs on pull requests
-# (every e2e test), and deploy.yml calls it (workflow_call) as the first job of
-# every deploy, with a quicker set of e2e tests (smoke), so both run the same check.
+# build, isolated integration and behavioral tests, and production regressions.
+# Pull requests and the normal main deployment gate both exercise the full suite.
 name: CI
 
 on:
@@ -11,7 +10,7 @@ on:
       e2e:
         description: "Which Playwright tests to run: all, or smoke (the walk through every view, and logging in)."
         type: string
-        default: smoke
+        default: all
 
 permissions:
   contents: read
@@ -47,28 +46,16 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: app
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: diogomota
-          POSTGRES_PASSWORD: e2e
-          POSTGRES_DB: diogomota
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -h 127.0.0.1 -U diogomota -d diogomota"
-          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       NEXT_TELEMETRY_DISABLED: 1
-      DATABASE_URL: postgresql://diogomota:e2e@localhost:5432/diogomota
       # The tests' own dev server (playwright.config.ts).
       AUTH_URL: http://localhost:3100
-      # Pull requests run every test; a deploy runs the smoke set (inputs.e2e).
+      # Normal main deployments explicitly select all tests; smoke remains an
+      # optional reusable-workflow input, never the normal deployment gate.
       E2E_ARGS: ${{ inputs.e2e == 'smoke' && 'views.spec.ts auth.spec.ts' || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -84,10 +71,12 @@ jobs:
       - run: npm ci
       - name: A secret for this run's sessions
         run: echo "AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
-      - run: npm run migrate
       - run: npx playwright install --with-deps chromium
       # E2E_ARGS is one of two fixed values above, never user input.
+      - run: node scripts/run-e2e.mjs --integration
       - run: npm run test:e2e -- $E2E_ARGS
+      - name: Production service worker and upload regressions
+        run: npm run test:e2e -- --production production.spec.ts --project=desktop
 
       - name: Keep the report of a failed run
         if: failure()

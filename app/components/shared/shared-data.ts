@@ -161,9 +161,19 @@ export function setupShared(client: QueryClient) {
   client.setMutationDefaults(taskMutationKey, {
     mutationFn: (change: TaskChange) => sendTaskChange(change),
     scope: { id: "shared-tasks" },
-    onSuccess: async (_data, change) => {
+    onSuccess: async (data, change) => {
       await client.cancelQueries({ queryKey: sharedKeys.tasks });
-      client.setQueryData<TaskList[]>(sharedKeys.tasks, (lists) => lists && applyTaskChange(lists, change));
+      client.setQueryData<TaskList[]>(sharedKeys.tasks, (lists) => {
+        if (!lists) return lists;
+        if (change.kind === "updateTask") {
+          const saved = data as Task;
+          return lists.map((list) => ({
+            ...list,
+            tasks: list.tasks.map((task) => (task.id === saved.id ? saved : task)),
+          }));
+        }
+        return applyTaskChange(lists, change);
+      });
     },
     onError: (error) => {
       if (error instanceof ApiError && [403, 404, 409].includes(error.status))

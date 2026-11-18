@@ -88,7 +88,7 @@ export function BooksApp({
       />
     );
   return (
-    <QueryProvider userId={user.id} version={version}>
+    <QueryProvider app="books" userId={user.id} version={version}>
       <ShelvesProvider>
         <AppShell
           name="Books"

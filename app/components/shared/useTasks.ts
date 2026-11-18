@@ -66,8 +66,17 @@ export function useTasks() {
   const [dismissedAt, setDismissedAt] = useState(0);
   const error = refused && refused.at >= dismissedAt ? `${refused.message} Your change was undone.` : "";
   const { mutate } = useMutation<unknown, Error, TaskChange>({ mutationKey: taskMutationKey });
+  const latestTasks = useRef<TaskList[]>([]);
+  useEffect(() => {
+    latestTasks.current = pending.reduce(applyTaskChange, query.data ?? []);
+  }, [pending, query.data]);
   const change = useCallback(
     (next: TaskChange) => {
+      if (next.kind === "updateTask" && next.fields.isComplete) {
+        const id = next.id;
+        const task = latestTasks.current.flatMap((list) => list.tasks).find((task) => task.id === id);
+        if (task?.repeat) next = { ...next, fields: { ...next.fields, expectedDueDate: task.dueDate } };
+      }
       setDismissedAt(Date.now());
       mutate(next);
     },

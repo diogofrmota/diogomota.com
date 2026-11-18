@@ -164,7 +164,7 @@ export const taskCreate = z.object({
 export type TaskCreate = z.input<typeof taskCreate>;
 
 /** A change to a task: any of its fields. */
-export const taskPatch = z.object(taskFields).partial();
+export const taskPatch = z.object({ ...taskFields, expectedDueDate: taskFields.dueDate }).partial();
 export type TaskPatch = z.input<typeof taskPatch>;
 
 // --- Shows -------------------------------------------------------------------

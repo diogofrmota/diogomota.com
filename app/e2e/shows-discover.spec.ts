@@ -162,16 +162,18 @@ test("Discover shows TMDB's lists, three genres and Added by Friends, for TV sho
   ]);
 
   // Back to TV shows: shown at once, from what the page already loaded. All but
-  // Recommended by Friends, which loads each time: it changes when a friend sends one.
+  // The two friends sections refresh when opened; TMDB's lists stay cached.
   const requests: string[] = [];
   page.on("request", (request) => {
     const url = request.url();
-    if (url.includes("/api/shows/") && !url.endsWith("/recommended")) requests.push(url);
+    if (url.includes("/api/shows/")) requests.push(new URL(url).pathname);
   });
   await typeSwitch(page, "TV Shows").click();
   await expect(cardButtons(grid(page, "Top Rated TV shows"))).toHaveCount(20);
   await expect(cardButtons(grid(page, "Popular TV shows"))).toHaveCount(20);
-  expect(requests).toEqual([]);
+  await expect(section(page, "Added by Friends")).toContainText("No TV shows from friends yet.");
+  expect(requests).toContain("/api/shows/discover/tv/friends");
+  expect(requests.filter((url) => !url.endsWith("/recommended") && !url.endsWith("/friends"))).toEqual([]);
 
   // TMDB's logo, a link to its site, and its notice, once at the bottom (components/shows/TmdbAttribution).
   const attribution = page.getByRole("main").locator("footer").filter({ visible: true });

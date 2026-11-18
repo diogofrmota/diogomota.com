@@ -172,7 +172,19 @@ export async function updateTask(
   id: string,
   fields: z.output<typeof taskPatch>,
 ): Promise<Task> {
+  // Lock before reading/merging, then use a fresh statement snapshot for
+  // assignments too. Never upgrade the space's already-held shared lock.
+  if (!isUuid(id)) throw new HttpError("Task not found.", 404);
+  await db.query(
+    "SELECT id FROM tasks WHERE id = $1 AND list_id IN (SELECT id FROM task_lists WHERE space_id = $2) FOR UPDATE",
+    [id, space.id],
+  );
   const current = await findTask(db, space, id);
+  if (fields.isComplete && current.repeat && !current.isComplete) {
+    if (fields.expectedDueDate === undefined)
+      throw new HttpError("Reload this recurring task before completing it; its occurrence was not identified.", 409);
+    if (fields.expectedDueDate !== current.dueDate) return current;
+  }
   const task = applyTaskFields(current, fields, today());
   const assigneeIds = task.assigneeIds ?? [];
   checkAssignees(space, assigneeIds);

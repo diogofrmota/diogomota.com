@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useId, useState, type DragEvent } from "react";
+import { useActionState, useEffect, useId, useState, useSyncExternalStore, type DragEvent } from "react";
 import {
   avatarChanged,
   changeEmail,
@@ -16,7 +16,6 @@ import {
 import { AvatarCrop } from "@/components/account/AvatarCrop";
 import { LogoutButton } from "@/components/account/LogoutButton";
 import { Avatar } from "@/components/common/Avatar";
-import { clearOfflineData } from "@/components/common/QueryProvider";
 import { Dialog } from "@/components/common/Dialog";
 import {
   ChevronRightIcon,
@@ -454,7 +453,7 @@ function DeleteForm() {
   const [state, action, pending] = useActionState(deleteAccount, {});
   const errors = state.fieldErrors ?? {};
   return (
-    <form action={action} noValidate className={formStyles.form} onSubmit={clearOfflineData}>
+    <form action={action} noValidate className={formStyles.form}>
       <p>
         This deletes your account and everything it has here: your library, friends, recommendations and activity. You
         leave your Shared space; if you&rsquo;re its last member, its calendar and tasks are deleted too. It can&rsquo;t
@@ -537,6 +536,7 @@ function VerifyEmail({ email }: { email: string }) {
 }
 
 type Setting = "avatar" | "name" | "username" | "email" | "theme" | "password" | "data" | "delete";
+const subscribeHydration = () => () => {};
 
 /** Each setting's popup title. */
 const titles: Record<Setting, string> = {
@@ -575,6 +575,12 @@ export function AccountSettings({
   };
   message?: string;
 }) {
+  // Server-rendered dialog triggers cannot handle clicks until hydration.
+  const ready = useSyncExternalStore(
+    subscribeHydration,
+    () => true,
+    () => false,
+  );
   const [open, setOpen] = useState<Setting | null>(null);
   const [notice, setNotice] = useState(message ?? "");
   const headingId = useId();
@@ -601,7 +607,13 @@ export function AccountSettings({
   return (
     <>
       <div className={styles.profile}>
-        <button type="button" className={styles.avatarButton} aria-haspopup="dialog" onClick={() => show("avatar")}>
+        <button
+          type="button"
+          disabled={!ready}
+          className={styles.avatarButton}
+          aria-haspopup="dialog"
+          onClick={() => show("avatar")}
+        >
           <Avatar username={user.username} name={user.name} url={user.avatarUrl} className={styles.profileAvatar} />
           <span className={styles.avatarEdit} aria-hidden="true">
             <PencilIcon />
@@ -619,6 +631,7 @@ export function AccountSettings({
               data-press="wide"
               aria-haspopup="dialog"
               onClick={() => show(id)}
+              disabled={!ready}
             >
               <span className={styles.rowTitle}>{label ?? titles[id]}</span>
               <span className={ui.srOnly}>: </span>

@@ -32,9 +32,9 @@ jobs:
     # Only main is built and deployed; a rollback skips the build.
     if: github.ref == 'refs/heads/main' && !inputs.image_tag
     uses: ./.github/workflows/ci.yml
-    # The quick set of Playwright tests; pull requests run them all.
+    # Full behavioral coverage gates the normal main-only workflow.
     with:
-      e2e: smoke
+      e2e: all
 
   image:
     needs: check

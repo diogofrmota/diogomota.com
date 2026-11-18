@@ -6,6 +6,11 @@ import { homeWithNext } from "@/lib/next-path";
 // to home (which offers to log in and come back), API routes answer 401.
 // The pages, routes and actions behind it check the session again themselves.
 export async function proxy(request: NextRequest) {
+  if (
+    /^\/api\/recipes\/[^/]+\/photos$/.test(request.nextUrl.pathname) &&
+    Number(request.headers.get("content-length")) > 20 * 1024 * 1024 + 64 * 1024
+  )
+    return Response.json({ error: "That photo is over 20 MB. Try a smaller one." }, { status: 413 });
   const session = await auth.api.getSession({ headers: request.headers });
   if (session) return NextResponse.next();
 

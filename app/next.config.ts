@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: { proxyClientMaxBodySize: "21mb" },
+  distDir: process.env.E2E_PRODUCTION === "1" && process.env.E2E_RUN_ID ? ".next-e2e-production" : ".next",
   // Self-contained server in .next/standalone, used by the Docker image.
   output: "standalone",
   // The apps were at /apps until home became them (docs/decisions/0014): old

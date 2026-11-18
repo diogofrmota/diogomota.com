@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import type { FormState } from "@/lib/form-state";
 import { safeNextPath } from "@/lib/next-path";
+import { grantSessionTransition } from "@/lib/session-transition";
 import { clientIp, loginLimit } from "@/lib/rate-limit";
 
 // Logs in with a username or an email (in any case), and the password.
@@ -31,5 +32,5 @@ export async function logIn(_previous: FormState, formData: FormData): Promise<F
     if (error instanceof APIError) return { error: "Wrong username/email or password.", values };
     throw error;
   }
-  redirect(safeNextPath(formData.get("next")) ?? "/");
+  redirect(await grantSessionTransition(safeNextPath(formData.get("next")) ?? "/", true));
 }

@@ -40,8 +40,8 @@ export const test = base.extend({
 
 export type TestUser = { username: string; email: string; password: string; name: string };
 
-// Details for a new account. The "e2e_" prefix marks what global-teardown.ts
-// deletes. The name's second word is as unique as the username, to find them by.
+// Details for a new account in this run's disposable database. The prefix is
+// only a label, never evidence that a preexisting account belongs to a test.
 export function newUser(): TestUser {
   const id = randomBytes(6).toString("hex");
   return {

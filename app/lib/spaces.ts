@@ -79,6 +79,12 @@ export function readSpace(userId: string, id?: string): Promise<Space | null> {
   });
 }
 
+/** Authorize and read within the caller's transaction; keep locks through data reads. */
+export async function readSpaceInTransaction(db: PoolClient, userId: string): Promise<Space | null> {
+  const spaceId = await spaceIdOf(db, userId, "SHARE");
+  return spaceId ? loadSpace(db, spaceId, "SHARE") : null;
+}
+
 async function addMember(db: PoolClient, userId: string, spaceId: string) {
   const { rows } = await db.query("SELECT space_color FROM users WHERE space_id = $1", [spaceId]);
   const color = memberColors.find((color) => !rows.some((row) => row.space_color === color.hex));
@@ -205,8 +211,10 @@ export function leaveSpace(userId: string, spaceId: string): Promise<null> {
 
 /** Leaves whatever space the user is in, if any (deleting an account). */
 export function leaveSpaceOf(userId: string): Promise<void> {
-  return transaction(async (db) => {
-    const spaceId = await spaceIdOf(db, userId, "UPDATE");
-    if (spaceId) await leave(db, userId, await loadSpace(db, spaceId, "UPDATE"));
-  });
+  return transaction((db) => leaveSpaceInTransaction(db, userId));
+}
+
+export async function leaveSpaceInTransaction(db: PoolClient, userId: string): Promise<void> {
+  const spaceId = await spaceIdOf(db, userId, "UPDATE");
+  if (spaceId) await leave(db, userId, await loadSpace(db, spaceId, "UPDATE"));
 }

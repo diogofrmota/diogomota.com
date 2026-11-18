@@ -1,5 +1,6 @@
 # Build output, dependencies and generated files.
 .next
+.next-e2e-production
 node_modules
 package-lock.json
 next-env.d.ts

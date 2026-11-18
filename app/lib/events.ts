@@ -147,6 +147,9 @@ export async function importBenficaGames(
   userId: string,
   matches: BenficaMatch[],
 ): Promise<{ added: number; skipped: number }> {
+  // Imports serialize independently of ordinary calendar work. This does not
+  // upgrade Shared's membership/space locks or constrain manual events.
+  await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [`benfica-import:${space.id}`]);
   let added = 0;
   for (const match of matches) {
     const title = `${match.homeTeam} vs ${match.awayTeam}`;

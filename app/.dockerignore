@@ -3,9 +3,11 @@
 node_modules
 data
 .next
+.next-e2e-production
 next-env.d.ts
 *.tsbuildinfo
 e2e
+integration
 playwright.config.ts
 test-results
 playwright-report

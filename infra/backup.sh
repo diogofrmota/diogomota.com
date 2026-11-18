@@ -35,6 +35,15 @@ gzip -t "$tmp"
 mv "$tmp" "$file"
 echo "Wrote $file ($(du -h "$file" | cut -f1))"
 
+# Only prune a category after its verified replacement was installed. Always
+# exclude that replacement, even if the host clock or file times are unusual.
+prune() {
+    local pattern=$1 replacement=$2
+    find "$BACKUP_DIR" -maxdepth 1 -type f -name "$pattern" ! -name "$(basename "$replacement")" \
+        -mtime +"$RETENTION_DAYS" -print -delete | sed 's/^/Deleted /'
+}
+prune "${db}_*.sql.gz" "$file"
+
 # A folder of the running app's data volume, as backups/<folder>_<stamp>.tar.gz:
 # the profile pictures (app/lib/avatars.ts) and the recipes' photos
 # (app/lib/recipe-photos.ts). Without a running app there is nothing to read
@@ -44,18 +53,20 @@ archive() {
     local folder=$1 what=$2
     local out="$BACKUP_DIR/${folder}_$stamp.tar.gz"
     if docker compose exec -T app test -d "/app/data/$folder" </dev/null 2>/dev/null; then
-        docker compose exec -T app tar -czf - -C /app/data "$folder" </dev/null > "$out.partial"
-        gzip -t "$out.partial"
-        mv "$out.partial" "$out"
+        if ! docker compose exec -T app tar -czf - -C /app/data "$folder" </dev/null > "$out.partial" ||
+           ! tar -tzf "$out.partial" >/dev/null; then
+            echo "FAILED $what: retained previous archives."
+            return 1
+        fi
+        mv "$out.partial" "$out" || return 1
         echo "Wrote $out ($(du -h "$out" | cut -f1))"
+        prune "${folder}_*.tar.gz" "$out"
     else
-        echo "Skipped $what: the app isn't running, or there are none yet."
+        echo "DEGRADED: skipped $what; retained previous archives (app unavailable or directory absent)."
+        return 1
     fi
 }
-archive avatars "the profile pictures"
-archive recipe-photos "the recipes' photos"
-
-# Only reached after a successful dump, so failing backups never delete the old ones.
-find "$BACKUP_DIR" -maxdepth 1 -type f \
-    \( -name "${db}_*.sql.gz" -o -name "avatars_*.tar.gz" -o -name "recipe-photos_*.tar.gz" \) \
-    -mtime +"$RETENTION_DAYS" -print -delete | sed 's/^/Deleted /'
+degraded=0
+archive avatars "the profile pictures" || degraded=1
+archive recipe-photos "the recipes' photos" || degraded=1
+exit "$degraded"

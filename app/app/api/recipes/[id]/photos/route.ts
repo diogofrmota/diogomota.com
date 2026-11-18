@@ -3,6 +3,7 @@ import { fromThisSite, HttpError } from "@/lib/http";
 import { recipePhotoUploadLimit } from "@/lib/rate-limit";
 import { PhotoError, photoMaxBytes, processPhoto } from "@/lib/recipe-photos";
 import { addPhoto, checkPhotoRoom } from "@/lib/recipes";
+import { boundedFormData } from "@/lib/upload-body";
 
 // POST /api/recipes/:id/photos, a multipart form with the file as `photo`: adds
 // a photo to the end of one of your recipes (its cover, if it's the first), up
@@ -27,8 +28,9 @@ export async function POST(request: Request, { params }: RouteContext<"/api/reci
     await checkPhotoRoom(session.user.id, id);
     let photo: FormDataEntryValue | null;
     try {
-      photo = (await request.formData()).get("photo");
-    } catch {
+      photo = (await boundedFormData(request, photoMaxBytes + 64 * 1024, tooBig)).get("photo");
+    } catch (error) {
+      if (error instanceof HttpError) throw error;
       return fail("Send the photo as a file.", 400);
     }
     if (!(photo instanceof File) || photo.size === 0) return fail("Choose a photo.", 400);

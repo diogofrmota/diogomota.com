@@ -1,4 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
+import { assertTestIsolation } from "./e2e/isolation";
+
+assertTestIsolation();
 
 // The tests' own dev server, on a port of its own (not 3000, where `npm run dev`
 // runs). scripts/run-e2e.mjs knows it by this port.
@@ -49,7 +52,7 @@ export default defineConfig({
     },
   ],
   globalTeardown: "./e2e/global-teardown.ts",
-  // Needs the docker compose database running and DATABASE_URL in .env.local.
+  // scripts/run-e2e.mjs provisions its own fresh database and media root.
   // Every run starts its own dev server with E2E_TEST_HOOKS=1 (emails kept in
   // memory, the fake TMDB: lib/test-hooks.ts) and stops it when the run ends.
   // None is ever reused, so no run gets a server left over from another, or one
@@ -58,12 +61,22 @@ export default defineConfig({
   // (scripts/run-e2e.mjs), which stops whatever an earlier run left running
   // before it starts, and whatever this one leaves when it ends.
   webServer: {
-    command: `npm run dev -- --port ${port}`,
+    command:
+      process.env.E2E_PRODUCTION === "1"
+        ? "node .next-e2e-production/standalone/server.js"
+        : `npm run dev -- --port ${port}`,
     url: baseURL,
     reuseExistingServer: false,
     // AUTH_URL: the links in emails (confirming an email, a password reset) are to this server.
     // CONTACT_EMAIL: /about's Get in touch form is there, whatever .env.local says (e2e/about.spec.ts).
-    env: { E2E_TEST_HOOKS: "1", DATABASE_POOL_MAX: "20", AUTH_URL: baseURL, CONTACT_EMAIL: "contact@example.com" },
+    env: {
+      E2E_TEST_HOOKS: "1",
+      DATABASE_POOL_MAX: "20",
+      AUTH_URL: baseURL,
+      CONTACT_EMAIL: "contact@example.com",
+      PORT: String(port),
+      HOSTNAME: "0.0.0.0",
+    },
     timeout: 120_000,
   },
 });

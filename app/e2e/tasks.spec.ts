@@ -58,6 +58,9 @@ async function keyboardMove(page: Page, title: string, from: number, to: number,
   await handle(page, title).focus();
   await page.keyboard.press("Space");
   await announced(`Picked up ${title}, position ${from} of ${of}.`);
+  // dnd-kit announces pickup before attaching its key listener in setTimeout.
+  // Cross that timer turn before sending the first arrow, without a fixed sleep.
+  await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
   for (let at = from; at !== to;) {
     at += to < from ? -1 : 1;
     await page.keyboard.press(to < from ? "ArrowUp" : "ArrowDown");
@@ -424,7 +427,9 @@ test.describe("on a phone", () => {
   });
 });
 
-test("changes show before the server answers, and roll back when it refuses", async ({ page }) => {
+test("changes are optimistic, refusals undo them, and transport failures retry without losing work", async ({
+  page,
+}) => {
   await setup(page);
   await openTasks(page);
   await createFirstList(page, "House");
@@ -456,18 +461,23 @@ test("changes show before the server answers, and roll back when it refuses", as
   await expect(alert).toContainText("The order changed meanwhile. Try again. Your change was undone.");
   await expect.poll(() => todoTitles(page)).toEqual(["Call the plumber", "Pay rent"]);
   await page.unrouteAll();
+  await page.getByRole("button", { name: "Dismiss" }).click();
+  await expect(alert).toHaveCount(0);
 
   await page.route(`**${base}/lists/*/tasks`, (route) => route.abort());
   await page.getByLabel("Write a task").fill("Ghost task");
   await page.getByLabel("Write a task").press("Enter");
-  await expect(alert).toContainText("Could not reach the server. Check your connection. Your change was undone.");
-  await expect.poll(() => todoTitles(page)).toEqual(["Call the plumber", "Pay rent"]);
+  await expect.poll(() => todoTitles(page)).toEqual(["Call the plumber", "Pay rent", "Ghost task"]);
+  expect((await readLists(page))[0].tasks.some((task) => task.title === "Ghost task")).toBe(false);
+  await expect(alert).toHaveCount(0);
   await page.unrouteAll();
-  await page.getByRole("button", { name: "Dismiss" }).click();
+  await expect
+    .poll(async () => (await readLists(page))[0].tasks.filter((task) => task.title === "Ghost task").length)
+    .toBe(1);
   await expect(alert).toHaveCount(0);
   await page.reload();
   await openTasks(page);
-  await expect.poll(() => todoTitles(page)).toEqual(["Call the plumber", "Pay rent"]);
+  await expect.poll(() => todoTitles(page)).toEqual(["Call the plumber", "Pay rent", "Ghost task"]);
 });
 
 test("the tasks API is scoped to the caller's current space and validates what it saves", async ({
