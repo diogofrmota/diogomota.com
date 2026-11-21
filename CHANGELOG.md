@@ -1,8 +1,12 @@
 # Changelog
 
-Each deploy publishes a GitHub Release (`vX.Y.Z`) listing its commits (`.github/workflows/deploy.yml`); this file says what each minor version brought, in words. The detail is in [plan.md](plan.md)'s Build log, the decisions in [docs/decisions/](docs/decisions/).
+Each deploy publishes a GitHub Release (`vX.Y.Z`) listing its commits (`.github/workflows/deploy.yml`); this file says what each minor version brought, in words. The decisions are in [docs/decisions/](docs/decisions/).
 
 ## Unreleased
+
+- **The front page, simpler** ([docs/decisions/0016](docs/decisions/0016-the-front-page-is-a-website.md)): the apps in three groups (For Couples, Trackers, Health), each with its apps' small icons and a few lines; How it works with each number beside its title, bigger; How to add to Home Screen, step by step on an iPhone, in place of Questions; less room under the last band; on a phone, the menu's links before the apps. **Shared is called Calendar** (its address stays `/shared`). **Report a bug** (`/report-bug`, from home's footer) emails Diogo what went wrong, with the version and browser. **Remember me** on Log in: unticked, the session ends when the browser closes.
+
+- **Faster checks** ([docs/decisions/0022](docs/decisions/0022-small-deploy-gate.md)): a deploy now waits for formatting, lint, typecheck, unit and integration tests and about 30 `@smoke` browser tests on a production build, in parallel jobs, while the image is built and scanned beside them, instead of the whole browser suite before the build. `npm run test:affected` runs only what an uncommitted change can break, fastest first. The browser suite has 142 tests instead of 188 (duplicates merged, axe once per view), and runs faster: cheap password hashing with test hooks on, a production build with four workers, the longest tests first.
 
 - **2.0.0 remediation:** pending offline changes survive app switching, reloads and releases; simultaneous tabs use separate journals, and unsupported queues offer recovery downloads. Books owner views reopen offline, and successful account transitions clear private cached data across tabs.
 - Shared task patches preserve concurrent edits, recurring completions identify their occurrence, calendar imports serialize, and exports/feeds keep membership authorization through their reads. Account deletion is atomic with retryable media cleanup (additive migration 028).
@@ -34,7 +38,7 @@ Each deploy publishes a GitHub Release (`vX.Y.Z`) listing its commits (`.github/
 - Shared: the calendar's toolbar is all together in the middle, and Month comes before Agenda.
 - A new email is confirmed once the link sent to it is opened, also for an account that never confirmed its first (since Better Auth 1.7.18 it stayed "not confirmed").
 
-From the review in [update_UX.md](update_UX.md):
+From a UX review:
 
 - Home is the apps ([docs/decisions/0014](docs/decisions/0014-home-is-the-apps.md)): `diogomota.com/` is what `/apps` was, and `/apps` redirects there. Logged in, Home, in the middle, over the apps' icons, big, in a grid like a phone's home screen (two to a row on a phone, four wider), each with a badge of what is waiting (Shared: your tasks due today or before; Shows: friend requests and new recommendations) and going back to the view last used in it. Version · Privacy · About are at the bottom of the page. Logged out, the website's front page (below); the intro is `/about`.
 - One tab bar everywhere: Account (or Log in and Sign up, each its own icon) and Home, which is also each app's last tab, in place of Apps. The top bar, the account menu and Back to apps are gone. The header is only the tabs. The 404 and error pages are in the apps' look.
@@ -63,12 +67,14 @@ From the review in [update_UX.md](update_UX.md):
 From the v1.2.0 review.
 
 **Accounts**
+
 - Better Auth in place of Auth.js: database sessions, ended at once by logging out, a password change or deleting the account. Everyone logs in once more after the deploy; passwords stay the same.
 - Signing up sends a link to confirm the email; password resets only go to a confirmed one, and the newest reset link is the only one that works.
 - Changing the email sends a link to the new address; it changes once the link is opened.
 - Account: Download my data and Delete my account. A Privacy page says what is kept.
 
 **Both apps**
+
 - Each view and open panel is in the URL: a reload keeps them, and links open them.
 - On a phone, the tabs are along the bottom of the screen.
 - Undo instead of "are you sure?" for deleting and leaving.
@@ -77,6 +83,7 @@ From the v1.2.0 review.
 - Log in first, Sign up filled, everywhere.
 
 **Shared**
+
 - For couples: the welcome and `/apps` say so; a new space asks to invite your partner.
 - Invite links (with the phone's share sheet), from any member.
 - Calendar: the agenda (the default on a phone), three days for a week on a phone, swipe between periods, a line at the time it is now, events dragged with the mouse, events for two people or more, the whole calendar as a subscription for Google, Apple or Outlook Calendar. Events have no notes.
@@ -84,6 +91,7 @@ From the v1.2.0 review.
 - Settings: recent activity.
 
 **Shows**
+
 - The Watchlist is Library.
 - A title's panel: its genres, the friends who have it, More like this, Recommend to a friend.
 - Discover: Recommended by Friends; sections load as they come near; the TV Shows | Movies choice is remembered.
@@ -91,11 +99,12 @@ From the v1.2.0 review.
 - TMDB's logo and notice are back.
 
 **Behind the scenes**
+
 - Node 24, Prettier, unit tests, and every Playwright test in CI; the image is scanned before it's pushed; Dependabot every week; rate limits in nginx; migrations expand and contract.
 
 ## v1.1.0
 
-Profile pictures, names, a cleaner calendar and the Shows guide (plan.md, Build log, 2026-11-11 and 2026-11-12).
+Profile pictures, names, a cleaner calendar and the Shows guide (2026-11-11 and 2026-11-12).
 
 ## v1.0.0 — 2026-11-02
 

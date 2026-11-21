@@ -7,3 +7,5 @@
 **What it is:** `users.space_id` holds one space per user. Any member invites (a single-use link for 24 hours); the owner only decides who inherits the space.
 
 **Costs:** someone with a partner and flatmates can't be in both; a `space_members` table would be the change, best made while there is little data.
+
+**Update, 2026-11-21:** the app is called Calendar now (what people look for on the front page and on home); its address is still `/shared`, as are its API (`/api/shared`), its subscription feed and invite links, so nothing that was bookmarked, subscribed to or shared breaks.

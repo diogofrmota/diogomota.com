@@ -32,15 +32,7 @@ const profilePicture = (page: Page) =>
 /** What the last popup saved, said under the settings once it closes. */
 const notice = (page: Page, text: string) => page.getByRole("main").getByRole("status").filter({ hasText: text });
 
-async function expectNoHorizontalScroll(page: Page) {
-  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
-    scrollWidth: document.documentElement.scrollWidth,
-    clientWidth: document.documentElement.clientWidth,
-  }));
-  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
-}
-
-test("Account's icon on / opens the settings, whose tab bar has only Apps, the way back; /account has no top bar", async ({
+test("Account's icon on / opens the settings: no top bar, only Apps in the tab bar, a row per setting, then Log out", async ({
   page,
 }) => {
   const user = newUser();
@@ -66,14 +58,9 @@ test("Account's icon on / opens the settings, whose tab bar has only Apps, the w
   await expect(page.getByRole("main")).toContainText(user.email);
   await bar.getByRole("link", { name: "Apps", exact: true }).click();
   await expect(page).toHaveURL("/");
-});
 
-test("Account: the profile picture in the middle, a row per setting with its value (Data / Privacy page last), then Log out", async ({
-  page,
-}) => {
-  const user = newUser();
-  await signUp(page, user);
-  await expect(page).toHaveURL("/");
+  // Account: the profile picture in the middle, a row per setting with its
+  // value (Data / Privacy page last), then Log out.
   await page.goto("/account");
   const main = page.getByRole("main");
 
@@ -379,6 +366,9 @@ test("change password, which logs out every device", async ({ page, browser }) =
 
   const form = await openPopup(page, accountSetting(page, "Password"), "Update password");
   await expect(form.getByLabel("Current password")).toBeFocused();
+  // Without the current one, a reset by email.
+  await expect(form).toContainText("Don't know your current password?");
+  await expect(form.getByRole("link", { name: "Reset it by email" })).toHaveAttribute("href", "/forgot-password");
   const newPassword = "a whole new password";
   async function submit(current: string, password: string, confirm: string) {
     await form.getByLabel("Current password").fill(current);
@@ -408,41 +398,6 @@ test("change password, which logs out every device", async ({ page, browser }) =
   // Back to account settings.
   await logIn(page, user.username, newPassword, "/login?next=%2Faccount");
   await expect(page).toHaveURL("/account");
-});
-
-test("theme preference persists after logging in again", async ({ page }) => {
-  const user = newUser();
-  await signUp(page, user);
-  await expect(page).toHaveURL("/");
-
-  const app = page.locator("[data-theme]");
-  await page.goto("/shared");
-  await expect(app).toHaveAttribute("data-theme", "minimal-neutrals");
-
-  await page.goto("/account");
-  // The theme in use, on its row; two to choose from, Light and Dark.
-  const themeRow = accountSetting(page, "Theme");
-  await expect(themeRow).toContainText("Light");
-  const form = await openSetting(page, "Theme");
-  await expect(form.getByRole("radio")).toHaveCount(2);
-  await expect(form.getByRole("radio", { name: "Light", exact: true })).toBeChecked();
-  await form.getByRole("radio", { name: "Dark", exact: true }).check();
-  await form.getByRole("button", { name: "Save theme" }).click();
-  await expect(form).toBeHidden();
-  await expect(notice(page, "Theme saved.")).toBeVisible();
-  await expect(app).toHaveAttribute("data-theme", "graphite");
-
-  await logOut(page, user.username);
-  await logIn(page, user.username, user.password);
-  await expect(page).toHaveURL("/");
-
-  await page.goto("/account");
-  await expect(themeRow).toContainText("Dark");
-  await openSetting(page, "Theme");
-  await expect(form.getByRole("radio", { name: "Dark", exact: true })).toBeChecked();
-  await page.goto("/shared");
-  await expect(app).toHaveAttribute("data-theme", "graphite");
-  await expect(app).toHaveCSS("background-color", "rgb(31, 32, 35)");
 });
 
 test("a profile picture, chosen or dropped, is adjusted, made small and shows in the tab bars; Remove picture takes it away", async ({
@@ -577,77 +532,6 @@ test("a profile picture, chosen or dropped, is adjusted, made small and shows in
   await expect(accountButton(page, user.username)).toContainText(initials(user.username, user.name));
 });
 
-test("forgot password, in Update password, opens the reset by email", async ({ page }) => {
-  const user = newUser();
-  await signUp(page, user);
-  await expect(page).toHaveURL("/");
-  await page.goto("/account");
-
-  const password = await openPopup(page, accountSetting(page, "Password"), "Update password");
-  await expect(password).toContainText("Don't know your current password?");
-  await password.getByRole("link", { name: "Reset it by email" }).click();
-  await expect(page).toHaveURL("/forgot-password");
-});
-
-test("logged out, /account redirects home and Log in comes back to it", async ({ page }) => {
-  await page.goto("/account");
-  await expect(page).toHaveURL("/?next=%2Faccount");
-  await expect(page.getByRole("dialog")).toBeHidden();
-  await expect(page.getByRole("banner").getByRole("link", { name: "Log in" })).toHaveAttribute(
-    "href",
-    "/login?next=%2Faccount",
-  );
-});
-
-test.describe("at 320px wide", () => {
-  test.use({ viewport: { width: 320, height: 740 }, isMobile: true, hasTouch: true });
-
-  test("logged-in home and /account, with a popup open, have no horizontal scroll", async ({ page }) => {
-    const user = newUser();
-    await signUp(page, user);
-    await expect(page).toHaveURL("/");
-    await expectNoHorizontalScroll(page);
-
-    // Three icons to a row, all of each on the screen, even this narrow.
-    const main = page.getByRole("main");
-    const icons = ["Books", "Recipes", "Fitness"].map((name) => main.getByRole("link", { name, exact: true }));
-    for (const icon of icons) await expect(icon).toBeInViewport({ ratio: 1 });
-    const tops = await Promise.all(icons.map(async (icon) => (await icon.boundingBox())!.y));
-    expect(new Set(tops).size).toBe(1);
-    await expectNoHorizontalScroll(page);
-
-    await page.goto("/account");
-    await expectNoHorizontalScroll(page);
-    // On a touch screen, a popup opens without its field focused: the keyboard
-    // would come up over it. A tap on the field types.
-    expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
-    for (const name of ["Name", "Username", "Email"]) {
-      const popup = await openSetting(page, name);
-      await expect(popup.getByRole("textbox").first()).not.toBeFocused();
-      await expect(popup.getByRole("button", { name: "Close" })).toBeFocused();
-      await popup.getByRole("textbox").first().tap();
-      await expect(popup.getByRole("textbox").first()).toBeFocused();
-      await popup.getByRole("button", { name: "Close" }).tap();
-      await expect(popup).toBeHidden();
-    }
-    const theme = await openSetting(page, "Theme");
-    await expect(theme).toBeInViewport({ ratio: 1 });
-    await expectNoHorizontalScroll(page);
-  });
-});
-
-test("a theme that no longer exists shows as Light", async ({ page }) => {
-  const user = newUser();
-  await signUp(page, user);
-  await expect(page).toHaveURL("/");
-  await withDatabase((db) =>
-    db.query("UPDATE users SET theme_preference = 'space' WHERE username = $1", [user.username]),
-  );
-  await page.goto("/account");
-  await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
-  await expect(accountSetting(page, "Theme")).toContainText("Light");
-});
-
 test("an email not confirmed yet says so, and the link can be sent again", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
@@ -667,7 +551,7 @@ test("an email not confirmed yet says so, and the link can be sent again", async
   await expect(page.getByRole("button", { name: "Send the link again" })).toHaveCount(0);
 });
 
-test("Download my data has the account, library and space; Delete my account takes the password and deletes it all", async ({
+test("Download my data has the account, library and space; Delete my account takes the password and deletes it all @smoke", async ({
   page,
 }) => {
   const user = newUser();

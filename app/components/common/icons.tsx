@@ -313,6 +313,16 @@ export function ShareIcon() {
   );
 }
 
+/** A rounded square with a plus: Safari's Add to Home Screen (the front page's guide). */
+export function AddSquareIcon() {
+  return (
+    <Icon>
+      <rect x="4" y="4" width="16" height="16" rx="3.5" />
+      <path d="M12 8.5v7M8.5 12h7" />
+    </Icon>
+  );
+}
+
 /** Arrows in a loop: something that repeats. */
 export function RepeatIcon() {
   return (

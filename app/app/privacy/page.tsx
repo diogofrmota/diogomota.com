@@ -42,7 +42,7 @@ export default async function PrivacyPage() {
           metadata).
         </li>
         <li>
-          <strong>Shared:</strong> your space&rsquo;s members, calendar events and task lists, which everyone in the
+          <strong>Calendar:</strong> your space&rsquo;s members, calendar events and task lists, which everyone in the
           space sees and changes.
         </li>
         <li>

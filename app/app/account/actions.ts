@@ -126,7 +126,7 @@ export async function changePassword(_previous: FormState, formData: FormData): 
     body: { currentPassword, newPassword, revokeOtherSessions: true },
     headers: requestHeaders,
   });
-  // Every other device is logged out; this one too, by choice (plan.md). Logging
+  // Every other device is logged out; this one too, by choice. Logging
   // in with the new password comes back here.
   await auth.api.signOut({ headers: requestHeaders }).catch(() => {});
   redirect(await grantSessionTransition(`/login?${new URLSearchParams({ password: "changed", next: "/account" })}`));

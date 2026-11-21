@@ -10,5 +10,8 @@ export default defineConfig({
       "server-only": fileURLToPath(new URL("./test/server-only.ts", import.meta.url)),
     },
   },
-  test: { include: ["integration/**/*.test.ts"], fileParallelism: false, testTimeout: 15000 },
+  // The files run side by side (about a third faster): each makes its own
+  // accounts and spaces in the run's database, mocks in its own worker, and
+  // names its own containers.
+  test: { include: ["integration/**/*.test.ts"], testTimeout: 15000 },
 });

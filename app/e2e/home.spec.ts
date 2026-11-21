@@ -5,31 +5,34 @@ import { expect, linkNames, newUser, signUp, test } from "./fixtures";
 import { mockBase, otherPerson, userId } from "./shows";
 
 // Home (docs/decisions/0014, 0016). Logged out, the website's front page: its
-// header, what the site is, Sign up, a section per app (Open opens its login
-// prompt), How it works, Questions, and its footer. Logged in, "Diogo’s Apps":
-// the apps' icons, with no tab bar, with what is waiting in each and going
-// back to the view last used in it.
+// header, what the site is, Sign up, the apps in three groups (an app's icon
+// opens its login prompt), How it works, How to add to Home Screen, and its
+// footer. Logged in, "Diogo’s Apps": the apps' icons, with no tab bar, with
+// what is waiting in each and going back to the view last used in it.
 
-const appSection = (page: Page, name: string) =>
+/** The front page's group of apps with this title: For Couples, Trackers, Health. */
+const appGroup = (page: Page, title: string) =>
   page
     .getByRole("main")
     .getByRole("article")
-    .filter({ has: page.getByRole("heading", { name, exact: true }) });
+    .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+/** An app's icon on the front page, which opens its login prompt. */
+const appIcon = (page: Page, name: string) =>
+  page.getByRole("main").getByRole("region", { name: "The apps" }).getByRole("link", { name, exact: true });
 const tabBar = (page: Page) => page.getByRole("navigation", { name: "Account" });
 const siteNav = (page: Page) => page.getByRole("banner").getByRole("navigation", { name: "Site" });
 
-test("/apps is now home: it redirects there for good, with its query", async ({ page }) => {
-  const response = await page.request.get("/apps?next=%2Fshows", { maxRedirects: 0 });
-  expect(response.status()).toBe(308);
-  expect(response.headers().location).toBe("/?next=%2Fshows");
+test("logged out, home is the website's front page (/apps redirects to it): what the site is, the apps in groups, How it works, How to add to Home Screen", async ({
+  page,
+}) => {
+  // /apps is now home: it redirects there for good, with its query.
+  const redirect = await page.request.get("/apps?next=%2Fshows", { maxRedirects: 0 });
+  expect(redirect.status()).toBe(308);
+  expect(redirect.headers().location).toBe("/?next=%2Fshows");
   await page.goto("/apps?account=deleted");
   await expect(page).toHaveURL("/?account=deleted");
   await expect(page.getByRole("status")).toHaveText("Your account and everything it had here were deleted.");
-});
 
-test("logged out, home is the website's front page: what the site is, the apps, How it works, Questions", async ({
-  page,
-}) => {
   await page.goto("/");
   await expect(page).toHaveTitle("diogo mota");
   // Logged out, in Light.
@@ -37,55 +40,101 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   const main = page.getByRole("main");
   const hero = main.getByRole("region", { name: siteTagline });
   await expect(hero.getByRole("heading", { level: 1 })).toHaveText("Small apps to share with friends");
-  await expect(hero).toContainText("Share your calendar and register your shows watchlist!");
+  await expect(hero).toContainText("Shared calendar, Fitness app and Shows Tracker!");
   await expect(hero.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup");
   await expect(hero.getByRole("link", { name: "Login", exact: true })).toHaveAttribute("href", "/login");
   // Only the buttons: no "Have an account? Log in" under them, and no pictures of the apps.
   await expect(hero.getByText("Have an account?")).toHaveCount(0);
-  await expect(hero.getByText(/^diogomota\.com\//)).toHaveCount(0);
+  await expect(main.getByText(/^diogomota\.com\//)).toHaveCount(0);
 
-  // A section per app, by its name: its icon, headline, what it does, and Open.
-  expect(apps.map((app) => app.name)).toEqual(["Shared", "Shows", "Books", "Recipes", "Fitness"]);
-  for (const app of apps) {
-    const section = appSection(page, app.name);
-    await expect(section).toHaveAttribute("id", app.href.slice(1));
-    await expect(section).toContainText(app.tagline);
-    for (const feature of app.features) await expect(section).toContainText(feature);
-    const logo = section.getByRole("heading", { name: app.name }).locator("img");
-    await expect(logo).toHaveAttribute("src", app.logo);
-    expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
-    await expect(section.getByRole("link", { name: `Open ${app.name}` })).toBeVisible();
+  // The apps in three groups, side by side: each its title, its apps' small icons (each its name under
+  // it, and where its link on the site lands), and a line or so about them, each after a tick.
+  expect(apps.map((app) => app.name)).toEqual(["Calendar", "Shows", "Books", "Recipes", "Fitness"]);
+  const groups = [
+    { title: "For Couples", apps: ["Calendar", "Recipes"], points: 2 },
+    { title: "Trackers", apps: ["Shows", "Books"], points: 3 },
+    { title: "Health", apps: ["Fitness"], points: 2 },
+  ];
+  await expect(main.getByRole("region", { name: "The apps" }).getByRole("article")).toHaveCount(3);
+  const tops: number[] = [];
+  for (const group of groups) {
+    const article = appGroup(page, group.title);
+    await expect(article.getByRole("link")).toHaveText(group.apps);
+    await expect(article.locator("li svg")).toHaveCount(group.points);
+    tops.push((await article.boundingBox())!.y);
+    for (const name of group.apps) {
+      const app = apps.find((app) => app.name === name)!;
+      const icon = article.getByRole("link", { name, exact: true });
+      await expect(icon.locator("..")).toHaveAttribute("id", app.href.slice(1));
+      const logo = icon.locator("img");
+      await expect(logo).toHaveAttribute("src", app.logo);
+      expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+      // Small, as before: 36 px, its name under it.
+      const image = (await logo.boundingBox())!;
+      expect(image.width).toBe(36);
+      const label = (await icon.getByText(name).boundingBox())!;
+      expect(label.y).toBeGreaterThanOrEqual(image.y + image.height);
+    }
   }
-  // Side by side, by turns: the first app's picture on the left (Shared), the next one's on the right (Shows), and so on.
-  const pictureX = async (name: string) =>
-    (await appSection(page, name).locator("[aria-hidden='true']").first().boundingBox())!.x;
-  const wordsX = async (name: string) => (await appSection(page, name).getByRole("heading").boundingBox())!.x;
-  for (const [i, app] of apps.slice(0, 4).entries()) {
-    if (i % 2) expect(await pictureX(app.name), app.name).toBeGreaterThan(await wordsX(app.name));
-    else expect(await pictureX(app.name), app.name).toBeLessThan(await wordsX(app.name));
-  }
+  expect(new Set(tops).size).toBe(1);
 
-  // How it works, in three steps; Questions, with the way to About and Privacy.
-  await expect(main.getByRole("region", { name: "How it works" }).getByRole("listitem")).toHaveCount(3);
-  const questions = main.getByRole("region", { name: "Questions" });
-  await expect(questions.getByRole("heading", { level: 3 })).toHaveText([
-    "Who runs it?",
-    "Is my data private?",
-    "Can I use it on my phone?",
-    "Can I take my data with me?",
-  ]);
-  await expect(questions).toContainText(
-    "Diogo. The apps are made for friends and family, and anyone can sign up. More on the About page.",
+  // How it works, in three steps, each its number beside its title.
+  const steps = main.getByRole("region", { name: "How it works" });
+  await expect(steps.getByRole("listitem")).toHaveCount(3);
+  await expect(steps.getByRole("heading", { level: 3 })).toHaveText(["Sign up", "Pick an app", "Invite your friends"]);
+  await expect(steps).toContainText(
+    "Invite your partner to your shared Calendar, or add friends in Shows or Books to share what you read and watch.",
   );
-  await expect(questions.getByRole("link", { name: "About" })).toHaveAttribute("href", "/about");
-  await expect(questions.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
-  // And Sign up once more, at the end.
-  await expect(
-    main.getByRole("region", { name: "Try it now and join the community" }).getByRole("link", { name: "Sign up" }),
-  ).toHaveAttribute("href", "/signup");
+  const title = steps.getByRole("heading", { level: 3 }).first();
+  await expect(title).toHaveCSS("font-size", "24px");
+  const number = (await steps.getByRole("listitem").first().getByText("1", { exact: true }).boundingBox())!;
+  const words = (await title.boundingBox())!;
+  expect(words.x).toBeGreaterThan(number.x + number.width);
+  expect(Math.abs(words.y + words.height / 2 - (number.y + number.height / 2))).toBeLessThan(3);
+
+  // No Questions any more: How to add to Home Screen, a slide a step.
+  await expect(main.getByRole("region", { name: "Questions" })).toHaveCount(0);
+  const guide = main.getByRole("region", { name: "How to add to Home Screen" });
+  const slides = guide.locator("[aria-roledescription='slide']");
+  await expect(slides).toHaveCount(6);
+  await expect(slides.first()).toHaveAccessibleName("Step 1 of 6");
+  await expect(slides.first().getByRole("heading")).toHaveText("Open diogomota.com in Safari");
+  const previous = guide.getByRole("button", { name: "Previous step" });
+  const next = guide.getByRole("button", { name: "Next step" });
+  const dots = guide.locator("[data-current]");
+  // The slide showing is the one at the left edge of the steps (the page may scroll to the buttons).
+  const track = guide.getByRole("group", { name: "Steps" });
+  const showing = (i: number) =>
+    expect
+      .poll(async () => Math.abs((await slides.nth(i).boundingBox())!.x - (await track.boundingBox())!.x))
+      .toBeLessThanOrEqual(1);
+  await guide.scrollIntoViewIfNeeded();
+  await showing(0);
+  await expect(previous).toBeDisabled();
+  await expect(dots).toHaveCount(1);
+  await next.click();
+  await showing(1);
+  await expect(slides.nth(0)).not.toBeInViewport();
+  await expect(previous).toBeEnabled();
+  // The keys, on the steps: End to the last, which has no Next; the arrows one at a time.
+  await track.press("End");
+  await showing(5);
+  await expect(slides.nth(5).getByRole("heading")).toHaveText("Open it from your Home Screen");
+  await expect(next).toBeDisabled();
+  await track.press("ArrowLeft");
+  await showing(4);
+  await expect(next).toBeEnabled();
+  await previous.click();
+  await showing(3);
+
+  // And Sign up once more, at the end, with the footer close under it.
+  const band = main.getByRole("region", { name: "Try it now and join the community" });
+  await expect(band.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup");
 
   // Only the year and build version remain in the footer, on the page's own gray (not a white band).
   const footer = page.getByRole("contentinfo");
+  const bandBox = (await band.boundingBox())!;
+  expect((await footer.boundingBox())!.y - (bandBox.y + bandBox.height)).toBeLessThanOrEqual(32);
   await expect(footer).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(footer.getByRole("link")).toHaveCount(0);
   await expect(footer.locator("span")).toHaveCount(2);
@@ -96,7 +145,7 @@ test("logged out, home is the website's front page: what the site is, the apps, 
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
   await expect(meta("name", "description")).toHaveAttribute(
     "content",
-    "Small apps to share with friends: Shared, Shows, Books, Recipes, and Fitness.",
+    "Small apps to share with friends: Calendar, Shows, Books, Recipes, and Fitness.",
   );
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com");
   const image = await page.request.get("/opengraph-image");
@@ -146,7 +195,10 @@ test("the website's header: the mark goes home, Apps opens a menu of them, then 
   await nav.getByRole("link", { name: /^Shows/ }).click();
   await expect(page).toHaveURL("/#shows");
   await expect(nav.getByRole("link", { name: /^Shows/ })).toBeHidden();
-  await expect(appSection(page, "Shows")).toBeInViewport();
+  // Its icon, with its group's title over it, clear of the sticky header.
+  await expect(appIcon(page, "Shows")).toBeInViewport();
+  const groupTitle = (await appGroup(page, "Trackers").getByRole("heading").boundingBox())!;
+  expect(groupTitle.y).toBeGreaterThanOrEqual((await page.getByRole("banner").boundingBox())!.height);
 
   await nav.getByRole("link", { name: "About" }).click();
   await expect(page).toHaveURL("/about");
@@ -163,7 +215,7 @@ test("the website's header: the mark goes home, Apps opens a menu of them, then 
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
-  test("the header is the mark, Sign up and Menu, which has the rest; the apps' sections have no pictures", async ({
+  test("the header is the mark, Sign up and Menu, which has the site's links and then the apps; the groups one over the other", async ({
     page,
   }) => {
     await page.goto("/");
@@ -175,20 +227,22 @@ test.describe("on a phone", () => {
       "href",
       "/login",
     );
-    // Each app's section is its words only: its picture is for wider screens.
-    for (const app of apps) {
-      await expect(appSection(page, app.name).getByRole("heading", { name: app.name })).toBeVisible();
-      await expect(appSection(page, app.name).getByText(`diogomota.com${app.href}`)).toBeHidden();
-    }
+    // The groups, one over the other, each with its apps' icons.
+    const [couples, trackers, health] = await Promise.all(
+      ["For Couples", "Trackers", "Health"].map(async (title) => (await appGroup(page, title).boundingBox())!),
+    );
+    expect(trackers.y).toBeGreaterThan(couples.y + couples.height);
+    expect(health.y).toBeGreaterThan(trackers.y + trackers.height);
+    for (const app of apps) await expect(appIcon(page, app.name)).toBeVisible();
 
     await header.getByRole("button", { name: "Menu" }).click();
     const menu = header.getByRole("navigation", { name: "Menu" });
     expect(await linkNames(menu)).toEqual([
-      ...apps.map((app) => `${app.name} ${app.description}`),
       "How it works",
       "About",
       "Privacy",
       "Log in",
+      ...apps.map((app) => `${app.name} ${app.description}`),
     ]);
     // Nothing of it off the screen.
     const box = (await menu.boundingBox())!;
@@ -200,6 +254,14 @@ test.describe("on a phone", () => {
 
     await page.goto("/");
     await expect(page.getByRole("contentinfo").getByRole("link")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    // The guide's steps swipe sideways, one at a time, within the page.
+    const guide = page.getByRole("main").getByRole("region", { name: "How to add to Home Screen" });
+    const steps = guide.getByRole("group", { name: "Steps" });
+    await steps.scrollIntoViewIfNeeded();
+    await steps.evaluate((element) => element.scrollTo({ left: element.clientWidth, behavior: "instant" }));
+    await expect(guide.locator("[aria-roledescription='slide']").nth(1)).toBeInViewport({ ratio: 0.9 });
+    await expect(guide.getByRole("button", { name: "Previous step" })).toBeEnabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole("main").getByRole("link", { name: "Login", exact: true }).click();
     await expect(page).toHaveURL("/login");
@@ -229,70 +291,42 @@ test("the login pages keep the apps' tab bar: Log in, Sign up (each its own icon
   await page.goto("/signup?next=%2Fshows");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sign up to use Shows");
   await page.goto("/login?next=%2Fshared");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Log in to open Shared");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Log in to open Calendar");
 });
 
-test("sent home from a protected page, Log in and Sign up return there, and an app's prompt opens", async ({
+test("each app's icon on the front page opens its login prompt, which closes with Escape, its close button or the backdrop", async ({
   page,
 }) => {
-  await page.goto("/account");
-  await expect(page).toHaveURL("/?next=%2Faccount");
-  const hero = page.getByRole("main").getByRole("region", { name: siteTagline });
-  await expect(hero.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup?next=%2Faccount");
-  const header = page.getByRole("banner");
-  await expect(header.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login?next=%2Faccount");
-  await expect(header.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup?next=%2Faccount");
-  await expect(hero.getByRole("link", { name: "Login", exact: true })).toHaveAttribute(
-    "href",
-    "/login?next=%2Faccount",
-  );
-
-  await page.goto("/shows/discover");
-  await expect(page).toHaveURL("/?next=%2Fshows%2Fdiscover");
-  await expect(page.getByRole("dialog", { name: "Log in to open Shows" })).toBeVisible();
-});
-
-for (const app of apps) {
-  test(`Open ${app.name} on the front page opens its login prompt`, async ({ page }) => {
-    await page.goto("/");
-    await appSection(page, app.name)
-      .getByRole("link", { name: `Open ${app.name}` })
-      .click();
-
+  await page.goto("/");
+  for (const app of apps) {
+    const open = appIcon(page, app.name);
+    await open.click();
     const prompt = page.getByRole("dialog", { name: `Log in to open ${app.name}` });
     await expect(prompt).toBeVisible();
     await expect(page).toHaveURL("/");
     // What the app is for, under the title.
     await expect(prompt.getByRole("paragraph")).toHaveText(app.description);
-
     const next = new URLSearchParams({ next: app.href });
     await expect(prompt.getByRole("link", { name: "Log in" })).toHaveAttribute("href", `/login?${next}`);
     await expect(prompt.getByRole("link", { name: "Sign Up" })).toHaveAttribute("href", `/signup?${next}`);
+    await page.keyboard.press("Escape");
+    await expect(prompt).toBeHidden();
+    await expect(open).toBeFocused();
+  }
 
-    await prompt.getByRole("link", { name: "Log in" }).click();
-    await expect(page).toHaveURL(`/login?${next}`);
-  });
-}
-
-test("the login prompt closes with Escape, its close button or the backdrop", async ({ page }) => {
-  await page.goto("/");
-  const link = page.getByRole("main").getByRole("link", { name: "Open Shared" });
+  const link = appIcon(page, "Calendar");
   const prompt = page.getByRole("dialog");
-
-  await link.click();
-  await expect(prompt).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(prompt).toBeHidden();
-  await expect(link).toBeFocused();
-
   await link.click();
   await prompt.getByRole("button", { name: "Close" }).click();
   await expect(prompt).toBeHidden();
-
   await link.click();
   await page.mouse.click(5, 5);
   await expect(prompt).toBeHidden();
   await expect(page).toHaveURL("/");
+
+  await link.click();
+  await prompt.getByRole("link", { name: "Log in" }).click();
+  await expect(page).toHaveURL("/login?next=%2Fshared");
 });
 
 test("logged in, / is the user's apps: their icons, no tab bar, and the email note sends its link from here", async ({
@@ -322,7 +356,7 @@ test("logged in, / is the user's apps: their icons, no tab bar, and the email no
   await expect(account).toHaveAttribute("href", "/account");
   await expect(account).toHaveAccessibleDescription("Manage your profile and account settings");
   await expect(account.locator("img")).toHaveAttribute("src", "/logos/account.svg");
-  await expect(main.locator("ul > li > a")).toHaveText(["Account", "Shared", "Shows", "Books", "Recipes", "Fitness"]);
+  await expect(main.locator("ul > li > a")).toHaveText(["Account", "Calendar", "Shows", "Books", "Recipes", "Fitness"]);
   const launcherBox = (await heading.locator("..").boundingBox())!;
   expect(Math.abs(launcherBox.y + launcherBox.height / 2 - 400)).toBeLessThan(25);
   // Big icons, side by side in the middle of the page, under the heading (four to a row on a wide screen).
@@ -346,8 +380,9 @@ test("logged in, / is the user's apps: their icons, no tab bar, and the email no
   expect(last.y).toBeGreaterThan(icons[0].y);
   const lastRow = icons.filter((icon) => icon.y === last.y);
   expect(Math.abs(middle(lastRow[0], lastRow.at(-1)!) - width / 2)).toBeLessThanOrEqual(2);
-  // Version and Privacy at the bottom of the page, well under the icons.
-  const footer = (await main.getByText(/^Version (dev|v\d+\.\d+\.\d+) · Privacy$/).boundingBox())!;
+  // Version, Privacy and Report a bug at the bottom of the page, well under the icons.
+  const footer = (await main.getByText(/^Version (dev|v\d+\.\d+\.\d+) · Privacy · Report a bug$/).boundingBox())!;
+  await expect(main.getByRole("link", { name: "Report a bug" })).toHaveAttribute("href", "/report-bug");
   await expect(main.getByRole("link", { name: "About" })).toHaveCount(0);
   const height = await page.evaluate(() => innerHeight);
   expect(footer.y).toBeGreaterThan(height - 100);
@@ -387,22 +422,22 @@ test("app icons always open their main page, ignoring old saved-view cookies", a
   await page.goto("/");
   await expect(shows).toHaveAttribute("href", "/shows");
 
-  // Shared remembers Tasks, but without a space it can only open on its welcome.
+  // Calendar remembers Tasks, but without a space it can only open on its welcome.
   await page.context().addCookies([{ name: "last-view-shared", value: "tasks", url: page.url() }]);
   await page.reload();
-  await expect(page.getByRole("main").getByRole("link", { name: "Shared", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("main").getByRole("link", { name: "Calendar", exact: true })).toHaveAttribute(
     "href",
     "/shared",
   );
   expect((await page.request.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
   await page.reload();
-  await expect(page.getByRole("main").getByRole("link", { name: "Shared", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("main").getByRole("link", { name: "Calendar", exact: true })).toHaveAttribute(
     "href",
     "/shared",
   );
 });
 
-test("badges: Shared's tasks due for you, Shows' friend requests and new recommendations", async ({
+test("badges: Calendar's tasks due for you, Shows' friend requests and new recommendations", async ({
   page,
   browser,
 }) => {
@@ -412,7 +447,7 @@ test("badges: Shared's tasks due for you, Shows' friend requests and new recomme
   const meId = await userId(me.username);
   const icon = (name: string) => page.getByRole("main").getByRole("link", { name: new RegExp(`^${name}\\b`) });
 
-  // Shared: tasks due today or before, for me or for nobody; not later, not done, not someone else's.
+  // Calendar: tasks due today or before, for me or for nobody; not later, not done, not someone else's.
   expect((await page.request.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
   const list = (await (await page.request.post("/api/shared/tasks/lists", { data: { name: "Home" } })).json()).data;
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(new Date());
@@ -432,8 +467,8 @@ test("badges: Shared's tasks due for you, Shows' friend requests and new recomme
     expect(created.ok(), task.title).toBe(true);
   }
   await page.reload();
-  await expect(icon("Shared")).toHaveAccessibleName("Shared, 2 tasks due");
-  await expect(icon("Shared").getByText("2", { exact: true })).toBeVisible();
+  await expect(icon("Calendar")).toHaveAccessibleName("Calendar, 2 tasks due");
+  await expect(icon("Calendar").getByText("2", { exact: true })).toBeVisible();
 
   // Shows: a friend request waiting, then a friend's recommendation, which Discover then shows.
   const friend = await otherPerson(browser);

@@ -7,7 +7,7 @@ import { sharedViews, viewFromParams } from "@/lib/app-views";
 import { readSpace } from "@/lib/spaces";
 import { findUserById } from "@/lib/users";
 
-export const metadata: Metadata = { title: "Shared", robots: { index: false } };
+export const metadata: Metadata = { title: "Calendar", robots: { index: false } };
 export const viewport = appViewport;
 
 // /shared, /shared/tasks, /shared/settings, with the open panels in ?p=

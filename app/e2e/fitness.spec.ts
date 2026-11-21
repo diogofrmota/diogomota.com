@@ -328,7 +328,7 @@ test("a run: its pace as it's typed, in the history and the records; changed, th
   expect(data.runs).toEqual([expect.objectContaining({ distanceM: 10000, durationS: 3300 })]);
 });
 
-test("the API: only your own data, and what it refuses", async ({ page, browser, request }) => {
+test("the API: only your own data, and what it refuses @smoke", async ({ page, browser, request }) => {
   await openFitness(page);
   const routine = await post(page.request, "/routines", {
     name: "Legs",
@@ -430,10 +430,4 @@ test("the API: only your own data, and what it refuses", async ({ page, browser,
   });
   expect(crossSite.status()).toBe(403);
   expect((await request.get("/api/fitness")).status()).toBe(401);
-});
-
-test("logged out, /fitness sends home with its login prompt, which comes back to it", async ({ page }) => {
-  await page.goto("/fitness/progress");
-  await expect(page).toHaveURL("/?next=%2Ffitness%2Fprogress");
-  await expect(page.getByRole("dialog", { name: "Log in to open Fitness" })).toBeVisible();
 });

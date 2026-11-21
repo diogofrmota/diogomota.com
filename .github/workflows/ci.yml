@@ -1,16 +1,27 @@
-# Checks the app: formatting, lint, typecheck, the migration rules, unit tests and a
-# build, isolated integration and behavioral tests, and production regressions.
-# Pull requests and the normal main deployment gate both exercise the full suite.
+# Checks the app in three jobs that run side by side, a few minutes in all:
+# formatting, lint, typecheck, the migration rule and the unit tests; the
+# integration tests (a fresh database); and the Playwright @smoke tests (signing
+# up and in, every app's views, what keeps each account's data its own, the
+# offline and upload regressions) against a production build. The rest of the
+# Playwright suite runs locally, only for what a change touches (`npm run
+# test:affected`), or all of it from Actions → CI → Run workflow with e2e: all.
 name: CI
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      e2e:
+        description: "Which Playwright tests: smoke (the @smoke tests, as for a deploy) or all (every test, desktop and phone)."
+        type: choice
+        options: [smoke, all]
+        default: smoke
   workflow_call:
     inputs:
       e2e:
-        description: "Which Playwright tests to run: all, or smoke (the walk through every view, and logging in)."
+        description: "Which Playwright tests: smoke or all."
         type: string
-        default: all
+        default: smoke
 
 permissions:
   contents: read
@@ -18,7 +29,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: app
@@ -42,21 +53,41 @@ jobs:
       # A migration may only drop or rename what the previous release stopped reading (README.md, Migrations).
       - run: npm run check:migrations
       - run: npm run test:unit
-      - run: npm run build
+      # No `npm run build` here: the e2e job builds the app, and deploy.yml's image job builds the image.
+
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+      - run: node scripts/run-e2e.mjs --integration
 
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: ${{ inputs.e2e == 'all' && 45 || 15 }}
     defaults:
       run:
         working-directory: app
     env:
       NEXT_TELEMETRY_DISABLED: 1
-      # The tests' own dev server (playwright.config.ts).
+      # The tests' own server (playwright.config.ts).
       AUTH_URL: http://localhost:3100
-      # Normal main deployments explicitly select all tests; smoke remains an
-      # optional reusable-workflow input, never the normal deployment gate.
-      E2E_ARGS: ${{ inputs.e2e == 'smoke' && 'views.spec.ts auth.spec.ts' || '' }}
+      # One of two fixed values, never user input: the @smoke tests on the
+      # desktop, or everything (both projects).
+      E2E_ARGS: ${{ inputs.e2e == 'all' && ' ' || '--grep @smoke --project=desktop' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -72,11 +103,11 @@ jobs:
       - name: A secret for this run's sessions
         run: echo "AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: npx playwright install --with-deps chromium
-      # E2E_ARGS is one of two fixed values above, never user input.
-      - run: node scripts/run-e2e.mjs --integration
-      - run: npm run test:e2e -- $E2E_ARGS
-      - name: Production service worker and upload regressions
-        run: npm run test:e2e -- --production production.spec.ts --project=desktop
+      # A production build (scripts/run-e2e.mjs builds it), so no route waits
+      # to compile, with its service worker for production.spec.ts.
+      - run: |
+          # shellcheck disable=SC2086 # E2E_ARGS splits into its arguments on purpose
+          node scripts/run-e2e.mjs --production $E2E_ARGS
 
       - name: Keep the report of a failed run
         if: failure()

@@ -9,11 +9,15 @@ import { safeNextPath } from "@/lib/next-path";
 import { grantSessionTransition } from "@/lib/session-transition";
 import { clientIp, loginLimit } from "@/lib/rate-limit";
 
-// Logs in with a username or an email (in any case), and the password.
+// Logs in with a username or an email (in any case), and the password. With
+// Remember me (`remember`, on to start with) the session lasts 30 days (auth.ts);
+// without it, its cookie ends when the browser closes, and the session within a
+// day (Better Auth's rememberMe: false).
 export async function logIn(_previous: FormState, formData: FormData): Promise<FormState> {
   const login = formData.get("login");
   const password = formData.get("password");
-  const values = { login: typeof login === "string" ? login : "" };
+  const rememberMe = formData.get("remember") === "on";
+  const values = { login: typeof login === "string" ? login : "", remember: rememberMe ? "yes" : "no" };
   const name = values.login.trim();
   if (!name || typeof password !== "string" || !password) {
     return { error: "Enter your username or email, and your password.", values };
@@ -25,8 +29,9 @@ export async function logIn(_previous: FormState, formData: FormData): Promise<F
   }
   try {
     // Usernames can't contain "@", so one never matches a username and another account's email.
-    if (name.includes("@")) await auth.api.signInEmail({ body: { email: name, password }, headers: requestHeaders });
-    else await auth.api.signInUsername({ body: { username: name, password }, headers: requestHeaders });
+    if (name.includes("@"))
+      await auth.api.signInEmail({ body: { email: name, password, rememberMe }, headers: requestHeaders });
+    else await auth.api.signInUsername({ body: { username: name, password, rememberMe }, headers: requestHeaders });
   } catch (error) {
     // One message for an unknown account and a wrong password.
     if (error instanceof APIError) return { error: "Wrong username/email or password.", values };

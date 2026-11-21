@@ -426,7 +426,7 @@ What grows on disk: the app images (the deployed one and two older ones), about 
 
 ## Remediation rollout and media cleanup
 
-The remediation and its acceptance results are recorded in the [audit remediation ledger](audit-2026-11-18.md#remediation-ledger). Local verification uses disposable resources; a push to `main` starts the normal deployment workflow.
+Local verification uses disposable resources; a push to `main` starts the normal deployment workflow.
 
 Before a future authorized rollout, take and verify normal database/media backups, apply additive migration `028_media_cleanup_jobs.sql` using the normal migration runner, and deploy the new image. Existing images ignore the new table, so database rollback compatibility is preserved. Do not drop legacy columns or the new outbox during image rollback.
 

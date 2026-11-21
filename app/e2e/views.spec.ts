@@ -17,14 +17,14 @@ test.beforeEach(async ({ page, isMobile }) => {
 });
 
 const sharedTab = (page: Page, view: string) =>
-  page.getByRole("navigation", { name: "Shared", exact: true }).getByRole("button", { name: view, exact: true });
+  page.getByRole("navigation", { name: "Calendar", exact: true }).getByRole("button", { name: view, exact: true });
 
 async function goBackTo(page: Page, view: string) {
   await page.goBack();
   await expect(viewHeading(page)).toHaveText(view);
 }
 
-test("Books shelves and panels", async ({ page }) => {
+test("Books shelves and panels @smoke", async ({ page }) => {
   await signUp(page, newUser(), "/signup?next=%2Fbooks");
   await expect(page).toHaveURL("/books");
   await expect(page.getByRole("heading", { name: "Start by discovering books!" })).toBeVisible();
@@ -74,11 +74,12 @@ async function expectFocusedWithMouse(page: Page, field: Locator) {
   else await expect(field).not.toBeFocused();
 }
 
-test("the site's pages", async ({ page }) => {
+test("the site's pages @smoke", async ({ page }) => {
   for (const [path, view] of [
     ["/", "home"],
     ["/about", "about"],
     ["/privacy", "privacy"],
+    ["/report-bug", "report a bug"],
     ["/login", "login"],
     ["/signup", "sign up"],
     ["/forgot-password", "forgot password"],
@@ -94,7 +95,7 @@ test("the site's pages", async ({ page }) => {
   await checkView(page, "error page");
 
   await page.goto("/");
-  await page.getByRole("main").getByRole("link", { name: "Open Shows" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Log in to open Shows" })).toBeVisible();
   await checkView(page, "login prompt");
   await page.keyboard.press("Escape");
@@ -143,7 +144,7 @@ test("the site's pages", async ({ page }) => {
   await expect(crop).toBeHidden();
 });
 
-test("Shared: every view and dialog, each closed with Back", async ({ page }) => {
+test("Calendar: every view and dialog, each closed with Back @smoke", async ({ page }) => {
   await signUp(page, newUser(), "/signup?next=/shared");
   await expect(page.getByRole("heading", { name: "Your shared calendar" })).toBeVisible();
   await checkView(page, "Shared welcome");
@@ -228,7 +229,7 @@ test("Shared: every view and dialog, each closed with Back", async ({ page }) =>
   await goBackTo(page, "Calendar");
 });
 
-test("Shows: every view and dialog, each closed with Back", async ({ page, browser }) => {
+test("Shows: every view and dialog, each closed with Back @smoke", async ({ page, browser }) => {
   const me = await openShows(page);
   // A new account's guide: TV shows, movies, friends, then what was added.
   const main = page.getByRole("main");
@@ -357,7 +358,7 @@ test("Shows: every view and dialog, each closed with Back", async ({ page, brows
   await asker.context.close();
 });
 
-test("Recipes: every view and dialog, each closed with Back", async ({ page }) => {
+test("Recipes: every view and dialog, each closed with Back @smoke", async ({ page }) => {
   const recipesTab = (view: string) =>
     page.getByRole("navigation", { name: "Recipes", exact: true }).getByRole("button", { name: view, exact: true });
   await signUp(page, newUser(), "/signup?next=/recipes");
@@ -442,7 +443,7 @@ test("Recipes: every view and dialog, each closed with Back", async ({ page }) =
   await goBackTo(page, "Recipes");
 });
 
-test("Fitness: every view and dialog, each closed with Back", async ({ page }) => {
+test("Fitness: every view and dialog, each closed with Back @smoke", async ({ page }) => {
   const fitnessTab = (view: string) =>
     page.getByRole("navigation", { name: "Fitness", exact: true }).getByRole("button", { name: view, exact: true });
   await signUp(page, newUser(), "/signup?next=/fitness");
@@ -593,7 +594,9 @@ test("Fitness: every view and dialog, each closed with Back", async ({ page }) =
   await goBackTo(page, "Today");
 });
 
-test("a load that fails says so, and Retry loads it again", async ({ page }) => {
+test("a load that fails says so, and Retry loads it again", async ({ page, isMobile }) => {
+  // What a failed load says is the same at any size; the phone walks the views above.
+  test.skip(isMobile, "the same on a phone");
   const offline = "Could not reach the server. Check your connection.";
   const failing = async (path: string | RegExp, view: () => Promise<void>, name: string) => {
     await page.route(path, (route) =>

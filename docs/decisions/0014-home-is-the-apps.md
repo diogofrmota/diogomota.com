@@ -1,6 +1,6 @@
 # 0014 — Home is the apps
 
-**Decided:** unreleased (after v1.2.0), 2026-11-14, from the review in [update_UX.md](../../update_UX.md). Logged out, changed by [0016](0016-the-front-page-is-a-website.md): the front page is a website, and `/about` is in its look.
+**Decided:** unreleased (after v1.2.0), 2026-11-14, from a UX review. Logged out, changed by [0016](0016-the-front-page-is-a-website.md): the front page is a website, and `/about` is in its look.
 
 **Why:** `diogomota.com/` was a personal intro with one button, Check Apps, and everyone who came for the apps had to pass through it: friends opening a link, the installed app (which started on `/apps`), anyone sent to log in. The apps are what the site is for, so they are the front door, and the intro is one page further.
 

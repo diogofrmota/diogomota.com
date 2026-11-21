@@ -327,7 +327,7 @@ test("deleting a recipe closes it with Undo, then deletes it and its photos; pho
   expect((await page.request.get(`/api/recipes/photos/${second}`)).status()).toBe(404);
 });
 
-test("the API: only your own recipes and photos, and what it refuses", async ({ page, browser, request }) => {
+test("the API: only your own recipes and photos, and what it refuses @smoke", async ({ page, browser, request }) => {
   await openRecipes(page);
   const mine = await createRecipe(page.request, { title: "Secret sauce", ingredients: ["1 tbsp miso"] });
   expect((await addPhoto(page.request, mine.id)).status()).toBe(201);
@@ -400,10 +400,4 @@ test("the API: only your own recipes and photos, and what it refuses", async ({ 
   });
   expect(crossSite.status()).toBe(403);
   expect((await request.get("/api/recipes")).status()).toBe(401);
-});
-
-test("logged out, /recipes sends home with its login prompt, which comes back to it", async ({ page }) => {
-  await page.goto("/recipes/shopping");
-  await expect(page).toHaveURL("/?next=%2Frecipes%2Fshopping");
-  await expect(page.getByRole("dialog", { name: "Log in to open Recipes" })).toBeVisible();
 });

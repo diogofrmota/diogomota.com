@@ -7,6 +7,7 @@ import { SiteFrame } from "@/components/site/SiteFrame";
 import { apps, appSlug } from "@/lib/apps";
 import { aboutDescription, baseOpenGraph, contactEmail, siteName } from "@/lib/site";
 import { defaultTheme } from "@/lib/themes";
+import { sendContactMessage } from "./actions";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -58,7 +59,7 @@ export default async function About() {
             <p>
               Questions, ideas or something that doesn&rsquo;t work? Send me a message and I&rsquo;ll get back to you.
             </p>
-            <ContactForm />
+            <ContactForm action={sendContactMessage} />
           </section>
         )}
       </article>

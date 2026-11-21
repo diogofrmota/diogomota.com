@@ -1,9 +1,19 @@
 import { randomUUID } from "node:crypto";
-import { expect, type Page, test } from "@playwright/test";
-import { linkNames } from "./fixtures";
+import { type Page } from "@playwright/test";
+import { accountSetting, expect, linkNames, newUser, signUp, test } from "./fixtures";
 
 // /reset-password without a token shows its "link expired" message.
-const pages = ["/", "/about", "/login", "/signup", "/forgot-password", "/reset-password", "/privacy", "/no-such-page"];
+const pages = [
+  "/",
+  "/about",
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/privacy",
+  "/report-bug",
+  "/no-such-page",
+];
 
 async function expectNoHorizontalScroll(page: Page) {
   await page.evaluate(() => document.fonts.ready);
@@ -14,17 +24,19 @@ async function expectNoHorizontalScroll(page: Page) {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
-// The narrowest phones: views.spec.ts checks these pages at 390 and 375 px.
+// The narrowest phones: views.spec.ts checks every view at 390 and 375 px.
 test.describe("at 320px wide", () => {
   test.use({ viewport: { width: 320, height: 740 }, isMobile: true, hasTouch: true });
 
-  test("no page scrolls sideways, nor home with the login prompt open", async ({ page }) => {
+  test("no page scrolls sideways: the site's, home with its login prompt or menu open, then logged in, home and Account's popups", async ({
+    page,
+  }) => {
     for (const path of pages) {
       await page.goto(path);
       await expectNoHorizontalScroll(page);
     }
     await page.goto("/");
-    await page.getByRole("main").getByRole("link", { name: "Open Shows" }).click();
+    await page.getByRole("main").getByRole("link", { name: "Shows", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await expectNoHorizontalScroll(page);
     // Nor with the website's menu open.
@@ -32,36 +44,47 @@ test.describe("at 320px wide", () => {
     await page.getByRole("banner").getByRole("button", { name: "Menu" }).click();
     await expect(page.getByRole("navigation", { name: "Menu" })).toBeVisible();
     await expectNoHorizontalScroll(page);
+
+    await signUp(page, newUser());
+    await expect(page).toHaveURL("/");
+    await expectNoHorizontalScroll(page);
+    // Three icons to a row, all of each on the screen, even this narrow.
+    const main = page.getByRole("main");
+    const icons = ["Books", "Recipes", "Fitness"].map((name) => main.getByRole("link", { name, exact: true }));
+    for (const icon of icons) await expect(icon).toBeInViewport({ ratio: 1 });
+    const tops = await Promise.all(icons.map(async (icon) => (await icon.boundingBox())!.y));
+    expect(new Set(tops).size).toBe(1);
+
+    await page.goto("/account");
+    await expectNoHorizontalScroll(page);
+    // On a touch screen, a popup opens without its field focused: the keyboard
+    // would come up over it. A tap on the field types.
+    expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
+    for (const name of ["Name", "Username", "Email", "Theme"]) {
+      await accountSetting(page, name).click();
+      const popup = page.getByRole("dialog", { name, exact: true });
+      await expect(popup).toBeInViewport({ ratio: 1 });
+      await expectNoHorizontalScroll(page);
+      if (name !== "Theme") {
+        await expect(popup.getByRole("button", { name: "Close" })).toBeFocused();
+        await expect(popup.getByRole("textbox").first()).not.toBeFocused();
+        await popup.getByRole("textbox").first().tap();
+        await expect(popup.getByRole("textbox").first()).toBeFocused();
+      }
+      await popup.getByRole("button", { name: "Close" }).tap();
+      await expect(popup).toBeHidden();
+    }
   });
 });
 
-test("health check reports ok", async ({ request }) => {
-  const response = await request.get("/api/health");
-  expect(response.status()).toBe(200);
-  expect(await response.json()).toEqual({ status: "ok" });
-});
+test("the health check, the icons and the web app manifest are served @smoke", async ({ page }) => {
+  const health = await page.request.get("/api/health");
+  expect(health.status()).toBe(200);
+  expect(await health.json()).toEqual({ status: "ok" });
 
-test("unknown URLs get a 404 page in the apps' look, with the tab bar and Go home", async ({ page }) => {
-  const response = await page.goto("/no-such-page");
-  expect(response?.status()).toBe(404);
-  await expect(page).toHaveTitle("page not found · diogo mota");
-  await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
-  // Light, logged out: the theme's gray.
-  await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
-  expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(
-    "rgb(230, 230, 230)",
-  );
-  expect(await linkNames(page.getByRole("navigation", { name: "Account" }))).toEqual(["Log in", "Sign up", "Apps"]);
-
-  await page.getByRole("main").getByRole("link", { name: "Go home" }).click();
-  await expect(page).toHaveURL("/");
-});
-
-test("favicon and touch icon are served", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator('head link[rel="icon"][type="image/svg+xml"]')).toHaveCount(1);
   await expect(page.locator('head link[rel="apple-touch-icon"]')).toHaveCount(1);
-
   for (const [path, type] of [
     ["/favicon.ico", "image/x-icon"],
     ["/icon.svg", "image/svg+xml"],
@@ -71,9 +94,8 @@ test("favicon and touch icon are served", async ({ page }) => {
     expect(response.status(), path).toBe(200);
     expect(response.headers()["content-type"], path).toBe(type);
   }
-});
 
-test("the web app manifest lets phones add the site to their home screen", async ({ page }) => {
+  // The manifest lets phones add the site to their home screen.
   for (const path of ["/", "/about"]) {
     await page.goto(path);
     await expect(page.locator('head link[rel="manifest"]')).toHaveAttribute("href", "/manifest.webmanifest");
@@ -106,7 +128,22 @@ test("the web app manifest lets phones add the site to their home screen", async
   }
 });
 
-test("a page that fails to render shows the error page, whose Retry renders it again", async ({ page }) => {
+test("unknown URLs get a 404 page in the apps' look, and a page that fails to render the error page, whose Retry renders it again", async ({
+  page,
+}) => {
+  const response = await page.goto("/no-such-page");
+  expect(response?.status()).toBe(404);
+  await expect(page).toHaveTitle("page not found · diogo mota");
+  await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
+  // Light, logged out: the theme's gray.
+  await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(
+    "rgb(230, 230, 230)",
+  );
+  expect(await linkNames(page.getByRole("navigation", { name: "Account" }))).toEqual(["Log in", "Sign up", "Apps"]);
+  await page.getByRole("main").getByRole("link", { name: "Go home" }).click();
+  await expect(page).toHaveURL("/");
+
   // A test page that fails once for each id (app/test/error).
   await page.goto(`/test/error?id=${randomUUID()}`);
   await expect(page.getByRole("heading", { level: 1, name: "Something went wrong" })).toBeVisible();
@@ -130,9 +167,9 @@ test("keyboard focus is visible", async ({ page }) => {
 
   await page.goto("/");
   // The header (the mark, Apps, How it works, About, Log in and Sign up), then
-  // the hero's Sign up and Login, then Shared's Open.
+  // the hero's Sign up and Login, then Calendar's icon.
   for (let i = 0; i < 9; i++) await page.keyboard.press("Tab");
-  const open = page.getByRole("main").getByRole("link", { name: "Open Shared" });
+  const open = page.getByRole("main").getByRole("link", { name: "Calendar", exact: true });
   await expect(open).toBeFocused();
   await expect(open).toHaveCSS("outline-style", "solid");
 

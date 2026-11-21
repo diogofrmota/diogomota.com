@@ -1,8 +1,14 @@
 import type { NextConfig } from "next";
 
+// The e2e tests' production build (scripts/run-e2e.mjs --production).
+const e2eBuild = process.env.E2E_PRODUCTION === "1" && !!process.env.E2E_RUN_ID;
+
 const nextConfig: NextConfig = {
   experimental: { proxyClientMaxBodySize: "21mb" },
-  distDir: process.env.E2E_PRODUCTION === "1" && process.env.E2E_RUN_ID ? ".next-e2e-production" : ".next",
+  distDir: e2eBuild ? ".next-e2e-production" : ".next",
+  // The tests' build skips the typecheck (half its time): `npm run typecheck`
+  // runs beside it in CI (ci.yml's check), and the image's build still checks.
+  typescript: { ignoreBuildErrors: e2eBuild },
   // Self-contained server in .next/standalone, used by the Docker image.
   output: "standalone",
   // The apps were at /apps until home became them (docs/decisions/0014): old

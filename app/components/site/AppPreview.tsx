@@ -2,14 +2,13 @@ import { memberColors } from "@/lib/space-types";
 import styles from "./AppPreview.module.css";
 
 // A small picture of an app, drawn with the page's theme from the apps' own
-// parts, so it looks like the app does for this user: in its window on the
-// front page (AppWindow, scaled up), in its login prompt and in Shared's
-// welcome. Decorative (the words beside it say what the app is): no text in it
+// parts, so it looks like the app does for this user: in its login prompt
+// on the front page and in Calendar's welcome. Decorative (the words beside it say what the app is): no text in it
 // but the calendar's day numbers.
 
 const [blue, rose, green, gold] = memberColors.map((color) => color.hex);
 
-/** Shared: a month of the calendar with members' events, and a task list beside it. */
+/** Calendar: a month of the calendar with members' events, and a task list beside it. */
 function SharedPreview() {
   // Three weeks, Monday first: [day, the event's color, or none].
   const days: [number, string?][] = [

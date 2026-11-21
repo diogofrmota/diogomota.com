@@ -5,54 +5,25 @@ import { appAt } from "@/lib/apps";
 import { authHref } from "@/lib/next-path";
 import { siteLead, siteTagline } from "@/lib/site";
 import { AppSections } from "./AppSections";
+import { HomeScreenGuide } from "./HomeScreenGuide";
 import styles from "./FrontPage.module.css";
 
 const steps = [
   ["Sign up", "Your name, a username, your email and a password. Then confirm your email."],
   ["Pick an app", "Every app is there from the start, on your phone or your computer."],
   [
-    "Bring your people",
-    "Invite your partner to your Shared space, or add friends in Shows or Books to share what you read and watch.",
+    "Invite your friends",
+    "Invite your partner to your shared Calendar, or add friends in Shows or Books to share what you read and watch.",
   ],
 ] as const;
 
-const questions: { question: string; answer: React.ReactNode }[] = [
-  {
-    question: "Who runs it?",
-    answer: (
-      <>
-        Diogo. The apps are made for friends and family, and anyone can sign up. More on the{" "}
-        <Link href="/about">About</Link> page.
-      </>
-    ),
-  },
-  {
-    question: "Is my data private?",
-    answer: (
-      <>
-        No ads, no analytics and no tracking cookies. The site runs on a server in Europe, and nobody sells or shares
-        your data. The <Link href="/privacy">Privacy</Link> page has the details.
-      </>
-    ),
-  },
-  {
-    question: "Can I use it on my phone?",
-    answer:
-      "Yes. Add it to your home screen and it opens like an app of its own, and your personal libraries keep working offline. Profiles and friends need a connection.",
-  },
-  {
-    question: "Can I take my data with me?",
-    answer:
-      "Yes. In Account, Data / Privacy page has Download my data, a file with all of it, and Delete my account, which deletes it all at once.",
-  },
-];
-
 /**
  * The front page (home, logged out; docs/decisions/0016), in the website's
- * frame (SiteFrame): what the site is, Sign up and Login; then a section per
- * app (AppSections, with its picture on a wider screen), How it works, Questions,
- * and Sign up once more. `next` (from a protected page) makes Log in and Sign
- * up return there, and opens the prompt of the app it is in.
+ * frame (SiteFrame): what the site is, Sign up and Login; then the apps in
+ * three groups (AppSections: For Couples, Trackers, Health), How it works,
+ * How to add to Home Screen (HomeScreenGuide, step by step on an iPhone), and
+ * Sign up once more. `next` (from a protected page) makes Log in and Sign up
+ * return there, and opens the prompt of the app it is in.
  */
 export function FrontPage({ next, deleted }: { next: string | null; deleted: boolean }) {
   return (
@@ -93,6 +64,7 @@ export function FrontPage({ next, deleted }: { next: string | null; deleted: boo
         <ol className={styles.steps}>
           {steps.map(([title, text], i) => (
             <li key={title} className={styles.step}>
+              {/* The number, then the title beside it; the words under both. */}
               <span className={styles.stepNumber} aria-hidden="true">
                 {i + 1}
               </span>
@@ -103,18 +75,14 @@ export function FrontPage({ next, deleted }: { next: string | null; deleted: boo
         </ol>
       </section>
 
-      <section id="questions" className={styles.section} aria-labelledby="questions-title">
-        <h2 id="questions-title" className={styles.heading}>
-          Questions
+      <section id="home-screen" className={styles.section} aria-labelledby="home-screen-title">
+        <h2 id="home-screen-title" className={styles.heading}>
+          How to add to Home Screen
         </h2>
-        <div className={styles.questions}>
-          {questions.map(({ question, answer }) => (
-            <div key={question}>
-              <h3>{question}</h3>
-              <p>{answer}</p>
-            </div>
-          ))}
-        </div>
+        <p className={styles.sectionLead}>
+          On an iPhone, in Safari: then it opens from your Home Screen like an app of its own.
+        </p>
+        <HomeScreenGuide />
       </section>
 
       <section className={`${styles.section} ${styles.band}`} aria-labelledby="band-title">

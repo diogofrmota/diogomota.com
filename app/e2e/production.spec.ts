@@ -7,6 +7,8 @@ import { isolatedNginx, photoMultipart } from "./nginx";
 import { seedLargeDataset } from "./large-dataset";
 
 test.skip(process.env.E2E_PRODUCTION !== "1", "Requires an isolated production build and service worker.");
+// The only tests that let the service worker register (playwright.config.ts blocks it for the rest).
+test.use({ serviceWorkers: "allow" });
 
 async function controlled(page: import("@playwright/test").Page, route: string) {
   await page.goto(route);
@@ -20,7 +22,7 @@ async function controlled(page: import("@playwright/test").Page, route: string) 
     .toBe(true);
 }
 
-test("offline Fitness edits survive Books switching, another app tab, reload and replay once", async ({
+test("offline Fitness edits survive Books switching, another app tab, reload and replay once @smoke", async ({
   page,
   context,
 }) => {
@@ -79,7 +81,7 @@ test("offline Fitness edits survive Books switching, another app tab, reload and
   expect(patches).toBe(1);
 });
 
-test("multi-year data measurements and quota failure keep pending operations recoverable", async ({
+test("multi-year data measurements and quota failure keep pending operations recoverable @smoke", async ({
   page,
   context,
 }, testInfo) => {
@@ -179,7 +181,7 @@ test("multi-year data measurements and quota failure keep pending operations rec
     .toBe(true);
 });
 
-test("legacy queues from an old release migrate by app and Shows additions resume with reconciliation", async ({
+test("legacy queues from an old release migrate by app and Shows additions resume with reconciliation @smoke", async ({
   page,
 }) => {
   const user = newUser();
@@ -232,7 +234,7 @@ test("legacy queues from an old release migrate by app and Shows additions resum
   ).toBe(2);
 });
 
-test("successful password logout clears other tabs and private documents; failed validation preserves queues", async ({
+test("successful password logout clears other tabs and private documents; failed validation preserves queues @smoke", async ({
   page,
   context,
 }) => {
@@ -283,7 +285,7 @@ test("successful password logout clears other tabs and private documents; failed
   await expect(page.getByRole("navigation", { name: "Books", exact: true })).toBeVisible();
 });
 
-test("production nginx and Next accept bounded photos; reject oversized, chunked and malformed bodies", async ({
+test("production nginx and Next accept bounded photos; reject oversized, chunked and malformed bodies @smoke", async ({
   page,
   context,
 }) => {
@@ -338,7 +340,9 @@ test("production nginx and Next accept bounded photos; reject oversized, chunked
   }
 });
 
-test("logout upgrades a legacy worker without a cleanup handler before completing local cleanup", async ({ page }) => {
+test("logout upgrades a legacy worker without a cleanup handler before completing local cleanup @smoke", async ({
+  page,
+}) => {
   await signUp(page, newUser());
   await expect(page).toHaveURL("/");
   await page.goto("/account");
@@ -358,7 +362,9 @@ test("logout upgrades a legacy worker without a cleanup handler before completin
   expect(await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL.endsWith("/sw.js"))).toBe(true);
 });
 
-test("unsupported journals remain unchanged, pause editing, and can be downloaded for recovery", async ({ page }) => {
+test("unsupported journals remain unchanged, pause editing, and can be downloaded for recovery @smoke", async ({
+  page,
+}) => {
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/");
@@ -383,7 +389,7 @@ test("unsupported journals remain unchanged, pause editing, and can be downloade
   expect((await (await page.request.get("/api/fitness")).json()).data.days).toEqual([]);
 });
 
-test("browsers without Web Locks retain connected use and explicitly reject offline edits", async ({
+test("browsers without Web Locks retain connected use and explicitly reject offline edits @smoke", async ({
   page,
   context,
 }) => {
@@ -406,7 +412,7 @@ test("browsers without Web Locks retain connected use and explicitly reject offl
   await expect(page.locator('data[value="250"]')).toBeVisible();
 });
 
-test("an acknowledged write leaving its view is drained before another journal owner replays it", async ({
+test("an acknowledged write leaving its view is drained before another journal owner replays it @smoke", async ({
   page,
   context,
 }) => {

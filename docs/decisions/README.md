@@ -1,6 +1,6 @@
 # Decisions
 
-One short record per decision that shapes the site: what was chosen, why, and what it costs. A new decision gets the next number; one that changes gets a new record that says which it replaces (the old one stays, marked as replaced). The details of how things work are in [README.md](../../README.md) and the Playwright tests; the history in [plan.md](../../plan.md)'s Build log.
+One short record per decision that shapes the site: what was chosen, why, and what it costs. A new decision gets the next number; one that changes gets a new record that says which it replaces (the old one stays, marked as replaced). The details of how things work are in [README.md](../../README.md) and the Playwright tests; the history in [CHANGELOG.md](../../CHANGELOG.md) and the git log.
 
 | # | Decision | Since |
 |---|---|---|
@@ -24,3 +24,5 @@ One short record per decision that shapes the site: what was chosen, why, and wh
 | [0018](0018-fitness.md) | Fitness, the fourth app: each user's own | unreleased |
 | [0019](0019-books.md) | Books, the fifth app: private shelves and page progress | unreleased |
 | [0020](0020-books-looks-like-shows.md) | Books looks like Shows, with Shows' styles | unreleased |
+| [0021](0021-offline-durability-and-test-isolation.md) | Durable offline operations and disposable test resources | v2.0.0 |
+| [0022](0022-small-deploy-gate.md) | A small deploy gate; the rest of the tests run for what a change touches | unreleased |

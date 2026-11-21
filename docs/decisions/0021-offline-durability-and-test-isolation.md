@@ -40,7 +40,7 @@ nginx access logs omit queries/referrers and redact token path segments. Raw req
 
 The test runner ignores ordinary database/media settings. Every mutating run owns a fresh PostgreSQL 16 container, random loopback port, random database identity and separate OS-temp media root. PostgreSQL data uses a container-local temporary filesystem. Playwright and DB helpers require matching explicit test identity/paths; there is no `.env.local` database fallback. Teardown never deletes username prefixes or unowned shared spaces. Container removal includes only its own anonymous volumes; media deletion validates the intended absolute temporary root.
 
-The normal main deployment gate runs the full behavioral suite, isolated database/operations integration tests and a production standalone-build suite. Production test hooks require the same test database/media identity and a loopback authentication URL. Ordinary production configuration leaves them disabled. This preserves main-only development while testing the actual worker and upload proxy boundary.
+The main deployment gate runs isolated database/operations integration tests and, on a production standalone build, the `@smoke` behavioral tests with the production suite ([0022](0022-small-deploy-gate.md); it ran the full behavioral suite until then). Production test hooks require the same test database/media identity and a loopback authentication URL. Ordinary production configuration leaves them disabled. This preserves main-only development while testing the actual worker and upload proxy boundary.
 
 ## Documentation checked
 

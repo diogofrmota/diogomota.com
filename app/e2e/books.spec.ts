@@ -181,7 +181,7 @@ test("a book added yourself: its pages from quick actions, finished, edited, rem
   await expect.poll(async () => (await (await page.request.get("/api/books")).json()).data).toEqual([]);
 });
 
-test("books API: validation, duplicate prevention, ownership and deletion", async ({ page, browser }) => {
+test("books API: validation, duplicate prevention, ownership and deletion @smoke", async ({ page, browser }) => {
   await openBooks(page);
   const book = { title: "Dune", catalogId: "OL893415W", totalPages: 400, shelf: "currently-reading", pagesRead: 100 };
   const created = await page.request.post("/api/books", { data: book });

@@ -6,4 +6,4 @@
 
 **What it is:** a migration only adds what its release needs. Dropping or renaming a column or table, changing a type or adding NOT NULL waits for a later release, with `-- contract: <what>, unread since vX.Y.Z`. `scripts/check-migrations.mjs` (in CI) refuses one that doesn't.
 
-**Costs:** unused columns stay for a release (now `events.notes`, `users.password_hash`, `password_changed_at`, `password_resets`, `user_shows.rating`), and someone has to write the contract migration (plan.md, To-do).
+**Costs:** unused columns stay for a release (now `events.notes`, `users.password_hash`, `password_changed_at`, `password_resets`, `user_shows.rating`), and someone has to write the contract migration (README.md, To-do).

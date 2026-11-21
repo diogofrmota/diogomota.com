@@ -42,7 +42,8 @@ function AppLinks({ user }: { user: SiteUser }) {
  * left, then Apps (a menu of them), How it works and About; on the right, Log
  * in (plain) and Sign up (filled), as everywhere, or Account and Your apps once
  * logged in. On a phone: the mark, Sign up (or Your apps) and a menu with the
- * rest. Log in and Sign up return to `next`.
+ * rest, its links (How it works, About, Privacy, Log in) over the apps. Log in
+ * and Sign up return to `next`.
  */
 export function SiteHeader({ user, next, current }: { user: SiteUser; next?: string | null; current?: SitePage }) {
   const here = (page: SitePage) => (current === page ? ("page" as const) : undefined);
@@ -118,8 +119,8 @@ export function SiteHeader({ user, next, current }: { user: SiteUser; next?: str
             className={styles.menuButton}
             panelClassName={`${styles.panel} ${styles.menuPanel}`}
           >
+            {/* The site's links first, then the apps. */}
             <nav aria-label="Menu">
-              <AppLinks user={user} />
               <ul className={styles.menuLinks}>
                 {!user && (
                   <li>
@@ -140,6 +141,7 @@ export function SiteHeader({ user, next, current }: { user: SiteUser; next?: str
                   {user ? <Link href="/account">Account</Link> : <Link href={authHref("/login", next)}>Log in</Link>}
                 </li>
               </ul>
+              <AppLinks user={user} />
             </nav>
           </SiteMenu>
         </div>

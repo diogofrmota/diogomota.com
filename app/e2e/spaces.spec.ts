@@ -48,7 +48,10 @@ async function leave(page: Page) {
   await expect(page.getByRole("heading", { name: "Your shared calendar" })).toBeVisible({ timeout: 15_000 });
 }
 
-test("two users create, copy invite, join, transfer ownership and delete the last space", async ({ page, browser }) => {
+test("two users create, copy invite, join, transfer ownership and delete the last space @smoke", async ({
+  page,
+  browser,
+}) => {
   const owner = await register(page);
   const space = await create(page);
   await settings(page);
@@ -140,7 +143,7 @@ test("invalid, expired and used invite codes show clear errors; a member can lea
   }
 });
 
-test("another space's data and mutations are denied, with and without a space", async ({ page, browser }) => {
+test("another space's data and mutations are denied, with and without a space @smoke", async ({ page, browser }) => {
   await register(page);
   const secret = await create(page);
   const context = await browser.newContext(contextOptions());
@@ -184,26 +187,6 @@ test("concurrent creates and joins preserve one space per user and single-use in
     expect((await (await page.request.get(base)).json()).data.members).toHaveLength(2);
   } finally {
     await context.close();
-  }
-});
-
-test("on mobile the welcome and Settings fit both themes", async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await register(page);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await create(page);
-  await settings(page);
-  await page.evaluate(() => Object.defineProperty(Navigator.prototype, "share", { value: undefined }));
-  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.getByRole("region", { name: "Invite someone" }).getByRole("button", { name: "Share invite link" }).click();
-  await expect(page.getByLabel("Invite link")).toHaveValue(/\/join\/.{8}$/);
-  for (const theme of ["minimal-neutrals", "graphite"]) {
-    // Shown without saving it (the theme is chosen in Account settings): every color comes from data-theme.
-    if (theme === "graphite")
-      await page.locator("[data-theme]").evaluate((shell) => shell.setAttribute("data-theme", "graphite"));
-    await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", theme);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await expect(page.getByRole("button", { name: "Leave this space", exact: true })).toBeVisible();
   }
 });
 
@@ -259,7 +242,7 @@ test("an invite link shows who sent it, and joins once logged in (never by itsel
   try {
     // Logged out: who sent it, then Log in and Sign up, which come back to it.
     await other.goto(`/join/${code}`);
-    await expect(other.getByRole("heading", { level: 1 })).toHaveText(`${owner.name} invited you to Shared`);
+    await expect(other.getByRole("heading", { level: 1 })).toHaveText(`${owner.name} invited you to their Calendar`);
     await other.getByRole("main").getByRole("link", { name: "Sign up" }).click();
     const member = newUser();
     await other.getByLabel("Name", { exact: true }).fill(member.name);

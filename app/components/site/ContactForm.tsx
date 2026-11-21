@@ -1,18 +1,32 @@
 "use client";
 
 import { useActionState } from "react";
-import { sendContactMessage } from "@/app/about/actions";
 import ui from "@/components/common/ui.module.css";
 import { EMAIL_MAX, NAME_MAX } from "@/lib/account-rules";
+import type { FormState } from "@/lib/form-state";
 import { CONTACT_MESSAGE_MAX } from "@/lib/site";
 import { Field, FormMessage, SubmitButton, TextAreaField } from "./Form";
 import formStyles from "./Form.module.css";
 
-// /about's Get in touch: a name, an email to reply to and the message, sent to
-// Diogo by email (app/about/actions.ts) without the page showing his address.
-// Sent, the fields empty and a thanks shows; refused, what was typed stays.
-export function ContactForm() {
-  const [state, action, pending] = useActionState(sendContactMessage, {});
+// A name, an email to reply to and the message, sent to Diogo by email
+// (lib/contact-message.ts) without the page showing his address: /about's Get
+// in touch, and /report-bug, whose labels are its own. Sent, the message
+// empties and a thanks shows; refused, what was typed stays. `defaults` fills
+// in the name and email of who is logged in.
+export function ContactForm({
+  action: send,
+  messageLabel = "Message",
+  messageHint,
+  submitLabel = "Send message",
+  defaults,
+}: {
+  action: (previous: FormState, formData: FormData) => Promise<FormState>;
+  messageLabel?: string;
+  messageHint?: string;
+  submitLabel?: string;
+  defaults?: { name?: string | null; email?: string | null };
+}) {
+  const [state, action, pending] = useActionState(send, {});
 
   return (
     <form action={action} noValidate className={formStyles.form}>
@@ -23,7 +37,7 @@ export function ContactForm() {
         autoComplete="name"
         required
         maxLength={NAME_MAX}
-        defaultValue={state.values?.name}
+        defaultValue={state.values?.name ?? defaults?.name ?? undefined}
       />
       <Field
         label="Your email"
@@ -34,11 +48,12 @@ export function ContactForm() {
         autoComplete="email"
         required
         maxLength={EMAIL_MAX}
-        defaultValue={state.values?.email}
+        defaultValue={state.values?.email ?? defaults?.email ?? undefined}
       />
       <TextAreaField
-        label="Message"
+        label={messageLabel}
         name="message"
+        hint={messageHint}
         error={state.fieldErrors?.message}
         required
         maxLength={CONTACT_MESSAGE_MAX}
@@ -52,7 +67,7 @@ export function ContactForm() {
         </label>
       </div>
       <FormMessage error={state.error} success={state.success} />
-      <SubmitButton label="Send message" pending={pending} />
+      <SubmitButton label={submitLabel} pending={pending} />
     </form>
   );
 }

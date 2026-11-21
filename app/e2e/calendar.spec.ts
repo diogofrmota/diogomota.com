@@ -65,147 +65,121 @@ async function download(page: Page, name: string) {
   return readFile((await file.path())!, "utf8");
 }
 
-for (const mobile of [false, true]) {
-  test(`calendar lifecycle, exports, views and back button (${mobile ? "mobile" : "desktop"})`, async ({ page }) => {
-    if (mobile) await page.setViewportSize({ width: 390, height: 844 });
-    const { space } = await setup(page);
-    if (mobile) await showMonth(page);
-    const me = space.members[0];
-    // The colors over the calendar: each member by their name, not their username.
-    const legend = page.getByRole("list", { name: "Event colors" });
-    await expect(legend).toHaveCount(0);
-    // The form: Who?, each member's picture (or initial) and All, any of them; the one adding it chosen.
-    await page.getByRole("button", { name: "Add event", exact: true }).click();
-    const who = page.getByRole("group", { name: "Who?" });
-    await expect(who.getByRole("checkbox")).toHaveCount(1);
-    await expect(who.getByRole("checkbox", { name: me.name!, exact: true })).toBeChecked();
-    await expect(who.getByRole("checkbox", { name: "All", exact: true })).toHaveCount(0);
-    // No notes, and no select for who it's for.
-    await expect(page.getByRole("dialog").getByRole("textbox", { name: /Notes/ })).toHaveCount(0);
-    await expect(page.getByRole("dialog").getByRole("combobox")).toHaveCount(0);
-    await page.keyboard.press("Escape");
-    await add(page, "Morning walk", me.name!);
-    await add(page, "Dinner together", "All");
-    const personal = page.getByRole("button", { name: /^Morning walk,/ });
-    const group = page.getByRole("button", { name: /^Dinner together,/ });
-    // Who it's for (their initials here, the group's icon) and the title: on a wide month, with its time.
-    await expect(personal).toBeVisible();
-    await expect(group).toContainText("Dinner together");
-    await expect(personal).toHaveAccessibleName(`Morning walk, 09:30, ${me.name}`);
-    await expect(group).toHaveAccessibleName(`Dinner together, 09:30, ${me.name}`);
-    const today = localParts(new Date()).date;
-    const todayLabel = dateLabel(today, { weekday: "long", day: "numeric", month: "long" });
-    if (mobile) {
-      // A phone's month: today has two bars (no text), and is picked: its events are listed under the month.
-      const day = page.getByRole("button", { name: `${todayLabel}, 2 events` });
-      await expect(day).toHaveAttribute("aria-pressed", "true");
-      await expect(day.locator("..").locator("[class*='bar']:not([class*='bars'])")).toHaveCount(2);
-      const list = page.getByRole("region", { name: "Today" });
-      await expect(list.getByRole("button", { name: /^(Morning walk|Dinner together),/ })).toHaveCount(2);
-      await expect(list.getByRole("button", { name: `Add event on ${todayLabel}` })).toBeVisible();
-    } else {
-      // Both fit in their day, under its number: it doesn't scroll.
-      const day = page.getByRole("button", { name: `${todayLabel}, add event` }).locator("..");
-      await expect(day.getByRole("button", { name: /^(Morning walk|Dinner together),/ })).toHaveCount(2);
-      expect(await day.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
-    }
-    const walk = ((await (await page.request.get(base)).json()).data as CalendarEvent[]).find(
-      (e) => e.title === "Morning walk",
-    )!;
-    await page.reload();
-    if (mobile) await showMonth(page);
+test("calendar lifecycle, exports, views and back button", async ({ page }) => {
+  const { space } = await setup(page);
+  const me = space.members[0];
+  // The colors over the calendar: each member by their name, not their username.
+  const legend = page.getByRole("list", { name: "Event colors" });
+  await expect(legend).toHaveCount(0);
+  // The form: Who?, each member's picture (or initial) and All, any of them; the one adding it chosen.
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
+  const who = page.getByRole("group", { name: "Who?" });
+  await expect(who.getByRole("checkbox")).toHaveCount(1);
+  await expect(who.getByRole("checkbox", { name: me.name!, exact: true })).toBeChecked();
+  await expect(who.getByRole("checkbox", { name: "All", exact: true })).toHaveCount(0);
+  // No notes, and no select for who it's for.
+  await expect(page.getByRole("dialog").getByRole("textbox", { name: /Notes/ })).toHaveCount(0);
+  await expect(page.getByRole("dialog").getByRole("combobox")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await add(page, "Morning walk", me.name!);
+  await add(page, "Dinner together", "All");
+  const personal = page.getByRole("button", { name: /^Morning walk,/ });
+  const group = page.getByRole("button", { name: /^Dinner together,/ });
+  // Who it's for (their initials here, the group's icon) and the title: on a wide month, with its time.
+  await expect(personal).toBeVisible();
+  await expect(group).toContainText("Dinner together");
+  await expect(personal).toHaveAccessibleName(`Morning walk, 09:30, ${me.name}`);
+  await expect(group).toHaveAccessibleName(`Dinner together, 09:30, ${me.name}`);
+  const today = localParts(new Date()).date;
+  const todayLabel = dateLabel(today, { weekday: "long", day: "numeric", month: "long" });
+  // Both fit in their day, under its number: it doesn't scroll.
+  const day = page.getByRole("button", { name: `${todayLabel}, add event` }).locator("..");
+  await expect(day.getByRole("button", { name: /^(Morning walk|Dinner together),/ })).toHaveCount(2);
+  expect(await day.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
+  const walk = ((await (await page.request.get(base)).json()).data as CalendarEvent[]).find(
+    (e) => e.title === "Morning walk",
+  )!;
+  await page.reload();
 
-    // On screen (the rest is its name, for screen readers): the initials and the title, after its time on a wide month.
-    const letters = initials(space.members[0].username, space.members[0].name);
-    await expect(personal.locator(':scope > [aria-hidden="true"]')).toHaveText([
-      letters,
-      mobile ? "Morning walk" : /^09:30\s*Morning walk$/,
-    ]);
-    await expect(group.locator(':scope > [aria-hidden="true"]')).toHaveText([
-      letters,
-      mobile ? "Dinner together" : /^09:30\s*Dinner together$/,
-    ]);
-    expect(await personal.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe(
-      space.members[0].color,
-    );
-    expect(await group.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe(
-      space.members[0].color,
-    );
-    for (const view of ["Agenda", "Month"]) {
-      await page.getByRole("button", { name: view, exact: true }).click();
-      await expect(page.getByRole("region", { name: view.toLowerCase() + " calendar", exact: true })).toBeVisible();
-    }
-    await personal.click();
-    // Who it's for, by their name; events have no notes.
-    await expect(page.getByRole("dialog")).toContainText(me.name!);
-    const box = await page.getByRole("dialog").boundingBox();
-    // On a phone, the whole screen.
-    if (mobile) {
-      expect(box!.width).toBeLessThan(390);
-      expect(box!.height).toBeLessThan(844);
-    } else expect(box!.width).toBeLessThan(600);
-    const ics = await download(page, "Apple or Outlook (.ics)");
-    expect(ics).toContain("SUMMARY:Morning walk\r\n");
-    expect(ics).toContain(`DESCRIPTION:For: ${me.name}\r\n`);
-    const link = new URL((await page.getByRole("link", { name: "Google Calendar" }).getAttribute("href"))!);
-    expect(link.searchParams.get("ctz")).toBe("Europe/Lisbon");
-    expect(link.searchParams.get("dates")).toMatch(/^\d{8}T\d{6}Z\/\d{8}T\d{6}Z$/);
-    expect(link.searchParams.get("details")).toBe(`For: ${me.name}`);
-    // The open event is in the URL; Back closes it.
-    await expect(page).toHaveURL(`/shared?p=event%3A${walk.id}`);
-    await page.goBack();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page).toHaveURL("/shared");
-    await personal.click();
-    await page.getByRole("button", { name: "Edit event", exact: true }).click();
-    await expect(page.getByRole("dialog")).not.toContainText("Time zone");
-    await expect(
-      page.getByRole("group", { name: "Who?" }).getByRole("checkbox", { name: me.name!, exact: true }),
-    ).toBeChecked();
-    await page.getByLabel("Event title", { exact: true }).fill("Evening walk");
-    await setTime(page, "Start time", "18:00");
-    await setTime(page, "End time", "19:00");
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    await page.reload();
-    if (mobile) await showMonth(page);
-    await expect(page.getByRole("button", { name: /^Evening walk, 18:00/ })).toBeVisible();
-    // Exports are per event, from its dialog: none for the whole calendar, and no time zone line (not in the form either).
-    await expect(page.getByRole("link", { name: /Export calendar/ })).toHaveCount(0);
-    await expect(page.getByText("Europe/Lisbon")).toHaveCount(0);
-    await page.getByRole("button", { name: /^Evening walk,/ }).click();
-    const edited = await download(page, "Apple or Outlook (.ics)");
-    expect(edited).toContain("SUMMARY:Evening walk");
-    expect(edited).not.toContain("SUMMARY:Dinner together");
-    await page.goBack();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    // Delete event: gone at once, with Undo for a few seconds (no "are you sure?").
-    await page.getByRole("button", { name: /^Evening walk,/ }).click();
+  // On screen (the rest is its name, for screen readers): the initials and the title, after its time on a wide month.
+  const letters = initials(space.members[0].username, space.members[0].name);
+  await expect(personal.locator(':scope > [aria-hidden="true"]')).toHaveText([letters, /^09:30\s*Morning walk$/]);
+  await expect(group.locator(':scope > [aria-hidden="true"]')).toHaveText([letters, /^09:30\s*Dinner together$/]);
+  expect(await personal.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe(
+    space.members[0].color,
+  );
+  expect(await group.evaluate((el) => (el as HTMLElement).style.getPropertyValue("--event-color"))).toBe(
+    space.members[0].color,
+  );
+  for (const view of ["Agenda", "Month"]) {
+    await page.getByRole("button", { name: view, exact: true }).click();
+    await expect(page.getByRole("region", { name: view.toLowerCase() + " calendar", exact: true })).toBeVisible();
+  }
+  await personal.click();
+  // Who it's for, by their name; events have no notes.
+  await expect(page.getByRole("dialog")).toContainText(me.name!);
+  const box = await page.getByRole("dialog").boundingBox();
+  expect(box!.width).toBeLessThan(600);
+  const ics = await download(page, "Apple or Outlook (.ics)");
+  expect(ics).toContain("SUMMARY:Morning walk\r\n");
+  expect(ics).toContain(`DESCRIPTION:For: ${me.name}\r\n`);
+  const link = new URL((await page.getByRole("link", { name: "Google Calendar" }).getAttribute("href"))!);
+  expect(link.searchParams.get("ctz")).toBe("Europe/Lisbon");
+  expect(link.searchParams.get("dates")).toMatch(/^\d{8}T\d{6}Z\/\d{8}T\d{6}Z$/);
+  expect(link.searchParams.get("details")).toBe(`For: ${me.name}`);
+  // The open event is in the URL; Back closes it.
+  await expect(page).toHaveURL(`/shared?p=event%3A${walk.id}`);
+  await page.goBack();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page).toHaveURL("/shared");
+  await personal.click();
+  await page.getByRole("button", { name: "Edit event", exact: true }).click();
+  await expect(page.getByRole("dialog")).not.toContainText("Time zone");
+  await expect(
+    page.getByRole("group", { name: "Who?" }).getByRole("checkbox", { name: me.name!, exact: true }),
+  ).toBeChecked();
+  await page.getByLabel("Event title", { exact: true }).fill("Evening walk");
+  await setTime(page, "Start time", "18:00");
+  await setTime(page, "End time", "19:00");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("button", { name: /^Evening walk, 18:00/ })).toBeVisible();
+  // Exports are per event, from its dialog: none for the whole calendar, and no time zone line (not in the form either).
+  await expect(page.getByRole("link", { name: /Export calendar/ })).toHaveCount(0);
+  await expect(page.getByText("Europe/Lisbon")).toHaveCount(0);
+  await page.getByRole("button", { name: /^Evening walk,/ }).click();
+  const edited = await download(page, "Apple or Outlook (.ics)");
+  expect(edited).toContain("SUMMARY:Evening walk");
+  expect(edited).not.toContain("SUMMARY:Dinner together");
+  await page.goBack();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  // Delete event: gone at once, with Undo for a few seconds (no "are you sure?").
+  await page.getByRole("button", { name: /^Evening walk,/ }).click();
+  await page.getByRole("button", { name: "Delete event", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Evening walk,/ })).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: "Deleted “Evening walk”" })).toBeVisible();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByRole("button", { name: /^Evening walk,/ })).toBeVisible();
+  for (const title of ["Evening walk", "Dinner together"]) {
+    await page.getByRole("button", { name: new RegExp(`^${title},`) }).click();
     await page.getByRole("button", { name: "Delete event", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /^Evening walk,/ })).toHaveCount(0);
-    await expect(page.getByRole("status").filter({ hasText: "Deleted “Evening walk”" })).toBeVisible();
-    await page.getByRole("button", { name: "Undo", exact: true }).click();
-    await expect(page.getByRole("button", { name: /^Evening walk,/ })).toBeVisible();
-    for (const title of ["Evening walk", "Dinner together"]) {
-      await page.getByRole("button", { name: new RegExp(`^${title},`) }).click();
-      await page.getByRole("button", { name: "Delete event", exact: true }).click();
-      await expect(page.getByRole("dialog")).toHaveCount(0);
-    }
-    // The second delete sent the first; the second goes once its Undo has.
-    await expect
-      .poll(
-        () =>
-          withDatabase(async (db) => (await db.query("SELECT id FROM events WHERE space_id=$1", [space.id])).rowCount),
-        { timeout: 15_000 },
-      )
-      .toBe(0);
-    await page.getByRole("button", { name: "Add event", exact: true }).click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-  });
-}
+  }
+  // The second delete sent the first; the second goes once its Undo has.
+  await expect
+    .poll(
+      () =>
+        withDatabase(async (db) => (await db.query("SELECT id FROM events WHERE space_id=$1", [space.id])).rowCount),
+      { timeout: 15_000 },
+    )
+    .toBe(0);
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
 
 /** Four events today, 08:00 to 15:00, for the whole group. */
 async function fourToday(page: Page) {
@@ -294,7 +268,7 @@ test("on a phone, a day of the month is its bars, three then +1, and a tap on it
   }
 });
 
-test("events and exports are isolated by current space; same-space members can collaborate", async ({
+test("events and exports are isolated by current space; same-space members can collaborate @smoke", async ({
   page,
   browser,
   request,

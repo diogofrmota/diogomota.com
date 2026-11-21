@@ -8,20 +8,21 @@ export const siteDomain = siteUrl.hostname;
 /** What the site is, in a line: the front page's headline. */
 export const siteTagline = "Small apps to share with friends";
 /** The front page's introduction, under the headline. */
-export const siteLead = "Share your calendar and register your shows watchlist!";
+export const siteLead = "Shared calendar, Fitness app and Shows Tracker!";
 /** What the site is, with its apps (home, the web app manifest, and every page without its own description). */
 export const siteDescription = `${siteTagline}: ${appNames}.`;
 /** Who runs it: /about. */
 export const aboutDescription = "Diogo Mota, DevOps engineer based in Lisbon, Portugal.";
 
 /**
- * Where /about's Get in touch form sends its messages: CONTACT_EMAIL, set where
- * it runs (.env.production.example). Never shown on a page. Unset, /about has
- * no form and Privacy says to ask Diogo.
+ * Where /about's Get in touch form and /report-bug send their messages:
+ * CONTACT_EMAIL, set where it runs (.env.production.example). Never shown on a
+ * page. Unset, /about has no form, /report-bug says it can't take reports, and
+ * Privacy says to ask Diogo.
  */
 export const contactEmail = (): string | null => process.env.CONTACT_EMAIL?.trim() || null;
 
-/** The longest message Get in touch sends. */
+/** The longest message Get in touch or Report a bug sends. */
 export const CONTACT_MESSAGE_MAX = 5000;
 
 // Open Graph fields shared by every page. Next.js merges metadata shallowly, so a

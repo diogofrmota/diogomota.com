@@ -23,8 +23,8 @@
   text-align: center;
 }
 
-/* Version and Privacy: for whoever deploys it, and for the curious. At the
-   bottom of the page, after whatever is above it. */
+/* Version, Privacy and Report a bug: for whoever deploys it, for the curious,
+   and for what's broken. At the bottom of the page, after whatever is above it. */
 .footer {
   grid-row: 3;
   align-self: end;

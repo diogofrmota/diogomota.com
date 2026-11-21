@@ -18,7 +18,7 @@ const shown = (user: TestUser) => `${user.name} (@${user.username})`;
 const secondWord = (user: TestUser) => user.name.split(" ")[1];
 const named = (id: string, user: TestUser) => ({ id, username: user.username, avatarUrl: null, name: user.name });
 const friendsState = async (page: Page) => (await (await page.request.get("/api/shows/friends")).json()).data;
-test("only accepted friends can read a library through the API, and every friends request is checked", async ({
+test("only accepted friends can read a library through the API, and every friends request is checked @smoke", async ({
   page,
   browser,
   baseURL,

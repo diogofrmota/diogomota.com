@@ -456,8 +456,8 @@ function DeleteForm() {
     <form action={action} noValidate className={formStyles.form}>
       <p>
         This deletes your account and everything it has here: your library, friends, recommendations and activity. You
-        leave your Shared space; if you&rsquo;re its last member, its calendar and tasks are deleted too. It can&rsquo;t
-        be undone. <Link href="/api/account/export">Download your data</Link> first if you want to keep it.
+        leave your shared Calendar; if you&rsquo;re its last member, its calendar and tasks are deleted too. It
+        can&rsquo;t be undone. <Link href="/api/account/export">Download your data</Link> first if you want to keep it.
       </p>
       <Field
         label="Password"

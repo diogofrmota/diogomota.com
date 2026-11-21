@@ -673,7 +673,7 @@ test.describe("on a phone", () => {
   });
 });
 
-test("the library API lists, changes and removes titles, and checks every change", async ({
+test("the library API lists, changes and removes titles, and checks every change @smoke", async ({
   page,
   browser,
   baseURL,
@@ -713,7 +713,12 @@ test("the library API lists, changes and removes titles, and checks every change
     },
   });
 
-  const changed = await patch(orchard, { status: "watching", currentSeason: 2, currentEpisode: 8, isFavourite: true });
+  const changed = await patch(orchard, {
+    status: "watching",
+    currentSeason: 2,
+    currentEpisode: 8,
+    isFavourite: true,
+  });
   expect(changed.status()).toBe(200);
   expect((await changed.json()).data).toEqual({
     id: expect.any(String),
@@ -755,7 +760,10 @@ test("the library API lists, changes and removes titles, and checks every change
   expect((await patch(harbor, { status: "planned" }, { Origin: "https://evil.example" })).status()).toBe(403);
   expect(
     (
-      await page.request.patch(entryUrl(harbor), { data: "status=planned", headers: { "Content-Type": "text/plain" } })
+      await page.request.patch(entryUrl(harbor), {
+        data: "status=planned",
+        headers: { "Content-Type": "text/plain" },
+      })
     ).status(),
   ).toBe(415);
   expect((await page.request.delete(entryUrl(harbor), { headers: { Origin: "https://evil.example" } })).status()).toBe(

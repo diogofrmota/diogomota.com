@@ -1,7 +1,8 @@
-# Deploys main to https://diogomota.com: check (ci.yml), build and push the image
-# to Docker Hub, then copy the stack files to the VPS and run infra/deploy.sh there.
+# Deploys main to https://diogomota.com: check (ci.yml) while the image is built
+# and scanned (build), push the image to Docker Hub once both pass (image), then
+# copy the stack files to the VPS and run infra/deploy.sh there.
 # Rollback: run it by hand on main with image_tag set to an older short SHA, which
-# skips check and image (README.md, Production).
+# skips check, build and image (README.md, Production).
 name: Deploy
 
 on:
@@ -32,30 +33,25 @@ jobs:
     # Only main is built and deployed; a rollback skips the build.
     if: github.ref == 'refs/heads/main' && !inputs.image_tag
     uses: ./.github/workflows/ci.yml
-    # Full behavioral coverage gates the normal main-only workflow.
+    # The @smoke tests gate a deploy (ci.yml says what they cover).
     with:
-      e2e: all
+      e2e: smoke
 
-  image:
-    needs: check
+  # At the same time as check: the image is built into the runner's Docker and
+  # scanned, and its layers cached, but nothing is pushed until check passes too.
+  build:
+    if: github.ref == 'refs/heads/main' && !inputs.image_tag
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions:
-      contents: write # to tag the commit with its version and publish its release
     outputs:
-      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The whole history and the existing vX.Y.Z tags: to pick the next version,
-          # and to list the commits since the last one in its release.
+          # The existing vX.Y.Z tags, to pick the next version.
           fetch-depth: 0
           fetch-tags: true
-
-      - name: Short commit SHA
-        id: tag
-        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Version
         id: version
@@ -71,6 +67,7 @@ jobs:
           last=$(git tag --list "v$line.*" | sed -nE 's/^v[0-9]+\.[0-9]+\.([0-9]+)$/\1/p' | sort -n | tail -n 1)
           echo "version=v$line.$((${last:--1} + 1))" >> "$GITHUB_OUTPUT"
 
+      # Pulls the base image logged in (Docker Hub's anonymous pulls are rate limited).
       - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -78,7 +75,6 @@ jobs:
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # Built into the runner's Docker first, to be scanned before anything is pushed.
       - name: Build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -102,26 +98,56 @@ jobs:
           only-fixed: true
           output-format: table
 
-      # The same build again, from the cache, now pushed with its tags.
+  image:
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # to tag the commit with its version and publish its release
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The whole history and the existing vX.Y.Z tags: to list the commits
+          # since the last version in its release.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Short commit SHA
+        id: tag
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # The build job's build again, from its cache (the same context and
+      # arguments), now pushed with its tags.
       - name: Push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: ./app
           build-contexts: migrations=db/migrations
-          build-args: APP_VERSION=${{ steps.version.outputs.version }}
+          build-args: APP_VERSION=${{ env.VERSION }}
           push: true
           tags: |
             ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}
-            ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE }}:${{ env.VERSION }}
             ${{ env.IMAGE }}:latest
           cache-from: type=gha
 
       # After the push, so a failed build doesn't use up a version. The release lists
       # the commits since the previous version (CHANGELOG.md says where to find them).
-      - name: Tag the commit ${{ steps.version.outputs.version }} and publish its release
+      - name: Tag the commit ${{ env.VERSION }} and publish its release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           previous=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
@@ -142,7 +168,7 @@ jobs:
 
   deploy:
     needs: image
-    # After a successful build, or on its own for a rollback (check and image skipped).
+    # After a successful push, or on its own for a rollback (check, build and image skipped).
     if: >-
       !cancelled() && github.ref == 'refs/heads/main' &&
       (needs.image.result == 'success' || inputs.image_tag != '')

@@ -16,7 +16,7 @@ async function setup(page: Page) {
   return (await (await page.request.get("/api/shared/spaces")).json()).data as Space;
 }
 async function openTasks(page: Page) {
-  await page.getByRole("navigation", { name: "Shared", exact: true }).getByRole("button", { name: "Tasks" }).click();
+  await page.getByRole("navigation", { name: "Calendar", exact: true }).getByRole("button", { name: "Tasks" }).click();
   await expect(page.getByRole("heading", { name: "Tasks", exact: true })).toBeVisible();
   await expect(page.getByText("Loading tasks…")).toHaveCount(0);
 }
@@ -365,7 +365,10 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await dialog.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("status").filter({ hasText: "Deleted “Fix the door”" })).toBeVisible();
-  await page.getByRole("navigation", { name: "Shared", exact: true }).getByRole("button", { name: "Calendar" }).click();
+  await page
+    .getByRole("navigation", { name: "Calendar", exact: true })
+    .getByRole("button", { name: "Calendar" })
+    .click();
   // Leaving the view ends the undo window.
   await expect.poll(async () => (await readLists(page))[0].tasks.map((t) => t.title)).toEqual(["Buy milk"]);
   await openTasks(page);
@@ -406,7 +409,7 @@ test.describe("on a phone", () => {
     const toast = page.getByRole("status").filter({ hasText: "Deleted “Bread”" });
     // Above the tab bar along the bottom of the screen.
     const box = (await toast.boundingBox())!;
-    const tabs = (await page.getByRole("navigation", { name: "Shared" }).boundingBox())!;
+    const tabs = (await page.getByRole("navigation", { name: "Calendar", exact: true }).boundingBox())!;
     expect(box.y + box.height).toBeLessThanOrEqual(tabs.y);
     await toast.getByRole("button", { name: "Undo" }).tap();
     await expect.poll(() => todoTitles(page)).toEqual(["Coffee", "Apples", "Bread"]);
@@ -480,7 +483,7 @@ test("changes are optimistic, refusals undo them, and transport failures retry w
   await expect.poll(() => todoTitles(page)).toEqual(["Call the plumber", "Pay rent", "Ghost task"]);
 });
 
-test("the tasks API is scoped to the caller's current space and validates what it saves", async ({
+test("the tasks API is scoped to the caller's current space and validates what it saves @smoke", async ({
   page,
   browser,
   request,

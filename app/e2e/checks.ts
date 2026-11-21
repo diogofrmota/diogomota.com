@@ -5,7 +5,7 @@ import { expect } from "./fixtures";
 
 // The checks views.spec.ts runs on every view of the site and the apps, at the
 // sizes of the project running: the mobile project's 390x844 phone and a 375x812
-// one, or the desktop project's 1280x800.
+// one (the layout), or the desktop project's 1280x800 (the layout, then axe).
 
 const phoneSizes = [
   { width: 390, height: 844 },
@@ -140,25 +140,6 @@ export async function showTheme(page: Page, theme: string) {
   await page.locator("[data-theme]").evaluate((shell, value) => shell.setAttribute("data-theme", value), theme);
 }
 
-/**
- * axe on what is showing now, in every theme (lib/themes.ts). checkView runs it
- * in Light (the default) and Dark on every view; themes.spec.ts in all of them on the views
- * that between them have every pair of the themes' colors.
- */
-export async function checkThemes(page: Page, view: string) {
-  await test.step(`check ${view} in every theme`, async () => {
-    const shell = page.locator("[data-theme]");
-    const saved = (await shell.getAttribute("data-theme"))!;
-    for (const { id, background } of themes) {
-      await showTheme(page, id);
-      // In the theme's colors, and not some other's, before axe looks.
-      await expect(shell).toHaveCSS("background-color", rgb(background));
-      expect(await seriousAxeViolations(page), `${view}, ${id} theme`).toEqual([]);
-    }
-    await showTheme(page, saved);
-  });
-}
-
 /** "#faf8f5" as getComputedStyle has it: "rgb(250, 248, 245)". */
 export function rgb(hex: string) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -166,9 +147,10 @@ export function rgb(hex: string) {
 }
 
 /**
- * Checks what is showing now: its layout at each of the project's sizes, then
- * axe, inside the apps in Light and Dark (the site's pages are always
- * black; themes.spec.ts checks every theme).
+ * Checks what is showing now: its layout at each of the project's sizes, then,
+ * on the desktop project only, axe: in every theme (lib/themes.ts) inside the
+ * apps, once on the site's pages (they have one look). axe finds the same on a
+ * phone, whose colors are the same too, so the phone checks only the layout.
  */
 export async function checkView(page: Page, view: string) {
   await test.step(`check ${view}`, async () => {
@@ -180,6 +162,7 @@ export async function checkView(page: Page, view: string) {
       expect(problems, `${view} at ${size.width}x${size.height}`).toEqual([]);
     }
     await page.setViewportSize(sizes[0]);
+    if (phone) return;
 
     const shell = page.locator("[data-theme]");
     if (!(await shell.count())) {
@@ -187,9 +170,9 @@ export async function checkView(page: Page, view: string) {
       return;
     }
     const saved = (await shell.getAttribute("data-theme"))!;
-    for (const theme of ["minimal-neutrals", "graphite"]) {
-      await showTheme(page, theme);
-      expect(await seriousAxeViolations(page), `${view}, ${theme} theme`).toEqual([]);
+    for (const { id } of themes) {
+      await showTheme(page, id);
+      expect(await seriousAxeViolations(page), `${view}, ${id} theme`).toEqual([]);
     }
     await showTheme(page, saved);
   });

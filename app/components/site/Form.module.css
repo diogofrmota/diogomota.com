@@ -95,6 +95,29 @@
   caret-color: var(--text);
 }
 
+/* A checkbox with its label beside it (login's Remember me), in the accent;
+   the label is what's tapped, so it is a finger's height. */
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-self: start;
+  min-height: var(--control-height);
+  margin-block: calc(var(--space-2) * -1);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.check input {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .hint {
   color: var(--muted);
   font-size: var(--text-sm);

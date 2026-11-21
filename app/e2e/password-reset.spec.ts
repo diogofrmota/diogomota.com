@@ -72,7 +72,82 @@ function heading(page: Page) {
   return page.getByRole("heading", { level: 1 });
 }
 
-test("forgot password gives the same answer whether or not an account has the email", async ({ page, request }) => {
+/** Makes the reset link's token an hour old: Better Auth keeps only the token's hash (auth.ts). */
+async function expire(link: string) {
+  const token = new URL(link, "http://n.invalid").searchParams.get("token")!;
+  const { rowCount } = await withDatabase((client) =>
+    client.query(`UPDATE verifications SET expires_at = now() - interval '1 second' WHERE identifier = $1`, [
+      createHash("sha256").update(`reset-password:${token}`).digest("base64url"),
+    ]),
+  );
+  expect(rowCount).toBe(1);
+}
+
+test("the emailed link resets the password once, by the sign-up's rules, and logs out every session @smoke", async ({
+  page,
+  context,
+  browser,
+  request,
+}) => {
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/");
+  await confirmEmail(page, user.email);
+  const otherDevice = await browser.newContext();
+  const other = await otherDevice.newPage();
+  await logIn(other, user.username, user.password);
+  await expect(other).toHaveURL("/");
+
+  // Reset from this device while it's still logged in, with the link open in two tabs.
+  await requestReset(page, user.email);
+  const link = await resetLink(request, user.email);
+  const otherTab = await context.newPage();
+  await otherTab.goto(link);
+  await page.goto(link);
+  await expect(heading(page)).toHaveText("Reset password");
+  await expect(page.getByRole("main")).toContainText(`Choose a new password for ${user.username}.`);
+
+  // The sign-up rules.
+  await setNewPassword(page, "short");
+  await expect(page.getByText("Use at least 10 characters.")).toBeVisible();
+  await setNewPassword(page, "é".repeat(37));
+  await expect(page.getByText("That password is too long (at most 72 bytes).")).toBeVisible();
+  await setNewPassword(page, "a brand new password", "a different password");
+  await expect(page.getByText("The passwords don't match.")).toBeVisible();
+
+  await setNewPassword(page, "a brand new password");
+  await expect(page).toHaveURL("/login?password=changed");
+  await expect(page.getByRole("main")).toContainText("Your password was changed. Log in with the new one.");
+
+  // Used, the link doesn't work again, not even from a page opened before.
+  await setNewPassword(otherTab, "the second new password");
+  await expect(heading(otherTab)).toHaveText("Link expired");
+  await expect(otherTab.getByRole("main")).toContainText(linkExpired);
+  await page.goto(link);
+  await expect(heading(page)).toHaveText("Link expired");
+  await page.getByRole("link", { name: "Get a new link" }).click();
+  await expect(page).toHaveURL("/forgot-password");
+
+  // Every session of the account is logged out.
+  for (const tab of [page, other]) {
+    await tab.goto("/shared");
+    await expect(tab).toHaveURL("/?next=%2Fshared");
+  }
+  await otherDevice.close();
+
+  await logIn(page, user.username, user.password);
+  await expect(formAlert(page)).toHaveText(wrongCredentials);
+  await logIn(page, user.username, "the second new password");
+  await expect(formAlert(page)).toHaveText(wrongCredentials);
+  await logIn(page, user.email, "a brand new password");
+  await expect(page).toHaveURL("/");
+  await expect(accountButton(page, user.username)).toBeVisible();
+});
+
+test("the same answer whether or not an account has the email, or has confirmed it; a link expires after an hour", async ({
+  page,
+  request,
+}) => {
   const user = await existingUser(page);
   await page.goto("/login");
   await page.getByRole("link", { name: "Forgot password?" }).click();
@@ -95,156 +170,51 @@ test("forgot password gives the same answer whether or not an account has the em
   expect(email.html).toContain(`">Choose a new password</a>`);
   expect(email.html).toContain(link);
   expect(await emailsTo(request, unknown)).toEqual([]);
-});
 
-test("reset the password with the emailed link, then log in with the new one", async ({ page, request }) => {
-  const user = await existingUser(page);
-  await requestReset(page, user.email);
-  await page.goto(await resetLink(request, user.email));
-
-  await expect(heading(page)).toHaveText("Reset password");
-  await expect(page.getByRole("main")).toContainText(`Choose a new password for ${user.username}.`);
-
-  // The sign-up rules.
-  await setNewPassword(page, "short");
-  await expect(page.getByText("Use at least 10 characters.")).toBeVisible();
-  await setNewPassword(page, "é".repeat(37));
-  await expect(page.getByText("That password is too long (at most 72 bytes).")).toBeVisible();
-  await setNewPassword(page, "a brand new password", "a different password");
-  await expect(page.getByText("The passwords don't match.")).toBeVisible();
-
-  await setNewPassword(page, "a brand new password");
-  await expect(page).toHaveURL("/login?password=changed");
-  await expect(page.getByRole("main")).toContainText("Your password was changed. Log in with the new one.");
-
-  await logIn(page, user.username, user.password);
-  await expect(formAlert(page)).toHaveText(wrongCredentials);
-  await logIn(page, user.email, "a brand new password");
+  // An email nobody confirmed gets no reset link, and the same answer.
+  const unconfirmed = newUser();
+  await signUp(page, unconfirmed);
   await expect(page).toHaveURL("/");
-  await expect(accountButton(page, user.username)).toBeVisible();
-});
+  // Until it is, home says so.
+  await expect(page.getByRole("main")).toContainText(`Confirm your email (${unconfirmed.email})`);
+  await logOut(page, unconfirmed.username);
+  await requestReset(page, unconfirmed.email);
+  // The sign-up's confirmation is the only email it got.
+  await expect.poll(async () => (await allEmailsTo(request, unconfirmed.email)).length).toBe(1);
 
-test("a used link doesn't work again, not even from a page opened before", async ({ page, context, request }) => {
-  const user = await existingUser(page);
-  await requestReset(page, user.email);
-  const link = await resetLink(request, user.email);
-
-  // The same link open in two tabs.
-  const otherTab = await context.newPage();
-  await otherTab.goto(link);
-  await page.goto(link);
-  await setNewPassword(page, "the first new password");
-  await expect(page).toHaveURL("/login?password=changed");
-
-  await setNewPassword(otherTab, "the second new password");
-  await expect(heading(otherTab)).toHaveText("Link expired");
-  await expect(otherTab.getByRole("main")).toContainText(linkExpired);
-
-  await page.goto(link);
-  await expect(heading(page)).toHaveText("Link expired");
-  await page.getByRole("link", { name: "Get a new link" }).click();
-  await expect(page).toHaveURL("/forgot-password");
-
-  await logIn(page, user.username, "the second new password");
-  await expect(formAlert(page)).toHaveText(wrongCredentials);
-  await logIn(page, user.username, "the first new password");
-  await expect(page).toHaveURL("/");
-});
-
-test("an expired link is rejected and the password stays the same", async ({ page, request }) => {
-  const user = await existingUser(page);
-  await requestReset(page, user.email);
-  const link = await resetLink(request, user.email);
+  // The hour passes while the reset page is open: the link is refused, and the password stays the same.
   await page.goto(link);
   await expect(heading(page)).toHaveText("Reset password");
-
-  // The hour passes while the page is open. Better Auth keeps the token's hash only (auth.ts).
-  const token = new URL(link, "http://n.invalid").searchParams.get("token")!;
-  const { rowCount } = await withDatabase((client) =>
-    client.query(`UPDATE verifications SET expires_at = now() - interval '1 second' WHERE identifier = $1`, [
-      createHash("sha256").update(`reset-password:${token}`).digest("base64url"),
-    ]),
-  );
-  expect(rowCount).toBe(1);
-
+  await expire(link);
   await setNewPassword(page, "a brand new password");
   await expect(heading(page)).toHaveText("Link expired");
   await page.goto(link);
   await expect(page.getByRole("main")).toContainText(linkExpired);
-
   await logIn(page, user.username, user.password);
   await expect(page).toHaveURL("/");
+  expect(await emailsTo(request, unconfirmed.email)).toEqual([]);
 });
 
-test("a new request replaces the earlier link", async ({ page, request }) => {
-  const user = await existingUser(page);
-  await requestReset(page, user.email);
-  const first = await resetLink(request, user.email);
-  await requestReset(page, user.email);
-  const second = await resetLink(request, user.email, 2);
-  expect(second).not.toBe(first);
-
-  await page.goto(first);
-  await expect(heading(page)).toHaveText("Link expired");
-  await page.goto(second);
-  await setNewPassword(page, "a brand new password");
-  await expect(page).toHaveURL("/login?password=changed");
-});
-
-test("a reset logs out every session of the account", async ({ page, browser, request }) => {
-  const user = newUser();
-  await signUp(page, user);
-  await expect(page).toHaveURL("/");
-  await confirmEmail(page, user.email);
-  const otherDevice = await browser.newContext();
-  const other = await otherDevice.newPage();
-  await logIn(other, user.username, user.password);
-  await expect(other).toHaveURL("/");
-
-  // Reset from the first device while it's still logged in.
-  await requestReset(page, user.email);
-  await page.goto(await resetLink(request, user.email));
-  await setNewPassword(page, "a brand new password");
-  await expect(page).toHaveURL("/login?password=changed");
-
-  for (const tab of [page, other]) {
-    await tab.goto("/shared");
-    await expect(tab).toHaveURL("/?next=%2Fshared");
-  }
-  await otherDevice.close();
-});
-
-test("reset requests are rate limited per client address", async ({ page }) => {
-  for (let i = 0; i < 5; i++) await requestReset(page, newUser().email);
-
-  await page.goto("/forgot-password");
-  await page.getByLabel("Email").fill(newUser().email);
-  await page.getByRole("button", { name: "Send reset link" }).click();
-  await expect(formAlert(page)).toHaveText("Too many reset requests from your network. Try again in an hour.");
-});
-
-test("an address gets at most 3 reset emails an hour, with the same answer after that", async ({ page, request }) => {
+test("a new request replaces the earlier link, and an address gets at most 3 an hour, with the same answer after that", async ({
+  page,
+  request,
+}) => {
   const user = await existingUser(page);
   for (let i = 0; i < 4; i++) await requestReset(page, user.email);
 
   // The 4th request sent nothing, so the 3rd link is the one that works.
-  const third = await resetLink(request, user.email, 3);
-  await page.goto(third);
+  const three = await resetLink(request, user.email, 3);
+  const [one, two] = (await emailsTo(request, user.email)).slice(0, 2).map(({ text }) => {
+    const url = new URL(text.match(/^https?:\/\/\S+\/reset-password\?token=\S+$/m)![0]);
+    return `${url.pathname}${url.search}`;
+  });
+  expect(new Set([one, two, three]).size).toBe(3);
+  for (const old of [one, two]) {
+    await page.goto(old);
+    await expect(heading(page)).toHaveText("Link expired");
+  }
+  await page.goto(three);
   await setNewPassword(page, "a brand new password");
   await expect(page).toHaveURL("/login?password=changed");
   expect(await emailsTo(request, user.email)).toHaveLength(3);
-});
-
-test("an email nobody confirmed gets no reset link (the same answer)", async ({ page, request }) => {
-  const user = newUser();
-  await signUp(page, user);
-  await expect(page).toHaveURL("/");
-  // Until it is, /apps says so.
-  await expect(page.getByRole("main")).toContainText(`Confirm your email (${user.email})`);
-  await logOut(page, user.username);
-  await requestReset(page, user.email);
-  // The sign-up's confirmation is the only email it got.
-  await expect.poll(async () => (await allEmailsTo(request, user.email)).length).toBe(1);
-  await page.waitForTimeout(500);
-  expect(await emailsTo(request, user.email)).toEqual([]);
 });

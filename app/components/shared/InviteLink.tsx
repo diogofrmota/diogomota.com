@@ -34,7 +34,7 @@ export function InviteLink({ space, label = "Share invite link" }: { space: Spac
       const text = "Join my shared calendar and lists on diogomota.com";
       if (typeof navigator.share === "function") {
         try {
-          await navigator.share({ title: "Shared", text, url });
+          await navigator.share({ title: "Calendar", text, url });
           setNotice({ text: "Invite sent. It works once, for 24 hours." });
         } catch (error) {
           // Closing the share sheet isn't an error: the link is below to copy.

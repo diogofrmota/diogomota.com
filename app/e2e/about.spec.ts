@@ -6,7 +6,12 @@ import { emailsTo, expect, newUser, signUp, test } from "./fixtures";
 /** CONTACT_EMAIL on the tests' server (playwright.config.ts): where Get in touch sends. */
 const contactAddress = "contact@example.com";
 
-test("about is in the website's look: its header and footer, the intro, and what the site is", async ({ page }) => {
+test("about is in the website's look and the system font, with nothing from other sites: its header and footer, the intro, what the site is, its title and preview", async ({
+  page,
+  baseURL,
+}) => {
+  const requests: URL[] = [];
+  page.on("request", (request) => requests.push(new URL(request.url())));
   await page.goto("/about");
   // Light, logged out, as the front page: not black any more.
   await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
@@ -24,9 +29,9 @@ test("about is in the website's look: its header and footer, the intro, and what
   await expect(site).toContainText("I make them for my friends and family");
   await expect(site).not.toContainText("Diogo makes");
   await expect(site).toContainText(
-    "Shared, a calendar for two, Shows, a watchlist with your friends, Books, a bookshelf and reading tracker, Recipes, a recipe box with a shopping list, and Fitness, a workout and health tracker.",
+    "Calendar, events and task lists for two, Shows, a watchlist with your friends, Books, a bookshelf and reading tracker, Recipes, a recipe box with a shopping list, and Fitness, a workout and health tracker.",
   );
-  await expect(site.getByRole("link", { name: "Shared", exact: true })).toHaveAttribute("href", "/#shared");
+  await expect(site.getByRole("link", { name: "Calendar", exact: true })).toHaveAttribute("href", "/#shared");
   await expect(site.getByRole("link", { name: "Shows", exact: true })).toHaveAttribute("href", "/#shows");
   await expect(site.getByRole("link", { name: "Recipes", exact: true })).toHaveAttribute("href", "/#recipes");
   await expect(site.getByRole("link", { name: "Fitness", exact: true })).toHaveAttribute("href", "/#fitness");
@@ -37,11 +42,50 @@ test("about is in the website's look: its header and footer, the intro, and what
   await expect(nav.getByRole("link", { name: "About" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("contentinfo").getByRole("link")).toHaveCount(0);
   await expect(page.getByRole("contentinfo")).toContainText(`\u00a9 ${new Date().getFullYear()} Diogo Mota`);
+
+  // A title, the intro as its description, and its own preview image.
+  await expect(page).toHaveTitle("about · diogo mota");
+  // Not only in <head>: a page rendered on request streams its metadata into the body (Next.js).
+  const meta = (attribute: string, value: string) => page.locator(`meta[${attribute}="${value}"]`);
+  await expect(meta("name", "description")).toHaveAttribute(
+    "content",
+    "Diogo Mota, DevOps engineer based in Lisbon, Portugal.",
+  );
+  await expect(meta("property", "og:title")).toHaveAttribute("content", "diogo mota");
+  await expect(meta("property", "og:description")).toHaveAttribute("content", /Lisbon, Portugal/);
+  await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com/about");
+  await expect(meta("property", "og:type")).toHaveAttribute("content", "website");
+  // The dev server puts its own origin here; production builds use https://diogomota.com.
+  await expect(meta("property", "og:image")).toHaveAttribute("content", /^https?:\/\/[^/]+\/about\/opengraph-image\b/);
+  const image = await page.request.get("/about/opengraph-image");
+  expect(image.ok()).toBe(true);
+  expect(image.headers()["content-type"]).toBe("image/png");
+
+  // The system font, as the rest of the site, and nothing loaded from other sites.
+  await page.evaluate(() => document.fonts.ready);
+  const family = await main
+    .getByRole("heading", { level: 1 })
+    .evaluate((h1) => getComputedStyle(h1).fontFamily.split(",")[0].trim());
+  expect(family).toBe("system-ui");
+  // Not counting the dev server's own tools: their badge loads a font while it says "Compiling".
+  const fonts = requests.filter(
+    (url) => /\.(woff2?|ttf|otf)$/.test(url.pathname) && !url.pathname.startsWith("/__nextjs"),
+  );
+  expect(fonts.map(String)).toEqual([]);
+  const origin = new URL(baseURL!).origin;
+  expect(requests.filter((url) => url.origin !== origin).map(String)).toEqual([]);
 });
 
-test("Get in touch is a form that emails Diogo, without showing his address", async ({ page, request }) => {
-  await page.goto("/about");
+test("Get in touch is a form that emails Diogo, without showing his address, and Privacy sends questions to it", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/privacy");
+  await expect(page.locator("a[href^='mailto:']")).toHaveCount(0);
+  await page.getByRole("main").getByRole("link", { name: "About" }).click();
+  await expect(page).toHaveURL("/about#contact");
   const contact = page.getByRole("main").getByRole("region", { name: "Get in touch" });
+  await expect(contact).toBeInViewport();
   // The address is nowhere on the page, nor in what was sent to the browser.
   expect(await page.content()).not.toContain(contactAddress);
   await expect(page.locator("a[href^='mailto:']")).toHaveCount(0);
@@ -73,55 +117,55 @@ A second line.`;
   expect(sent[0].text).toContain("From: Ana Test <ana@example.com>");
 });
 
-test("Privacy sends questions to About's form, not to an address", async ({ page }) => {
-  await page.goto("/privacy");
-  await expect(page.locator("a[href^='mailto:']")).toHaveCount(0);
-  await page.getByRole("main").getByRole("link", { name: "About" }).click();
-  await expect(page).toHaveURL("/about#contact");
-  await expect(page.getByRole("region", { name: "Get in touch" })).toBeInViewport();
-});
-
-test("about has a title, the intro as its description and its own preview image", async ({ page }) => {
-  await page.goto("/about");
-  await expect(page).toHaveTitle("about · diogo mota");
-
-  const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
-  await expect(meta("name", "description")).toHaveAttribute(
-    "content",
-    "Diogo Mota, DevOps engineer based in Lisbon, Portugal.",
-  );
-  await expect(meta("property", "og:title")).toHaveAttribute("content", "diogo mota");
-  await expect(meta("property", "og:description")).toHaveAttribute("content", /Lisbon, Portugal/);
-  await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com/about");
-  await expect(meta("property", "og:type")).toHaveAttribute("content", "website");
-  // The dev server puts its own origin here; production builds use https://diogomota.com.
-  await expect(meta("property", "og:image")).toHaveAttribute("content", /^https?:\/\/[^/]+\/about\/opengraph-image\b/);
-
-  const image = await page.request.get("/about/opengraph-image");
-  expect(image.ok()).toBe(true);
-  expect(image.headers()["content-type"]).toBe("image/png");
-});
-
-test("about is in the system font, as the rest of the site, with nothing from other sites", async ({
+test("Report a bug, from home's footer, emails Diogo what went wrong with the account, version and browser; logged out it's in the website's frame", async ({
   page,
-  baseURL,
+  request,
 }) => {
-  const requests: URL[] = [];
-  page.on("request", (request) => requests.push(new URL(request.url())));
-  await page.goto("/about");
-  await page.evaluate(() => document.fonts.ready);
-
-  const family = await page
-    .getByRole("heading", { level: 1 })
-    .evaluate((h1) => getComputedStyle(h1).fontFamily.split(",")[0].trim());
-  expect(family).toBe("system-ui");
-  // Not counting the dev server's own tools: their badge loads a font while it says "Compiling".
-  const fonts = requests.filter(
-    (url) => /\.(woff2?|ttf|otf)$/.test(url.pathname) && !url.pathname.startsWith("/__nextjs"),
+  // Logged out: in the website's frame, the fields empty.
+  await page.goto("/report-bug");
+  await expect(page).toHaveTitle("report a bug · diogo mota");
+  await expect(page.getByRole("banner").getByRole("link", { name: "Sign up" })).toBeVisible();
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { level: 1 })).toHaveText("Report a bug");
+  expect(await page.content()).not.toContain(contactAddress);
+  const form = main.getByRole("region", { name: "Bug report" });
+  await expect(form.getByLabel("Your name")).toHaveValue("");
+  await form.getByRole("button", { name: "Send report" }).click();
+  await expect(form).toContainText("Describe the bug.");
+  const anonymous = `Nothing loads ${Date.now()}.`;
+  await form.getByLabel("Your name").fill("Ana Test");
+  await form.getByLabel("Your email").fill("ana@example.com");
+  await form.getByLabel("What went wrong?").fill(anonymous);
+  await form.getByRole("button", { name: "Send report" }).click();
+  await expect(form.getByRole("status")).toContainText("Thanks! Your report is on its way");
+  const sent = (await emailsTo(request, contactAddress, "Bug report from Ana Test on diogomota.com")).filter((email) =>
+    email.text.includes(anonymous),
   );
-  expect(fonts.map(String)).toEqual([]);
-  const origin = new URL(baseURL!).origin;
-  expect(requests.filter((url) => url.origin !== origin).map(String)).toEqual([]);
+  expect(sent).toHaveLength(1);
+  expect(sent[0].replyTo).toBe("ana@example.com");
+  expect(sent[0].text).toContain("From: Ana Test <ana@example.com>\nAccount: not logged in\nVersion: ");
+  expect(sent[0].text).toMatch(/^Browser: Mozilla\/5\.0 /m);
+
+  // Logged in: from home's footer, in the apps' frame, the name and email filled in.
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/");
+  await main.getByRole("link", { name: "Report a bug" }).click();
+  await expect(page).toHaveURL("/report-bug");
+  await expect(page.getByRole("navigation", { name: "Account" })).toBeVisible();
+  await expect(form.getByLabel("Your name")).toHaveValue(user.name);
+  await expect(form.getByLabel("Your email")).toHaveValue(user.email);
+  const report = `The calendar is blank ${Date.now()}.`;
+  await form.getByLabel("What went wrong?").fill(report);
+  await form.getByRole("button", { name: "Send report" }).click();
+  await expect(form.getByRole("status")).toContainText("Thanks! Your report is on its way");
+  await expect(form.getByLabel("What went wrong?")).toHaveValue("");
+  const mine = (await emailsTo(request, contactAddress, `Bug report from ${user.name} on diogomota.com`)).filter(
+    (email) => email.text.includes(report),
+  );
+  expect(mine).toHaveLength(1);
+  expect(mine[0].replyTo).toBe(user.email);
+  expect(mine[0].text).toContain(`Account: @${user.username}`);
 });
 
 test("logged in, about's header has Account and Your apps, and the apps' links open them", async ({ page }) => {

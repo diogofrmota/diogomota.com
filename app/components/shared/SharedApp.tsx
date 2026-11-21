@@ -41,7 +41,7 @@ function Shared({ user, initialSpace, initial }: { user: User; initialSpace: Spa
   return (
     <AppShell
       key={space?.id ?? "welcome"}
-      name="Shared"
+      name="Calendar"
       basePath="/shared"
       initial={space ? initial : { view: "welcome", panels: [] }}
       username={user.username}

@@ -1,6 +1,6 @@
-/* The front page (FrontPage, AppSections, AppWindow), in the website's column
+/* The front page (FrontPage, AppSections), in the website's column
    (SiteFrame's --site-width). Sections a good way apart, each its heading;
-   anything linked to (#apps, #shared, #how-it-works) stops clear of the sticky
+   anything linked to (#apps, #shows, #how-it-works) stops clear of the sticky
    header. */
 .section,
 .hero,
@@ -22,6 +22,19 @@
   margin: 0 0 var(--space-6);
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
+}
+
+/* A line under a section's heading, before what it has. */
+.heading:has(+ .sectionLead) {
+  margin-bottom: var(--space-2);
+}
+
+.sectionLead {
+  max-width: 40rem;
+  margin: 0 0 var(--space-6);
+  color: var(--muted);
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
 }
 
 /* Big buttons: the hero's and the band's. */
@@ -65,90 +78,62 @@
   margin-top: var(--space-2);
 }
 
-/* A browser window, with an app in it (AppWindow): its bar (three dots and
-   the address), then the app's picture inset in its page's color. Everything
-   in it in the page's theme. The picture is drawn at the size of a card and
-   scaled with --preview-zoom, so its parts keep their proportions in a big
-   window. */
-.window {
-  --preview-radius: var(--radius-md);
-
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  box-shadow:
-    0 2px 4px oklch(0 0 0 / 0.06),
-    0 24px 48px -16px oklch(0 0 0 / 0.28);
-}
-
-.windowBar {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  height: 2.25rem;
-  padding: 0 var(--space-3);
-  border-bottom: 1px solid var(--border);
-  background: var(--hover);
-}
-
-.windowBar > span {
-  flex: none;
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: 50%;
-  background: var(--border);
-}
-
-.windowBar > .address {
-  width: auto;
-  height: auto;
-  margin-inline: auto;
-  padding: 0.0625rem var(--space-6);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-
-.windowPreview {
-  margin: var(--space-3);
-  zoom: var(--preview-zoom, 1);
-}
-
-/* The apps: a section each, only the words on a phone (no picture), side by
-   side with the window wider (by turns: .reverse has the words first). */
-.app {
+/* The apps, in three groups (AppSections): one over the other on a phone,
+   side by side from 48rem, as cards. Each its title, its apps' icons (small,
+   each its name under it, opening its login prompt) and what they do. An
+   app's link (/#shows) lands on its icon with its group's title in view. */
+.groups {
   display: grid;
-  gap: var(--space-6);
-  align-items: center;
-  scroll-margin-top: 5rem;
-}
-
-.app + .app {
-  margin-top: 4rem;
-}
-
-.appWindow {
-  display: none;
-}
-
-.appCopy {
-  display: grid;
-  justify-items: start;
   gap: var(--space-4);
 }
 
-.appName {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin: 0;
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
+.group {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  scroll-margin-top: 5rem;
 }
 
-.appName img {
+.groupTitle {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+
+.groupApps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.groupApp {
+  scroll-margin-top: 9rem;
+}
+
+/* Wider than its icon, for a finger and for the name under it. */
+.appTile {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  min-width: 4.5rem;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+
+.appTile img {
   flex: none;
   width: 2.25rem;
   height: 2.25rem;
@@ -156,18 +141,16 @@
   box-shadow: var(--shadow-sm);
 }
 
-.tagline {
-  margin: 0;
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
-  line-height: var(--leading-tight);
-  letter-spacing: var(--tracking-tight);
-  text-wrap: balance;
+@media (hover: hover) {
+  .appTile:hover {
+    background: var(--hover);
+  }
 }
 
 /* What it does: a line each, after a tick in the accent on its soft tint. */
 .checks {
   display: grid;
+  align-content: start;
   gap: var(--space-3);
   margin: 0;
   padding: 0;
@@ -183,6 +166,7 @@
 }
 
 .checks svg {
+  flex: none;
   width: 1.25rem;
   height: 1.25rem;
   margin-top: 0.125rem;
@@ -193,11 +177,8 @@
   stroke-width: 3;
 }
 
-.appCopy :global(svg) {
-  flex: none;
-}
-
-/* How it works: three cards in a row, wider; each its number in the accent. */
+/* How it works: three cards in a row, wider; each its number in the accent,
+   with its title beside it. */
 .steps {
   display: grid;
   gap: var(--space-4);
@@ -208,54 +189,43 @@
 
 .step {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-content: start;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-4) var(--space-3);
   padding: var(--space-6);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--surface);
 }
 
+.step h3 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
 .stepNumber {
   display: grid;
+  flex: none;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
-  margin-bottom: var(--space-2);
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
   background: var(--accent);
   color: var(--bg);
+  font-size: var(--text-lg);
   font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
 }
 
-.step h3,
-.questions h3 {
-  margin: 0;
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
-}
-
-.step p,
-.questions p {
+.step p {
+  grid-column: 1 / -1;
   margin: 0;
   color: var(--muted);
-}
-
-/* Questions: each its answer under it, two to a row wider. */
-.questions {
-  display: grid;
-  gap: var(--space-6) var(--space-8);
-}
-
-.questions h3 {
-  margin-bottom: var(--space-1);
-}
-
-.questions a {
-  color: var(--accent);
-  font-weight: var(--weight-medium);
-  text-underline-offset: 0.2em;
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
 }
 
 /* Sign up once more, at the end: a band in the accent, its button in the
@@ -291,8 +261,7 @@
   font-weight: var(--weight-semibold);
 }
 
-/* From 48rem: the apps' sections side by side with their pictures, the steps
-   in a row, the questions two to a row. */
+/* From 48rem: the apps' groups and the steps in a row. */
 @media (min-width: 48rem) {
   .hero {
     padding-top: 4.5rem;
@@ -308,38 +277,13 @@
   }
 
   .heading,
-  .tagline,
   .band h2 {
     font-size: var(--text-3xl);
   }
 
-  .app {
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    gap: 4rem;
-  }
-
-  .app.reverse {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  }
-
-  .appWindow {
-    display: block;
-  }
-
-  .app.reverse .appWindow {
-    order: 1;
-  }
-
-  .app + .app {
-    margin-top: 6rem;
-  }
-
+  .groups,
   .steps {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .questions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .band {
@@ -347,19 +291,8 @@
   }
 }
 
-/* The pictures grow with their windows. */
 @media (min-width: 64rem) {
-  .window {
-    --preview-zoom: 1.15;
-  }
-
   .hero h1 {
     font-size: 3.75rem;
-  }
-}
-
-@media (min-width: 80rem) {
-  .window {
-    --preview-zoom: 1.35;
   }
 }

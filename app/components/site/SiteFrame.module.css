@@ -22,9 +22,10 @@
 }
 
 /* The footer: the year and version, small and muted, on the page's own
-   background (no band of another color), under a hairline. */
+   background (no band of another color), under a hairline, a little way under
+   the page's last part (the front page's Sign up band, /about's last card). */
 .footer {
-  margin-top: 5rem;
+  margin-top: var(--space-8);
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--border);
 }

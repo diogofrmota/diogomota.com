@@ -32,7 +32,7 @@ export type TabNavProps = {
  * bar (HeaderTabs): an app's tabs, or Account (or Log in and Sign up) and
  * Apps. Along the bottom of a phone's screen, within reach of a thumb, and
  * across the top of a wider one, as its header. With an app's tabs, the page
- * has the whole width; without (/ and the rest, Shared before there is a
+ * has the whole width; without (/ and the rest, Calendar before there is a
  * space) it is a centered column. `bare` leaves the tab bar out: on / logged
  * in, whose icons are the way to everything (Account is one of them), and on
  * the error page, which can't tell who is logged in.
@@ -61,7 +61,7 @@ export function AppFrame({
   next?: string | null;
   /** Which of Account (or Log in, Sign up) is the page shown, if one is. */
   current?: LauncherTab;
-  /** An app's page: its tab bar (nav), or only Apps in Shared before there is a space. */
+  /** An app's page: its tab bar (nav), or only Apps in Calendar before there is a space. */
   inApp?: boolean;
   bare?: boolean;
   nav?: TabNavProps;
@@ -80,13 +80,13 @@ export function AppFrame({
       <meta name="theme-color" content={themeBackground(theme)} />
       {/* Before the page: the header on a wide screen (sticky), fixed to the bottom on a phone. */}
       {bare ? null : app ? (
-        // Shared before there is a space: no tabs yet, only Apps.
-        <TabBar {...(nav ?? { label: "Shared", tabs: [], current: "", onSelect: () => {} })} />
+        // Calendar before there is a space: no tabs yet, only Apps.
+        <TabBar {...(nav ?? { label: "Calendar", tabs: [], current: "", onSelect: () => {} })} />
       ) : (
         <LauncherTabs current={current} username={username} name={name} avatarUrl={avatarUrl} next={next} />
       )}
       <main
-        className={`${styles.main} ${nav?.label === "Shared" && nav.current === "calendar" ? styles.calendarMain : ""}`}
+        className={`${styles.main} ${nav?.label === "Calendar" && nav.current === "calendar" ? styles.calendarMain : ""}`}
       >
         {children}
       </main>

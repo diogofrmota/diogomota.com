@@ -84,7 +84,9 @@ export async function followAccountMenu(page: Page, name: "Account" | "Switch ap
 
 /** A tab of Shared's, in the middle of the top bar. */
 export function sharedTab(page: Page, view: "Calendar" | "Tasks" | "Settings") {
-  return page.getByRole("navigation", { name: "Shared", exact: true }).getByRole("button", { name: view, exact: true });
+  return page
+    .getByRole("navigation", { name: "Calendar", exact: true })
+    .getByRole("button", { name: view, exact: true });
 }
 
 /**

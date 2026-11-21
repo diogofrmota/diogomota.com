@@ -21,6 +21,11 @@ export function LoginForm({ next }: { next: string | null }) {
         defaultValue={state.values?.login}
       />
       <Field label="Password" name="password" type="password" autoComplete="current-password" required />
+      {/* On (as it starts): logged in for 30 days. Off: until the browser closes, at most a day. */}
+      <label className={formStyles.check}>
+        <input type="checkbox" name="remember" defaultChecked={state.values?.remember !== "no"} />
+        Remember me
+      </label>
       <FormMessage error={state.error} />
       <SubmitButton label="Log in" pending={pending} wide />
     </form>

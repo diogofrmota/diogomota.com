@@ -43,7 +43,7 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
     );
   }
 
-  const title = from ? `${from} invited you to Shared` : "You're invited to Shared";
+  const title = from ? `${from} invited you to their Calendar` : "You're invited to a shared Calendar";
   const intro = "A calendar and task lists for the two of you: dinners, trips, the bins and the shopping.";
   if (!session) {
     const next = `/join/${code}`;
@@ -58,7 +58,7 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
             Sign up
           </Link>
         </p>
-        <p>Then you join, and Shared opens with the calendar.</p>
+        <p>Then you join, and Calendar opens.</p>
       </AuthPage>
     );
   }
@@ -68,7 +68,7 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
     return (
       <AuthPage
         title={title}
-        intro="You're already in a space, and you can be in one at a time. To join this one, leave yours first in Shared's Settings."
+        intro="You're already in a space, and you can be in one at a time. To join this one, leave yours first in Calendar's Settings."
         action={{ href: "/shared/settings", label: "Open Settings" }}
       />
     );
