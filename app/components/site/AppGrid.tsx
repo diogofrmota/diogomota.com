@@ -28,14 +28,15 @@ function PendingRing() {
 }
 
 /**
- * The apps on /, logged in: a grid of their icons, like a phone's home screen,
- * each with its name under it and a count of what is waiting in it on its
- * corner. Each goes straight into its app, on its main page.
+ * The apps of a folder on /, logged in (AppFolders): a grid of their icons,
+ * like a phone's home screen, each with its name under it and a count of what
+ * is waiting in it on its corner. Each goes straight into its app, on its main
+ * page. `className` sizes it for where it is (the folder's popup).
  */
-export function AppGrid({ apps }: { apps: readonly GridApp[] }) {
+export function AppGrid({ apps, className = "" }: { apps: readonly GridApp[]; className?: string }) {
   const id = useId();
   return (
-    <ul className={styles.grid}>
+    <ul className={`${styles.grid} ${className}`}>
       {apps.map(({ app, href, badge, badgeLabel }, i) => (
         <li key={app.href} style={{ "--i": i } as React.CSSProperties}>
           <Link

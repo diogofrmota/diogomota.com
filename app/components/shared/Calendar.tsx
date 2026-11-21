@@ -385,11 +385,11 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
     >
       <h1 className={ui.srOnly}>Calendar</h1>
       {space.members.length === 1 && !inviteHidden && (
-        // Shared is for two: right after creating a space, the next step is asking the other person in.
+        // A group is two people: right after creating one, the next step is asking the other person in.
         <section className={styles.invitePrompt} aria-labelledby="invite-prompt">
           <div>
             <h2 id="invite-prompt">Invite your partner</h2>
-            <p className={ui.muted}>Send them a link to join your calendar and lists.</p>
+            <p className={ui.muted}>Send them a link to join your group: the calendar, tasks and recipes.</p>
           </div>
           <InviteLink space={space} />
           <button type="button" className={styles.close} aria-label="Not now" onClick={() => dismissInvite(space.id)}>

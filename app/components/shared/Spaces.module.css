@@ -1,6 +1,7 @@
-/* The space’s own parts. Headings, cards, fields and buttons are the apps’
-   common ones (components/common/ui.module.css). */
-/* The welcome's two cards, side by side on wide screens. */
+/* The group’s own parts (For Couples). Headings, cards, fields and buttons
+   are the apps’ common ones (components/common/ui.module.css). */
+/* The welcome's two cards, side by side on wide screens; in For Couples'
+   folder on home, one over the other, closer. */
 .options {
   display: grid;
   gap: 1.25rem;
@@ -11,6 +12,18 @@
     grid-template-columns: 1fr 1fr;
     align-items: start;
   }
+}
+.welcomePopup {
+  display: grid;
+  gap: var(--space-3);
+}
+.welcomePopup > p {
+  margin: 0;
+}
+.welcomePopup .options {
+  grid-template-columns: none;
+  gap: var(--space-3);
+  margin-top: 0;
 }
 .welcomeError {
   margin-top: 1.25rem;

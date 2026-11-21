@@ -13,7 +13,7 @@ const steps = [
   ["Pick an app", "Every app is there from the start, on your phone or your computer."],
   [
     "Invite your friends",
-    "Invite your partner to your shared Calendar, or add friends in Shows or Books to share what you read and watch.",
+    "Invite your partner to your group in For Couples, or add friends in Shows or Books to share what you read and watch.",
   ],
 ] as const;
 

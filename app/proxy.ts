@@ -25,7 +25,9 @@ export const config = {
   matcher: [
     "/books/:path*",
     "/api/books/:path*",
-    "/shared/:path*",
+    "/calendar/:path*",
+    "/tasks/:path*",
+    "/couples/:path*",
     "/shows/:path*",
     "/api/social/:path*",
     "/recipes/:path*",

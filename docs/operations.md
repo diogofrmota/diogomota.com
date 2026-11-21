@@ -436,6 +436,8 @@ Account deletion now commits logical deletion, space departure/ownership transfe
 docker compose exec -T app node scripts/cleanup-media.mjs
 ```
 
+A job with no `user_id` (migration `029_couples_groups.sql`) is a For Couples group's recipe photos, queued when its last member left: it removes only those photos, never a profile picture. An image from before 029 can't run such a job: it counts an attempt and leaves it for the next release to finish.
+
 The command reports the remaining count and exits nonzero while jobs remain. Repeat until zero; missing files are safe to retry. Do not re-create a deleted account to retry cleanup. This command is an operations instruction, not something to run against ordinary/production data during development tests.
 
 Browser rollout requires an additional boundary: close or refresh old-version app tabs before making further offline changes. The new client imports the legacy snapshot once per app and retains the original for recovery; an already-open old client does not understand the new journal format. Unsupported legacy recurring completions without cached occurrence evidence pause editing and offer **Download pending changes**. Do not clear browser storage, delete those journals, or manually replay recurring completions without reconciling their occurrence. Pending journals are not tied to APP_VERSION; disposable query snapshots are.

@@ -9,8 +9,8 @@ import { expect, newUser, signUp, test } from "./fixtures";
 // moves (and stretches), and that reduced motion turns all of it off.
 
 async function sharedCalendar(page: Page) {
-  await signUp(page, newUser(), "/signup?next=/shared");
-  await page.getByRole("button", { name: "Create space" }).click();
+  await signUp(page, newUser(), "/signup?next=/calendar");
+  await page.getByRole("button", { name: "Create a group" }).click();
   await expect(page.getByRole("region", { name: "month calendar" })).toBeVisible();
 }
 

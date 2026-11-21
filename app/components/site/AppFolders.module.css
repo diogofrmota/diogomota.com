@@ -1,0 +1,288 @@
+/* The folders on /, logged in (AppFolders): three in one row at every width,
+   in the middle, like a phone's folders: a tile the size of an app's icon
+   (AppGrid), its apps' small icons in a 3x3 grid inside it, and its name
+   under it. On a phone the tiles take a share of the screen's width, so the
+   three fit on the narrowest, names and all. Each comes in from just below,
+   one after another (--i), as the apps' icons do. */
+.folders {
+  --icon-size: min(5.5rem, 22vw);
+
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 40rem) {
+  .folders {
+    --icon-size: 7rem;
+
+    gap: var(--space-8);
+  }
+}
+
+/* Each a column a little wider than its tile, for its name, shrinking (and
+   the name with it, to an ellipsis) on the narrowest phones. */
+.folders li {
+  display: flex;
+  flex: 0 1 max(var(--icon-size), 6.25rem);
+  justify-content: center;
+  min-width: 0;
+  animation: folder-in var(--duration) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+@keyframes folder-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.folder {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+
+.folder:active {
+  scale: var(--press);
+}
+
+.folder:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folders li {
+    animation: none;
+  }
+
+  .folder:active {
+    scale: none;
+  }
+}
+
+/* The folder itself: the page's text color, faint, over what is behind it,
+   with the corners of an app's icon. Its first four apps' icons in a 2x2
+   grid, from the top left (a folder has three apps at most for now, so a
+   phone's 3x3 would leave it mostly empty). */
+.tile {
+  position: relative;
+  display: block;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  border-radius: 22.5%;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--text) 6%, transparent),
+    var(--shadow-sm);
+  backdrop-filter: blur(12px);
+}
+
+@media (hover: hover) {
+  .folder:hover .tile {
+    background: color-mix(in srgb, var(--text) 12%, transparent);
+  }
+}
+
+.minis {
+  position: absolute;
+  inset: 16%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 12%;
+}
+
+.minis img {
+  width: 100%;
+  height: 100%;
+  border-radius: 22.5%;
+}
+
+.name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 40rem) {
+  .name {
+    font-size: var(--text-md);
+  }
+}
+
+/* For Couples' lock, on the tile's top right corner as a badge is, in the
+   page's color and ringed in it, so it stands off the tile as a sign, not a
+   count. */
+.lock {
+  --lock-size: 1.375rem;
+
+  position: absolute;
+  top: -0.375rem;
+  right: -0.375rem;
+  display: grid;
+  place-items: center;
+  width: var(--lock-size);
+  height: var(--lock-size);
+  border: 2px solid var(--bg);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  box-sizing: content-box;
+}
+
+.lock svg {
+  width: 0.8125rem;
+  height: 0.8125rem;
+  stroke-width: 2.5;
+}
+
+/* What is waiting: AppGrid's badge. Beside the lock, along the top edge, on
+   For Couples. Two classes, to win over AppGrid's place whatever the order. */
+.badge.besideLock {
+  right: calc(1.375rem + 0.25rem);
+}
+
+/* An open folder: the apps' popup, see-through over a blurred page, as a
+   phone's open folder is; solid where see-through is asked against. */
+.popup {
+  width: min(26rem, calc(100% - 2rem));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(24px) saturate(1.4);
+}
+
+.popup[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.popup::backdrop {
+  background: #0006;
+  backdrop-filter: blur(6px);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .popup {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+
+  .popup::backdrop {
+    background: #0008;
+    backdrop-filter: none;
+  }
+}
+
+.content {
+  display: grid;
+  gap: var(--space-4);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-5) var(--space-5) var(--space-6);
+}
+
+/* The title, then (For Couples) the group's settings and Close, at its end. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.iconButton {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.iconButton svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+@media (hover: hover) {
+  .iconButton:hover {
+    background: var(--hover);
+    color: var(--text);
+  }
+}
+
+.iconButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Who sees For Couples' apps: after the lock, as on its folder. */
+.note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: calc(-1 * var(--space-2)) 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.note svg {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
+
+/* The folder's apps, three to a row, a little smaller than on a page. Two
+   classes, to win over AppGrid's sizes whatever the order. */
+.apps.apps {
+  --icon-size: 4.5rem;
+  --columns: 3;
+  --column-gap: var(--space-3);
+
+  max-width: none;
+  row-gap: var(--space-5);
+}
+
+@media (min-width: 40rem) {
+  .apps.apps {
+    --icon-size: 5rem;
+  }
+}

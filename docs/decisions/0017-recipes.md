@@ -15,3 +15,5 @@
 - `023_recipes.sql` only adds tables ([0004](0004-expand-and-contract-migrations.md)).
 
 **Costs:** amounts are only as good as what can be read from the text: no unit conversion (3 tsp don't become 1 tbsp), and an amount in words ("two eggs") isn't scaled. Photos add disk on the VPS (a few hundred KB each) and to the backups, and the offsite backup has only the dumps, so lost photos would have to be added again. Nothing is shared: a couple who cook together each keep their own recipes (sharing a recipe, or the shopping list with a Shared space, would be a later decision).
+
+**Update, 2026-11-21:** Recipes is no longer each user's own: it is the group's, in For Couples, and both of its people see and change its recipes, photos and one shopping list ([0023](0023-folders-and-a-group-for-couples.md), migration 029). Without a group, Recipes offers one; recipes kept before come into the group on creating or joining it.

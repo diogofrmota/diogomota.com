@@ -2,10 +2,16 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import { recordActivity } from "./activity";
+import { cleanupMediaJobs } from "../scripts/media-cleanup.mjs";
 import { getPool } from "./db";
 import { HttpError } from "./http";
-import { memberColors, type Invite, type InvitePreview, type Space } from "./space-types";
+import { adoptParked, removeGroupRecipes } from "./recipe-groups";
+import { groupSize, memberColors, type Invite, type InvitePreview, type Space } from "./space-types";
 import { avatarUrlSql } from "./users";
+
+// A space is a group of two in For Couples (docs/decisions/0006, 0023): its
+// calendar, task lists, recipes and shopping list. "Space" in the code, "group"
+// in what people read.
 
 /**
  * Runs `fn` in a transaction, committed when it returns and rolled back when it
@@ -26,8 +32,10 @@ export async function transaction<T>(fn: (db: PoolClient) => Promise<T>): Promis
   }
 }
 
-// Locking. Every Shared request locks the rows it depends on, always the user's
-// row before the space's, so two requests can't wait on each other:
+// Locking. Every request of For Couples' apps locks the rows it depends on,
+// always the user's row, then the space's, then (Recipes' shopping list) the
+// group's advisory lock (lib/recipe-groups.ts, lockShopping), then the rows
+// themselves, so two requests can't wait on each other:
 //
 // - Reading and changing a space's calendar and tasks share the locks (FOR SHARE):
 //   members of a space work at the same time, and other spaces are never in the way.
@@ -36,6 +44,8 @@ export async function transaction<T>(fn: (db: PoolClient) => Promise<T>): Promis
 //   other requests to finish, and those wait for them. A member can't leave
 //   halfway through a request that assigns them something, and two people can't
 //   take the last place or the same color.
+// - Nothing upgrades a lock it took FOR SHARE to FOR UPDATE: two members doing
+//   so at once would wait on each other for good.
 
 /** The user's space, or null; the user's row is locked `mode` until the end of the transaction. */
 async function spaceIdOf(db: PoolClient, userId: string, mode: "SHARE" | "UPDATE"): Promise<string | null> {
@@ -65,7 +75,7 @@ async function loadSpace(db: PoolClient, spaceId: string, mode: "SHARE" | "UPDAT
 export function inSpace<T>(userId: string, fn: (db: PoolClient, space: Space) => Promise<T>): Promise<T> {
   return transaction(async (db) => {
     const spaceId = await spaceIdOf(db, userId, "SHARE");
-    if (!spaceId) throw new HttpError("Join or create a space first.", 403);
+    if (!spaceId) throw new HttpError("Join or create a group first.", 403);
     return fn(db, await loadSpace(db, spaceId, "SHARE"));
   });
 }
@@ -74,7 +84,7 @@ export function inSpace<T>(userId: string, fn: (db: PoolClient, space: Space) =>
 export function readSpace(userId: string, id?: string): Promise<Space | null> {
   return transaction(async (db) => {
     const spaceId = await spaceIdOf(db, userId, "SHARE");
-    if (id && spaceId !== id) throw new HttpError("Space not found.", 404);
+    if (id && spaceId !== id) throw new HttpError("Group not found.", 404);
     return spaceId ? loadSpace(db, spaceId, "SHARE") : null;
   });
 }
@@ -85,14 +95,20 @@ export async function readSpaceInTransaction(db: PoolClient, userId: string): Pr
   return spaceId ? loadSpace(db, spaceId, "SHARE") : null;
 }
 
+const groupFull = () => new HttpError(`This group is full (${groupSize} people).`, 409);
+
+// Adds the user to the space (both rows locked FOR UPDATE), with the first
+// color nobody in it has, and brings their parked recipes into it.
 async function addMember(db: PoolClient, userId: string, spaceId: string) {
   const { rows } = await db.query("SELECT space_color FROM users WHERE space_id = $1", [spaceId]);
+  if (rows.length >= groupSize) throw groupFull();
   const color = memberColors.find((color) => !rows.some((row) => row.space_color === color.hex));
-  if (!color) throw new HttpError("This space is full (10 members).", 409);
+  if (!color) throw groupFull();
   await db.query(
     "UPDATE users SET space_id = $2, space_color = $3, space_joined_at = clock_timestamp() WHERE id = $1",
     [userId, spaceId, color.hex],
   );
+  await adoptParked(db, userId, spaceId);
 }
 
 // A space has no name (012_unnamed_spaces_profile_pictures.sql): it is its
@@ -100,7 +116,7 @@ async function addMember(db: PoolClient, userId: string, spaceId: string) {
 export function createSpace(userId: string): Promise<Space> {
   return transaction(async (db) => {
     if (await spaceIdOf(db, userId, "UPDATE"))
-      throw new HttpError("Leave your current space before creating another.", 409);
+      throw new HttpError("Leave your current group before creating another.", 409);
     const { rows } = await db.query("INSERT INTO spaces (created_by) VALUES ($1) RETURNING id", [userId]);
     await addMember(db, userId, rows[0].id);
     return loadSpace(db, rows[0].id, "UPDATE");
@@ -111,7 +127,7 @@ export function createSpace(userId: string): Promise<Space> {
 export function joinSpace(userId: string, code: string): Promise<Space> {
   return transaction(async (db) => {
     if (await spaceIdOf(db, userId, "UPDATE"))
-      throw new HttpError("Leave your current space before joining another.", 409);
+      throw new HttpError("Leave your current group before joining another.", 409);
     const { rows } = await db.query(
       "SELECT *, expires_at <= clock_timestamp() AS expired FROM invites WHERE code = $1 FOR UPDATE",
       [code],
@@ -144,18 +160,28 @@ export async function previewInvite(code: string): Promise<InvitePreview | null>
   return {
     from: row.username ? { name: row.name, username: row.username } : null,
     members: row.members,
-    state: row.used ? "used" : row.expired ? "expired" : row.members === 0 ? "gone" : "open",
+    state: row.used
+      ? "used"
+      : row.expired
+        ? "expired"
+        : row.members === 0
+          ? "gone"
+          : row.members >= groupSize
+            ? "full"
+            : "open",
   };
 }
 
 const codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-/** A new single-use invite code, valid for 24 hours. Any member can make one. */
+/** A new single-use invite code, valid for 24 hours, while the group has room. Any member can make one. */
 export function createInvite(userId: string, spaceId: string): Promise<Invite> {
   return transaction(async (db) => {
     // Another space's (or none): 404, whether or not the user has a space.
-    if ((await spaceIdOf(db, userId, "SHARE")) !== spaceId) throw new HttpError("Space not found.", 404);
+    if ((await spaceIdOf(db, userId, "SHARE")) !== spaceId) throw new HttpError("Group not found.", 404);
     await db.query("SELECT 1 FROM spaces WHERE id = $1 FOR SHARE", [spaceId]);
+    const { rows } = await db.query("SELECT count(*)::int AS members FROM users WHERE space_id = $1", [spaceId]);
+    if (rows[0].members >= groupSize) throw groupFull();
     for (;;) {
       const code = Array.from({ length: 8 }, () => codeAlphabet[randomInt(codeAlphabet.length)]).join("");
       const result = await db.query(
@@ -170,10 +196,11 @@ export function createInvite(userId: string, spaceId: string): Promise<Invite> {
 }
 
 // Leaves the space, with the user's and the space's rows locked: their
-// assignments there go, the space goes with its last member, and otherwise an
-// owner hands it on to the member who joined first (their outstanding invites
-// stop working).
-async function leave(db: PoolClient, userId: string, space: Space) {
+// assignments there go, the space goes with its last member (its recipes and
+// shopping list too, their photos' files queued for removal: true when there
+// are some), and otherwise an owner hands it on to the member who joined first
+// (their outstanding invites stop working). What they added stays the group's.
+async function leave(db: PoolClient, userId: string, space: Space): Promise<boolean> {
   await db.query(
     "DELETE FROM task_assignees WHERE user_id = $1 AND task_id IN (SELECT t.id FROM tasks t JOIN task_lists l ON l.id = t.list_id WHERE l.space_id = $2)",
     [userId, space.id],
@@ -191,30 +218,32 @@ async function leave(db: PoolClient, userId: string, space: Space) {
   ]);
   const next = space.members.find((member) => member.id !== userId);
   if (!next) {
+    // Before the space: its recipes would only lose their space_id with it (029_couples_groups.sql).
+    const photos = await removeGroupRecipes(db, space.id);
     await db.query("DELETE FROM spaces WHERE id = $1", [space.id]);
-    return;
+    return photos;
   }
   if (space.ownerId === userId) {
     await db.query("UPDATE spaces SET created_by = $2 WHERE id = $1", [space.id, next.id]);
   }
   await recordActivity(db, { userId, spaceId: space.id, kind: "left" });
+  return false;
 }
 
 /** Leaves the space `spaceId` (404 unless it is the user's). */
-export function leaveSpace(userId: string, spaceId: string): Promise<null> {
-  return transaction(async (db) => {
-    if ((await spaceIdOf(db, userId, "UPDATE")) !== spaceId) throw new HttpError("Space not found.", 404);
-    await leave(db, userId, await loadSpace(db, spaceId, "UPDATE"));
-    return null;
+export async function leaveSpace(userId: string, spaceId: string): Promise<null> {
+  const photos = await transaction(async (db) => {
+    if ((await spaceIdOf(db, userId, "UPDATE")) !== spaceId) throw new HttpError("Group not found.", 404);
+    return leave(db, userId, await loadSpace(db, spaceId, "UPDATE"));
   });
+  // Files can't be in the transaction: a failure leaves the job, to be retried (lib/account-deletion.ts).
+  if (photos)
+    await cleanupMediaJobs(getPool()).catch(() => console.error("Media cleanup deferred; retry pending jobs."));
+  return null;
 }
 
-/** Leaves whatever space the user is in, if any (deleting an account). */
-export function leaveSpaceOf(userId: string): Promise<void> {
-  return transaction((db) => leaveSpaceInTransaction(db, userId));
-}
-
-export async function leaveSpaceInTransaction(db: PoolClient, userId: string): Promise<void> {
+/** Leaves the user's space, if any, in the caller's transaction; true when photos' files were queued for removal. */
+export async function leaveSpaceInTransaction(db: PoolClient, userId: string): Promise<boolean> {
   const spaceId = await spaceIdOf(db, userId, "UPDATE");
-  if (spaceId) await leave(db, userId, await loadSpace(db, spaceId, "UPDATE"));
+  return spaceId ? leave(db, userId, await loadSpace(db, spaceId, "UPDATE")) : false;
 }

@@ -1,5 +1,5 @@
 import { siteTagline } from "../lib/site";
-import { accountButton, expect, formAlert, logIn, logOut, newUser, signUp, test } from "./fixtures";
+import { accountButton, expect, formAlert, logIn, logOut, newUser, openFromHome, signUp, test } from "./fixtures";
 
 const wrongCredentials = "Wrong username/email or password.";
 const signUpConflict =
@@ -15,15 +15,15 @@ test("sign up logs the new user in, home, whose icons go straight into the apps;
 
   await expect(page).toHaveURL("/");
   await expect(accountButton(page, user.username)).toBeVisible();
-  // Logged in, no front page (the website's): the apps' icons, with no header or tab bar.
+  // Logged in, no front page (the website's): the profile and the apps' folders, with no header or tab bar.
   await expect(page.getByRole("region", { name: "Small apps to share with friends" })).toHaveCount(0);
   await expect(page.getByRole("banner")).toHaveCount(0);
   await expect(page.getByRole("navigation")).toHaveCount(0);
 
-  await page.getByRole("main").getByRole("link", { name: "Calendar", exact: true }).click();
-  await expect(page).toHaveURL("/shared");
+  await openFromHome(page, "Shows");
+  await expect(page).toHaveURL("/shows");
   await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
-  // With a session the Spaces endpoint returns the user's current space.
+  // With a session the spaces endpoint returns the user's current group.
   expect(await (await page.request.get("/api/shared/spaces")).json()).toEqual({ data: null });
 
   // Logged in, /login and /signup go on home or to next.
@@ -67,7 +67,7 @@ test("log out from Account; log in with the username or the email, in any case, 
   await expect(page).toHaveURL("/");
   // Not on / (which has no tab bar): only on Account.
   await expect(page.getByRole("button", { name: "Log out" })).toHaveCount(0);
-  await page.getByRole("main").getByRole("link", { name: "Account", exact: true }).click();
+  await page.getByRole("main").getByRole("link", { name: "Account settings", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await page.getByRole("main").getByRole("button", { name: "Log out", exact: true }).click();
   // Logged out, home is the website: Log in and Sign up in its header.
@@ -75,8 +75,8 @@ test("log out from Account; log in with the username or the email, in any case, 
   const header = page.getByRole("banner");
   await expect(header.getByRole("link", { name: "Log in" })).toBeVisible();
   await expect(header.getByRole("link", { name: "Sign Up" })).toBeVisible();
-  await page.goto("/shared");
-  await expect(page).toHaveURL(`/?${next("/shared")}`);
+  await page.goto("/calendar");
+  await expect(page).toHaveURL(`/?${next("/calendar")}`);
 
   await logIn(page, user.username, user.password);
   await expect(page).toHaveURL("/");
@@ -115,7 +115,7 @@ test("logged out, the apps and Account send home, with the app's login prompt, a
   await signUp(page, user);
   await expect(page).toHaveURL("/");
   await logOut(page, user.username);
-  for (const path of ["/shared", "/shows", "/shows/anything?x=1", "/account"]) {
+  for (const path of ["/calendar", "/shows", "/shows/anything?x=1", "/account"]) {
     await page.goto(path);
     await expect(page).toHaveURL(`/?${next(path)}`);
   }

@@ -1,8 +1,9 @@
 import type { Viewport } from "next";
 
-// The apps on home, in display order. Adding an app is one entry here, plus its
-// logo in public/logos, its route under app/, its views in lib/app-views.ts and
-// its place in a group on the front page (components/site/AppSections.tsx).
+// The apps, in display order, folder by folder. Adding an app is one entry
+// here and its place in a folder (below), plus its logo in public/logos, its
+// route under app/, its views in lib/app-views.ts and its preview on the front
+// page (components/site/AppPreview.tsx).
 export type AppInfo = {
   name: string;
   /** Where the app lives. */
@@ -17,12 +18,26 @@ export type AppInfo = {
 
 export const apps: readonly AppInfo[] = [
   {
-    // Its address is still /shared, from when the app was called Shared.
+    // Its logo is still shared.svg, from when the app was called Shared (at /shared, which redirects here).
     name: "Calendar",
-    href: "/shared",
+    href: "/calendar",
     description: "Shared calendar for couples",
-    summary: "events and task lists for two",
+    summary: "a calendar for two",
     logo: "/logos/shared.svg",
+  },
+  {
+    name: "Tasks",
+    href: "/tasks",
+    description: "Shared task lists for couples",
+    summary: "task lists for two",
+    logo: "/logos/tasks.svg",
+  },
+  {
+    name: "Recipes",
+    href: "/recipes",
+    description: "Save the recipes you cook together, and shop from one list",
+    summary: "a recipe box with a shopping list for two",
+    logo: "/logos/recipes.svg",
   },
   {
     name: "Shows",
@@ -39,13 +54,6 @@ export const apps: readonly AppInfo[] = [
     logo: "/logos/books.svg",
   },
   {
-    name: "Recipes",
-    href: "/recipes",
-    description: "Save and organise recipes you want to cook again",
-    summary: "a recipe box with a shopping list",
-    logo: "/logos/recipes.svg",
-  },
-  {
     name: "Fitness",
     href: "/fitness",
     description: "Plan workouts and track fitness, hydration, and body weight",
@@ -54,7 +62,30 @@ export const apps: readonly AppInfo[] = [
   },
 ];
 
-/** "Calendar, Shows, and Recipes". */
+export type FolderId = "couples" | "trackers" | "health";
+
+/** A folder of apps: on home, logged in (components/site/AppFolders.tsx), and the front page's groups (AppSections). */
+export type AppFolder = {
+  id: FolderId;
+  title: string;
+  /** Its apps, by href, in their order. */
+  apps: readonly AppInfo["href"][];
+  /** Only the group's two people see what is in it: a lock on its folder on home. */
+  private: boolean;
+};
+
+// Every app is in one folder (test/home-and-ux.test.ts), in the order of apps.
+export const folders: readonly AppFolder[] = [
+  { id: "couples", title: "For Couples", apps: ["/calendar", "/tasks", "/recipes"], private: true },
+  { id: "trackers", title: "Trackers", apps: ["/shows", "/books"], private: false },
+  { id: "health", title: "Health", apps: ["/fitness"], private: false },
+];
+
+/** A folder's apps, in its order. */
+export const appsOf = (folder: AppFolder): AppInfo[] =>
+  folder.apps.map((href) => apps.find((app) => app.href === href)!);
+
+/** "Calendar, Tasks, and Recipes". */
 export const appNames = new Intl.ListFormat("en", { type: "conjunction" }).format(apps.map((app) => app.name));
 
 /** The id of an app's place on the front page, and of its link there: "shows" (/#shows). */

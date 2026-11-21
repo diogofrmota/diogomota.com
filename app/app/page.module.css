@@ -1,10 +1,11 @@
-/* /, logged in: the apps' icons in a column (the front page, logged out,
-   is the website's: components/site/FrontPage), with no tab bar. At least as
-   tall as the screen less the page's padding, so the footer is at the bottom
-   of the page however little is above it. */
+/* /, logged in: who is here and the apps' folders in a column (the front
+   page, logged out, is the website's: components/site/FrontPage), with no tab
+   bar. At least as tall as the screen less the page's padding: the profile
+   at the top, the folders under it, and the footer at the bottom of the page
+   however little is above it. */
 .view {
   display: grid;
-  grid-template-rows: 1fr auto 1fr;
+  grid-template-rows: auto 1fr auto;
   max-width: 56rem;
   min-height: var(--app-view-height);
   margin-inline: auto;
@@ -12,15 +13,18 @@
 
 .launcher {
   grid-row: 2;
-  align-self: center;
+  display: grid;
+  align-content: start;
+  gap: var(--space-8);
   width: 100%;
+  padding-top: var(--space-4);
 }
 
-/* "Diogo’s Apps", over the icons: in the middle, as the icons are. Two
-   classes, to win over ui.module.css's heading whatever the order. */
-.title.title {
-  margin-bottom: var(--space-6);
-  text-align: center;
+@media (min-width: 40rem) {
+  .launcher {
+    gap: 3rem;
+    padding-top: var(--space-8);
+  }
 }
 
 /* Version, Privacy and Report a bug: for whoever deploys it, for the curious,

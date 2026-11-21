@@ -21,11 +21,35 @@
 
 /* Shared: the month, and the task list beside it. Inside the preview, close to
    its edge: the smallest corners. */
-.shared {
+/* Calendar: the month, filling the picture. */
+.calendar {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
+  height: 100%;
+}
+
+/* Tasks: the lists, then the one picked's tasks, wider. */
+.tasksApp {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr);
   gap: var(--space-2);
   height: 100%;
+}
+
+.lists {
+  display: grid;
+  align-content: start;
+  gap: 0.375rem;
+  padding-block: var(--space-1);
+}
+
+.list {
+  display: block;
+  padding: 0.375rem;
+  border-radius: var(--radius-xs);
+}
+
+.list[data-current] {
+  background: var(--accent-soft);
 }
 
 .month,

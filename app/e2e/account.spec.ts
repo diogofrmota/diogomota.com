@@ -38,10 +38,10 @@ test("Account's icon on / opens the settings: no top bar, only Apps in the tab b
   const user = newUser();
   await signUp(page, user);
   await expect(page).toHaveURL("/");
-  // / has no tab bar: its icons are the way on, Account among them.
+  // / has no tab bar: Account settings, under the profile, and the folders are the way on.
   await expect(page.getByRole("navigation")).toHaveCount(0);
 
-  await page.getByRole("main").getByRole("link", { name: "Account", exact: true }).click();
+  await page.getByRole("main").getByRole("link", { name: "Account settings", exact: true }).click();
   await expect(page).toHaveURL("/account");
   // The title in the middle of the page.
   const title = page.getByRole("heading", { level: 1, name: "account" });
@@ -389,8 +389,8 @@ test("change password, which logs out every device", async ({ page, browser }) =
   await submit(user.password, newPassword, newPassword);
   await expect(page).toHaveURL("/login?password=changed&next=%2Faccount");
   await expect(page.getByRole("main")).toContainText("Your password was changed. Log in with the new one.");
-  await other.goto("/shared");
-  await expect(other).toHaveURL("/?next=%2Fshared");
+  await other.goto("/calendar");
+  await expect(other).toHaveURL("/?next=%2Fcalendar");
   await otherDevice.close();
 
   await logIn(page, user.username, user.password);
@@ -551,12 +551,12 @@ test("an email not confirmed yet says so, and the link can be sent again", async
   await expect(page.getByRole("button", { name: "Send the link again" })).toHaveCount(0);
 });
 
-test("Download my data has the account, library and space; Delete my account takes the password and deletes it all @smoke", async ({
+test("Download my data has the account, library and group; Delete my account takes the password and deletes it all @smoke", async ({
   page,
 }) => {
   const user = newUser();
-  await signUp(page, user, "/signup?next=%2Fshared");
-  await page.getByRole("button", { name: "Create space" }).click();
+  await signUp(page, user, "/signup?next=%2Fcalendar");
+  await page.getByRole("button", { name: "Create a group" }).click();
   await expect(page.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
   const { data: space } = await (await page.request.get("/api/shared/spaces")).json();
   await page.goto("/account");
@@ -593,7 +593,7 @@ test("Download my data has the account, library and space; Delete my account tak
   );
   await withDatabase(async (db) => {
     expect((await db.query("SELECT 1 FROM users WHERE username = $1", [user.username])).rowCount).toBe(0);
-    // The space went with its last member.
+    // The group went with its last member.
     expect((await db.query("SELECT 1 FROM spaces WHERE id = $1", [space.id])).rowCount).toBe(0);
   });
   await logIn(page, user.username, user.password);

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { appViewFromUrl, appViewUrl } from "@/hooks/useAppView";
-import { viewFromParams } from "@/lib/app-views";
+import { homeViews, viewFromParams } from "@/lib/app-views";
 import { safeNextPath } from "@/lib/next-path";
 import { eventInput, inviteCodeOf, joinInput, libraryPatch, taskCreate, taskPatch } from "@/lib/schemas";
 
@@ -83,9 +83,22 @@ describe("the apps' URLs", () => {
   test("a path that isn't one of the app's views is nothing", () => {
     expect(appViewFromUrl("/shows", views, "/shows/watchlist", "")).toBeNull();
     expect(appViewFromUrl("/shows", views, "/shows/discover/more", "")).toBeNull();
-    expect(appViewFromUrl("/shows", views, "/shared", "")).toBeNull();
+    expect(appViewFromUrl("/shows", views, "/calendar", "")).toBeNull();
     expect(viewFromParams(views, ["nope"], undefined)).toBeNull();
     expect(viewFromParams(views, undefined, ["a", "b", "c", "d", "e", "f"])?.panels).toHaveLength(5);
+  });
+
+  test("home's folders are its panels: /?p=folder:couples; an app's path isn't home", () => {
+    expect(appViewUrl("/", homeViews, { view: "home", panels: ["folder:couples"] })).toBe("/?p=folder%3Acouples");
+    expect(appViewFromUrl("/", homeViews, "/", "?p=folder:couples")).toEqual({
+      view: "home",
+      panels: ["folder:couples"],
+    });
+    expect(appViewFromUrl("/", homeViews, "/calendar", "")).toBeNull();
+    expect(viewFromParams(homeViews, undefined, "folder:trackers")).toEqual({
+      view: "home",
+      panels: ["folder:trackers"],
+    });
   });
 
   test("where to go after logging in is only ever a path of this site", () => {

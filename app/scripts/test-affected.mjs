@@ -160,16 +160,16 @@ const parts = [
     views: [],
   },
   {
-    name: "Calendar",
+    name: "For Couples",
     files: [
-      /^app\/shared\//,
+      /^app\/(calendar|tasks|couples)\//,
       /^app\/api\/(shared|calendar)\//,
       /^app\/join\//,
       /^components\/shared\//,
-      /^lib\/(calendar|calendar-feeds|events|tasks|task-types|spaces|space-types|football-data|football-types)\./,
+      /^lib\/(calendar|calendar-feeds|events|tasks|task-types|spaces|space-types|recipe-groups|football-data|football-types)\./,
     ],
-    specs: ["calendar", "tasks", "spaces", "shared-features"],
-    views: ["Calendar: every view"],
+    specs: ["calendar", "tasks", "spaces", "shared-features", "recipes"],
+    views: ["For Couples: Calendar, Tasks and the group's settings"],
   },
   {
     name: "Recipes",
@@ -177,9 +177,9 @@ const parts = [
       /^app\/recipes\//,
       /^app\/api\/recipes\//,
       /^components\/recipes\//,
-      /^lib\/(recipes|recipe-types|recipe-photos)\./,
+      /^lib\/(recipes|recipe-types|recipe-photos|recipe-groups)\./,
     ],
-    specs: ["recipes"],
+    specs: ["recipes", "spaces"],
     views: ["Recipes: every view"],
   },
   {

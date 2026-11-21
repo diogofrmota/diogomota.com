@@ -9,3 +9,5 @@
 **Costs:** someone with a partner and flatmates can't be in both; a `space_members` table would be the change, best made while there is little data.
 
 **Update, 2026-11-21:** the app is called Calendar now (what people look for on the front page and on home); its address is still `/shared`, as are its API (`/api/shared`), its subscription feed and invite links, so nothing that was bookmarked, subscribed to or shared breaks.
+
+**Update, 2026-11-21 (later):** a space is a **group of two** now ([0023](0023-folders-and-a-group-for-couples.md)): joining a full one, or inviting into it, is refused. It is called a group in everything people read, and holds For Couples' three apps: Calendar (`/calendar`), Tasks (`/tasks`, Calendar's Tasks tab before) and Recipes, with its settings at `/couples`. `/shared` redirects; the API, the invite links and the subscription feed keep their addresses.

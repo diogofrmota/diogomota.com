@@ -3,14 +3,15 @@ import { query } from "@/lib/db";
 import { listBooks } from "@/lib/books";
 import { listEvents } from "@/lib/events";
 import { readFitness } from "@/lib/fitness";
-import { listRecipes, listShopping } from "@/lib/recipes";
+import { exportRecipes } from "@/lib/recipes";
 import { readSpaceInTransaction, transaction } from "@/lib/spaces";
 import { readLists } from "@/lib/tasks";
 
 // GET /api/account/export: everything the site keeps about you, as a JSON file
 // (Account, Data / Privacy page): your account, your Shows library, friends and
-// recommendations, what you did (the activity feeds), your space's calendar
-// and tasks, which you share with its members, your recipes and shopping list,
+// recommendations, what you did (the activity feeds), your group's calendar,
+// tasks, recipes and shopping list, which you share with your partner (or
+// without a group, the recipes you kept on your own),
 // and your fitness log (routines, workouts, runs, supplements, the days logged
 // and the goals). Not the password, sessions, profile picture (that one is on
 // your Account page to save) or recipes' photos (each recipe lists its photos' links).
@@ -19,7 +20,7 @@ export async function GET() {
   if (!session) return Response.json({ error: "Please log in again." }, { status: 401 });
   const userId = session.user.id;
 
-  const [account, library, friends, recommendations, activity, shared, recipes, shopping, fitness, books] =
+  const [account, library, friends, recommendations, activity, [shared, { recipes, shopping }], fitness, books] =
     await Promise.all([
       query(
         `SELECT username, name, email, email_verified AS "emailVerified", theme_preference AS theme,
@@ -54,16 +55,17 @@ export async function GET() {
       ),
       transaction(async (db) => {
         const space = await readSpaceInTransaction(db, userId);
-        return space
-          ? {
-              members: space.members.map(({ username, name, role }) => ({ username, name, role })),
-              events: await listEvents(db, space),
-              taskLists: await readLists(db, space),
-            }
-          : null;
+        return [
+          space
+            ? {
+                members: space.members.map(({ username, name, role }) => ({ username, name, role })),
+                events: await listEvents(db, space),
+                taskLists: await readLists(db, space),
+              }
+            : null,
+          await exportRecipes(db, userId, space?.id ?? null),
+        ] as const;
       }),
-      listRecipes(userId),
-      listShopping(userId),
       readFitness(userId),
       listBooks(userId),
     ]);

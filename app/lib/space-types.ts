@@ -15,7 +15,11 @@ export const memberColors = [
   { hex: "#997700", name: "Ochre" },
 ] as const;
 
-// No name: a space is its members, calendar and task lists.
+/** A group is two people: the one who made it and their partner (docs/decisions/0023). */
+export const groupSize = 2;
+
+// No name: a space (a group, in what people read) is its members, calendar,
+// task lists and recipes.
 export type Space = {
   id: string;
   ownerId: string;
@@ -28,7 +32,8 @@ export type Invite = { code: string; expiresAt: string };
 export type InvitePreview = {
   /** Who made it, or null for an older invite or a deleted account. */
   from: { name: string | null; username: string } | null;
-  /** How many people the space has now. */
+  /** How many people the group has now. */
   members: number;
-  state: "open" | "used" | "expired" | "gone";
+  /** "full": the group already has its two people. */
+  state: "open" | "used" | "expired" | "gone" | "full";
 };

@@ -4,7 +4,10 @@
 
 export type AppViewState = { view: string; panels: readonly string[] };
 
-export const sharedViews = ["calendar", "tasks", "settings"] as const;
+/** Home, logged in: one view, its panels the folder open (folder:couples; components/site/AppFolders.tsx). */
+export const homeViews = ["home"] as const;
+export const calendarViews = ["calendar"] as const;
+export const tasksViews = ["tasks"] as const;
 export const showsViews = ["library", "discover", "profile"] as const;
 export const recipesViews = ["recipes", "favourites", "shopping"] as const;
 export const fitnessViews = ["today", "workouts", "progress"] as const;

@@ -1,21 +1,24 @@
 "use client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { flushSync } from "react-dom";
 import { ActivityFeed } from "@/components/common/ActivityFeed";
 import { Avatar } from "@/components/common/Avatar";
 import { CalendarIcon } from "@/components/common/icons";
 import { CopiedIcon, reducedMotion, useBriefly } from "@/components/common/motion";
 import { PersonName } from "@/components/common/PersonName";
+import { QueryProvider } from "@/components/common/QueryProvider";
 import { Spinner } from "@/components/common/Spinner";
 import { Alert, Button, Confirm, Notice } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
 import { UndoToast, useUndo } from "@/components/common/Undo";
 import type { ActivityItem } from "@/lib/activity-types";
-import type { Space } from "@/lib/space-types";
+import { groupSize, type Space } from "@/lib/space-types";
+import { CouplesWelcome } from "./CouplesWelcome";
 import { InviteLink } from "./InviteLink";
-import { sharedKeys, sharedRequest, spaceQuery } from "./shared-data";
+import { setupShared, sharedKeys, sharedRequest, spaceQuery } from "./shared-data";
 import styles from "./Spaces.module.css";
+import { useGroup } from "./useGroup";
 
 type Feed = { url: string; webcal: string };
 
@@ -263,18 +266,23 @@ function SpaceCards({
           ))}
         </ul>
       </section>
-      <section className={ui.card} aria-labelledby="invite-heading">
-        <h2 id="invite-heading" className={ui.cardHeading}>
-          Invite someone
-        </h2>
-        <p className={ui.muted}>Share an invite with someone else. It expires in 24 hours!</p>
-        <InviteLink space={space} />
-      </section>
+      {/* A group is two people: once both are in, there is no one else to invite. */}
+      {space.members.length < groupSize && (
+        <section className={ui.card} aria-labelledby="invite-heading">
+          <h2 id="invite-heading" className={ui.cardHeading}>
+            Invite your partner
+          </h2>
+          <p className={ui.muted}>
+            Send them a link to join your calendar, tasks and recipes. It works once, for 24 hours.
+          </p>
+          <InviteLink space={space} />
+        </section>
+      )}
       <ImportCalendarsCard />
       <CalendarFeedCard />
       <ActivityCard />
       {/* Leaving: a button after the cards. It can be undone for a few seconds;
-          as the last member it deletes the space, so it asks first instead. */}
+          as the last member it deletes the group, so it asks first instead. */}
       {confirmLeave ? (
         <Confirm
           confirmLabel="Leave and delete"
@@ -282,7 +290,7 @@ function SpaceCards({
           onConfirm={leave}
           onCancel={() => setConfirmLeave(false)}
         >
-          You&rsquo;re the last member: leaving deletes this space, its calendar and its tasks. Leave it?
+          You&rsquo;re the last member: leaving deletes this group, its calendar, its tasks and its recipes. Leave it?
         </Confirm>
       ) : (
         <Button
@@ -290,10 +298,10 @@ function SpaceCards({
           busy={leaving || !!undo.pending}
           onClick={() => {
             if (last) setConfirmLeave(true);
-            else undo.schedule({ label: "Leaving this space…", commit: () => void leave() });
+            else undo.schedule({ label: "Leaving the group…", commit: () => void leave() });
           }}
         >
-          Leave this space
+          Leave the group
         </Button>
       )}
       {leaveError && <Notice error>{leaveError}</Notice>}
@@ -302,37 +310,40 @@ function SpaceCards({
   );
 }
 
-/**
- * Shared's Settings tab: the space's members, invites, the calendar
- * subscription, recent activity and leaving. The space is SharedApp's, and
- * every change goes back to it (onChange): members who came or went show in the
- * other tabs, and leaving takes Shared back to creating or joining a space.
- */
-export function SpaceSettings({
-  space,
-  userId,
-  onChange,
-}: {
-  space: Space;
-  userId: string;
-  onChange: (space: Space | null) => void;
-}) {
-  // Loaded again each time the tab is shown (Activity resumes the query), so
-  // what other members changed meanwhile shows.
-  const current = useQuery(spaceQuery);
-  // Only an answer loaded since the tab was shown: one kept from before may be older than the space.
-  useEffect(() => {
-    if (current.isFetchedAfterMount && !current.isFetching && current.data !== undefined) onChange(current.data);
-  }, [current.data, current.isFetchedAfterMount, current.isFetching, onChange]);
-
-  // The top bar's Settings tab names the view; the h1 is for screen readers.
+function Settings({ userId, initialSpace }: { userId: string; initialSpace: Space | null }) {
+  const { space, showSpace, onJoined, checked } = useGroup(initialSpace);
+  if (!space) return <CouplesWelcome onJoined={onJoined} />;
   return (
     <div className={ui.view}>
-      <h1 className={ui.srOnly}>Settings</h1>
+      <h1 className={ui.heading}>Group settings</h1>
       <div className={ui.stack}>
-        {current.isError && <Alert onRetry={() => void current.refetch()}>{current.error.message}</Alert>}
-        <SpaceCards space={space} userId={userId} onChange={onChange} />
+        {checked.isError && <Alert onRetry={() => void checked.refetch()}>{checked.error.message}</Alert>}
+        <SpaceCards space={space} userId={userId} onChange={showSpace} />
       </div>
     </div>
+  );
+}
+
+/**
+ * For Couples' settings (/couples, from the gear in its folder on home): the
+ * group's members, inviting your partner while you're alone in it, importing
+ * calendars, the calendar subscription, recent activity and leaving. The group
+ * is checked as the page is shown (useGroup), so members who came or went
+ * show; leaving shows creating or joining a group again. Its data is For
+ * Couples' (QueryProvider app "shared", as Calendar's and Tasks').
+ */
+export function CouplesSettingsPage({
+  userId,
+  initialSpace,
+  version,
+}: {
+  userId: string;
+  initialSpace: Space | null;
+  version: string;
+}) {
+  return (
+    <QueryProvider app="shared" userId={userId} version={version} setup={setupShared}>
+      <Settings userId={userId} initialSpace={initialSpace} />
+    </QueryProvider>
   );
 }

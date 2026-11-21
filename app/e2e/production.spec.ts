@@ -90,6 +90,8 @@ test("multi-year data measurements and quota failure keep pending operations rec
   await expect(page).toHaveURL("/");
   const id = await userId(user.username);
   await seedLargeDataset(id);
+  // The recipes are a group's (docs/decisions/0023): creating one brings in the ones kept before it.
+  expect((await page.request.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
   const metrics: Record<string, unknown> = {};
   for (const app of ["fitness", "recipes"]) {
     const measurements = await page.evaluate(async (app) => {
@@ -291,6 +293,7 @@ test("production nginx and Next accept bounded photos; reject oversized, chunked
 }) => {
   await signUp(page, newUser(), "/signup?next=/recipes");
   await expect(page).toHaveURL("/recipes");
+  expect((await page.request.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
   const recipe = (await (await page.request.post("/api/recipes", { data: { title: "Upload boundaries" } })).json())
     .data;
   const cookie = (await context.cookies()).map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
@@ -439,6 +442,8 @@ test("an acknowledged write leaving its view is drained before another journal o
   await page.getByRole("button", { name: "250 ml", exact: true }).click();
   await received;
   await page.getByRole("link", { name: "Apps", exact: true }).click();
+  // Books is in the Trackers folder on home.
+  await page.getByRole("main").getByRole("button", { name: "Trackers" }).click();
   await page.locator('main a[href="/books"]').click();
   await expect(page).toHaveURL("/books");
   release();

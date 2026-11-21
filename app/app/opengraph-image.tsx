@@ -8,8 +8,8 @@ import { defaultTheme, themeBackground } from "@/lib/themes";
 
 // Link preview of home and every page without its own (/about has its own),
 // rendered once at build time, as the front page's header and headline: the >_
-// mark and diogomota, what the site is, and the apps' icons, on the Light
-// theme's gray.
+// mark and diogomota, what the site is, and the apps' icons (six, without
+// their names, to fit in a row), on the Light theme's gray.
 export const alt = `diogomota: ${siteTagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -53,13 +53,10 @@ export default function OpenGraphImage() {
       <div style={{ marginTop: 36, fontSize: 76, fontWeight: 700, letterSpacing: -2, lineHeight: 1.08 }}>
         {siteTagline}
       </div>
-      <div style={{ display: "flex", gap: 36, marginTop: 52 }}>
+      <div style={{ display: "flex", gap: 28, marginTop: 52 }}>
         {logos.map((logo) => (
-          <div key={logo.name} style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logo.src} width={88} height={88} alt="" style={{ borderRadius: 20 }} />
-            <span style={{ fontSize: 40, color: "#4e4e58" }}>{logo.name}</span>
-          </div>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={logo.name} src={logo.src} width={104} height={104} alt="" style={{ borderRadius: 24 }} />
         ))}
       </div>
     </div>,

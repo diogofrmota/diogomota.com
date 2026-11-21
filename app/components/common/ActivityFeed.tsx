@@ -33,9 +33,9 @@ function onDay(startsAt: string) {
 function sentence(item: ActivityItem, title: React.ReactNode, viewer?: string): React.ReactNode {
   switch (item.kind) {
     case "joined":
-      return "joined the space";
+      return "joined the group";
     case "left":
-      return "left the space";
+      return "left the group";
     case "event-added":
       return `added ${item.data.title} on ${onDay(item.data.startsAt)}`;
     case "event-changed":
@@ -109,7 +109,7 @@ function runSentence(run: ActivityItem[]): string {
 }
 
 /**
- * An activity feed (lib/activity.ts): what the space's members, or the user's
+ * An activity feed (lib/activity.ts): what the group's members, or the user's
  * friends, did lately, newest first, a run of the same thing as one line. In
  * Shows, a title opens its panel. With `limit`, the first that many lines,
  * then Show more for the rest.

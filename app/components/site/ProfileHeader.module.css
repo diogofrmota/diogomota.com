@@ -1,0 +1,44 @@
+/* The top of /, logged in (ProfileHeader): the picture, the name, the
+   username and Account settings, one under the other, in the middle. */
+.profile {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  text-align: center;
+}
+
+/* The picture, or the initials as large as it: as on /account, a little smaller. */
+.avatar {
+  width: 6rem;
+  height: 6rem;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-3xl);
+  text-box: trim-both cap alphabetic;
+  box-shadow: var(--shadow-sm);
+}
+
+.name {
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+
+.username {
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+
+/* A pill, as a phone's settings button is. Two classes, to win over ui.module.css's button whatever the order. */
+.account.account {
+  justify-self: center;
+  margin-top: var(--space-3);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+}

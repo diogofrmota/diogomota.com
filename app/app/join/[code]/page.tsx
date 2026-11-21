@@ -12,16 +12,17 @@ import { JoinForm } from "./JoinForm";
 
 // The code is in the URL: no Referer header carries it anywhere, and no search engine lists it.
 export const metadata: Metadata = {
-  title: "join a shared space",
+  title: "join a group",
   robots: { index: false },
   referrer: "no-referrer",
 };
 
 export const viewport = appViewport;
 
-// An invite link (SH14, components/shared/InviteLink): who sent it, then Log in
-// or Sign up (which come back here), or, logged in, Join. Opening it never joins
-// by itself (a link preview or a prefetch would). Codes work once, for 24 hours.
+// An invite link (SH14, components/shared/InviteLink) to a group of For
+// Couples: who sent it, then Log in or Sign up (which come back here), or,
+// logged in, Join. Opening it never joins by itself (a link preview or a
+// prefetch would). Codes work once, for 24 hours, while the group has room.
 export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
   const code = inviteCodeOf((await params).code);
   const valid = /^[A-HJ-NP-Z2-9]{8}$/.test(code);
@@ -35,16 +36,18 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
         intro={
           preview?.state === "used"
             ? "Someone already joined with it: each invite works once. Ask for a new one."
-            : preview?.state === "expired"
-              ? "It expired: each invite works for 24 hours. Ask for a new one."
-              : "There's no such invite. Ask for a new link."
+            : preview?.state === "full"
+              ? "This group already has two people."
+              : preview?.state === "expired"
+                ? "It expired: each invite works for 24 hours. Ask for a new one."
+                : "There's no such invite. Ask for a new link."
         }
       />
     );
   }
 
-  const title = from ? `${from} invited you to their Calendar` : "You're invited to a shared Calendar";
-  const intro = "A calendar and task lists for the two of you: dinners, trips, the bins and the shopping.";
+  const title = from ? `${from} invited you to their group` : "You're invited to a group";
+  const intro = "A calendar, task lists and recipes for the two of you: dinners, trips, the bins and the shopping.";
   if (!session) {
     const next = `/join/${code}`;
     return (
@@ -58,7 +61,7 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
             Sign up
           </Link>
         </p>
-        <p>Then you join, and Calendar opens.</p>
+        <p>Then you join, and For Couples opens.</p>
       </AuthPage>
     );
   }
@@ -68,8 +71,8 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
     return (
       <AuthPage
         title={title}
-        intro="You're already in a space, and you can be in one at a time. To join this one, leave yours first in Calendar's Settings."
-        action={{ href: "/shared/settings", label: "Open Settings" }}
+        intro="You're already in a group, and you can be in one at a time. To join this one, leave yours first in the group's settings."
+        action={{ href: "/couples", label: "Open group settings" }}
       />
     );
   }
@@ -77,7 +80,7 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
     <AuthPage
       title={title}
       intro={intro}
-      form={<JoinForm code={code} label={from ? `Join ${from}'s space` : "Join the space"} />}
+      form={<JoinForm code={code} label={from ? `Join ${from}'s group` : "Join the group"} />}
     />
   );
 }

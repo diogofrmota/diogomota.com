@@ -3,13 +3,13 @@ import styles from "./AppPreview.module.css";
 
 // A small picture of an app, drawn with the page's theme from the apps' own
 // parts, so it looks like the app does for this user: in its login prompt
-// on the front page and in Calendar's welcome. Decorative (the words beside it say what the app is): no text in it
+// on the front page and in For Couples' welcome. Decorative (the words beside it say what the app is): no text in it
 // but the calendar's day numbers.
 
 const [blue, rose, green, gold] = memberColors.map((color) => color.hex);
 
-/** Calendar: a month of the calendar with members' events, and a task list beside it. */
-function SharedPreview() {
+/** Calendar: a month of the calendar with the two people's events. */
+function CalendarPreview() {
   // Three weeks, Monday first: [day, the event's color, or none].
   const days: [number, string?][] = [
     [9],
@@ -34,14 +34,29 @@ function SharedPreview() {
     [28],
     [29],
   ];
-  const tasks = [true, false, false, true, false];
   return (
-    <span className={styles.shared}>
+    <span className={styles.calendar}>
       <span className={styles.month}>
         {days.map(([day, color]) => (
           <span key={day} className={styles.day} data-today={day === 11 || undefined}>
             <span className={styles.dayNumber}>{day}</span>
             {color && <span className={styles.event} style={{ "--event-color": color } as React.CSSProperties} />}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
+/** Tasks: the lists, the first one picked, and its tasks beside them, some ticked off. */
+function TasksPreview() {
+  const tasks = [true, false, false, true, false];
+  return (
+    <span className={styles.tasksApp}>
+      <span className={styles.lists}>
+        {[60, 80, 45].map((width, i) => (
+          <span key={i} className={styles.list} data-current={i === 0 || undefined}>
+            <span className={styles.line} style={{ width: `${width}%` }} />
           </span>
         ))}
       </span>
@@ -142,7 +157,8 @@ function FitnessPreview() {
 
 const previews: Record<string, () => React.ReactNode> = {
   "/books": BooksPreview,
-  "/shared": SharedPreview,
+  "/calendar": CalendarPreview,
+  "/tasks": TasksPreview,
   "/shows": ShowsPreview,
   "/recipes": RecipesPreview,
   "/fitness": FitnessPreview,

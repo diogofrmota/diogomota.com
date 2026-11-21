@@ -13,10 +13,12 @@ export async function cleanupMediaJobs(pool) {
       try {
         const avatarDir = process.env.AVATAR_DIR || path.join(process.cwd(), "data", "avatars");
         const photoDir = process.env.RECIPE_PHOTO_DIR || path.join(process.cwd(), "data", "recipe-photos");
-        for (const id of [job.user_id, ...job.photo_ids]) {
+        // A job without a user is a deleted group's recipe photos (lib/recipe-groups.ts):
+        // no profile picture goes with them.
+        for (const id of job.user_id ? [job.user_id, ...job.photo_ids] : job.photo_ids) {
           if (!/^[a-f0-9-]{36}$/i.test(id)) throw new Error("Invalid media id");
         }
-        await rm(path.join(avatarDir, `${job.user_id}.webp`), { force: true });
+        if (job.user_id) await rm(path.join(avatarDir, `${job.user_id}.webp`), { force: true });
         for (const id of job.photo_ids)
           for (const suffix of ["", "-thumb"]) await rm(path.join(photoDir, `${id}${suffix}.webp`), { force: true });
         await db.query("DELETE FROM media_cleanup_jobs WHERE id = $1", [job.id]);

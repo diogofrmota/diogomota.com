@@ -10,13 +10,14 @@ const base = "/api/shared/tasks";
 const contextOptions = () => ({ extraHTTPHeaders: { "X-Forwarded-For": `10.${[...randomBytes(3)].join(".")}` } });
 
 async function setup(page: Page) {
-  await signUp(page, newUser(), "/signup?next=/shared");
-  await page.getByRole("button", { name: "Create space" }).click();
+  await signUp(page, newUser(), "/signup?next=/calendar");
+  await page.getByRole("button", { name: "Create a group" }).click();
   await expect(page.getByRole("heading", { name: "Calendar", exact: true })).toBeVisible();
   return (await (await page.request.get("/api/shared/spaces")).json()).data as Space;
 }
+/** Tasks (/tasks), its own app since For Couples (docs/decisions/0023). */
 async function openTasks(page: Page) {
-  await page.getByRole("navigation", { name: "Calendar", exact: true }).getByRole("button", { name: "Tasks" }).click();
+  await page.goto("/tasks");
   await expect(page.getByRole("heading", { name: "Tasks", exact: true })).toBeVisible();
   await expect(page.getByText("Loading tasks…")).toHaveCount(0);
 }
@@ -159,7 +160,7 @@ test("lists: empty state, create, rename, reorder with the keyboard and delete, 
   await expect(dialog).toBeVisible();
   await page.goBack();
   await expect(dialog).toHaveCount(0);
-  await expect(page).toHaveURL("/shared/tasks");
+  await expect(page).toHaveURL("/tasks");
 });
 
 test("tasks: add, reorder with mouse and keyboard (persists after reload), complete, assign and delete with undo", async ({
@@ -175,8 +176,8 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   const context = await browser.newContext(contextOptions());
   try {
     const other = await context.newPage();
-    await signUp(other, friend, "/signup?next=/shared");
-    await expect(other.getByRole("heading", { name: "Your shared calendar" })).toBeVisible();
+    await signUp(other, friend, "/signup?next=/calendar");
+    await expect(other.getByRole("heading", { name: "For Couples" })).toBeVisible();
     const code = (await (await page.request.post(`/api/shared/spaces/${space.id}/invites`, { data: {} })).json()).data
       .code;
     expect((await other.request.post("/api/shared/spaces/join", { data: { code } })).ok()).toBe(true);
@@ -365,11 +366,8 @@ test("tasks: add, reorder with mouse and keyboard (persists after reload), compl
   await dialog.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("status").filter({ hasText: "Deleted “Fix the door”" })).toBeVisible();
-  await page
-    .getByRole("navigation", { name: "Calendar", exact: true })
-    .getByRole("button", { name: "Calendar" })
-    .click();
-  // Leaving the view ends the undo window.
+  // Leaving the page (for Calendar, a page of its own now) ends the undo window: the delete is sent as it goes.
+  await page.goto("/calendar");
   await expect.poll(async () => (await readLists(page))[0].tasks.map((t) => t.title)).toEqual(["Buy milk"]);
   await openTasks(page);
   await expect.poll(() => todoTitles(page)).toEqual(["Buy milk"]);
@@ -409,7 +407,7 @@ test.describe("on a phone", () => {
     const toast = page.getByRole("status").filter({ hasText: "Deleted “Bread”" });
     // Above the tab bar along the bottom of the screen.
     const box = (await toast.boundingBox())!;
-    const tabs = (await page.getByRole("navigation", { name: "Calendar", exact: true }).boundingBox())!;
+    const tabs = (await page.getByRole("navigation", { name: "Tasks", exact: true }).boundingBox())!;
     expect(box.y + box.height).toBeLessThanOrEqual(tabs.y);
     await toast.getByRole("button", { name: "Undo" }).tap();
     await expect.poll(() => todoTitles(page)).toEqual(["Coffee", "Apples", "Bread"]);
@@ -483,7 +481,7 @@ test("changes are optimistic, refusals undo them, and transport failures retry w
   await expect.poll(() => todoTitles(page)).toEqual(["Call the plumber", "Pay rent", "Ghost task"]);
 });
 
-test("the tasks API is scoped to the caller's current space and validates what it saves @smoke", async ({
+test("the tasks API is scoped to the caller's current group and validates what it saves @smoke", async ({
   page,
   browser,
   request,
@@ -527,7 +525,7 @@ test("the tasks API is scoped to the caller's current space and validates what i
       other.request.post(`${base}/lists/${list.id}/tasks`, { data: { title: "Planted" } }),
     ];
     for (const response of await Promise.all(attempts)) expect(response.status()).toBe(404);
-    // Its own list can't take another space's ids or members either.
+    // Its own list can't take another group's ids or members either.
     const own: TaskList = (await (await other.request.post(`${base}/lists`, { data: { name: "Own" } })).json()).data;
     expect(
       (await other.request.post(`${base}/lists/${own.id}/tasks`, { data: { id: task.id, title: "Clash" } })).status(),

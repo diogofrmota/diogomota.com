@@ -1,14 +1,15 @@
 import type { Page } from "@playwright/test";
-import { apps } from "../lib/apps";
+import { apps, appsOf, folders } from "../lib/apps";
 import { siteTagline } from "../lib/site";
 import { expect, linkNames, newUser, signUp, test } from "./fixtures";
 import { mockBase, otherPerson, userId } from "./shows";
 
-// Home (docs/decisions/0014, 0016). Logged out, the website's front page: its
-// header, what the site is, Sign up, the apps in three groups (an app's icon
-// opens its login prompt), How it works, How to add to Home Screen, and its
-// footer. Logged in, "Diogo’s Apps": the apps' icons, with no tab bar, with
-// what is waiting in each and going back to the view last used in it.
+// Home (docs/decisions/0014, 0016, 0023). Logged out, the website's front
+// page: its header, what the site is, Sign up, the apps in three groups (an
+// app's icon opens its login prompt), How it works, How to add to Home Screen,
+// and its footer. Logged in, with no tab bar: who is here (the picture, the
+// name, the username and Account settings), then the apps in three folders,
+// each opening in a popup, with what is waiting in each.
 
 /** The front page's group of apps with this title: For Couples, Trackers, Health. */
 const appGroup = (page: Page, title: string) =>
@@ -49,9 +50,9 @@ test("logged out, home is the website's front page (/apps redirects to it): what
 
   // The apps in three groups, side by side: each its title, its apps' small icons (each its name under
   // it, and where its link on the site lands), and a line or so about them, each after a tick.
-  expect(apps.map((app) => app.name)).toEqual(["Calendar", "Shows", "Books", "Recipes", "Fitness"]);
+  expect(apps.map((app) => app.name)).toEqual(["Calendar", "Tasks", "Recipes", "Shows", "Books", "Fitness"]);
   const groups = [
-    { title: "For Couples", apps: ["Calendar", "Recipes"], points: 2 },
+    { title: "For Couples", apps: ["Calendar", "Tasks", "Recipes"], points: 2 },
     { title: "Trackers", apps: ["Shows", "Books"], points: 3 },
     { title: "Health", apps: ["Fitness"], points: 2 },
   ];
@@ -83,7 +84,7 @@ test("logged out, home is the website's front page (/apps redirects to it): what
   await expect(steps.getByRole("listitem")).toHaveCount(3);
   await expect(steps.getByRole("heading", { level: 3 })).toHaveText(["Sign up", "Pick an app", "Invite your friends"]);
   await expect(steps).toContainText(
-    "Invite your partner to your shared Calendar, or add friends in Shows or Books to share what you read and watch.",
+    "Invite your partner to your group in For Couples, or add friends in Shows or Books to share what you read and watch.",
   );
   const title = steps.getByRole("heading", { level: 3 }).first();
   await expect(title).toHaveCSS("font-size", "24px");
@@ -145,7 +146,7 @@ test("logged out, home is the website's front page (/apps redirects to it): what
   const meta = (attribute: string, value: string) => page.locator(`head meta[${attribute}="${value}"]`);
   await expect(meta("name", "description")).toHaveAttribute(
     "content",
-    "Small apps to share with friends: Calendar, Shows, Books, Recipes, and Fitness.",
+    "Small apps to share with friends: Calendar, Tasks, Recipes, Shows, Books, and Fitness.",
   );
   await expect(meta("property", "og:url")).toHaveAttribute("content", "https://diogomota.com");
   const image = await page.request.get("/opengraph-image");
@@ -290,7 +291,7 @@ test("the login pages keep the apps' tab bar: Log in, Sign up (each its own icon
   // From an app's login prompt, the title says which app.
   await page.goto("/signup?next=%2Fshows");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sign up to use Shows");
-  await page.goto("/login?next=%2Fshared");
+  await page.goto("/login?next=%2Fcalendar");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Log in to open Calendar");
 });
 
@@ -326,10 +327,10 @@ test("each app's icon on the front page opens its login prompt, which closes wit
 
   await link.click();
   await prompt.getByRole("link", { name: "Log in" }).click();
-  await expect(page).toHaveURL("/login?next=%2Fshared");
+  await expect(page).toHaveURL("/login?next=%2Fcalendar");
 });
 
-test("logged in, / is the user's apps: their icons, no tab bar, and the email note sends its link from here", async ({
+test("logged in, / is who is here and the apps in three folders, no tab bar, and the email note sends its link from here", async ({
   page,
 }) => {
   const user = newUser();
@@ -337,50 +338,97 @@ test("logged in, / is the user's apps: their icons, no tab bar, and the email no
   // Signing up with nowhere to go next lands on /.
   await expect(page).toHaveURL("/");
   const main = page.getByRole("main");
+  // At the top, in the middle: the picture (the initials, without one), the name, (@username) and Account settings.
   const heading = main.getByRole("heading", { level: 1 });
-  // The first word of the name: "Tester’s Apps".
-  await expect(heading).toHaveText(`${user.name.split(" ")[0]}’s Apps`);
+  await expect(heading).toHaveText(user.name);
   await expect(heading).toHaveCSS("text-align", "center");
-  // No header and no tab bar: the icons are the way to everything, Account among them.
+  await expect(main.getByText(`(@${user.username})`, { exact: true })).toBeVisible();
+  const account = main.getByRole("link", { name: "Account settings", exact: true });
+  await expect(account).toHaveAttribute("href", "/account");
+  // No header and no tab bar: the profile and the folders are the way to everything.
   await expect(page.getByRole("banner")).toHaveCount(0);
   await expect(page.getByRole("navigation")).toHaveCount(0);
 
-  // An icon for each app, straight into it, with what it is for read out with it.
-  for (const app of apps) {
-    const link = main.getByRole("link", { name: app.name, exact: true });
-    await expect(link).toHaveAttribute("href", app.href);
-    await expect(link).toHaveAccessibleDescription(app.description);
-    await expect(link.locator("img")).toHaveAttribute("src", app.logo);
-  }
-  const account = main.getByRole("link", { name: "Account", exact: true });
-  await expect(account).toHaveAttribute("href", "/account");
-  await expect(account).toHaveAccessibleDescription("Manage your profile and account settings");
-  await expect(account.locator("img")).toHaveAttribute("src", "/logos/account.svg");
-  await expect(main.locator("ul > li > a")).toHaveText(["Account", "Calendar", "Shows", "Books", "Recipes", "Fitness"]);
-  const launcherBox = (await heading.locator("..").boundingBox())!;
-  expect(Math.abs(launcherBox.y + launcherBox.height / 2 - 400)).toBeLessThan(25);
-  // Big icons, side by side in the middle of the page, under the heading (four to a row on a wide screen).
   // Once they have come in (anything that turns for as long as it waits aside).
   await page.waitForFunction(() =>
     document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity),
   );
-  const icons = await Promise.all(
-    [{ name: "Account" }, ...apps].map(
-      async (app) => (await main.getByRole("link", { name: app.name, exact: true }).locator("img").boundingBox())!,
-    ),
-  );
   const width = await page.evaluate(() => document.documentElement.clientWidth);
-  for (const icon of icons) expect(icon.width).toBeGreaterThanOrEqual(112);
-  // Both the full first row and the remaining apps are centered.
-  const middle = (left: { x: number }, right: { x: number; width: number }) => (left.x + right.x + right.width) / 2;
-  const row = icons.slice(0, 4);
-  for (const icon of row) expect(icon.y).toBe(icons[0].y);
-  expect(Math.abs(middle(row[0], row[3]) - width / 2)).toBeLessThanOrEqual(2);
-  const last = icons.at(-1)!;
-  expect(last.y).toBeGreaterThan(icons[0].y);
-  const lastRow = icons.filter((icon) => icon.y === last.y);
-  expect(Math.abs(middle(lastRow[0], lastRow.at(-1)!) - width / 2)).toBeLessThanOrEqual(2);
-  // Version, Privacy and Report a bug at the bottom of the page, well under the icons.
+  const centre = (box: { x: number; width: number }) => box.x + box.width / 2;
+  for (const part of [heading, account])
+    expect(Math.abs(centre((await part.boundingBox())!) - width / 2)).toBeLessThanOrEqual(2);
+
+  // Under it, the three folders in a row, in the middle: each its apps' small icons, its name, and what is in it.
+  const buttons = folders.map((folder) => main.getByRole("button", { name: folder.title, exact: true }));
+  const boxes = await Promise.all(buttons.map(async (button) => (await button.boundingBox())!));
+  for (const box of boxes) expect(box.y).toBe(boxes[0].y);
+  expect(boxes[0].y).toBeGreaterThan((await account.boundingBox())!.y);
+  expect(Math.abs((boxes[0].x + boxes[2].x + boxes[2].width) / 2 - width / 2)).toBeLessThanOrEqual(2);
+  for (const [i, folder] of folders.entries()) {
+    await expect(buttons[i]).toHaveAttribute("aria-haspopup", "dialog");
+    await expect(buttons[i].locator("img")).toHaveCount(folder.apps.length);
+    const names = new Intl.ListFormat("en", { type: "conjunction" }).format(appsOf(folder).map((app) => app.name));
+    await expect(buttons[i]).toHaveAccessibleDescription(
+      folder.private ? `${names}. Private: only you and your partner see them.` : `${names}.`,
+    );
+    // For Couples, the group's, has a lock in its top right corner.
+    await expect(buttons[i].locator("[class*='lock']")).toHaveCount(folder.private ? 1 : 0);
+  }
+  const lock = (await buttons[0].locator("[class*='lock']").boundingBox())!;
+  const tile = (await buttons[0].locator("[class*='tile']").boundingBox())!;
+  expect(lock.x + lock.width).toBeGreaterThan(tile.x + tile.width);
+  expect(lock.y).toBeLessThan(tile.y);
+
+  // A folder opens in a popup, at its own URL: its apps, each straight into its app, with what it is for.
+  const [, trackers, health] = buttons;
+  await trackers.click();
+  const popup = page.getByRole("dialog", { name: "Trackers" });
+  await expect(page).toHaveURL("/?p=folder%3Atrackers");
+  for (const app of appsOf(folders[1])) {
+    const link = popup.getByRole("link", { name: app.name, exact: true });
+    await expect(link).toHaveAttribute("href", app.href);
+    await expect(link).toHaveAccessibleDescription(app.description);
+    await expect(link.locator("img")).toHaveAttribute("src", app.logo);
+  }
+  await expect(trackers).toHaveAttribute("aria-expanded", "true");
+  // Escape closes it, back where it was; so does Back.
+  await page.keyboard.press("Escape");
+  await expect(popup).toBeHidden();
+  await expect(page).toHaveURL("/");
+  await expect(trackers).toBeFocused();
+  await trackers.click();
+  await expect(popup).toBeVisible();
+  await page.goBack();
+  await expect(popup).toBeHidden();
+  await expect(page).toHaveURL("/");
+  // A link opens one, and closing it stays on home.
+  await page.goto("/?p=folder:health");
+  const fitness = page.getByRole("dialog", { name: "Health" });
+  await expect(fitness.getByRole("link", { name: "Fitness", exact: true })).toHaveAttribute("href", "/fitness");
+  await fitness.getByRole("button", { name: "Close" }).click();
+  await expect(fitness).toBeHidden();
+  await expect(page).toHaveURL("/");
+  await expect(health).toBeVisible();
+
+  // For Couples, before there is a group, offers one; once made, its apps, and the way to the group's settings.
+  await buttons[0].click();
+  const couples = page.getByRole("dialog", { name: "For Couples" });
+  await expect(couples).toContainText("Private: only you and your partner see these apps.");
+  await expect(couples.getByRole("link")).toHaveCount(0);
+  await couples.getByRole("button", { name: "Create a group" }).click();
+  for (const app of appsOf(folders[0]))
+    await expect(couples.getByRole("link", { name: app.name, exact: true })).toHaveAttribute("href", app.href);
+  await couples.getByRole("link", { name: "Group settings" }).click();
+  await expect(page).toHaveURL("/couples");
+  await expect(main.getByRole("heading", { level: 1 })).toHaveText("Group settings");
+  await expect(main.getByRole("region", { name: "Invite your partner" })).toBeVisible();
+  // Back: home, with the folder open, as it was left.
+  await page.goBack();
+  await expect(couples.getByRole("link", { name: "Calendar", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(couples).toBeHidden();
+
+  // Version, Privacy and Report a bug at the bottom of the page, well under the folders.
   const footer = (await main.getByText(/^Version (dev|v\d+\.\d+\.\d+) · Privacy · Report a bug$/).boundingBox())!;
   await expect(main.getByRole("link", { name: "Report a bug" })).toHaveAttribute("href", "/report-bug");
   await expect(main.getByRole("link", { name: "About" })).toHaveCount(0);
@@ -402,42 +450,25 @@ test("logged in, / is the user's apps: their icons, no tab bar, and the email no
   await expect(main.getByRole("heading", { level: 1 })).toHaveText("Account");
 });
 
-test("app icons always open their main page, ignoring old saved-view cookies", async ({ page }) => {
-  await signUp(page, newUser());
-  await expect(page).toHaveURL("/");
-
-  await page.goto("/shows/discover");
-  await expect(
-    page.getByRole("navigation", { name: "Shows" }).getByRole("button", { name: "Discover" }),
-  ).toHaveAttribute("aria-current", "page");
-  await page.getByRole("navigation", { name: "Shows" }).getByRole("link", { name: "Apps" }).click();
-  await expect(page).toHaveURL("/");
-  const shows = page.getByRole("main").getByRole("link", { name: "Shows", exact: true });
-  await expect(shows).toHaveAttribute("href", "/shows");
-  await shows.click();
-  await expect(page).toHaveURL("/shows");
-
-  // Back on its first view: the app's own path.
-  await page.getByRole("navigation", { name: "Shows" }).getByRole("button", { name: "Library" }).click();
-  await page.goto("/");
-  await expect(shows).toHaveAttribute("href", "/shows");
-
-  // Calendar remembers Tasks, but without a space it can only open on its welcome.
-  await page.context().addCookies([{ name: "last-view-shared", value: "tasks", url: page.url() }]);
-  await page.reload();
-  await expect(page.getByRole("main").getByRole("link", { name: "Calendar", exact: true })).toHaveAttribute(
-    "href",
-    "/shared",
-  );
-  expect((await page.request.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
-  await page.reload();
-  await expect(page.getByRole("main").getByRole("link", { name: "Calendar", exact: true })).toHaveAttribute(
-    "href",
-    "/shared",
-  );
+test("For Couples' apps moved: their old addresses go to the new ones for good, with their open panels", async ({
+  page,
+}) => {
+  for (const [from, to] of [
+    ["/shared", "/calendar"],
+    ["/shared?p=event%3Aabc", "/calendar?p=event%3Aabc"],
+    ["/shared/tasks", "/tasks"],
+    ["/shared/tasks?p=task%3Aabc", "/tasks?p=task%3Aabc"],
+    ["/shared/settings", "/couples"],
+    ["/shared/anything", "/calendar"],
+    ["/benfica/games", "/couples"],
+  ]) {
+    const response = await page.request.get(from, { maxRedirects: 0 });
+    expect(response.status(), from).toBe(308);
+    expect(response.headers().location, from).toBe(to);
+  }
 });
 
-test("badges: Calendar's tasks due for you, Shows' friend requests and new recommendations", async ({
+test("badges: Tasks' due for you, Recipes' to buy, Shows' friend requests and new recommendations, added up on their folders", async ({
   page,
   browser,
 }) => {
@@ -445,9 +476,14 @@ test("badges: Calendar's tasks due for you, Shows' friend requests and new recom
   await signUp(page, me);
   await expect(page).toHaveURL("/");
   const meId = await userId(me.username);
-  const icon = (name: string) => page.getByRole("main").getByRole("link", { name: new RegExp(`^${name}\\b`) });
+  const folder = (title: string) => page.getByRole("main").getByRole("button", { name: new RegExp(`^${title}\\b`) });
+  /** An app's icon, in its folder's popup, opened for it. */
+  const icon = async (title: string, name: string) => {
+    if (!(await page.getByRole("dialog", { name: title }).isVisible())) await folder(title).click();
+    return page.getByRole("dialog", { name: title }).getByRole("link", { name: new RegExp(`^${name}\\b`) });
+  };
 
-  // Calendar: tasks due today or before, for me or for nobody; not later, not done, not someone else's.
+  // Tasks: due today or before, for me or for nobody; not later, not done, not someone else's.
   expect((await page.request.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
   const list = (await (await page.request.post("/api/shared/tasks/lists", { data: { name: "Home" } })).json()).data;
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(new Date());
@@ -466,15 +502,32 @@ test("badges: Calendar's tasks due for you, Shows' friend requests and new recom
     const created = await page.request.post(`/api/shared/tasks/lists/${list.id}/tasks`, { data: task });
     expect(created.ok(), task.title).toBe(true);
   }
+  // Recipes: what is left to buy on the group's list.
+  const shopping = await page.request.post("/api/recipes/shopping", { data: { items: [{ text: "Bread" }] } });
+  expect(shopping.ok()).toBe(true);
   await page.reload();
-  await expect(icon("Calendar")).toHaveAccessibleName("Calendar, 2 tasks due");
-  await expect(icon("Calendar").getByText("2", { exact: true })).toBeVisible();
+  // On For Couples' folder, added up, beside its lock along the top edge.
+  await expect(folder("For Couples")).toHaveAccessibleName("For Couples, 3 waiting");
+  const badge = (await folder("For Couples").locator("[class*='badge']").boundingBox())!;
+  const lock = (await folder("For Couples").locator("[class*='lock']").boundingBox())!;
+  expect(badge.x + badge.width).toBeLessThanOrEqual(lock.x + 1);
+  expect(Math.abs(badge.y + badge.height / 2 - (lock.y + lock.height / 2))).toBeLessThan(3);
+  await expect(folder("For Couples").getByText("3", { exact: true })).toBeVisible();
+  // And on each app's icon in it; Calendar counts nothing.
+  await expect(await icon("For Couples", "Tasks")).toHaveAccessibleName("Tasks, 2 tasks due");
+  await expect((await icon("For Couples", "Tasks")).getByText("2", { exact: true })).toBeVisible();
+  await expect(await icon("For Couples", "Recipes")).toHaveAccessibleName("Recipes, 1 to buy");
+  await expect(await icon("For Couples", "Calendar")).toHaveAccessibleName("Calendar");
+  await page.keyboard.press("Escape");
+  await expect(folder("Trackers")).toHaveAccessibleName("Trackers");
 
   // Shows: a friend request waiting, then a friend's recommendation, which Discover then shows.
   const friend = await otherPerson(browser);
   expect((await friend.page.request.post("/api/shows/friends", { data: { username: me.username } })).ok()).toBe(true);
   await page.reload();
-  await expect(icon("Shows")).toHaveAccessibleName("Shows, 1 new");
+  await expect(folder("Trackers")).toHaveAccessibleName("Trackers, 1 waiting");
+  await expect(await icon("Trackers", "Shows")).toHaveAccessibleName("Shows, 1 new");
+  await page.keyboard.press("Escape");
 
   expect((await page.request.post("/api/shows/friends", { data: { username: friend.user.username } })).ok()).toBe(true);
   const recommended = await friend.page.request.post("/api/shows/recommendations", {
@@ -482,13 +535,15 @@ test("badges: Calendar's tasks due for you, Shows' friend requests and new recom
   });
   expect(recommended.ok()).toBe(true);
   await page.reload();
-  await expect(icon("Shows")).toHaveAccessibleName("Shows, 1 new");
+  await expect(await icon("Trackers", "Shows")).toHaveAccessibleName("Shows, 1 new");
+  await page.keyboard.press("Escape");
 
   const seen = page.waitForResponse((response) => response.url().endsWith("/api/shows/recommendations/seen"));
   await page.goto("/shows/discover");
   await expect(page.getByRole("region", { name: "Recommended by Friends" })).toBeVisible();
   expect((await seen).ok()).toBe(true);
   await page.goto("/");
-  await expect(icon("Shows")).toHaveAccessibleName("Shows");
+  await expect(folder("Trackers")).toHaveAccessibleName("Trackers");
+  await expect(await icon("Trackers", "Shows")).toHaveAccessibleName("Shows");
   await friend.context.close();
 });

@@ -6,8 +6,10 @@ import type { EventInput } from "@/lib/schemas";
 import type { Space } from "@/lib/space-types";
 import { applyTaskFields, moveBefore, type Task, type TaskFields, type TaskList } from "@/lib/task-types";
 
-// Shared's data in the browser (components/common/QueryProvider): the queries
-// of the space, its calendar and its tasks, and the changes made to them.
+// For Couples' data in the browser, for Calendar, Tasks and the group's
+// settings (components/common/QueryProvider, app "shared" for all three, as
+// when they were one app): the queries of the group, its calendar and its
+// tasks, and the changes made to them.
 
 /** Calls /api/shared{path}. Changes send a JSON body, an empty one when there is nothing to say. */
 export function sharedRequest<T>(
@@ -24,7 +26,7 @@ export function sharedRequest<T>(
     signal,
     keepalive,
     body: method === "GET" || method === "DELETE" ? undefined : (body ?? {}),
-    fallback: "Could not reach your space. Try again.",
+    fallback: "Could not reach your group. Try again.",
   });
 }
 

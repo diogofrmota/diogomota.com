@@ -8,6 +8,8 @@ import {
   type Page,
 } from "@playwright/test";
 
+import { appsOf, folders } from "../lib/apps";
+
 export { expect };
 
 // No test reaches TMDB. The app's server talks to a fake TMDB (lib/tmdb-mock.ts)
@@ -71,31 +73,35 @@ export async function logIn(page: Page, login: string, password: string, path = 
 
 /**
  * Goes where the account menu went before the tab bars had it all: / (its
- * Switch app, the tab bars' Apps now), and from there to Account (its icon
- * on /, which has no tab bar).
+ * Switch app, the tab bars' Apps now), and from there to Account (Account
+ * settings under the profile on /, which has no tab bar).
  */
 export async function followAccountMenu(page: Page, name: "Account" | "Switch app") {
   const apps = page.getByRole("link", { name: "Apps", exact: true });
   if (await apps.isVisible()) await apps.click();
   if (name === "Switch app") return;
   await expect(page).toHaveURL("/");
-  await page.getByRole("main").getByRole("link", { name, exact: true }).click();
-}
-
-/** A tab of Shared's, in the middle of the top bar. */
-export function sharedTab(page: Page, view: "Calendar" | "Tasks" | "Settings") {
-  return page
-    .getByRole("navigation", { name: "Calendar", exact: true })
-    .getByRole("button", { name: view, exact: true });
+  await page.getByRole("main").getByRole("link", { name: "Account settings", exact: true }).click();
 }
 
 /**
- * Opens Shared's Settings tab: the space's members, invites and leaving.
- * The space loads again each time the tab is shown.
+ * On /, logged in: opens an app from its folder (docs/decisions/0023), its
+ * popup first, then the app's icon in it.
  */
-export async function openSpaceSettings(page: Page) {
-  await sharedTab(page, "Settings").click();
-  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Settings");
+export async function openFromHome(page: Page, name: string) {
+  const folder = folders.find((f) => appsOf(f).some((app) => app.name === name))!;
+  await page.getByRole("main").getByRole("button", { name: folder.title }).click();
+  await page.getByRole("dialog", { name: folder.title }).getByRole("link", { name, exact: true }).click();
+}
+
+/**
+ * Opens For Couples' settings (/couples, docs/decisions/0023): the group's
+ * members, inviting your partner, the calendar's import and subscription, and
+ * leaving. The group loads again as the page is shown.
+ */
+export async function openGroupSettings(page: Page) {
+  await page.goto("/couples");
+  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Group settings");
 }
 
 /**
@@ -126,14 +132,15 @@ export async function saveTheme(page: Page, name: string) {
 
 /**
  * Account where a logged-in page has it (once the account menu, by the
- * username): its icon on /, or its tab, with the profile picture, in the tab
- * bar of the pages around the apps (/privacy, an invite, the 404; not
- * /account itself).
+ * username): Account settings under the profile on /, or its tab, with the
+ * profile picture, in the tab bar of the pages around the apps (/privacy, an
+ * invite, the 404; not /account itself).
  */
 export function accountButton(page: Page, username: string) {
   void username;
   return page
-    .locator('main a[href="/account"]:has(img[src="/logos/account.svg"])')
+    .getByRole("main")
+    .getByRole("link", { name: "Account settings", exact: true })
     .or(page.locator('nav[aria-label="Account"]:not(header nav) a[href="/account"]'));
 }
 

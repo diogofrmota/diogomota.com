@@ -16,9 +16,6 @@ test.beforeEach(async ({ page, isMobile }) => {
   test.slow();
 });
 
-const sharedTab = (page: Page, view: string) =>
-  page.getByRole("navigation", { name: "Calendar", exact: true }).getByRole("button", { name: view, exact: true });
-
 async function goBackTo(page: Page, view: string) {
   await page.goBack();
   await expect(viewHeading(page)).toHaveText(view);
@@ -114,7 +111,20 @@ test("the site's pages @smoke", async ({ page }) => {
   await signUp(page, user);
   await expect(page).toHaveURL("/");
   await checkView(page, "apps, logged in");
-  await page.getByRole("main").getByRole("link", { name: "Account", exact: true }).click();
+  // A folder open: For Couples, before there is a group, offers one; Trackers has its apps.
+  await page.getByRole("main").getByRole("button", { name: "For Couples" }).click();
+  const couples = page.getByRole("dialog", { name: "For Couples" });
+  await expect(couples.getByRole("button", { name: "Create a group" })).toBeVisible();
+  await checkView(page, "apps, For Couples without a group");
+  await page.keyboard.press("Escape");
+  await expect(couples).toBeHidden();
+  await page.getByRole("main").getByRole("button", { name: "Trackers" }).click();
+  const trackers = page.getByRole("dialog", { name: "Trackers" });
+  await expect(trackers.getByRole("link", { name: "Books", exact: true })).toBeVisible();
+  await checkView(page, "apps, a folder");
+  await page.goBack();
+  await expect(trackers).toBeHidden();
+  await page.getByRole("main").getByRole("link", { name: "Account settings", exact: true }).click();
   await expect(page).toHaveURL("/account");
   await checkView(page, "account");
 
@@ -144,12 +154,14 @@ test("the site's pages @smoke", async ({ page }) => {
   await expect(crop).toBeHidden();
 });
 
-test("Calendar: every view and dialog, each closed with Back @smoke", async ({ page }) => {
-  await signUp(page, newUser(), "/signup?next=/shared");
-  await expect(page.getByRole("heading", { name: "Your shared calendar" })).toBeVisible();
-  await checkView(page, "Shared welcome");
+test("For Couples: Calendar, Tasks and the group's settings, every view and dialog, each closed with Back @smoke", async ({
+  page,
+}) => {
+  await signUp(page, newUser(), "/signup?next=/calendar");
+  await expect(page.getByRole("heading", { name: "For Couples" })).toBeVisible();
+  await checkView(page, "For Couples welcome");
 
-  await page.getByRole("button", { name: "Create space" }).click();
+  await page.getByRole("button", { name: "Create a group" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
   await expect(page.getByRole("region", { name: /^(agenda|month|week|day) calendar$/ })).toBeVisible();
   await checkView(page, "Calendar, empty");
@@ -177,7 +189,7 @@ test("Calendar: every view and dialog, each closed with Back @smoke", async ({ p
     await checkView(page, `Calendar, ${view.toLowerCase()}`);
   }
 
-  await sharedTab(page, "Tasks").click();
+  await page.goto("/tasks");
   await expect(page.getByRole("heading", { name: "Start your first list" })).toBeVisible();
   await checkView(page, "Tasks, no lists");
   await page.getByLabel("List name").fill("Groceries");
@@ -211,19 +223,22 @@ test("Calendar: every view and dialog, each closed with Back @smoke", async ({ p
   await expect(page.getByRole("status").filter({ hasText: "Deleted “Bread”" })).toBeVisible();
   await checkView(page, "undo delete");
 
-  await sharedTab(page, "Settings").click();
-  await expect(viewHeading(page)).toHaveText("Settings");
+  await page.goto("/couples");
+  await expect(viewHeading(page)).toHaveText("Group settings");
   // Without a share sheet: the link is copied, and shown.
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.evaluate(() => Object.defineProperty(Navigator.prototype, "share", { value: undefined }));
-  await page.getByRole("region", { name: "Invite someone" }).getByRole("button", { name: "Share invite link" }).click();
+  await page
+    .getByRole("region", { name: "Invite your partner" })
+    .getByRole("button", { name: "Share invite link" })
+    .click();
   await expect(page.getByLabel("Invite link")).toHaveValue(/\/join\/.{8}$/);
   await expect(page.getByLabel("Calendar link")).toHaveValue(/\/api\/calendar\//);
-  await checkView(page, "Settings");
-  // The last member: leaving deletes the space, so it asks first.
-  await page.getByRole("button", { name: "Leave this space", exact: true }).click();
+  await checkView(page, "Group settings");
+  // The last member: leaving deletes the group, so it asks first.
+  await page.getByRole("button", { name: "Leave the group", exact: true }).click();
   await expect(page.getByRole("button", { name: "Leave and delete" })).toBeVisible();
-  await checkView(page, "Settings, confirm leave");
+  await checkView(page, "Group settings, confirm leave");
 
   await goBackTo(page, "Tasks");
   await goBackTo(page, "Calendar");
@@ -362,6 +377,9 @@ test("Recipes: every view and dialog, each closed with Back @smoke", async ({ pa
   const recipesTab = (view: string) =>
     page.getByRole("navigation", { name: "Recipes", exact: true }).getByRole("button", { name: view, exact: true });
   await signUp(page, newUser(), "/signup?next=/recipes");
+  // The group's, so a group first (For Couples).
+  await expect(page.getByRole("heading", { name: "For Couples" })).toBeVisible();
+  await page.getByRole("button", { name: "Create a group" }).click();
   await expect(page.getByRole("heading", { name: "Your recipes, in one place" })).toBeVisible();
   await checkView(page, "Recipes, empty");
   await recipesTab("Favourites").click();
@@ -611,8 +629,8 @@ test("a load that fails says so, and Retry loads it again", async ({ page, isMob
     await expect(alert).toBeHidden();
   };
 
-  await signUp(page, newUser(), "/signup?next=/shared");
-  await page.getByRole("button", { name: "Create space" }).click();
+  await signUp(page, newUser(), "/signup?next=/calendar");
+  await page.getByRole("button", { name: "Create a group" }).click();
   await expect(viewHeading(page)).toHaveText("Calendar");
   // Persisted data from before stays shown under the alert (components/common/QueryProvider).
   await failing(
@@ -623,9 +641,21 @@ test("a load that fails says so, and Retry loads it again", async ({ page, isMob
     "Calendar",
   );
   await expect(page.getByRole("region", { name: /^(agenda|month|week|day) calendar$/ })).toBeVisible();
-  await failing("**/api/shared/tasks", () => sharedTab(page, "Tasks").click(), "Tasks");
+  await failing(
+    "**/api/shared/tasks",
+    async () => {
+      await page.goto("/tasks");
+    },
+    "Tasks",
+  );
   await expect(page.getByRole("heading", { name: "Start your first list" })).toBeVisible();
-  await failing("**/api/shared/spaces", () => sharedTab(page, "Settings").click(), "Settings");
+  await failing(
+    "**/api/shared/spaces",
+    async () => {
+      await page.goto("/couples");
+    },
+    "Group settings",
+  );
   await expect(page.getByRole("listitem").filter({ hasText: "(you)" })).toBeVisible();
 
   await failing(

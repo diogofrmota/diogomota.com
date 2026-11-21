@@ -11,10 +11,10 @@ const base = "/api/shared/events";
 test.use({ timezoneId: "America/New_York" });
 async function setup(page: Page) {
   const user = newUser();
-  await signUp(page, user, "/signup?next=/shared");
-  await page.getByRole("button", { name: "Create space" }).click();
+  await signUp(page, user, "/signup?next=/calendar");
+  await page.getByRole("button", { name: "Create a group" }).click();
   await expect(page.getByRole("region", { name: /^(agenda|month|week|day) calendar$/ })).toBeVisible();
-  // A space of one is asked to invite their partner (shared-features.spec.ts): not now, so the grid has the room.
+  // A group of one is asked to invite their partner (shared-features.spec.ts): not now, so the grid has the room.
   await page.getByRole("region", { name: "Invite your partner" }).getByRole("button", { name: "Not now" }).click();
   return { user, space: (await (await page.request.get("/api/shared/spaces")).json()).data as Space };
 }
@@ -128,10 +128,10 @@ test("calendar lifecycle, exports, views and back button", async ({ page }) => {
   expect(link.searchParams.get("dates")).toMatch(/^\d{8}T\d{6}Z\/\d{8}T\d{6}Z$/);
   expect(link.searchParams.get("details")).toBe(`For: ${me.name}`);
   // The open event is in the URL; Back closes it.
-  await expect(page).toHaveURL(`/shared?p=event%3A${walk.id}`);
+  await expect(page).toHaveURL(`/calendar?p=event%3A${walk.id}`);
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page).toHaveURL("/shared");
+  await expect(page).toHaveURL("/calendar");
   await personal.click();
   await page.getByRole("button", { name: "Edit event", exact: true }).click();
   await expect(page.getByRole("dialog")).not.toContainText("Time zone");

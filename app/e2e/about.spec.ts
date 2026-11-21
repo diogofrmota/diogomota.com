@@ -29,9 +29,10 @@ test("about is in the website's look and the system font, with nothing from othe
   await expect(site).toContainText("I make them for my friends and family");
   await expect(site).not.toContainText("Diogo makes");
   await expect(site).toContainText(
-    "Calendar, events and task lists for two, Shows, a watchlist with your friends, Books, a bookshelf and reading tracker, Recipes, a recipe box with a shopping list, and Fitness, a workout and health tracker.",
+    "Calendar, a calendar for two, Tasks, task lists for two, Recipes, a recipe box with a shopping list for two, Shows, a watchlist with your friends, Books, a bookshelf and reading tracker, and Fitness, a workout and health tracker.",
   );
-  await expect(site.getByRole("link", { name: "Calendar", exact: true })).toHaveAttribute("href", "/#shared");
+  await expect(site.getByRole("link", { name: "Calendar", exact: true })).toHaveAttribute("href", "/#calendar");
+  await expect(site.getByRole("link", { name: "Tasks", exact: true })).toHaveAttribute("href", "/#tasks");
   await expect(site.getByRole("link", { name: "Shows", exact: true })).toHaveAttribute("href", "/#shows");
   await expect(site.getByRole("link", { name: "Recipes", exact: true })).toHaveAttribute("href", "/#recipes");
   await expect(site.getByRole("link", { name: "Fitness", exact: true })).toHaveAttribute("href", "/#fitness");

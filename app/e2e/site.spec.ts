@@ -48,12 +48,20 @@ test.describe("at 320px wide", () => {
     await signUp(page, newUser());
     await expect(page).toHaveURL("/");
     await expectNoHorizontalScroll(page);
-    // Three icons to a row, all of each on the screen, even this narrow.
+    // The three folders in a row, all of each on the screen, even this narrow; and one open.
     const main = page.getByRole("main");
-    const icons = ["Books", "Recipes", "Fitness"].map((name) => main.getByRole("link", { name, exact: true }));
-    for (const icon of icons) await expect(icon).toBeInViewport({ ratio: 1 });
-    const tops = await Promise.all(icons.map(async (icon) => (await icon.boundingBox())!.y));
+    const folders = ["For Couples", "Trackers", "Health"].map((name) =>
+      main.getByRole("button", { name, exact: true }),
+    );
+    for (const folder of folders) await expect(folder).toBeInViewport({ ratio: 1 });
+    const tops = await Promise.all(folders.map(async (folder) => (await folder.boundingBox())!.y));
     expect(new Set(tops).size).toBe(1);
+    await folders[1].tap();
+    const trackers = page.getByRole("dialog", { name: "Trackers" });
+    await expect(trackers).toBeInViewport({ ratio: 1 });
+    await expectNoHorizontalScroll(page);
+    await trackers.getByRole("button", { name: "Close" }).tap();
+    await expect(trackers).toBeHidden();
 
     await page.goto("/account");
     await expectNoHorizontalScroll(page);

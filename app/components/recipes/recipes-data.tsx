@@ -1,6 +1,7 @@
 "use client";
 import { useMutation, useMutationState, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { createContext, useContext, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useUndo } from "@/components/common/Undo";
 import { apiRequest, ApiError } from "@/lib/api-request";
 import type { Recipe, RecipeChange, RecipeFields, ShoppingItem } from "@/lib/recipe-types";
@@ -216,6 +217,15 @@ export function RecipesProvider({ children }: { children: React.ReactNode }) {
     queryFn: ({ signal }) => recipesRequest<ShoppingItem[]>("/shopping", { signal }),
     meta: { persist: true },
   });
+  // Out of the group (left it in another tab): the page again from the server,
+  // which offers creating or joining one instead (app/recipes).
+  const router = useRouter();
+  const outOfGroup = [recipesQuery.error, shoppingQuery.error].some(
+    (error) => error instanceof ApiError && error.status === 403,
+  );
+  useEffect(() => {
+    if (outOfGroup) router.refresh();
+  }, [outOfGroup, router]);
   const pending = useMutationState({
     filters: { mutationKey: changeKey, status: "pending" },
     select: (mutation) => mutation.state.variables as Change,

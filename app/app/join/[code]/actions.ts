@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { getSession } from "@/auth";
 import type { FormState } from "@/lib/form-state";
 import { HttpError } from "@/lib/http";
@@ -10,7 +10,11 @@ import { spaceJoinLimit } from "@/lib/rate-limit";
 import { joinInput } from "@/lib/schemas";
 import { joinSpace } from "@/lib/spaces";
 
-/** Joins the space of an invite link's code, then opens Shared on it. */
+/**
+ * Joins the group of an invite link's code, then opens For Couples' folder on
+ * home, with its apps. In place of the invite's page, which works only once:
+ * Back doesn't land on it.
+ */
 export async function joinWithLink(_previous: FormState, formData: FormData): Promise<FormState> {
   const parsed = joinInput.safeParse({ code: formData.get("code") });
   if (!parsed.success) return { error: "This invite link isn't right. Ask for a new one." };
@@ -23,6 +27,6 @@ export async function joinWithLink(_previous: FormState, formData: FormData): Pr
     if (error instanceof HttpError) return { error: error.message };
     throw error;
   }
-  revalidatePath("/shared");
-  redirect("/shared");
+  revalidatePath("/");
+  redirect("/?p=folder:couples", RedirectType.replace);
 }

@@ -13,3 +13,5 @@
 - Recommendations have `seen_at` (`022_recommendation_seen.sql`), set when Discover shows them (`POST /api/shows/recommendations/seen`).
 
 **Costs:** home renders per user (a query for the badges, the cookies for the last views), so it can't be cached for everyone; the service worker keeps the last copy for offline. The last view is per device, not per account. Links to `/apps` cost a redirect. A release before this one, rolled back to, still writes recommendations without `seen_at`, which then count as new until Discover shows them.
+
+**Update, 2026-11-21:** logged in, home is the user's profile (picture, name, "(@username)", Account settings) over the apps in three folders, For Couples, Trackers and Health, each opening in a popup ([0023](0023-folders-and-a-group-for-couples.md)). The Account icon is gone; the badges are on the folders, added up, and on the apps in them.

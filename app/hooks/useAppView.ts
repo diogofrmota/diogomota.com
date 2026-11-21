@@ -12,7 +12,7 @@ import {
 } from "react";
 import type { AppViewState } from "@/lib/app-views";
 
-// In-app navigation for the SPAs (/shared, /shows). Which view is showing, and
+// In-app navigation for the SPAs (/calendar, /shows, home's folders). Which view is showing, and
 // which modals or panels are open, is in the URL: the view is the path after
 // the app's (/shows/discover; the app's own path is its first view), and the
 // open panels, bottom to top, are its p parameters (?p=search&p=title:tv:1396).

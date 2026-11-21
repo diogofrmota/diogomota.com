@@ -1,20 +1,23 @@
 // The service worker of the apps (registered by components/common/OfflineSupport
-// in production): Shared, Shows, Recipes and Fitness open without a connection, with what
+// in production): Calendar, Tasks, Recipes, Shows, Books and Fitness open without a connection, with what
 // they last showed (their data is kept by components/common/QueryProvider, and
 // their changes wait there for the connection; recipes' photos are kept by the
 // browser, which may keep them for good: /api/recipes/photos).
 //
-// - Home and the apps' pages (/, /shared, /shows, /recipes, /fitness and their views): from the
-//   network, and the copy from the last time they loaded when it can't be
-//   reached, so the installed app (which starts on home) opens offline.
+// - Home and the apps' pages (/, /calendar, /tasks, /couples, /recipes, /shows, /books, /fitness
+//   and their views): from the network, and the copy from the last time they
+//   loaded when it can't be reached, so the installed app (which starts on
+//   home) opens offline.
 // - Next.js's built files (/_next/static, whose names change with their
 //   content), the icons and the logos: from this cache once fetched.
 // - Everything else, the APIs too, goes to the network as usual.
-// Logging out deletes the cache (clearOfflineData).
+// Logging out deletes the cache (clearOfflineData). v3: For Couples' apps
+// moved (/shared to /calendar, /tasks and /couples), so the pages kept at
+// their old addresses go with the old cache.
 
-const cacheName = "diogomota-offline-v2";
+const cacheName = "diogomota-offline-v3";
 // Only the owner's Books shelves, never another member's profile document.
-const appPages = /^\/((shared|shows|recipes|fitness)(\/|$)|books(?:\/(?:library|discover|profile))?\/?$|$)/;
+const appPages = /^\/((calendar|tasks|couples|shows|recipes|fitness)(\/|$)|books(?:\/(?:library|discover|profile))?\/?$|$)/;
 const staticFiles = /^\/(_next\/static|icons|logos)\//;
 let generation = 0;
 const writes = new Set();

@@ -28,14 +28,14 @@ export type TabNavProps = {
 
 /**
  * The frame of the apps and every page around them (/ logged in, /account, the
- * login pages, /privacy, an invite, the 404), in the user's theme, with a tab
- * bar (HeaderTabs): an app's tabs, or Account (or Log in and Sign up) and
- * Apps. Along the bottom of a phone's screen, within reach of a thumb, and
- * across the top of a wider one, as its header. With an app's tabs, the page
- * has the whole width; without (/ and the rest, Calendar before there is a
- * space) it is a centered column. `bare` leaves the tab bar out: on / logged
- * in, whose icons are the way to everything (Account is one of them), and on
- * the error page, which can't tell who is logged in.
+ * login pages, /privacy, an invite, the group's settings, the 404), in the
+ * user's theme, with a tab bar (HeaderTabs): an app's tabs, or Account (or Log
+ * in and Sign up) and Apps. Along the bottom of a phone's screen, within reach
+ * of a thumb, and across the top of a wider one, as its header. With an app's
+ * tabs, the page has the whole width; without (/ and the rest, For Couples'
+ * apps before there is a group) it is a centered column. `bare` leaves the tab
+ * bar out: on / logged in, whose profile and folders are the way to everything,
+ * and on the error page, which can't tell who is logged in.
  */
 export function AppFrame({
   theme,
@@ -45,6 +45,7 @@ export function AppFrame({
   next,
   current,
   inApp = false,
+  appName = "Calendar",
   bare = false,
   nav,
   children,
@@ -61,8 +62,10 @@ export function AppFrame({
   next?: string | null;
   /** Which of Account (or Log in, Sign up) is the page shown, if one is. */
   current?: LauncherTab;
-  /** An app's page: its tab bar (nav), or only Apps in Calendar before there is a space. */
+  /** An app's page: its tab bar (nav), or only Apps in For Couples' apps before there is a group. */
   inApp?: boolean;
+  /** The app, naming its tab bar when it has no tabs (before there is a group). */
+  appName?: string;
   bare?: boolean;
   nav?: TabNavProps;
   /** The page, in <main>. */
@@ -80,8 +83,8 @@ export function AppFrame({
       <meta name="theme-color" content={themeBackground(theme)} />
       {/* Before the page: the header on a wide screen (sticky), fixed to the bottom on a phone. */}
       {bare ? null : app ? (
-        // Calendar before there is a space: no tabs yet, only Apps.
-        <TabBar {...(nav ?? { label: "Calendar", tabs: [], current: "", onSelect: () => {} })} />
+        // For Couples' apps before there is a group: no tabs yet, only Apps.
+        <TabBar {...(nav ?? { label: appName, tabs: [], current: "", onSelect: () => {} })} />
       ) : (
         <LauncherTabs current={current} username={username} name={name} avatarUrl={avatarUrl} next={next} />
       )}
@@ -161,6 +164,7 @@ export function AppShell({
         username={username}
         avatarUrl={avatarUrl}
         inApp
+        appName={name}
         nav={hideNavigation ? undefined : nav}
         overlay={children}
       >

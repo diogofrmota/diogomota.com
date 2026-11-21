@@ -6,16 +6,21 @@ import { otherPerson } from "./shows";
 // The Recipes app (/recipes): a recipe's form and page, its ingredients scaled
 // to the servings chosen, photos, tags, search and favourites, the shopping
 // list (from a recipe's ingredients, ticked off, cleared with Undo) and the
-// API's rules: only your own recipes, and what it refuses.
+// API's rules: only your group's recipes (For Couples, docs/decisions/0023),
+// shared by its two people, and what it refuses.
 
 const tab = (page: Page, view: "Recipes" | "Favourites" | "Shopping") =>
   page.getByRole("navigation", { name: "Recipes", exact: true }).getByRole("button", { name: view, exact: true });
 const cards = (page: Page) => page.getByRole("main").getByRole("list", { name: /^(Recipes|Favourites)$/ });
 const cardTitles = (page: Page) => cards(page).locator("li > button:first-child [class*='cardTitle']");
 
+/** Signs up, then creates a group, whose Recipes it is, from the welcome Recipes shows without one. */
 async function openRecipes(page: Page) {
   await signUp(page, newUser(), "/signup?next=/recipes");
   await expect(page).toHaveURL("/recipes");
+  await expect(page.getByRole("heading", { name: "For Couples" })).toBeVisible();
+  await page.getByRole("button", { name: "Create a group" }).click();
+  await expect(page.getByRole("navigation", { name: "Recipes", exact: true }).getByRole("button")).toHaveCount(3);
 }
 
 const photo = (color: string, width = 1200, height = 900) =>
@@ -239,11 +244,14 @@ test("the shopping list: a recipe's ingredients scaled, typed lines, ticked off 
   await expect(page.getByRole("heading", { name: "To buy (3)" })).toBeVisible();
   expect((await typed).ok()).toBe(true);
 
-  // Home counts what is left to buy.
+  // Home counts what is left to buy: on For Couples' folder, added up, and on Recipes' icon in it.
   await page.goto("/");
-  await expect(page.getByRole("main").getByRole("link", { name: /^Recipes/ })).toHaveAccessibleName(
-    "Recipes, 3 to buy",
-  );
+  const folder = page.getByRole("main").getByRole("button", { name: /^For Couples/ });
+  await expect(folder).toHaveAccessibleName("For Couples, 3 waiting");
+  await folder.click();
+  await expect(
+    page.getByRole("dialog", { name: "For Couples" }).getByRole("link", { name: /^Recipes/ }),
+  ).toHaveAccessibleName("Recipes, 3 to buy");
   await page.goto("/recipes/shopping");
 
   // Ticked off: under Ticked off, and not counted.
@@ -327,7 +335,11 @@ test("deleting a recipe closes it with Undo, then deletes it and its photos; pho
   expect((await page.request.get(`/api/recipes/photos/${second}`)).status()).toBe(404);
 });
 
-test("the API: only your own recipes and photos, and what it refuses @smoke", async ({ page, browser, request }) => {
+test("the API: only your group's recipes and photos, and what it refuses @smoke", async ({
+  page,
+  browser,
+  request,
+}) => {
   await openRecipes(page);
   const mine = await createRecipe(page.request, { title: "Secret sauce", ingredients: ["1 tbsp miso"] });
   expect((await addPhoto(page.request, mine.id)).status()).toBe(201);
@@ -349,9 +361,14 @@ test("the API: only your own recipes and photos, and what it refuses @smoke", as
   ]);
   expect(exported.recipes.shoppingList).toEqual([]);
 
-  // Someone else sees none of it, and can't change it.
+  // Someone else sees none of it, and can't change it: without a group, Recipes needs one; in their own, it isn't there.
   const other = await otherPerson(browser);
   const theirs = other.page.request;
+  const outside = await theirs.get("/api/recipes");
+  expect(outside.status()).toBe(403);
+  expect((await outside.json()).error).toBe("Join or create a group first.");
+  expect((await theirs.get(`/api/recipes/photos/${photoId}`)).status()).toBe(404);
+  expect((await theirs.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
   expect((await (await theirs.get("/api/recipes")).json()).data).toEqual([]);
   expect((await theirs.get(`/api/recipes/${mine.id}`)).status()).toBe(404);
   expect((await theirs.patch(`/api/recipes/${mine.id}`, { data: { title: "Mine now" } })).status()).toBe(404);
@@ -400,4 +417,38 @@ test("the API: only your own recipes and photos, and what it refuses @smoke", as
   });
   expect(crossSite.status()).toBe(403);
   expect((await request.get("/api/recipes")).status()).toBe(401);
+});
+
+test("a group's two people share its recipes, their photos and one shopping list", async ({ page, browser }) => {
+  await openRecipes(page);
+  const soup = await createRecipe(page.request, { title: "Carrot soup", ingredients: ["4 carrots"] });
+  expect((await addPhoto(page.request, soup.id)).status()).toBe(201);
+  const photoId = ((await (await page.request.get(`/api/recipes/${soup.id}`)).json()).data as Created).photos[0].id;
+  const { data: space } = await (await page.request.get("/api/shared/spaces")).json();
+  const invite = await page.request.post(`/api/shared/spaces/${space.id}/invites`, { data: {} });
+  const { code } = (await invite.json()).data;
+
+  const partner = await otherPerson(browser);
+  try {
+    const theirs = partner.page.request;
+    expect((await theirs.post("/api/shared/spaces/join", { data: { code } })).ok()).toBe(true);
+    // The partner sees the recipe and its photo, and changes it for both.
+    await partner.page.goto("/recipes");
+    await expect(cardTitles(partner.page)).toHaveText(["Carrot soup"]);
+    expect((await theirs.get(`/api/recipes/photos/${photoId}`)).status()).toBe(200);
+    expect((await theirs.patch(`/api/recipes/${soup.id}`, { data: { title: "Carrot and ginger soup" } })).ok()).toBe(
+      true,
+    );
+    // And adds to the one list, from the recipe.
+    const added = await theirs.post("/api/recipes/shopping", {
+      data: { items: [{ text: "4 carrots", recipeId: soup.id }] },
+    });
+    expect((await added.json()).data).toEqual([expect.objectContaining({ text: "4 carrots", recipeId: soup.id })]);
+  } finally {
+    await partner.context.close();
+  }
+  await page.reload();
+  await expect(cardTitles(page)).toHaveText(["Carrot and ginger soup"]);
+  await tab(page, "Shopping").click();
+  await expect(page.getByRole("checkbox", { name: "4 carrots" })).toBeVisible();
 });

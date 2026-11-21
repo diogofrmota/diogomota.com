@@ -42,16 +42,13 @@ export default async function PrivacyPage() {
           metadata).
         </li>
         <li>
-          <strong>Calendar:</strong> your space&rsquo;s members, calendar events and task lists, which everyone in the
-          space sees and changes.
+          <strong>For Couples:</strong> your group&rsquo;s two members, its calendar events and task lists, and its
+          recipes (their ingredients, steps, notes, tags and links), their photos (made smaller, without their location
+          or other metadata), favourites and shopping list. Both of you see and change them, and nobody else.
         </li>
         <li>
           <strong>Shows:</strong> your library (what you watch, plan and finished, and your progress), and what you
           recommend to friends. Only friends you accepted see your library on your Shows profile.
-        </li>
-        <li>
-          <strong>Recipes:</strong> your recipes (their ingredients, steps, notes, tags and links), their photos (made
-          smaller, without their location or other metadata), your favourites and your shopping list. Only you see them.
         </li>
         <li>
           <strong>Books:</strong> your books, reading shelves and page progress. You and your accepted friends can see
@@ -66,7 +63,7 @@ export default async function PrivacyPage() {
           progress with accepted friends only.
         </li>
         <li>
-          <strong>Activity:</strong> what you did lately (an event added, a show or book finished), shown to your space
+          <strong>Activity:</strong> what you did lately (an event added, a show or book finished), shown to your group
           or your friends for 60 days.
         </li>
         <li>
@@ -87,9 +84,9 @@ export default async function PrivacyPage() {
       <h2>Your data, your choice</h2>
       <p>
         In <Link href="/account">Account</Link>, Data / Privacy page has <strong>Download my data</strong> (everything
-        above, as a file) and <strong>Delete my account</strong>, which deletes it all at once: you leave your space
-        (the space goes with its last member) and your library, friends, recipes, photos, books, fitness log and
-        activity go. Backups forget it within two weeks.
+        above, as a file) and <strong>Delete my account</strong>, which deletes it all at once: you leave your group (it
+        goes with its last member, with its calendar, tasks, recipes and photos) and your library, friends, books,
+        fitness log and activity go. Backups forget it within two weeks.
       </p>
       <p>
         Questions, or anything you want changed:{" "}

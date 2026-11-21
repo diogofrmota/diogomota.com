@@ -130,8 +130,8 @@ test("the emailed link resets the password once, by the sign-up's rules, and log
 
   // Every session of the account is logged out.
   for (const tab of [page, other]) {
-    await tab.goto("/shared");
-    await expect(tab).toHaveURL("/?next=%2Fshared");
+    await tab.goto("/calendar");
+    await expect(tab).toHaveURL("/?next=%2Fcalendar");
   }
   await otherDevice.close();
 

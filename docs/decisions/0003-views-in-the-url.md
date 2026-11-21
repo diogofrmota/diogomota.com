@@ -7,3 +7,5 @@
 **What it is:** the view is the path after the app's (`/shows/discover`), the open panels its `p` parameters, bottom to top (`?p=search&p=title:tv:1396`); `hooks/useAppView.ts` keeps them with `history.pushState` (no page load), and `app/shows/[[...view]]` renders the URL's on the server. A panel that came with the URL closes by replacing its entry, so it never leaves the app.
 
 **Costs:** URLs are longer; a panel id in a URL must be one the app can open on its own (a title, a friend, an event: each loads what it needs).
+
+**Update, 2026-11-21:** home's folders are its panels too: `/?p=folder:couples` is For Couples open ([0023](0023-folders-and-a-group-for-couples.md)), with the same hook (`useAppViewHistory("/", …)`).

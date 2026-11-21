@@ -161,7 +161,7 @@ function NameForm({ name, onSaved }: { name: string | null; onSaved: OnSaved }) 
         defaultValue={state.values?.name ?? name ?? ""}
       />
       <p className={formStyles.hint}>
-        Your friends in Shows and the people in your shared space see it, with your username.
+        Your friends in Shows and your partner in For Couples see it, with your username.
       </p>
       <FormMessage error={state.error} success={state.success} />
       <SubmitButton label="Save name" pending={pending} />
@@ -387,7 +387,7 @@ function AvatarForm({
       </div>
       <p id={hintId} className={formStyles.hint}>
         JPEG, PNG or WebP, up to {avatarMaxMb} MB. You choose the part of it to show, and it&apos;s made smaller. Your
-        friends in Shows and the people in your shared space see it.
+        friends in Shows and your partner in For Couples see it.
       </p>
       {cropping && (
         <AvatarCrop
@@ -445,9 +445,9 @@ function ThemeForm({ theme, labelledBy, onSaved }: { theme: Theme; labelledBy: s
 }
 
 /**
- * Delete my account, after the password: it leaves its space (the space goes with
- * its last member), and the library, friends and activity go with it. It can't be
- * undone, so the button says so.
+ * Delete my account, after the password: it leaves its group (the group goes
+ * with its last member), and the library, friends and activity go with it. It
+ * can't be undone, so the button says so.
  */
 function DeleteForm() {
   const [state, action, pending] = useActionState(deleteAccount, {});
@@ -456,8 +456,9 @@ function DeleteForm() {
     <form action={action} noValidate className={formStyles.form}>
       <p>
         This deletes your account and everything it has here: your library, friends, recommendations and activity. You
-        leave your shared Calendar; if you&rsquo;re its last member, its calendar and tasks are deleted too. It
-        can&rsquo;t be undone. <Link href="/api/account/export">Download your data</Link> first if you want to keep it.
+        leave your group in For Couples; if you&rsquo;re its last member, its calendar, tasks and recipes are deleted
+        too. It can&rsquo;t be undone. <Link href="/api/account/export">Download your data</Link> first if you want to
+        keep it.
       </p>
       <Field
         label="Password"

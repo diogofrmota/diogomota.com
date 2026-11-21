@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 import { dateLabel, datePlus, localInstants, localParts, type CalendarEvent } from "../lib/calendar";
 import type { Space } from "../lib/space-types";
 import type { TaskList } from "../lib/task-types";
-import { expect, newUser, openSpaceSettings, sharedTab, signUp, test } from "./fixtures";
+import { expect, newUser, openGroupSettings, signUp, test } from "./fixtures";
 
 // Shared's newer features: the agenda, events for more than one person, loading
 // a period at a time, the time grid (now line, dragging), the calendar
@@ -14,13 +14,13 @@ const contextOptions = () => ({ extraHTTPHeaders: { "X-Forwarded-For": `10.${[..
 
 async function setup(page: Page) {
   const user = newUser();
-  await signUp(page, user, "/signup?next=/shared");
-  await page.getByRole("button", { name: "Create space" }).click();
+  await signUp(page, user, "/signup?next=/calendar");
+  await page.getByRole("button", { name: "Create a group" }).click();
   await expect(page.getByRole("region", { name: /^(agenda|month|week|day) calendar$/ })).toBeVisible();
   return { user, space: (await (await page.request.get("/api/shared/spaces")).json()).data as Space };
 }
 
-/** Puts a second person in the space, in a browser of their own. */
+/** Puts a second person in the group, in a browser of their own. */
 async function partner(page: Page, space: Space, browser: import("@playwright/test").Browser) {
   const invite = await page.request.post(`/api/shared/spaces/${space.id}/invites`, { data: {} });
   expect(invite.ok(), await invite.text()).toBe(true);
@@ -28,9 +28,9 @@ async function partner(page: Page, space: Space, browser: import("@playwright/te
   const context = await browser.newContext(contextOptions());
   const other = await context.newPage();
   const user = newUser();
-  await signUp(other, user, "/signup?next=/shared");
-  // Signed up (and logged in) once Shared shows its welcome.
-  await expect(other.getByRole("button", { name: "Create space" })).toBeVisible();
+  await signUp(other, user, "/signup?next=/calendar");
+  // Signed up (and logged in) once Calendar shows the welcome.
+  await expect(other.getByRole("button", { name: "Create a group" })).toBeVisible();
   const join = await other.request.post("/api/shared/spaces/join", { data: { code } });
   expect(join.ok(), await join.text()).toBe(true);
   const joined: Space = (await (await page.request.get("/api/shared/spaces")).json()).data;
@@ -57,7 +57,7 @@ test("task Who? saves multiple people, keeps pictures after reload, and removes 
     expect(taskResponse.ok(), await taskResponse.text()).toBe(true);
     const task = (await taskResponse.json()).data;
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/shared/tasks");
+    await page.goto("/tasks");
     const add = page.getByLabel("Write a task");
     const row = page.getByRole("list", { name: "To do", exact: true }).getByRole("listitem");
     expect((await add.boundingBox())!.y).toBeLessThan((await row.boundingBox())!.y);
@@ -293,9 +293,11 @@ test("the calendar loads a period at a time: the API takes a range", async ({ pa
   expect((await (await page.request.get(events)).json()).data).toHaveLength(2);
 });
 
-test("Settings imports Benfica's games into the calendar, once each, for the whole space", async ({ page }) => {
+test("the group's settings import Benfica's games into the calendar, once each, for the whole group", async ({
+  page,
+}) => {
   await setup(page);
-  await openSpaceSettings(page);
+  await openGroupSettings(page);
   const card = page.getByRole("region", { name: "Import calendars" });
   await card.getByRole("button", { name: "Benfica games", exact: true }).click();
   await expect(card.getByRole("status")).toHaveText("Added 2 Benfica games to your calendar.");
@@ -310,7 +312,7 @@ test("Settings imports Benfica's games into the calendar, once each, for the who
   await expect(card.getByRole("status")).toHaveText("Your calendar already has all of Benfica's upcoming games.");
   expect((await (await page.request.get(events)).json()).data).toHaveLength(2);
   // And the calendar, which opens on the month, has them.
-  await sharedTab(page, "Calendar").click();
+  await page.goto("/calendar");
   await expect(page.getByRole("region", { name: "month calendar" })).toBeVisible();
   await page.getByRole("button", { name: "Agenda", exact: true }).click();
   await expect(
@@ -318,7 +320,7 @@ test("Settings imports Benfica's games into the calendar, once each, for the who
   ).toBeVisible();
 });
 
-test("Settings has a calendar link that calendar apps subscribe to; a new link stops the old one", async ({
+test("the group's settings have a calendar link that calendar apps subscribe to; a new link stops the old one", async ({
   page,
   playwright,
   baseURL,
@@ -327,7 +329,7 @@ test("Settings has a calendar link that calendar apps subscribe to; a new link s
   await page.request.post(events, {
     data: { title: "Anniversary", startsAt: at(today(), "20:00"), endsAt: at(today(), "22:00"), isGroup: true },
   });
-  await openSpaceSettings(page);
+  await openGroupSettings(page);
   const card = page.getByRole("region", { name: "Calendar in your phone" });
   // Hidden at first: blurred, its secret as dots, until Show, which goes once pressed.
   const link = card.getByLabel("Calendar link");
@@ -364,7 +366,7 @@ test("Settings has a calendar link that calendar apps subscribe to; a new link s
   }
 });
 
-test("a space of one is asked to invite their partner, until someone joins or Not now", async ({ page, browser }) => {
+test("a group of one is asked to invite their partner, until someone joins or Not now", async ({ page, browser }) => {
   const { space } = await setup(page);
   const prompt = page.getByRole("region", { name: "Invite your partner" });
   await expect(prompt).toBeVisible();
@@ -377,7 +379,7 @@ test("a space of one is asked to invite their partner, until someone joins or No
   // Another member's browser never had it dismissed, but there are two of them now.
   const ana = await partner(page, space, browser);
   try {
-    await ana.page.goto("/shared");
+    await ana.page.goto("/calendar");
     await expect(ana.page.getByRole("region", { name: /^(agenda|month|week|day) calendar$/ })).toBeVisible();
     await expect(ana.page.getByRole("region", { name: "Invite your partner" })).toHaveCount(0);
   } finally {
@@ -387,7 +389,7 @@ test("a space of one is asked to invite their partner, until someone joins or No
 
 test("a repeating task comes back with its next due date when ticked off", async ({ page }) => {
   await setup(page);
-  await sharedTab(page, "Tasks").click();
+  await page.goto("/tasks");
   await page.getByLabel("List name").fill("House");
   await page.getByRole("button", { name: "Create list" }).click();
   await page.getByLabel("Write a task").fill("Bins out");
@@ -421,17 +423,17 @@ test("Tasks shows what the other member adds and ticks off while it is open, wit
     .data;
   const ana = await partner(page, space, browser);
   try {
-    await sharedTab(page, "Tasks").click();
+    await page.goto("/tasks");
     await expect(page.getByRole("heading", { name: /^Groceries/ })).toBeVisible();
     await ana.page.request.post(`/api/shared/tasks/lists/${list.id}/tasks`, { data: { title: "Oat milk" } });
     // It asks every few seconds while open.
     await expect(page.getByRole("checkbox", { name: "Oat milk" })).toBeVisible({ timeout: 15_000 });
 
-    // And Settings has what each of them did.
-    await openSpaceSettings(page);
+    // And the group's settings have what each of them did.
+    await openGroupSettings(page);
     const activity = page.getByRole("region", { name: "Recent activity" });
     await expect(activity).toContainText(`${ana.user.name} added Oat milk to Groceries`);
-    await expect(activity).toContainText(`${ana.user.name} joined the space`);
+    await expect(activity).toContainText(`${ana.user.name} joined the group`);
   } finally {
     await ana.context.close();
   }

@@ -46,7 +46,7 @@ test("every theme saves from Account, colors the page, the page behind it and th
   // flash of another theme), in the apps and the pages around them.
   const dark = themes.find((theme) => theme.name === "Dark")!;
   await saveTheme(page, dark.name);
-  for (const path of ["/shows", "/shared", "/", "/account"]) {
+  for (const path of ["/shows", "/calendar", "/", "/account"]) {
     const response = await page.goto(path);
     expect(await response!.text(), path).toContain(`data-theme="${dark.id}"`);
     await expect(shell).toHaveAttribute("data-theme", dark.id);

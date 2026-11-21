@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { groupActivity, type ActivityItem } from "@/lib/activity-types";
+import { apps, appsOf, folders } from "@/lib/apps";
 import { dayOfEvent, layoutWeek, type CalendarEvent } from "@/lib/calendar";
 import { initials } from "@/lib/names";
 import { authHref, homeWithNext } from "@/lib/next-path";
@@ -7,7 +8,15 @@ import { authHref, homeWithNext } from "@/lib/next-path";
 describe("home (docs/decisions/0014)", () => {
   test("a logged-out visitor is sent home, which sends them on after logging in", () => {
     expect(homeWithNext("/shows/discover?p=search")).toBe("/?next=%2Fshows%2Fdiscover%3Fp%3Dsearch");
-    expect(authHref("/login", "/shared")).toBe("/login?next=%2Fshared");
+    expect(authHref("/login", "/calendar")).toBe("/login?next=%2Fcalendar");
+  });
+
+  test("every app is in one folder (docs/decisions/0023), in the order of the apps", () => {
+    expect(folders.flatMap(appsOf)).toEqual(apps);
+    expect(folders.map((folder) => folder.title)).toEqual(["For Couples", "Trackers", "Health"]);
+    expect(appsOf(folders[0]).map((app) => app.name)).toEqual(["Calendar", "Tasks", "Recipes"]);
+    // Only For Couples is the group's: a lock on its folder.
+    expect(folders.filter((folder) => folder.private).map((folder) => folder.id)).toEqual(["couples"]);
   });
 });
 
