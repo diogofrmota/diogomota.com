@@ -3,8 +3,6 @@ import { appNames } from "./apps";
 
 export const siteUrl = new URL("https://diogomota.com");
 export const siteName = "diogo mota";
-/** "diogomota.com": the name on the left of every top bar. */
-export const siteDomain = siteUrl.hostname;
 /** What the site is, in a line: the front page's headline. */
 export const siteTagline = "Small apps to share with friends";
 /** The front page's introduction, under the headline. */

@@ -38,14 +38,6 @@ export async function findUserById(id: string): Promise<User | null> {
   return { ...user, themePreference: isTheme(user.themePreference) ? user.themePreference : defaultTheme };
 }
 
-/**
- * The theme of a page that is open logged out too (the password reset pages):
- * the user's saved one, or the default without a user.
- */
-export async function themeOf(userId: string | undefined): Promise<Theme> {
-  return (userId && (await findUserById(userId))?.themePreference) || defaultTheme;
-}
-
 /** Sets the user's name. */
 export async function updateName(id: string, name: string): Promise<void> {
   await query(`UPDATE users SET name = $2 WHERE id = $1`, [id, name]);

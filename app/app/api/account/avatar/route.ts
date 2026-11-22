@@ -1,6 +1,8 @@
 import { getSession } from "@/auth";
 import { AvatarError, avatarMaxBytes, removeAvatar, saveAvatar } from "@/lib/avatars";
+import { fromThisSite, HttpError } from "@/lib/http";
 import { avatarUploadLimit } from "@/lib/rate-limit";
+import { boundedFormData } from "@/lib/upload-body";
 
 // The user's own profile picture, set in /account (components/account/AccountSettings,
 // AvatarForm): POST a multipart form with the file as `picture` to set it, DELETE
@@ -10,14 +12,6 @@ import { avatarUploadLimit } from "@/lib/rate-limit";
 const headers = { "Cache-Control": "no-store" };
 const fail = (error: string, status: number) => Response.json({ error }, { status, headers });
 
-// Changes only from this site, as the other APIs (app/api/shared/spaces).
-function fromThisSite(request: Request): boolean {
-  const origin = request.headers.get("origin");
-  // Next's internal request URL can use the container hostname behind nginx.
-  const siteOrigin = new URL(process.env.AUTH_URL ?? request.url).origin;
-  return !(origin && origin !== siteOrigin) && request.headers.get("sec-fetch-site") !== "cross-site";
-}
-
 const tooBig = `That picture is over ${avatarMaxBytes / 1024 / 1024} MB. Try a smaller one.`;
 
 export async function POST(request: Request) {
@@ -26,13 +20,13 @@ export async function POST(request: Request) {
   if (!fromThisSite(request)) return fail("Request must come from this site.", 403);
   if (!avatarUploadLimit(session.user.id))
     return fail("Too many pictures at once. Wait a few minutes and try again.", 429);
-  // The form around the file adds a little to its size.
-  if (Number(request.headers.get("content-length")) > avatarMaxBytes + 64 * 1024) return fail(tooBig, 413);
-
   let picture: FormDataEntryValue | null;
   try {
-    picture = (await request.formData()).get("picture");
-  } catch {
+    // The form around the file adds a little to its size. Counted as it is
+    // read, so a body without a Content-Length (chunked) is held to it too.
+    picture = (await boundedFormData(request, avatarMaxBytes + 64 * 1024, tooBig)).get("picture");
+  } catch (error) {
+    if (error instanceof HttpError) return fail(error.message, error.status);
     return fail("Send the picture as a file.", 400);
   }
   if (!(picture instanceof File) || picture.size === 0) return fail("Choose a picture.", 400);

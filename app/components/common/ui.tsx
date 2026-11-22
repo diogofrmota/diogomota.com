@@ -5,7 +5,7 @@ import { CloseIcon } from "./icons";
 import ui from "./ui.module.css";
 
 // The apps' common parts as components, on ui.module.css: every view of
-// Shared, Shows, /apps and /account uses these, so a button or a message looks
+// Shared, Shows, home and /account uses these, so a button or a message looks
 // and behaves the same everywhere, and its styles are in one place.
 
 type Variant = "primary" | "danger" | "remove" | "quiet";
@@ -32,11 +32,6 @@ export function Button({
       {...props}
     />
   );
-}
-
-/** The classes of a Button, for a link that looks like one. */
-export function buttonClass(variant?: Variant, className = ""): string {
-  return `${ui.button} ${variant ? ui[variant] : ""} ${className}`;
 }
 
 /**

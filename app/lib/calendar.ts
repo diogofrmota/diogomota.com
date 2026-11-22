@@ -176,47 +176,6 @@ export function dateTimeLabel(instant: string | Date): string {
   return dateTimeFormatter.format(new Date(instant));
 }
 
-const minutesOf = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
-
-/**
- * The timed events of one day as the week and day views lay them out: each from
- * its top to its bottom (minutes into the day, at least 44 tall: a finger), in a
- * lane of its overlap group. Every event of a group of overlapping events has as
- * many lanes as the group needs, so none covers another's tap target.
- */
-export function timedEvents(events: CalendarEvent[], date: string) {
-  const items = events
-    .map((event) => {
-      const { start, end } = eventDates(event);
-      const top = start.date < date ? 0 : minutesOf(start.time);
-      const bottom = end.date > date ? 1440 : minutesOf(end.time) + 1;
-      return { event, top, bottom: Math.max(top + 44, bottom), lane: 0, lanes: 1 };
-    })
-    .sort((a, b) => a.top - b.top || b.bottom - a.bottom);
-  let group: typeof items = [],
-    laneEnds: number[] = [],
-    groupEnd = -1;
-  function finish() {
-    for (const item of group) item.lanes = laneEnds.length;
-  }
-  for (const item of items) {
-    if (item.top >= groupEnd) {
-      finish();
-      group = [];
-      laneEnds = [];
-      groupEnd = -1;
-    }
-    let lane = laneEnds.findIndex((end) => end <= item.top);
-    if (lane < 0) lane = laneEnds.length;
-    item.lane = lane;
-    laneEnds[lane] = item.bottom;
-    group.push(item);
-    groupEnd = Math.max(groupEnd, item.bottom);
-  }
-  finish();
-  return items;
-}
-
 /** An event in a week of the month: the day it starts in the week (its column), how many of the week's days it covers, and its lane. */
 export type WeekEvent = { event: CalendarEvent; col: number; span: number; lane: number };
 

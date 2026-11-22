@@ -56,7 +56,6 @@ export const moveInput = z.object({
     .transform((id) => id.toLowerCase())
     .optional(),
 });
-export type MoveInput = z.input<typeof moveInput>;
 
 // --- Shared: spaces ----------------------------------------------------------
 
@@ -77,7 +76,6 @@ export const joinInput = z.object({
     .transform(inviteCodeOf)
     .pipe(z.string().regex(/^[A-HJ-NP-Z2-9]{8}$/, { error: "Invalid invite code. Check the code and try again." })),
 });
-export type JoinInput = z.input<typeof joinInput>;
 
 // --- Shared: calendar --------------------------------------------------------
 
@@ -128,7 +126,6 @@ export const upcomingEvents = z.object({
 // --- Shared: tasks -----------------------------------------------------------
 
 export const listInput = z.object({ id: uuid.optional(), name: title(80, "a list name") });
-export type ListInput = z.input<typeof listInput>;
 export const listRename = z.object({ name: title(80, "a list name") });
 
 const taskFields = {
@@ -161,11 +158,9 @@ export const taskCreate = z.object({
   isComplete: taskFields.isComplete.default(false),
   repeat: taskFields.repeat.default(null),
 });
-export type TaskCreate = z.input<typeof taskCreate>;
 
 /** A change to a task: any of its fields. */
 export const taskPatch = z.object({ ...taskFields, expectedDueDate: taskFields.dueDate }).partial();
-export type TaskPatch = z.input<typeof taskPatch>;
 
 // --- Shows -------------------------------------------------------------------
 
@@ -180,7 +175,6 @@ export const libraryAdd = z.object({
     .lt(2 ** 31, { error: "Title not found." }),
   status: z.enum(["planned", "watching", "completed"], { error: "Add it as Watching, Planned or Completed." }),
 });
-export type LibraryAdd = z.input<typeof libraryAdd>;
 
 /**
  * A change to a library entry. Unknown fields (a rating, from before ratings
@@ -192,7 +186,6 @@ export const libraryPatch = z.object({
   currentSeason: z.unknown().optional(),
   currentEpisode: z.unknown().optional(),
 });
-export type LibraryPatch = z.input<typeof libraryPatch>;
 
 // Checked in sendFriendRequest (lib/friends.ts), which says "Enter a username." for none.
 export const friendRequest = z.object({ username: z.unknown().optional() });
@@ -207,7 +200,6 @@ export const recommendInput = z.object({
     .positive({ error: "Title not found." })
     .lt(2 ** 31, { error: "Title not found." }),
 });
-export type RecommendInput = z.input<typeof recommendInput>;
 
 /** Discover showed the recommendations of TV shows or movies the user was sent. */
 export const recommendationsSeenInput = z.object({ type: mediaTypeSchema });
@@ -269,11 +261,9 @@ export const recipeCreate = z.object({
   tags: recipeFields.tags.default([]),
   isFavourite: recipeFields.isFavourite.default(false),
 });
-export type RecipeCreate = z.input<typeof recipeCreate>;
 
 /** A change to a recipe: any of its fields. */
 export const recipePatch = z.object(recipeFields).partial();
-export type RecipePatch = z.input<typeof recipePatch>;
 
 const shoppingText = title(recipeLimits.shoppingText, "an item");
 
@@ -291,14 +281,12 @@ export const shoppingAdd = z.object({
     .min(1, { error: "Add at least one item." })
     .max(recipeLimits.ingredients, { error: `Add up to ${recipeLimits.ingredients} items at a time.` }),
 });
-export type ShoppingAdd = z.input<typeof shoppingAdd>;
 
 /** A change to a line of the shopping list: its text, or ticked off (or not). */
 export const shoppingPatch = z.object({
   text: shoppingText.optional(),
   isChecked: z.boolean({ error: "Tick it off or not." }).optional(),
 });
-export type ShoppingPatch = z.input<typeof shoppingPatch>;
 
 /** Lines taken off the shopping list (Clear ticked, or one deleted). */
 export const shoppingRemove = z.object({
@@ -307,7 +295,6 @@ export const shoppingRemove = z.object({
     .min(1, { error: "Choose an item to remove." })
     .max(recipeLimits.shoppingItems, { error: "Too many items at once." }),
 });
-export type ShoppingRemove = z.input<typeof shoppingRemove>;
 
 // --- Fitness -------------------------------------------------------------------
 
@@ -345,11 +332,9 @@ export const routineCreate = z.object({
   exercises: routineFields.exercises,
   notes: routineFields.notes.default(""),
 });
-export type RoutineCreate = z.input<typeof routineCreate>;
 
 /** A change to a routine: any of its fields. */
 export const routinePatch = z.object(routineFields).partial();
-export type RoutinePatch = z.input<typeof routinePatch>;
 
 const workoutSet = z.object({
   reps: wholeNumber(0, fitnessLimits.reps, `Enter from 0 to ${fitnessLimits.reps} reps.`).nullable(),
@@ -388,11 +373,9 @@ export const workoutCreate = z.object({
   exercises: workoutFields.exercises.default([]),
   notes: workoutFields.notes.default(""),
 });
-export type WorkoutCreate = z.input<typeof workoutCreate>;
 
 /** A change to a workout: its day, name, exercises (all of them, with their sets) or notes. */
 export const workoutPatch = z.object(workoutFields).partial();
-export type WorkoutPatch = z.input<typeof workoutPatch>;
 
 const runFields = {
   date: fitnessDate,
@@ -413,10 +396,8 @@ export const runCreate = z.object({
   durationS: runFields.durationS,
   notes: runFields.notes.default(""),
 });
-export type RunCreate = z.input<typeof runCreate>;
 
 export const runPatch = z.object(runFields).partial();
-export type RunPatch = z.input<typeof runPatch>;
 
 /** A new supplement: its name, and its dose if any ("5 g"). */
 export const supplementCreate = z.object({
@@ -428,7 +409,6 @@ export const supplementCreate = z.object({
     .pipe(z.string().max(fitnessLimits.dose, { error: `Keep the dose to ${fitnessLimits.dose} characters.` }))
     .default(""),
 });
-export type SupplementCreate = z.input<typeof supplementCreate>;
 
 /** A change to a day of the log: any of its fields; null clears the steps or the weight. */
 export const dayPatch = z.object({
@@ -457,7 +437,6 @@ export const dayPatch = z.object({
     .transform((ids) => [...new Set(ids)])
     .optional(),
 });
-export type DayPatch = z.input<typeof dayPatch>;
 
 /** A change to the daily goals. */
 export const goalsPatch = z.object({
@@ -472,4 +451,3 @@ export const goalsPatch = z.object({
     `Enter a steps goal from ${fitnessLimits.stepsGoalMin} to ${fitnessLimits.stepsGoalMax.toLocaleString("en")}.`,
   ).optional(),
 });
-export type GoalsPatch = z.input<typeof goalsPatch>;

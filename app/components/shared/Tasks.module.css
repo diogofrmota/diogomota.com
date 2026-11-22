@@ -12,7 +12,6 @@
 }
 .toolbar,
 .listHeader,
-.actions,
 .dialogHeader,
 .add,
 .inputRow,
@@ -384,13 +383,6 @@
   gap: 0.35rem;
   overflow-wrap: anywhere;
 }
-.assigneeDot {
-  flex-shrink: 0;
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: 50%;
-  background: var(--member-color);
-}
 .notes {
   max-width: 100%;
   overflow: hidden;
@@ -546,9 +538,6 @@
   .done::details-content {
     transition: none;
   }
-}
-.actions {
-  flex-wrap: wrap;
 }
 .listRows {
   list-style: none;

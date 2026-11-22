@@ -310,15 +310,6 @@ export function RepeatIcon() {
   );
 }
 
-/** Lines of a list: the calendar's agenda. */
-export function ListIcon() {
-  return (
-    <Icon>
-      <path d="M8.5 6h11.5M8.5 12h11.5M8.5 18h11.5M4 6h.01M4 12h.01M4 18h.01" />
-    </Icon>
-  );
-}
-
 /** A copy of something: copying a link. */
 export function CopyIcon() {
   return (
@@ -352,15 +343,6 @@ export function DownloadIcon() {
   return (
     <Icon>
       <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />
-    </Icon>
-  );
-}
-
-/** An arrow to the right: a link that goes on (Open Shared). */
-export function ArrowRightIcon() {
-  return (
-    <Icon>
-      <path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5" />
     </Icon>
   );
 }

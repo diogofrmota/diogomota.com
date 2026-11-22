@@ -39,7 +39,6 @@ export type Workout = {
   updatedAt: string;
 };
 
-export type WorkoutFields = Pick<Workout, "date" | "name" | "routineId" | "exercises" | "notes">;
 export type WorkoutChange = Partial<Pick<Workout, "date" | "name" | "exercises" | "notes">>;
 
 /** A run: its day, distance in metres and time in seconds. */

@@ -6,7 +6,6 @@ import {
   eventDates,
   eventFor,
   localInstants,
-  timedEvents,
   type CalendarEvent,
 } from "@/lib/calendar";
 
@@ -88,34 +87,5 @@ describe("iCalendar", () => {
     expect(eventFor({ isGroup: false, assigneeIds: ["a"] }, names)).toBe("Ana");
     expect(eventFor({ isGroup: false, assigneeIds: ["a", "b"] }, names)).toBe("Ana and Diogo");
     expect(eventFor({ isGroup: false, assigneeIds: ["gone"] }, names)).toBe("Former member");
-  });
-});
-
-describe("the week and day views' layout", () => {
-  const at = (id: string, from: string, to: string) =>
-    event({ id, startsAt: `2026-07-10T${from}:00.000Z`, endsAt: `2026-07-10T${to}:00.000Z` });
-
-  test("overlapping events share their group's lanes; the next group starts afresh", () => {
-    // 09:00-10:00 and 09:30-11:00 overlap (Lisbon is UTC+1 in July); 12:00 doesn't.
-    const laid = timedEvents(
-      [at("a", "08:00", "09:00"), at("b", "08:30", "10:00"), at("c", "11:00", "12:00")],
-      "2026-07-10",
-    );
-    const byId = Object.fromEntries(laid.map((item) => [item.event.id, item]));
-    expect(byId.a).toMatchObject({ top: 540, lane: 0, lanes: 2 });
-    expect(byId.b).toMatchObject({ top: 570, lane: 1, lanes: 2 });
-    expect(byId.c).toMatchObject({ top: 720, lane: 0, lanes: 1 });
-  });
-
-  test("a short event is still a finger tall, and one from the day before starts at the top", () => {
-    const [short] = timedEvents([at("a", "08:00", "08:05")], "2026-07-10");
-    expect(short.bottom - short.top).toBe(44);
-    const [overnight] = timedEvents(
-      [event({ id: "n", startsAt: "2026-07-09T21:00:00.000Z", endsAt: "2026-07-10T07:00:00.000Z" })],
-      "2026-07-10",
-    );
-    expect(overnight.top).toBe(0);
-    // Until 08:00 in Lisbon: its end is read as the minute before it, plus that minute.
-    expect(overnight.bottom).toBe(8 * 60);
   });
 });

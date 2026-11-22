@@ -4,7 +4,13 @@ import type { NextConfig } from "next";
 const e2eBuild = process.env.E2E_PRODUCTION === "1" && !!process.env.E2E_RUN_ID;
 
 const nextConfig: NextConfig = {
-  experimental: { proxyClientMaxBodySize: "21mb" },
+  experimental: {
+    proxyClientMaxBodySize: "21mb",
+    // Turbopack's default merges every app's CSS into the chunks that hold the
+    // shared ui.module.css, so /login, the front page and the 404 loaded the
+    // styles of all the apps (~190 KB). The graph splits them by route instead.
+    cssChunking: "graph",
+  },
   distDir: e2eBuild ? ".next-e2e-production" : ".next",
   // The tests' build skips the typecheck (half its time): `npm run typecheck`
   // runs beside it in CI (ci.yml's check), and the image's build still checks.

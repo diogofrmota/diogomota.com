@@ -253,14 +253,20 @@ test("Today: water, steps, body weight and supplements, day by day; home counts 
   await expect.poll(taken).toHaveLength(1);
 
   await page.goto("/");
-  // Its name says what is waiting: "Fitness, 1 supplement to take".
-  const icon = page.getByRole("main").getByRole("link", { name: /^Fitness\b/ });
+  // Its folder, Health, says something is waiting (docs/decisions/0023), and
+  // its icon in the folder says what: "Fitness, 1 supplement to take".
+  const health = page.getByRole("main").getByRole("button", { name: /^Health\b/ });
+  await expect(health).toHaveAccessibleName("Health, 1 waiting");
+  await health.click();
+  const icon = page.getByRole("dialog", { name: "Health" }).getByRole("link", { name: /^Fitness\b/ });
   await expect(icon).toHaveAccessibleName("Fitness, 1 supplement to take");
   await page.goto("/fitness");
   await page.getByRole("region", { name: "Supplements" }).getByRole("checkbox", { name: "Vitamin D" }).check();
   await expect(page.getByRole("region", { name: "Supplements" })).toContainText("All taken.");
   await expect.poll(taken).toHaveLength(2);
   await page.goto("/");
+  await expect(health).toHaveAccessibleName("Health");
+  await health.click();
   await expect(icon).toHaveAccessibleName("Fitness");
 
   // All of it on the server, by day.

@@ -15,7 +15,7 @@ export const themes = [
 export type Theme = (typeof themes)[number]["id"];
 
 /**
- * Out of the box: logged out (/apps, the login pages), and a new account's
+ * Out of the box: logged out (home, the login pages), and a new account's
  * until they pick another in Account (the users column's default too).
  */
 export const defaultTheme: Theme = "minimal-neutrals";

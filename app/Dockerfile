@@ -50,7 +50,7 @@ RUN mkdir -p /app/data/avatars /app/data/recipe-photos && chown -R node:node /ap
 ENV AVATAR_DIR=/app/data/avatars
 ENV RECIPE_PHOTO_DIR=/app/data/recipe-photos
 
-# The image's version tag (vX.Y.Z), passed in by deploy.yml and shown on /apps.
+# The image's version tag (vX.Y.Z), passed in by deploy.yml and shown in the apps.
 # Set last so a new version doesn't invalidate the layers above.
 ARG APP_VERSION=dev
 ENV APP_VERSION=$APP_VERSION

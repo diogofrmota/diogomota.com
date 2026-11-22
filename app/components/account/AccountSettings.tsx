@@ -457,8 +457,11 @@ function DeleteForm() {
       <p>
         This deletes your account and everything it has here: your library, friends, recommendations and activity. You
         leave your group in For Couples; if you&rsquo;re its last member, its calendar, tasks and recipes are deleted
-        too. It can&rsquo;t be undone. <Link href="/api/account/export">Download your data</Link> first if you want to
-        keep it.
+        too. It can&rsquo;t be undone.{" "}
+        <a href="/api/account/export" download>
+          Download your data
+        </a>{" "}
+        first if you want to keep it.
       </p>
       <Field
         label="Password"

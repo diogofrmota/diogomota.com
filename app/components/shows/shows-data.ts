@@ -1,5 +1,5 @@
 "use client";
-import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useAppView } from "@/hooks/useAppView";
 import { apiRequest, type ApiError } from "@/lib/api-request";
@@ -77,9 +77,6 @@ export function useOpenTitle() {
     openPanel(`title:${titleKey(title)}`);
   };
 }
-
-/** The query client, for forgetShowsData. */
-export const useShowsClient = useQueryClient;
 
 // The TV Shows | Movies switch of Library and of Discover, each remembered on
 // this device (in memory too, where the browser keeps no storage).
