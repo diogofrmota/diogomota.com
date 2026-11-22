@@ -38,7 +38,7 @@ function AppLinks({ user }: { user: SiteUser }) {
 }
 
 /**
- * The website's header (SiteFrame): the >_ mark and diogomota (home) on the
+ * The website's header (SiteFrame): the dm mark and diogomota (home) on the
  * left, then Apps (a menu of them), How it works and About; on the right, Log
  * in (plain) and Sign up (filled), as everywhere, or Account and Your apps once
  * logged in. On a phone: the mark, Sign up (or Your apps) and a menu with the

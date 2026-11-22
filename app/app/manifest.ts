@@ -6,7 +6,7 @@ import { defaultTheme, themeBackground } from "@/lib/themes";
 // a phone's home screen, the site opens on home (the apps), without the
 // browser's bars. Its id is still /apps, where it opened until home became the
 // apps (docs/decisions/0014): phones that added it then keep one app, not two.
-// The icons are app/icon.svg's ">_" as PNGs; the maskable one is full bleed, for
+// The icons are app/icon.svg's "dm" as PNGs; the maskable one is full bleed, for
 // launchers that cut their own shape (the glyph is inside its safe zone). The
 // splash screen and the bar around it take the color of home as it opens, in
 // the default theme (Light), so starting the app doesn't flash black.

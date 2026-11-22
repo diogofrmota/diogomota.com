@@ -6,7 +6,7 @@ import { mockBase, otherPerson, userId } from "./shows";
 
 // Home (docs/decisions/0014, 0016, 0023). Logged out, the website's front
 // page: its header, what the site is, Sign up, the apps in three groups (an
-// app's icon opens its login prompt), How it works, How to add to Home Screen,
+// app's icon opens its login prompt), How it works, Add to Home Screen,
 // and its footer. Logged in, with no top bar: who is here (the picture, the
 // name, the username and Account settings), then the apps in three folders,
 // each opening in a popup, with what is waiting in each.
@@ -22,7 +22,7 @@ const appIcon = (page: Page, name: string) =>
   page.getByRole("main").getByRole("region", { name: "The apps" }).getByRole("link", { name, exact: true });
 const siteNav = (page: Page) => page.getByRole("banner").getByRole("navigation", { name: "Site" });
 
-test("logged out, home is the website's front page (/apps redirects to it): what the site is, the apps in groups, How it works, How to add to Home Screen", async ({
+test("logged out, home is the website's front page (/apps redirects to it): what the site is, the apps in groups, How it works, Add to Home Screen", async ({
   page,
 }) => {
   // /apps is now home: it redirects there for good, with its query.
@@ -52,7 +52,7 @@ test("logged out, home is the website's front page (/apps redirects to it): what
   expect(apps.map((app) => app.name)).toEqual(["Calendar", "Tasks", "Recipes", "Shows", "Books", "Fitness"]);
   const groups = [
     { title: "For Couples", apps: ["Calendar", "Tasks", "Recipes"], points: 2 },
-    { title: "Trackers", apps: ["Shows", "Books"], points: 3 },
+    { title: "Trackers", apps: ["Shows", "Books"], points: 2 },
     { title: "Health", apps: ["Fitness"], points: 2 },
   ];
   await expect(main.getByRole("region", { name: "The apps" }).getByRole("article")).toHaveCount(3);
@@ -92,9 +92,9 @@ test("logged out, home is the website's front page (/apps redirects to it): what
   expect(words.x).toBeGreaterThan(number.x + number.width);
   expect(Math.abs(words.y + words.height / 2 - (number.y + number.height / 2))).toBeLessThan(3);
 
-  // No Questions any more: How to add to Home Screen, a slide a step.
+  // No Questions any more: Add to Home Screen, a slide a step.
   await expect(main.getByRole("region", { name: "Questions" })).toHaveCount(0);
-  const guide = main.getByRole("region", { name: "How to add to Home Screen" });
+  const guide = main.getByRole("region", { name: "Add to Home Screen" });
   const slides = guide.locator("[aria-roledescription='slide']");
   await expect(slides).toHaveCount(6);
   await expect(slides.first()).toHaveAccessibleName("Step 1 of 6");
@@ -256,7 +256,7 @@ test.describe("on a phone", () => {
     await expect(page.getByRole("contentinfo").getByRole("link")).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     // The guide's steps swipe sideways, one at a time, within the page.
-    const guide = page.getByRole("main").getByRole("region", { name: "How to add to Home Screen" });
+    const guide = page.getByRole("main").getByRole("region", { name: "Add to Home Screen" });
     const steps = guide.getByRole("group", { name: "Steps" });
     await steps.scrollIntoViewIfNeeded();
     await steps.evaluate((element) => element.scrollTo({ left: element.clientWidth, behavior: "instant" }));
@@ -369,7 +369,7 @@ test("logged in, / is who is here and the apps in three folders, no tab bar, and
     await expect(buttons[i].locator("img")).toHaveCount(folder.apps.length);
     const names = new Intl.ListFormat("en", { type: "conjunction" }).format(appsOf(folder).map((app) => app.name));
     await expect(buttons[i]).toHaveAccessibleDescription(
-      folder.private ? `${names}. Private: only you and your partner see them.` : `${names}.`,
+      folder.private ? `${names}. Private group: only you and your partner.` : `${names}.`,
     );
     // For Couples, the group's, has a lock in its top right corner.
     await expect(buttons[i].locator("[class*='lock']")).toHaveCount(folder.private ? 1 : 0);
@@ -378,6 +378,26 @@ test("logged in, / is who is here and the apps in three folders, no tab bar, and
   const tile = (await buttons[0].locator("[class*='tile']").boundingBox())!;
   expect(lock.x + lock.width).toBeGreaterThan(tile.x + tile.width);
   expect(lock.y).toBeLessThan(tile.y);
+  // The small icons, square, two to a row from the top left: the first row as high in every folder, and For
+  // Couples' third app, on a second row, as far from the tile's bottom as the first row is from its top.
+  const minis = await Promise.all(
+    buttons.map((button) =>
+      button.locator("[class*='tile']").evaluate((element) => {
+        const tile = element.getBoundingClientRect();
+        return [...element.querySelectorAll("img")].map((img) => {
+          const box = img.getBoundingClientRect();
+          return { top: box.top - tile.top, bottom: tile.bottom - box.bottom, width: box.width, height: box.height };
+        });
+      }),
+    ),
+  );
+  for (const icons of minis) {
+    expect(Math.abs(icons[0].top - minis[0][0].top)).toBeLessThanOrEqual(0.5);
+    for (const icon of icons) expect(Math.abs(icon.width - icon.height)).toBeLessThanOrEqual(0.5);
+  }
+  const third = minis[0][2];
+  expect(third.top).toBeGreaterThan(minis[0][0].top + minis[0][0].height);
+  expect(Math.abs(third.bottom - minis[0][0].top)).toBeLessThanOrEqual(1);
 
   // A folder opens in a popup, at its own URL: its apps, each straight into its app, with what it is for.
   const [, trackers, health] = buttons;
@@ -413,7 +433,7 @@ test("logged in, / is who is here and the apps in three folders, no tab bar, and
   // For Couples, before there is a group, offers one; once made, its apps, and the way to the group's settings.
   await buttons[0].click();
   const couples = page.getByRole("dialog", { name: "For Couples" });
-  await expect(couples).toContainText("Private: only you and your partner see these apps.");
+  await expect(couples).toContainText("Private group: only you and your partner.");
   await expect(couples.getByRole("link")).toHaveCount(0);
   await couples.getByRole("button", { name: "Create a group" }).click();
   for (const app of appsOf(folders[0]))

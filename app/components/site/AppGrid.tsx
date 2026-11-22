@@ -47,7 +47,16 @@ export function AppGrid({ apps, className = "" }: { apps: readonly GridApp[]; cl
             aria-describedby={`${id}-${i}`}
           >
             <span className={styles.icon}>
-              <Image unoptimized src={app.logo} alt="" width={112} height={112} className={styles.logo} />
+              {/* Eager: in the folder's popup, it is there as the popup grows, not a moment after. */}
+              <Image
+                unoptimized
+                src={app.logo}
+                alt=""
+                width={112}
+                height={112}
+                loading="eager"
+                className={styles.logo}
+              />
               {badge > 0 && (
                 <span className={styles.badge} aria-hidden="true">
                   {badgeText(badge)}

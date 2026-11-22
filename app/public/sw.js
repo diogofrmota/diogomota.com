@@ -13,9 +13,10 @@
 // - Everything else, the APIs too, goes to the network as usual.
 // Logging out deletes the cache (clearOfflineData). v3: For Couples' apps
 // moved (/shared to /calendar, /tasks and /couples), so the pages kept at
-// their old addresses go with the old cache.
+// their old addresses go with the old cache. v4: the site's new icon, so phones
+// that kept the old one (the icons are kept once fetched) fetch it again.
 
-const cacheName = "diogomota-offline-v3";
+const cacheName = "diogomota-offline-v4";
 // Only the owner's Books shelves, never another member's profile document.
 const appPages = /^\/((calendar|tasks|couples|shows|recipes|fitness)(\/|$)|books(?:\/(?:library|discover|profile))?\/?$|$)/;
 const staticFiles = /^\/(_next\/static|icons|logos)\//;

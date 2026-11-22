@@ -73,14 +73,16 @@
      change both together). Only for what tells the user something, and the
      more often it's seen the quicker and quieter (a tick, a tab: frequency of
      use); a press or an icon 150ms, a dropdown 180ms (150-200), a dialog or
-     a message 220ms, something crossing the screen 260ms, all well under the
-     400ms where a wait starts to be felt (the Doherty threshold).
+     a message 220ms, something crossing the screen 260ms, a folder growing
+     out of its tile 360ms, all under the 400ms where a wait starts to be felt
+     (the Doherty threshold).
      - Entrances ease out: they start at once, and settle.
      - What moves from one place on screen to another eases in and out.
      - An exit is 20% shorter than its entrance (--exit): asked to go, it goes.
      - A list's rows come in --stagger apart, ten deep at most.
      - A press gives a little (--press); a popup grows from --popover-scale,
-       from what opened it, never from nothing.
+       from what opened it, never from nothing; a folder's popup grows out of
+       its tile, from the tile's size, as a phone's folder does.
      - A knob stretches as it moves (--stretch), and as it's pressed.
      - No bounce (overshoot) on everyday parts: --ease-celebrate is only for a
        celebration (the end of the Shows guide).
@@ -94,6 +96,7 @@
   --duration-dropdown: 180ms;
   --duration: 220ms;
   --duration-move: 260ms;
+  --duration-zoom: 360ms;
   --exit: 0.8;
   --stagger: 30ms;
   --press: 0.97;

@@ -5,12 +5,14 @@ describe("the motion system's numbers", () => {
   test("an exit is 20% shorter than its entrance", () => {
     expect(exitMs(motion.base)).toBe(176);
     expect(exitMs(motion.dropdown)).toBe(144);
+    expect(exitMs(motion.zoom)).toBe(288);
   });
 
   test("dropdowns take 150-200 ms, and everything stays under the Doherty threshold", () => {
     expect(motion.dropdown).toBeGreaterThanOrEqual(150);
     expect(motion.dropdown).toBeLessThanOrEqual(200);
-    for (const ms of [motion.fast, motion.dropdown, motion.base, motion.move]) expect(ms).toBeLessThan(400);
+    for (const ms of [motion.fast, motion.dropdown, motion.base, motion.move, motion.zoom])
+      expect(ms).toBeLessThan(400);
   });
 
   test("a list's rows come in 30 ms apart, ten deep at most", () => {

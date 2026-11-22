@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { defaultTheme, themeBackground } from "@/lib/themes";
 
-// Link preview of /about, rendered once at build time, as the page: the >_
+// Link preview of /about, rendered once at build time, as the page: the dm
 // mark and diogomota, then the name, the work and the city, on the Light
 // theme's gray.
 export const alt = "Diogo Mota, DevOps engineer based in Lisbon, Portugal";

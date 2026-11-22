@@ -39,8 +39,19 @@
   animation-duration: var(--duration-dropdown);
 }
 
+/* A folder's popup grows out of its tile from script (Dialog.tsx, growFrom),
+   about its own middle; its backdrop comes in as long. */
+.popup.popup[data-zoom][open] {
+  transform-origin: 50% 50%;
+  animation: none;
+}
+
 .popup::backdrop {
   animation: backdrop-in var(--duration) var(--ease-out);
+}
+
+.popup[data-zoom]::backdrop {
+  animation-duration: var(--duration-zoom);
 }
 
 @keyframes popup-in {

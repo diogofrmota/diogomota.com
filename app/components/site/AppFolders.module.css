@@ -79,8 +79,22 @@
 /* The folder itself: the page's text color, faint, over what is behind it,
    with the corners of an app's icon. Its first four apps' icons in a 2x2
    grid, from the top left (a folder has three apps at most for now, so a
-   phone's 3x3 would leave it mostly empty). */
+   phone's 3x3 would leave it mostly empty): each 30% of the tile, 8% apart,
+   16% in from its edges, so a second row (a third or fourth app) is as far
+   from the bottom as the first is from the top, and the first row is as
+   high in every folder. In set sizes, not fractions of the grid: Safari made
+   each icon as tall as the whole grid (height: 100% of it, not of its row),
+   drawn in the middle of that, so the first row sat lower and a third app
+   ran off the bottom of the tile.
+
+   While its popup is open, the tile is the popup (it grew out of it,
+   Dialog's zoomFrom): it goes as the popup comes in, and comes back as the
+   popup shrinks into it and fades (Dialog.tsx, leavingCopy), in its last
+   45%. */
 .tile {
+  --mini: calc(var(--icon-size) * 0.3);
+  --mini-gap: calc(var(--icon-size) * 0.08);
+
   position: relative;
   display: block;
   width: var(--icon-size);
@@ -91,6 +105,13 @@
     inset 0 0 0 1px color-mix(in srgb, var(--text) 6%, transparent),
     var(--shadow-sm);
   backdrop-filter: blur(12px);
+  transition: opacity calc(var(--duration-zoom) * 0.8 * 0.45) linear calc(var(--duration-zoom) * 0.8 * 0.55);
+}
+
+.folder[aria-expanded="true"] .tile {
+  opacity: 0;
+  transition-duration: calc(var(--duration-zoom) * 0.3);
+  transition-delay: 0s;
 }
 
 @media (hover: hover) {
@@ -99,18 +120,26 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .tile {
+    transition: none;
+  }
+}
+
 .minis {
   position: absolute;
-  inset: 16%;
+  inset: calc(var(--icon-size) * 0.16);
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 12%;
+  grid-template-columns: repeat(2, var(--mini));
+  grid-auto-rows: var(--mini);
+  align-content: start;
+  gap: var(--mini-gap);
 }
 
 .minis img {
-  width: 100%;
-  height: 100%;
+  display: block;
+  width: var(--mini);
+  height: var(--mini);
   border-radius: 22.5%;
 }
 
@@ -271,7 +300,8 @@
 }
 
 /* The folder's apps, three to a row, a little smaller than on a page. Two
-   classes, to win over AppGrid's sizes whatever the order. */
+   classes, to win over AppGrid's sizes whatever the order. There from the
+   first frame, growing with the folder, not coming in one after another. */
 .apps.apps {
   --icon-size: 4.5rem;
   --columns: 3;
@@ -279,6 +309,10 @@
 
   max-width: none;
   row-gap: var(--space-5);
+}
+
+.apps.apps li {
+  animation: none;
 }
 
 @media (min-width: 40rem) {

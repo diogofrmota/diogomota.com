@@ -8,7 +8,8 @@
  * - What moves from one place on screen to another eases in and out.
  * - Menus and dropdowns take 150-200 ms, dialogs a little longer; an exit is
  *   20% shorter than its entrance (`exit`): once it's asked to go, it goes.
- * - Popups start at 0.95 of their size (never from nothing), from what opened them.
+ * - Popups start at 0.95 of their size (never from nothing), from what opened them;
+ *   a folder's grows out of its tile, from the tile's size (`zoom`).
  * - No bounce (overshoot) on the everyday parts; only a celebration has one.
  */
 export const motion = {
@@ -22,6 +23,8 @@ export const motion = {
   base: 220,
   /** Something moving across the screen: a tab's underline, a switch's thumb. */
   move: 260,
+  /** A folder growing out of its tile into its popup, as a phone's does. */
+  zoom: 360,
   /** An exit's length, as a share of its entrance's. */
   exit: 0.8,
   /** Between one row of a list coming in and the next. */

@@ -29,7 +29,7 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
 
 // / (docs/decisions/0014, 0016, 0023). Logged out, the website's front page
 // (FrontPage, in SiteFrame): what the site is, Sign up, the apps in three
-// groups, How it works and How to add to Home Screen; `next` is set when the user was sent here from a
+// groups, How it works and Add to Home Screen; `next` is set when the user was sent here from a
 // protected page (proxy.ts): Log in and Sign up return there, and for an app
 // its prompt opens. Logged in, in the user's theme, without a top bar: who is
 // here at the top (ProfileHeader: the picture, the name, the username and

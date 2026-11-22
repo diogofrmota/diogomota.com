@@ -11,10 +11,12 @@ import styles from "./FrontPage.module.css";
 
 /** What each folder's apps are for, a line or so each (its title and apps: lib/apps.ts). */
 const points: Record<FolderId, string[]> = {
-  couples: ["One calendar and set of task lists for the two of you.", "Your recipes together, and one shopping list."],
+  couples: [
+    "One calendar and set of task lists for the two of you.",
+    "Share your favourite recipes and create a shopping list.",
+  ],
   trackers: [
-    "Every show, movie and book in one place.",
-    "Pick up where you left off, by episode or by page.",
+    "Every show, movie and book in one place. Track everything.",
     "See what your friends are watching and reading.",
   ],
   health: ["Log your workouts, runs and personal records.", "Track water, steps, weight and supplements each day."],

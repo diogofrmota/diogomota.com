@@ -4,9 +4,10 @@ import { expect, newUser, signUp, test } from "./fixtures";
 // The motion system (lib/motion.ts, components/common/motion.tsx, Dialog.tsx),
 // with motion on: every other spec runs with reduced motion (playwright.config.ts),
 // so nothing is caught half way. What is checked here is what can be measured
-// without racing the clock: where a popup grows from, that its exit is played by
-// a copy that then goes, that a segmented control's thumb is one object that
-// moves (and stretches), and that reduced motion turns all of it off.
+// without racing the clock: where a popup grows from (a folder: out of its
+// tile, from its size), that its exit is played by a copy that then goes, that
+// a segmented control's thumb is one object that moves (and stretches), and
+// that reduced motion turns all of it off.
 
 async function sharedCalendar(page: Page) {
   await signUp(page, newUser(), "/signup?next=/calendar");
@@ -66,6 +67,61 @@ test.describe("with motion", () => {
     await expect(add).toBeFocused();
   });
 
+  test("a folder grows out of its tile, from its size, and shrinks back into it, the tile going and coming back", async ({
+    page,
+  }) => {
+    await signUp(page, newUser());
+    await expect(page).toHaveURL("/");
+    const folder = page.getByRole("main").getByRole("button", { name: "Trackers", exact: true });
+    const tile = folder.locator("[class*='tile']");
+    await expect(tile).toHaveCSS("opacity", "1");
+    // Its growing is held at its first frame as it starts (Dialog.tsx, growFrom: the "zoom" animations), so
+    // it is measured there however long the steps between take.
+    await page.evaluate(() => {
+      const held: Animation[] = [];
+      Object.assign(window, { held });
+      const animate = Element.prototype.animate;
+      Element.prototype.animate = function (this: Element, ...args: Parameters<Element["animate"]>) {
+        const animation = animate.apply(this, args);
+        const options = args[1];
+        if (typeof options === "object" && options.id === "zoom") {
+          animation.pause();
+          held.push(animation);
+        }
+        return animation;
+      };
+    });
+    await folder.click();
+    const dialog = page.getByRole("dialog", { name: "Trackers" });
+    await expect(dialog).toBeVisible();
+    // Not the other popups' 0.95: grown from script, about its middle.
+    await expect(dialog).toHaveCSS("animation-name", "none");
+    const at = (await tile.boundingBox())!;
+    // Where it starts: on the tile, as big as fits inside it. Then let go, it grows to its own size.
+    const start = await dialog.evaluate(async (element) => {
+      const growing = (window as unknown as { held: Animation[] }).held.filter((a) => a.playState !== "idle");
+      const box = element.getBoundingClientRect();
+      for (const animation of growing) animation.play();
+      await Promise.all(growing.map((animation) => animation.finished));
+      return { growing: growing.length, x: box.x, y: box.y, width: box.width, height: box.height };
+    });
+    expect(start.growing).toBe(2);
+    expect(Math.abs(start.x + start.width / 2 - (at.x + at.width / 2))).toBeLessThan(2);
+    expect(Math.abs(start.y + start.height / 2 - (at.y + at.height / 2))).toBeLessThan(2);
+    expect(start.width).toBeLessThanOrEqual(at.width + 1);
+    expect(start.height).toBeLessThanOrEqual(at.height + 1);
+    expect(Math.max(start.width / at.width, start.height / at.height)).toBeGreaterThan(0.98);
+    // Open, the tile is the popup: gone from its place.
+    await expect(tile).toHaveCSS("opacity", "0");
+
+    await watchLeavingCopies(page);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect.poll(() => leavingCopies(page)).toEqual({ added: 1, removed: 1 });
+    await expect(tile).toHaveCSS("opacity", "1");
+    await expect(folder).toBeFocused();
+  });
+
   test("a segmented control's thumb is one object that slides (and stretches) to the option chosen", async ({
     page,
   }) => {
@@ -121,4 +177,15 @@ test("with reduced motion, nothing moves: no copy plays a popup's exit, and a th
     return [...element.querySelectorAll("span")].some((span) => span.getAnimations().some((a) => a.id === "layout"));
   });
   expect(moving).toBe(false);
+
+  // Nor does a folder grow out of its tile.
+  await page.goto("/");
+  await watchLeavingCopies(page);
+  await page.getByRole("main").getByRole("button", { name: "For Couples", exact: true }).click();
+  const folder = page.getByRole("dialog", { name: "For Couples" });
+  await expect(folder).toBeVisible();
+  expect(await folder.evaluate((element) => element.getAnimations().length)).toBe(0);
+  await page.keyboard.press("Escape");
+  await expect(folder).toBeHidden();
+  expect(await leavingCopies(page)).toEqual({ added: 0, removed: 0 });
 });

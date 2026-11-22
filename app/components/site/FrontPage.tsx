@@ -9,7 +9,7 @@ import { HomeScreenGuide } from "./HomeScreenGuide";
 import styles from "./FrontPage.module.css";
 
 const steps = [
-  ["Sign up", "Your name, a username, your email and a password. Then confirm your email."],
+  ["Sign up", "Your name, a username, your email and a password."],
   ["Pick an app", "Every app is there from the start, on your phone or your computer."],
   [
     "Invite your friends",
@@ -21,7 +21,7 @@ const steps = [
  * The front page (home, logged out; docs/decisions/0016), in the website's
  * frame (SiteFrame): what the site is, Sign up and Login; then the apps in
  * three groups (AppSections: For Couples, Trackers, Health), How it works,
- * How to add to Home Screen (HomeScreenGuide, step by step on an iPhone), and
+ * Add to Home Screen (HomeScreenGuide, step by step on an iPhone), and
  * Sign up once more. `next` (from a protected page) makes Log in and Sign up
  * return there, and opens the prompt of the app it is in.
  */
@@ -77,7 +77,7 @@ export function FrontPage({ next, deleted }: { next: string | null; deleted: boo
 
       <section id="home-screen" className={styles.section} aria-labelledby="home-screen-title">
         <h2 id="home-screen-title" className={styles.heading}>
-          How to add to Home Screen
+          Add to Home Screen
         </h2>
         <p className={styles.sectionLead}>
           On an iPhone, in Safari: then it opens from your Home Screen like an app of its own.

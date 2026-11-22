@@ -23,7 +23,7 @@ export type HomeFolder = Pick<AppFolder, "id" | "title" | "private"> & {
 };
 
 const listFormat = new Intl.ListFormat("en", { type: "conjunction" });
-const privateNote = "Private: only you and your partner see them.";
+const privateNote = "Private group: only you and your partner.";
 const subscribeNever = () => () => {};
 
 /**
@@ -31,9 +31,10 @@ const subscribeNever = () => () => {};
  * Couples, Trackers and Health in a row, each like a phone's folder, a tile of
  * its apps' small icons with its name under it, and what is waiting in them
  * on its corner. For Couples, the apps of the user's group, has a lock in its
- * corner (the count beside it). A folder opens in a popup, growing out of its
- * tile: its apps, each going into its app; For Couples' with the way to the
- * group's settings, or before there is a group, creating or joining one.
+ * corner (the count beside it). A folder opens in a popup that grows out of
+ * its tile, as a phone's folder does, and shrinks back into it: its apps, each
+ * going into its app; For Couples' with the way to the group's settings, or
+ * before there is a group, creating or joining one.
  *
  * The folder open is in the URL (/?p=folder:couples, hooks/useAppView.ts), so
  * Back closes it, a reload keeps it and a link opens it (an invite, once
@@ -74,7 +75,7 @@ export function AppFolders({
               disabled={!hydrated}
               onClick={() => openPanel(`folder:${folder.id}`)}
             >
-              <span className={styles.tile}>
+              <span id={`${id}-${folder.id}-tile`} className={styles.tile}>
                 <span className={styles.minis}>
                   {folder.apps.slice(0, 4).map(({ app }) => (
                     <Image key={app.href} unoptimized src={app.logo} alt="" width={40} height={40} />
@@ -102,20 +103,39 @@ export function AppFolders({
           </li>
         ))}
       </ul>
-      {open && <FolderPopup key={open.id} folder={open} inGroup={inGroup} onClose={closePanel} />}
+      {open && (
+        <FolderPopup
+          key={open.id}
+          folder={open}
+          inGroup={inGroup}
+          onClose={closePanel}
+          tile={() => document.getElementById(`${id}-${open.id}-tile`)}
+        />
+      )}
     </>
   );
 }
 
 // An open folder, in the apps' popup (components/common/Dialog), grown out of
-// its tile and back into it on closing (Escape, the backdrop, Close, Back).
-function FolderPopup({ folder, inGroup, onClose }: { folder: HomeFolder; inGroup: boolean; onClose: () => void }) {
+// its tile (`tile`), from its size, and back into it on closing (Escape, the
+// backdrop, Close, Back).
+function FolderPopup({
+  folder,
+  inGroup,
+  onClose,
+  tile,
+}: {
+  folder: HomeFolder;
+  inGroup: boolean;
+  onClose: () => void;
+  tile: () => Element | null;
+}) {
   const titleId = useId();
   const router = useRouter();
   const [refreshing, startTransition] = useTransition();
   const welcome = folder.private && !inGroup;
   return (
-    <Dialog className={styles.popup} aria-labelledby={titleId} onClose={onClose}>
+    <Dialog className={styles.popup} aria-labelledby={titleId} onClose={onClose} zoomFrom={tile}>
       <div className={styles.content}>
         <div className={styles.header}>
           <h2 id={titleId} className={styles.title}>
@@ -133,7 +153,7 @@ function FolderPopup({ folder, inGroup, onClose }: { folder: HomeFolder; inGroup
         {folder.private && (
           <p className={styles.note}>
             <LockIcon />
-            Private: only you and your partner see these apps.
+            {privateNote}
           </p>
         )}
         {welcome ? (

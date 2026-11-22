@@ -7,7 +7,7 @@ import { siteTagline } from "@/lib/site";
 import { defaultTheme, themeBackground } from "@/lib/themes";
 
 // Link preview of home and every page without its own (/about has its own),
-// rendered once at build time, as the front page's header and headline: the >_
+// rendered once at build time, as the front page's header and headline: the dm
 // mark and diogomota, what the site is, and the apps' icons (six, without
 // their names, to fit in a row), on the Light theme's gray.
 export const alt = `diogomota: ${siteTagline}`;

@@ -195,7 +195,7 @@ function Phone({ screen }: { screen: Screen }) {
 }
 
 /**
- * The front page's How to add to Home Screen: the steps in Safari on an
+ * The front page's Add to Home Screen: the steps in Safari on an
  * iPhone, a slide each (a drawing of the phone at that step, with what to tap
  * ringed, then the step in words). Swiped, scrolled, or moved with ‹ and ›
  * (a finger's size) or the arrow keys, Home and End; the dots under it, one a

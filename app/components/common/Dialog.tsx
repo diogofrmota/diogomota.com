@@ -14,8 +14,13 @@ export function typesFirst(): boolean {
 }
 
 type Box = Pick<DOMRect, "left" | "top" | "width" | "height">;
-/** What a popup came out of: the element pressed or focused to open it (and its box then), or a point. */
-export type Trigger = { element?: Element; box: Box };
+/**
+ * What a popup came out of: the element pressed or focused to open it (and its
+ * box then), or a point. `zoom`: it grows out of the element from the
+ * element's size, and shrinks back into it (a folder's tile), rather than
+ * from 0.95 of its own.
+ */
+export type Trigger = { element?: Element; box: Box; zoom?: boolean };
 
 // The last press anywhere (a click or a tap starts with one): what a popup
 // opened by it comes out of, and goes back into. Its box is kept too, for one
@@ -62,10 +67,56 @@ function placeOrigin(popup: HTMLElement, trigger: Trigger | null) {
   popup.style.setProperty("--origin", `${Math.round(x)}px ${Math.round(y)}px`);
 }
 
+/** Where the trigger is now: its element's box, or the box it had (an element that is gone). */
+const boxOf = (trigger: Trigger): Box =>
+  trigger.element?.isConnected ? trigger.element.getBoundingClientRect() : trigger.box;
+
+/**
+ * The transform that puts `box`, scaled about its middle and keeping its
+ * proportions, over `at`: as big as fits inside it, on its middle.
+ */
+function zoomedInto(box: Box, at: Box): string {
+  const scale = Math.min(at.width / box.width, at.height / box.height);
+  const dx = at.left + at.width / 2 - (box.left + box.width / 2);
+  const dy = at.top + at.height / 2 - (box.top + box.height / 2);
+  return `translate(${dx}px, ${dy}px) scale(${scale})`;
+}
+
+/**
+ * A popup growing out of its trigger (a folder's tile), as a phone's folder
+ * opens: from the trigger's size and place to its own, easing out, and
+ * showing in its first moment, so the tile looks to become it. Only transform
+ * and opacity, which the compositor runs smoothly whatever the page is doing.
+ * Its CSS animation is off (data-zoom, Dialog.module.css). Nothing with
+ * reduced motion.
+ */
+function growFrom(popup: HTMLElement, trigger: Trigger) {
+  if (reducedMotion()) return;
+  // Measured as itself (Strict Mode opens the same dialog twice).
+  stopZoom(popup);
+  const from = zoomedInto(popup.getBoundingClientRect(), boxOf(trigger));
+  const grow = { id: "zoom", duration: motion.zoom, easing: motion.easeOut };
+  popup.animate([{ transform: from }, { transform: "none" }], grow);
+  popup.animate([{ opacity: 0 }, { opacity: 1 }], { id: "zoom", duration: motion.zoom * 0.3, easing: "linear" });
+}
+
+/**
+ * Stops `popup` growing (growFrom), if it still is, so its box is its own
+ * again; returns how it looked, to go on from there (closed half way in).
+ */
+function stopZoom(popup: HTMLElement): Keyframe | null {
+  const growing = popup.getAnimations().filter((animation) => animation.id === "zoom");
+  if (!growing.length) return null;
+  const { transform, opacity } = getComputedStyle(popup);
+  for (const animation of growing) animation.cancel();
+  return { transform, opacity };
+}
+
 /**
  * Opens a modal popup, origin-aware: it grows from 0.95 of its size, from what
- * opened it (Dialog.module.css: --origin). For a <dialog> not made by Dialog
- * (the login prompt).
+ * opened it (Dialog.module.css: --origin), or for a `zoom` trigger, out of it
+ * from its size (growFrom). For a <dialog> not made by Dialog (the login
+ * prompt).
  */
 export function openPopup(popup: HTMLDialogElement, trigger: Trigger | null) {
   // The page stops scrolling under a popup (overflow: hidden). If it had a
@@ -74,7 +125,8 @@ export function openPopup(popup: HTMLDialogElement, trigger: Trigger | null) {
   const root = document.documentElement;
   if (innerWidth - root.clientWidth > 0) root.style.setProperty("scrollbar-gutter", "stable");
   popup.showModal();
-  placeOrigin(popup, trigger);
+  if (trigger?.zoom) growFrom(popup, trigger);
+  else placeOrigin(popup, trigger);
 }
 
 /** Once the last popup has closed, the page's scrollbar takes its room back. */
@@ -85,13 +137,17 @@ export function releasePage() {
 /**
  * A popup leaving: a copy of it, as it is now, over everything (the top layer,
  * so over a dialog under it too), shrinks back to 0.95 towards what opened it
- * and fades, with its backdrop; 20% quicker than it came in. Taken while the
+ * and fades, with its backdrop; 20% quicker than it came in. For a `zoom`
+ * trigger, it shrinks all the way back into it (a folder's tile), fading in
+ * its last 45% as the tile comes back (AppFolders.module.css). Taken while the
  * popup is still on screen; `play` once it is gone. Takes no taps, and is
  * hidden from screen readers. Nothing with reduced motion.
  */
 export function leavingCopy(popup: HTMLElement, trigger: Trigger | null): { play: () => void } | null {
   if (reducedMotion() || !popup.isConnected || !popup.matches("[open]")) return null;
   const parent = popup.parentElement;
+  // Closed while still growing: measured as itself, and leaving from how it looked.
+  const now = stopZoom(popup);
   const box = popup.getBoundingClientRect();
   const menu = popup.dataset.kind === "menu";
   const copy = document.createElement("div");
@@ -142,6 +198,7 @@ export function leavingCopy(popup: HTMLElement, trigger: Trigger | null): { play
         copy.style.zIndex = "2147483647";
       }
       for (const [twin, top, left] of scrolled) twin.scrollTo(left, top);
+      if (trigger?.zoom) return zoomBack(copy, box, trigger, now);
       // Towards the trigger as it is now (its class gives it transform-origin: var(--origin)).
       placeOrigin(copy, trigger);
       const duration = exitMs(menu ? motion.dropdown : motion.base);
@@ -166,6 +223,31 @@ export function leavingCopy(popup: HTMLElement, trigger: Trigger | null): { play
   };
 }
 
+// A leaving copy (at `box`, where the popup was) shrinking back into its
+// trigger as it is now, from how the popup looked (`now`: still growing, or
+// itself), and fading in its last 45%, with its backdrop; then gone.
+function zoomBack(copy: HTMLElement, box: Box, trigger: Trigger, now: Keyframe | null) {
+  const duration = exitMs(motion.zoom);
+  copy.style.transformOrigin = "50% 50%";
+  const from = { transform: now?.transform ?? "none" };
+  const shrink = copy.animate([from, { transform: zoomedInto(box, boxOf(trigger)) }], {
+    duration,
+    easing: motion.easeOut,
+    fill: "forwards",
+  });
+  const fade = { duration: duration * 0.45, delay: duration * 0.55, easing: "linear", fill: "both" as const };
+  copy.animate([{ opacity: now?.opacity ?? 1 }, { opacity: 0 }], fade);
+  try {
+    copy.animate([{ opacity: 1 }, { opacity: 0 }], { duration, easing: motion.easeOut, pseudoElement: "::backdrop" });
+  } catch {
+    // Its backdrop goes when it does.
+  }
+  void shrink.finished.then(
+    () => copy.remove(),
+    () => copy.remove(),
+  );
+}
+
 // The apps' modals and panels: a modal <dialog> that is open while it is mounted,
 // shown for a useAppView panel. Escape, a click on the backdrop and Back close it
 // (onClose goes back in history); closing hands focus back to where it was.
@@ -178,13 +260,15 @@ export function leavingCopy(popup: HTMLElement, trigger: Trigger | null): { play
 // button or card pressed, `origin` for a menu opened at a point), and leaves
 // back into it, 20% quicker (leavingCopy: a copy plays the exit once React has
 // taken the dialog away). A `menu` (a short list of actions by its trigger) is
-// as quick as a dropdown.
+// as quick as a dropdown. With `zoomFrom` (a folder's tile), it grows out of
+// that element from its size instead, and shrinks back into it.
 export function Dialog({
   className,
   style,
   onClose,
   origin,
   kind = "dialog",
+  zoomFrom,
   children,
   ...labelling
 }: {
@@ -194,6 +278,8 @@ export function Dialog({
   /** Where it was opened from, when that isn't the element pressed (a right click's point). */
   origin?: Box;
   kind?: "dialog" | "menu";
+  /** The element it grows out of, from its size, and shrinks back into (a folder's tile), when there is one. */
+  zoomFrom?: () => Element | null;
   children: React.ReactNode;
 } & ({ "aria-labelledby": string } | { "aria-label": string })) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -201,11 +287,17 @@ export function Dialog({
   // finger of the long press that opened it lands there too.
   const pressedBackdrop = useRef(false);
   const initialOrigin = useRef(origin);
+  const initialZoomFrom = useRef(zoomFrom);
   // Before the first paint, so it never shows still closed, nor in place before growing in.
   useLayoutEffect(() => {
     const dialog = ref.current!;
     const previous = document.activeElement as HTMLElement | null;
-    const trigger = initialOrigin.current ? { box: initialOrigin.current } : triggerOf(dialog, previous);
+    const zoomElement = initialZoomFrom.current?.();
+    const trigger: Trigger | null = zoomElement
+      ? { element: zoomElement, box: zoomElement.getBoundingClientRect(), zoom: true }
+      : initialOrigin.current
+        ? { box: initialOrigin.current }
+        : triggerOf(dialog, previous);
     openPopup(dialog, trigger);
     const first = dialog.querySelector<HTMLElement>("[data-autofocus]");
     if (first && (typesFirst() || !first.matches("input, textarea"))) first.focus();
@@ -226,6 +318,7 @@ export function Dialog({
       className={`${className} ${styles.popup}`}
       style={style}
       data-kind={kind}
+      data-zoom={zoomFrom ? "" : undefined}
       {...labelling}
       onCancel={(e) => {
         e.preventDefault();
