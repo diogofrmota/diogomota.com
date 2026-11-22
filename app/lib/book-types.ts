@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 export const shelves = ["want-to-read", "currently-reading", "finished"] as const;
 export type Shelf = (typeof shelves)[number];

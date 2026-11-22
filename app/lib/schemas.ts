@@ -3,7 +3,7 @@
 // types they describe. One definition for both, so they can't drift apart. Each
 // message is what the API answers when a field is wrong.
 
-import { z } from "zod";
+import { z } from "./zod";
 import { fitnessLimits } from "./fitness-types";
 import { defaultServings, normalizeSourceUrl, normalizeTags, recipeLimits } from "./recipe-types";
 import { repeats } from "./task-types";

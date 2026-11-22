@@ -1,5 +1,5 @@
 import "server-only";
-import { z } from "zod";
+import { z } from "./zod";
 import { getSession, type SessionUser } from "@/auth";
 
 /** A refused request: the message the API answers with, and its HTTP status. */

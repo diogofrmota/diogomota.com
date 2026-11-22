@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 export const benficaTeamId = 1903;
 const team = z.object({ id: z.number().nullable(), name: z.string().nullish(), shortName: z.string().nullish() });

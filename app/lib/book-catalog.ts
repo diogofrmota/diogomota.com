@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 import type { CatalogBook, CatalogBookDetail } from "@/lib/book-types";
 
 const catalogResponse = z.object({

@@ -74,6 +74,17 @@ it("nginx logs redact bearer paths, queries and referrers even for upstream and 
           )
           .on("error", reject);
       });
+    // The container runs before nginx in it takes connections (a TLS reset if asked
+    // too soon): wait for an answer first, from a path with nothing secret in it.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await request("/");
+        break;
+      } catch (error) {
+        if (attempt === 40) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    }
     await request(`/reset-password?token=${secret}`);
     await request(`/api/auth/reset-password/${secret}?token=${secret}`);
     await Promise.all(Array.from({ length: 45 }, () => request(`/api/calendar/${secret}?secret=${secret}`)));

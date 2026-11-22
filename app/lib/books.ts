@@ -1,5 +1,5 @@
 import "server-only";
-import { z } from "zod";
+import { z } from "./zod";
 import { query } from "./db";
 import { transaction } from "./spaces";
 import { recordActivity } from "./activity";

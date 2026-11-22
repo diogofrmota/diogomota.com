@@ -3,7 +3,7 @@
 # files on the app's data volume: the profile pictures to
 # backups/avatars_<YYYYMMDD-HHMMSS>.tar.gz and the recipes' photos to
 # backups/recipe-photos_<YYYYMMDD-HHMMSS>.tar.gz; then deletes each kind older
-# than 14 days. Run every 3 days by cron as deploy (infra/crontab); by hand:
+# than 14 days. Run every day by cron as deploy (infra/crontab); by hand:
 #   bash /opt/diogomota/infra/backup.sh
 # COMPOSE_FILE and BACKUP_DIR override the defaults (e.g. to test against the dev stack).
 set -euo pipefail

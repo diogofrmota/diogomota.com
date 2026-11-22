@@ -18,7 +18,7 @@ OFFSITE_DEST="${OFFSITE_DEST:-CHANGE-ME:}"
 # ==============================================================================
 
 OFFSITE_RETENTION_DAYS=90   # offsite copies older than this are deleted; 0 keeps all
-MAX_DUMP_AGE_DAYS=4         # backup.sh runs every 3 days; an older newest dump is an error
+MAX_DUMP_AGE_DAYS=2         # backup.sh runs every day; an older newest dump is an error
 RCLONE_IMAGE=rclone/rclone:1.75.2
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)

@@ -36,9 +36,28 @@ export const test = base.extend({
   },
   context: async ({ context }, provide) => {
     await fakeTmdbImages(context);
+    const violations = await recordCspViolations(context);
     await provide(context);
+    expect(violations, "The Content-Security-Policy (next.config.ts) blocked something").toEqual([]);
   },
 });
+
+// A production build sends a Content-Security-Policy (next.config.ts). Whatever
+// it blocks in a test's pages is listed here, so a new image host, script or
+// request to another site fails a test instead of quietly breaking on the site.
+async function recordCspViolations(context: BrowserContext): Promise<string[]> {
+  const mark = "CSP violation:";
+  await context.addInitScript((mark) => {
+    document.addEventListener("securitypolicyviolation", (event) =>
+      console.error(`${mark} ${event.effectiveDirective} ${event.blockedURI}`),
+    );
+  }, mark);
+  const violations: string[] = [];
+  context.on("console", (message) => {
+    if (message.text().startsWith(mark)) violations.push(message.text());
+  });
+  return violations;
+}
 
 export type TestUser = { username: string; email: string; password: string; name: string };
 

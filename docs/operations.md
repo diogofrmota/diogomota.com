@@ -90,7 +90,7 @@ Every deploy's image stays on Docker Hub as `diogofrmota/diogomota-com:<short SH
 
 ## Backups
 
-[infra/backup.sh](../infra/backup.sh) runs from cron ([infra/crontab](../infra/crontab)) at 03:00 server time (UTC) every 3 days. It writes `backups/diogomota_YYYYMMDD-HHMMSS.sql.gz`: plain SQL without owners or grants, gzipped and tested. Beside it, `backups/avatars_YYYYMMDD-HHMMSS.tar.gz` has the profile pictures and `backups/recipe-photos_YYYYMMDD-HHMMSS.tar.gz` the recipes' photos (the `avatars` and `recipe-photos` folders of the app's `appdata` volume, read from the running app; each skipped, with a line in the log, while the app is down or before anything was written to it). Each category is pruned independently, only after its verified replacement exists, retaining the replacement even if timestamps are unusual. Skipped or failed media backups retain previous archives and produce a DEGRADED/FAILED log entry and nonzero exit status; a successful database category still receives normal 14-day retention. The offsite backup copies only the dumps: the pictures and photos can be added again, the accounts, libraries and recipes can't.
+[infra/backup.sh](../infra/backup.sh) runs from cron ([infra/crontab](../infra/crontab)) at 03:00 server time (UTC) every day. It writes `backups/diogomota_YYYYMMDD-HHMMSS.sql.gz`: plain SQL without owners or grants, gzipped and tested. Beside it, `backups/avatars_YYYYMMDD-HHMMSS.tar.gz` has the profile pictures and `backups/recipe-photos_YYYYMMDD-HHMMSS.tar.gz` the recipes' photos (the `avatars` and `recipe-photos` folders of the app's `appdata` volume, read from the running app; each skipped, with a line in the log, while the app is down or before anything was written to it). Each category is pruned independently, only after its verified replacement exists, retaining the replacement even if timestamps are unusual. Skipped or failed media backups retain previous archives and produce a DEGRADED/FAILED log entry and nonzero exit status; a successful database category still receives normal 14-day retention. The offsite backup copies only the dumps: the pictures and photos can be added again, the accounts, libraries and recipes can't.
 
 The dumps are on the VPS's own disk: if the VPS is lost, so are they. Set up the [offsite backup](#offsite-backup-optional), or copy one to your PC now and then.
 
@@ -205,13 +205,13 @@ If the VPS is gone, start from a dump on your PC or [offsite](#offsite-backup-op
 
 ## Offsite backup (optional)
 
-[infra/offsite-backup.sh](../infra/offsite-backup.sh) copies the newest dump to storage of your choice outside the VPS, with [rclone](https://rclone.org/) run from its Docker image (`rclone/rclone:1.75.2`; nothing is installed on the VPS). It then deletes offsite copies older than 90 days (`OFFSITE_RETENTION_DAYS`). If the newest dump is more than 4 days old, it still copies it but deletes nothing and exits with an error, so failing backups never empty the offsite side.
+[infra/offsite-backup.sh](../infra/offsite-backup.sh) copies the newest dump to storage of your choice outside the VPS, with [rclone](https://rclone.org/) run from its Docker image (`rclone/rclone:1.75.2`; nothing is installed on the VPS). It then deletes offsite copies older than 90 days (`OFFSITE_RETENTION_DAYS`). If the newest dump is more than 2 days old, it still copies it but deletes nothing and exits with an error, so failing backups never empty the offsite side.
 
 The target is `OFFSITE_DEST`, at the top of the script, and the script refuses to run until it's set. Set it in the repo and commit: every deploy copies `infra/` over the VPS's copy.
 
 ### What it costs
 
-Today's dumps are a few KB of gzipped SQL. Even at 10 MB each, 30 copies (90 days, one every 3 days) are 300 MB. List prices as of November 2026:
+Today's dumps are a few KB of gzipped SQL. Even at 10 MB each, 90 copies (90 days, one a day) are 900 MB. List prices as of November 2026:
 
 | Where                                                                                 | Price                                                                                 | For these dumps                                              |
 | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
@@ -243,7 +243,7 @@ Other providers differ only in step 1 and the storage type picked in `rclone con
 
 3. Try it: `OFFSITE_DEST=offsite: bash infra/offsite-backup.sh`, then `rclone lsl offsite:` lists the copy under its real name. In Backblaze's web UI, both the name and the contents are scrambled.
 4. In the repo: set `OFFSITE_DEST="${OFFSITE_DEST:-offsite:}"` at the top of `infra/offsite-backup.sh` and uncomment the `offsite-backup.sh` line in `infra/crontab`. Commit and push, then on the VPS: `crontab infra/crontab` (and `crontab -l` to check).
-5. After the next backup day: `tail logs/offsite-backup.log`.
+5. The next morning: `tail logs/offsite-backup.log`.
 
 Optional hardening: a key that can't delete files (in B2, no `deleteFiles` capability) together with `OFFSITE_RETENTION_DAYS=0` means even someone who takes over the VPS can't delete the offsite copies. A lifecycle rule on the bucket then expires the old ones.
 
@@ -414,7 +414,7 @@ ssh deploy@162.19.252.190
 cd /opt/diogomota
 docker compose ps                                          # all Up, app and postgres healthy
 docker compose logs --since 720h app | grep -i 'schema'      # nothing: Better Auth checks the schema when it starts
-ls -lt backups | head -n 3                                 # the newest is at most 3 days old
+ls -lt backups | head -n 3                                 # the newest is at most a day old
 tail -n 3 logs/backup.log logs/renew-cert.log              # no ERROR (and logs/offsite-backup.log, once set up)
 docker compose run --rm certbot certificates | grep -E 'Domains|Expiry'
 df -h / && docker system df                                # disk use under about 80%
@@ -422,7 +422,7 @@ df -h / && docker system df                                # disk use under abou
 
 Every few months, also copy the newest dump to your PC (see [Backups](#backups)) and do a [restore dry run](#2-dry-run) with it, so you know it loads.
 
-What grows on disk: the app images (the deployed one and two older ones), about five dumps, container logs (capped at 30 MB each) and the database. `docker image prune` removes dangling images and is always safe. `docker image prune -a` also removes the images kept for a quick rollback, which would then be downloaded again.
+What grows on disk: the app images (the deployed one and two older ones), about 14 dumps (and their pictures and photos), container logs (capped at 30 MB each) and the database. `docker image prune` removes dangling images and is always safe. `docker image prune -a` also removes the images kept for a quick rollback, which would then be downloaded again.
 
 ## Remediation rollout and media cleanup
 
