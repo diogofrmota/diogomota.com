@@ -405,10 +405,11 @@ test.describe("on a phone", () => {
     await touchDrag(page, { x: 320, y }, { x: 60, y });
     await expect.poll(() => todoTitles(page)).toEqual(["Coffee", "Apples"]);
     const toast = page.getByRole("status").filter({ hasText: "Deleted “Bread”" });
-    // Above the tab bar along the bottom of the screen.
+    // At the bottom of the screen (Tasks has no tabs there), all of it in view.
+    await expect(page.getByRole("navigation")).toHaveCount(0);
     const box = (await toast.boundingBox())!;
-    const tabs = (await page.getByRole("navigation", { name: "Tasks", exact: true }).boundingBox())!;
-    expect(box.y + box.height).toBeLessThanOrEqual(tabs.y);
+    expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    expect(box.y + box.height).toBeGreaterThan(page.viewportSize()!.height - 100);
     await toast.getByRole("button", { name: "Undo" }).tap();
     await expect.poll(() => todoTitles(page)).toEqual(["Coffee", "Apples", "Bread"]);
     const gone = saved(page, /\/tasks\/[^/]+$/, "DELETE");

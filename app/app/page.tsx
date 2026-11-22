@@ -31,7 +31,7 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
 // (FrontPage, in SiteFrame): what the site is, Sign up, the apps in three
 // groups, How it works and How to add to Home Screen; `next` is set when the user was sent here from a
 // protected page (proxy.ts): Log in and Sign up return there, and for an app
-// its prompt opens. Logged in, in the user's theme, without a tab bar: who is
+// its prompt opens. Logged in, in the user's theme, without a top bar: who is
 // here at the top (ProfileHeader: the picture, the name, the username and
 // Account settings), then the apps in three folders, For Couples, Trackers and
 // Health (AppFolders), each with what is waiting in its apps (lib/badges.ts),

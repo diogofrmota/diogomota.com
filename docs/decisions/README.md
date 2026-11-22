@@ -27,3 +27,4 @@ One short record per decision that shapes the site: what was chosen, why, and wh
 | [0021](0021-offline-durability-and-test-isolation.md) | Durable offline operations and disposable test resources | v2.0.0 |
 | [0022](0022-small-deploy-gate.md) | A small deploy gate; the rest of the tests run for what a change touches | unreleased |
 | [0023](0023-folders-and-a-group-for-couples.md) | Home is folders; For Couples is a group of two | unreleased |
+| [0024](0024-a-top-bar-with-home.md) | A top bar with ‹ Home; tabs only for an app's own views | unreleased |

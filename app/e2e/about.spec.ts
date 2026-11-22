@@ -153,7 +153,10 @@ test("Report a bug, from home's footer, emails Diogo what went wrong with the ac
   await expect(page).toHaveURL("/");
   await main.getByRole("link", { name: "Report a bug" }).click();
   await expect(page).toHaveURL("/report-bug");
-  await expect(page.getByRole("navigation", { name: "Account" })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("link", { name: "Account", exact: true })).toHaveAttribute(
+    "href",
+    "/account",
+  );
   await expect(form.getByLabel("Your name")).toHaveValue(user.name);
   await expect(form.getByLabel("Your email")).toHaveValue(user.email);
   const report = `The calendar is blank ${Date.now()}.`;

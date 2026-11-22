@@ -6,7 +6,7 @@ import { defaultTheme } from "@/lib/themes";
 export const metadata: Metadata = { title: "page not found" };
 
 // A path that isn't a page (or an app's view that isn't one): in the apps'
-// look and the user's theme, with the tab bar, and Go home.
+// look and the user's theme, with the top bar, and Go home.
 export default async function NotFound() {
   const user = await getUser();
   return (

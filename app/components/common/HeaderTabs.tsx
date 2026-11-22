@@ -1,96 +1,62 @@
+"use client";
+
 import Link from "next/link";
-import { authHref } from "@/lib/next-path";
+import { useRouter } from "next/navigation";
 import { Avatar } from "./Avatar";
-import { AppsIcon, LoginIcon, UserPlusIcon } from "./icons";
+import { ChevronLeftIcon } from "./icons";
 import { LinkPending } from "./LinkPending";
 import { SegmentThumb } from "./motion";
 
 import type { TabNavProps } from "./AppShell";
 import shell from "./AppShell.module.css";
+import ui from "./ui.module.css";
 
-/** The tab of a page outside the apps that is current: account, or one of the login pages. */
-export type LauncherTab = "account" | "login" | "signup";
+/** Where the top bar's link on the left goes: home, or (on a friend's profile) back. */
+export type BackTarget = {
+  label: string;
+  href: string;
+  /** Back in the history when the page was opened from another of the site's, `href` when it was loaded here. */
+  history?: boolean;
+};
+
+const home: BackTarget = { label: "Home", href: "/" };
+
+/** Whether this page is the one the browser loaded, not one reached from another page of the site. */
+function loadedHere() {
+  const [entry] = performance.getEntriesByType("navigation");
+  return !entry || entry.name === location.href;
+}
+
+/** ‹ Home (or ‹ Back), on the left of the top bar. */
+function BackLink({ back }: { back: BackTarget }) {
+  const router = useRouter();
+  return (
+    <Link
+      href={back.href}
+      className={shell.back}
+      onClick={(event) => {
+        if (!back.history || loadedHere()) return;
+        event.preventDefault();
+        router.back();
+      }}
+    >
+      <LinkPending icon={<ChevronLeftIcon />} />
+      {back.label}
+    </Link>
+  );
+}
 
 /** The current tab's underline: one per tab bar (its layoutId), sliding from tab to tab. */
 function Underline({ bar }: { bar: string }) {
   return <SegmentThumb layoutId={`tab-underline:${bar}`} className={shell.underline} />;
 }
 
-/** Apps, at the end of every tab bar: /, the apps, and the way from one app to another. */
-function AppsTab() {
-  return (
-    <li>
-      <Link href="/">
-        <LinkPending icon={<AppsIcon />} />
-        Apps
-      </Link>
-    </li>
-  );
-}
-
 /**
- * The tab bar of the pages outside the apps (/account, the login pages,
- * /privacy, an invite, the 404; / itself has none, its icons are the way
- * on): Account (with the profile picture) and Apps; on /account, only Apps,
- * the way back (Log out is on the page). Logged out, Log in and Sign up in
- * Account's place, each its own icon, the current one marked. `current` is
- * none on the pages that aren't one of the tabs.
+ * An app's tabs, each its icon and name: along the bottom of a phone's screen,
+ * in the middle of the top bar on a wider one (AppShell.module.css). Only for
+ * an app with views of its own to switch between.
  */
-export function LauncherTabs({
-  current,
-  username,
-  name,
-  avatarUrl,
-  next,
-}: {
-  current?: LauncherTab;
-  username: string | null;
-  name?: string | null;
-  avatarUrl?: string | null;
-  next?: string | null;
-}) {
-  return (
-    <nav aria-label="Account" className={shell.tabBar}>
-      <ul>
-        {username ? (
-          current !== "account" && (
-            <li>
-              <Link href="/account">
-                <Avatar username={username} name={name} url={avatarUrl} className={shell.navAvatar} />
-                Account
-                <LinkPending />
-              </Link>
-            </li>
-          )
-        ) : (
-          <>
-            <li>
-              <Link href={authHref("/login", next)} aria-current={current === "login" ? "page" : undefined}>
-                <LinkPending icon={<LoginIcon />} />
-                Log in
-                {current === "login" && <Underline bar="launcher" />}
-              </Link>
-            </li>
-            <li>
-              <Link href={authHref("/signup", next)} aria-current={current === "signup" ? "page" : undefined}>
-                <LinkPending icon={<UserPlusIcon />} />
-                Sign up
-                {current === "signup" && <Underline bar="launcher" />}
-              </Link>
-            </li>
-          </>
-        )}
-        <AppsTab />
-      </ul>
-    </nav>
-  );
-}
-
-/**
- * An app's tab bar: its tabs, each its icon and name, then Apps. Along the
- * bottom of a phone's screen, across the top of a wider one (AppShell.module.css).
- */
-export function TabBar({ label, tabs, current, onSelect }: TabNavProps) {
+function TabBar({ label, tabs, current, onSelect }: TabNavProps) {
   return (
     <nav aria-label={label} className={shell.tabBar}>
       <ul>
@@ -108,8 +74,55 @@ export function TabBar({ label, tabs, current, onSelect }: TabNavProps) {
             </button>
           </li>
         ))}
-        <AppsTab />
       </ul>
     </nav>
+  );
+}
+
+/**
+ * The top bar of the apps and the pages around them (AppFrame): ‹ Home on the
+ * left (‹ Back on a friend's profile), then the app's name in an app; the
+ * user's picture on the right, the way to Account (not on /account itself,
+ * nor logged out). An app's tabs, when it has more than one, are in it too:
+ * on a phone they are fixed along the bottom of the screen, within reach of a
+ * thumb; on a wider screen, in the middle of the bar.
+ */
+export function TopBar({
+  title,
+  back = home,
+  nav,
+  username,
+  name,
+  avatarUrl,
+  onAccount = false,
+}: {
+  /** The app's name; none on the pages around the apps, whose heading is just under it. */
+  title?: string;
+  back?: BackTarget;
+  nav?: TabNavProps;
+  /** Null when logged out: no Account. */
+  username: string | null;
+  name?: string | null;
+  avatarUrl?: string | null;
+  /** On /account: no link to it. */
+  onAccount?: boolean;
+}) {
+  return (
+    <header className={shell.topBar}>
+      <div className={shell.lead}>
+        <BackLink back={back} />
+        {title && <span className={shell.title}>{title}</span>}
+      </div>
+      {nav && nav.tabs.length > 1 && <TabBar {...nav} />}
+      <div className={shell.trail}>
+        {username && !onAccount && (
+          // Named by hidden text, not aria-label: the initials it shows aren't its name.
+          <Link href="/account" className={shell.account}>
+            <Avatar username={username} name={name} url={avatarUrl} className={shell.navAvatar} />
+            <span className={ui.srOnly}>Account</span>
+          </Link>
+        )}
+      </div>
+    </header>
   );
 }

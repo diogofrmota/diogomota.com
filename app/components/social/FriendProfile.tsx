@@ -10,7 +10,10 @@ import type { SocialApp } from "./social-data";
 /**
  * A friend's profile (/shows/profile/id, /books/profile/id): the app's frame
  * and tabs around it, each tab a link back into the app, with none of the
- * app's own data loaded. Profiles live only in memory, never kept offline.
+ * app's own data loaded. ‹ Back in the top bar goes back to where it was
+ * opened from (the Friends list, a title, the activity), or to your own
+ * profile when the page was loaded here (the web app on a phone has no
+ * browser Back). Profiles live only in memory, never kept offline.
  */
 export function FriendProfile({
   app,
@@ -40,6 +43,7 @@ export function FriendProfile({
         theme={theme}
         username={user.username}
         avatarUrl={user.avatarUrl}
+        back={{ label: "Back", href: `/${app}/profile`, history: true }}
         nav={{
           label: name,
           tabs: tabs.map((tab) => ({ ...tab, view: null })),

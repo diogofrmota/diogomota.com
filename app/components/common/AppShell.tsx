@@ -3,7 +3,7 @@
 import { Activity, useCallback, useMemo, useState } from "react";
 import { AppViewContext, useAppViewHistory, type AppViewState } from "@/hooks/useAppView";
 import { themeBackground, type Theme } from "@/lib/themes";
-import { LauncherTabs, TabBar, type LauncherTab } from "./HeaderTabs";
+import { TopBar, type BackTarget } from "./HeaderTabs";
 import { OfflineSupport } from "./OfflineSupport";
 import styles from "./AppShell.module.css";
 import themeStyles from "./themes.module.css";
@@ -12,12 +12,12 @@ export type AppTab = {
   /** Unique within the app; the path of its view (/shows/discover) and saved in history entries (useAppView). */
   id: string;
   label: string;
-  /** With its label in the tab bar: over it on a phone, beside it on a wider screen. */
+  /** With its label in the tab bar: over it on a phone, beside it on a wider screen (an app with one view has no tabs). */
   icon: React.ReactNode;
   view: React.ReactNode;
 };
 
-/** What the tab bars need to show the tabs and switch between them. */
+/** What the tab bar needs to show the tabs and switch between them. */
 export type TabNavProps = {
   /** Names the navigation landmark: the app's name. */
   label: string;
@@ -29,12 +29,15 @@ export type TabNavProps = {
 /**
  * The frame of the apps and every page around them (/ logged in, /account, the
  * login pages, /privacy, an invite, the group's settings, the 404), in the
- * user's theme, with a tab bar (HeaderTabs): an app's tabs, or Account (or Log
- * in and Sign up) and Apps. Along the bottom of a phone's screen, within reach
- * of a thumb, and across the top of a wider one, as its header. With an app's
- * tabs, the page has the whole width; without (/ and the rest, For Couples'
- * apps before there is a group) it is a centered column. `bare` leaves the tab
- * bar out: on / logged in, whose profile and folders are the way to everything,
+ * user's theme, with a top bar (HeaderTabs' TopBar): ‹ Home on the left (to /:
+ * logged in, the profile and the folders; logged out, the front page), the
+ * app's name in an app, and the user's picture on the right, the way to
+ * Account. An app with views of its own has its tabs in it too: along the
+ * bottom of a phone's screen, within reach of a thumb, and in the middle of
+ * the bar on a wider one. In an app (its tabs, or its one view, as Calendar's)
+ * the page has the whole width; without (/account and the rest, For Couples'
+ * apps before there is a group) it is a centered column. `bare` leaves the bar
+ * out: on / logged in, whose profile and folders are the way to everything,
  * and on the error page, which can't tell who is logged in.
  */
 export function AppFrame({
@@ -42,31 +45,31 @@ export function AppFrame({
   username,
   name,
   avatarUrl,
-  next,
   current,
   inApp = false,
-  appName = "Calendar",
+  appName,
   bare = false,
+  back,
   nav,
   children,
   overlay,
 }: {
   theme: Theme;
-  /** Null when logged out: the tab bar has Log in and Sign up. */
+  /** Null when logged out: no Account in the top bar. */
   username: string | null;
-  /** The user's name, for the initials in Account's tab without a picture. */
+  /** The user's name, for the initials in Account's picture without one. */
   name?: string | null;
-  /** The user's profile picture, in the tab bar's Account (lib/users.ts). */
+  /** The user's profile picture, Account's in the top bar (lib/users.ts). */
   avatarUrl?: string | null;
-  /** Where Log in and Sign up return to. */
-  next?: string | null;
-  /** Which of Account (or Log in, Sign up) is the page shown, if one is. */
-  current?: LauncherTab;
-  /** An app's page: its tab bar (nav), or only Apps in For Couples' apps before there is a group. */
+  /** On /account, which the top bar doesn't link to. */
+  current?: "account";
+  /** An app's page: its name in the top bar, and its tabs (nav) once it has them (For Couples' apps before there is a group don't). */
   inApp?: boolean;
-  /** The app, naming its tab bar when it has no tabs (before there is a group). */
+  /** The app, named in the top bar: its tabs' name (nav's label) without it. */
   appName?: string;
   bare?: boolean;
+  /** Where the top bar's link on the left goes: ‹ Home without it. */
+  back?: BackTarget;
   nav?: TabNavProps;
   /** The page, in <main>. */
   children: React.ReactNode;
@@ -74,19 +77,25 @@ export function AppFrame({
   overlay?: React.ReactNode;
 }) {
   const app = inApp || !!nav;
+  const tabs = !bare && !!nav && nav.tabs.length > 1;
   return (
     <div
-      className={`${themeStyles.theme} ${styles.shell} ${nav ? "" : styles.withoutNav} ${bare ? "" : styles.withNav}`}
+      className={`${themeStyles.theme} ${styles.shell} ${nav ? "" : styles.withoutNav} ${bare ? "" : styles.withTopBar} ${tabs ? styles.withTabs : ""}`}
       data-theme={theme}
     >
       {/* Browser UI color on mobile. React moves it into <head>. */}
       <meta name="theme-color" content={themeBackground(theme)} />
-      {/* Before the page: the header on a wide screen (sticky), fixed to the bottom on a phone. */}
-      {bare ? null : app ? (
-        // For Couples' apps before there is a group: no tabs yet, only Apps.
-        <TabBar {...(nav ?? { label: appName, tabs: [], current: "", onSelect: () => {} })} />
-      ) : (
-        <LauncherTabs current={current} username={username} name={name} avatarUrl={avatarUrl} next={next} />
+      {/* Before the page: sticky at the top, its tabs (if any) fixed to the bottom on a phone. */}
+      {bare ? null : (
+        <TopBar
+          title={app ? (appName ?? nav?.label) : undefined}
+          back={back}
+          nav={nav}
+          username={username}
+          name={name}
+          avatarUrl={avatarUrl}
+          onAccount={current === "account"}
+        />
       )}
       <main
         className={`${styles.main} ${nav?.label === "Calendar" && nav.current === "calendar" ? styles.calendarMain : ""}`}
@@ -98,9 +107,10 @@ export function AppFrame({
   );
 }
 
-// An app in the frame: the current view and its tab bar, ending with Apps, the
-// way to the other apps and to Account. The view and the open panels
-// are in the URL (useAppView), so Back, reload and links work.
+// An app in the frame: the current view, and its tabs when it has more than
+// one, under a top bar with ‹ Home (the way to the other apps) and Account.
+// The view and the open panels are in the URL (useAppView), so Back, reload
+// and links work.
 //
 // Views that are switched away from stay mounted but hidden (<Activity>), so
 // they keep their state; their effects stop until they are shown again. The
@@ -127,7 +137,7 @@ export function AppShell({
   /** The first tab is the default view. */
   tabs: readonly AppTab[];
   username: string;
-  /** The user's profile picture, in the account menu. */
+  /** The user's profile picture, Account's in the top bar. */
   avatarUrl?: string | null;
   /** The user's saved theme, rendered by the server. It is changed in /account. */
   theme: Theme;

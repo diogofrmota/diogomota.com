@@ -71,14 +71,19 @@ export async function logIn(page: Page, login: string, password: string, path = 
   await page.getByRole("button", { name: "Log in" }).click();
 }
 
+/** ‹ Home, on the left of the top bar of the apps and the pages around them: the way to /. */
+export function homeLink(page: Page) {
+  return page.getByRole("banner").getByRole("link", { name: "Home", exact: true });
+}
+
 /**
- * Goes where the account menu went before the tab bars had it all: / (its
- * Switch app, the tab bars' Apps now), and from there to Account (Account
- * settings under the profile on /, which has no tab bar).
+ * Goes where the account menu went before the top bar had it all: / (its
+ * Switch app, the top bar's ‹ Home now), and from there to Account (Account
+ * settings under the profile on /, which has no top bar).
  */
 export async function followAccountMenu(page: Page, name: "Account" | "Switch app") {
-  const apps = page.getByRole("link", { name: "Apps", exact: true });
-  if (await apps.isVisible()) await apps.click();
+  const home = homeLink(page);
+  if (await home.isVisible()) await home.click();
   if (name === "Switch app") return;
   await expect(page).toHaveURL("/");
   await page.getByRole("main").getByRole("link", { name: "Account settings", exact: true }).click();
@@ -132,16 +137,16 @@ export async function saveTheme(page: Page, name: string) {
 
 /**
  * Account where a logged-in page has it (once the account menu, by the
- * username): Account settings under the profile on /, or its tab, with the
- * profile picture, in the tab bar of the pages around the apps (/privacy, an
- * invite, the 404; not /account itself).
+ * username): Account settings under the profile on /, or the profile picture
+ * on the right of the top bar of the apps and the pages around them (/privacy,
+ * an invite, the 404; not /account itself).
  */
 export function accountButton(page: Page, username: string) {
   void username;
   return page
     .getByRole("main")
     .getByRole("link", { name: "Account settings", exact: true })
-    .or(page.locator('nav[aria-label="Account"]:not(header nav) a[href="/account"]'));
+    .or(page.getByRole("banner").getByRole("link", { name: "Account", exact: true }));
 }
 
 /** Logs out with Log out on /account, which lands home: logged out, the website, Log in in its header. */
@@ -182,8 +187,8 @@ export async function confirmEmail(page: Page, address: string, expected = "Your
 }
 
 /**
- * The names of a tab bar's links, as screen readers read them (a picture or an
- * icon in one is hidden from them): ["Account", "Apps"] logged in.
+ * The names of a bar's links, as screen readers read them (a picture or an
+ * icon in one is hidden from them): ["Home", "Account"] in the top bar logged in.
  */
 export async function linkNames(nav: Locator): Promise<string[]> {
   return nav.getByRole("link").evaluateAll((links) =>

@@ -1,14 +1,26 @@
 import { type Page } from "@playwright/test";
-import { expect, followAccountMenu, newUser, openFromHome, saveTheme, signUp, test } from "./fixtures";
+import {
+  expect,
+  followAccountMenu,
+  homeLink,
+  linkNames,
+  newUser,
+  openFromHome,
+  saveTheme,
+  signUp,
+  test,
+} from "./fixtures";
 
-// The tabs. Calendar and Tasks have one view each (the group's settings are a
-// page of their own, /couples); Shows has no settings.
+// The tabs, of the apps with views of their own. Calendar and Tasks have one
+// view each, so no tabs (the group's settings are a page of their own, /couples).
 const appViews = [
-  { path: "/calendar", name: "Calendar", views: ["Calendar"] },
-  { path: "/tasks", name: "Tasks", views: ["Tasks"] },
   { path: "/shows", name: "Shows", views: ["Library", "Discover", "Profile"] },
   { path: "/books", name: "Books", views: ["Library", "Discover", "Profile"] },
   { path: "/fitness", name: "Fitness", views: ["Today", "Workouts", "Progress"] },
+] as const;
+const oneView = [
+  { path: "/calendar", name: "Calendar" },
+  { path: "/tasks", name: "Tasks" },
 ] as const;
 
 /** A view's URL: the app's own path for its first view, the view under it for the others. */
@@ -17,6 +29,8 @@ const viewUrl = (app: (typeof appViews)[number], view: string) =>
 /** A view's heading: its tab's name, but your own profile is "My profile". */
 const headingOf = (view: string) => (view === "Profile" ? "My profile" : view);
 
+/** The top bar: ‹ Home, the app's name and Account; the app's tabs are in it too. */
+const topBar = (page: Page) => page.getByRole("banner");
 /** The app's tabs: in the middle of the top bar on a wide screen, along the bottom on a phone. */
 const tabBar = (page: Page, app: string) => page.getByRole("navigation", { name: app, exact: true });
 const tab = (page: Page, app: string, view: string) =>
@@ -50,19 +64,31 @@ async function expectNoHorizontalScroll(page: Page) {
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 }
 
-test("each app's tabs switch views, each at its own URL, without loading a page, in a header that stays at the top; Apps goes to / @smoke", async ({
+test("each app's tabs switch views, each at its own URL, without loading a page, in a header that stays at the top; ‹ Home goes to / @smoke", async ({
   page,
 }) => {
   await openApp(page, "/calendar");
+  // An app with one view: its name and ‹ Home in the top bar, and no tabs.
+  for (const app of oneView) {
+    await page.goto(app.path);
+    await expect(page).toHaveTitle(`${app.name} · diogo mota`);
+    await expect(viewHeading(page)).toHaveText(app.name);
+    await expect(topBar(page)).toContainText(app.name);
+    expect(await linkNames(topBar(page))).toEqual(["Home", "Account"]);
+    await expect(page.getByRole("navigation")).toHaveCount(0);
+  }
   for (const app of appViews) {
     await page.goto(app.path);
     await expect(page).toHaveTitle(`${app.name} · diogo mota`);
     await expect(viewHeading(page)).toHaveText(app.views[0]);
-    await expect(page.getByRole("banner")).toHaveCount(0);
+    // On desktop one header: ‹ Home and the app's name, the tabs, then Account.
+    await expect(topBar(page)).toContainText(app.name);
+    expect(await linkNames(topBar(page))).toEqual(["Home", "Account"]);
     const nav = tabBar(page, app.name);
+    await expect(topBar(page).getByRole("navigation", { name: app.name, exact: true })).toBeVisible();
     await expect(nav.getByRole("button")).toHaveText([...app.views]);
     await expect(tab(page, app.name, app.views[0])).toHaveAttribute("aria-current", "page");
-    // On desktop the tab bar is the header, at the top as the page scrolls, its tabs keeping their widths.
+    // At the top as the page scrolls, its tabs keeping their widths.
     const box = (await nav.boundingBox())!;
     expect(box.y).toBe(0);
     expect(box.height).toBeLessThan(80);
@@ -84,8 +110,8 @@ test("each app's tabs switch views, each at its own URL, without loading a page,
     }
     expect(await page.evaluate(() => "sameDocument" in window)).toBe(true);
 
-    // Apps goes to /, which has no header or tab bar: the profile, with Account settings, and the folders.
-    await nav.getByRole("link", { name: "Apps", exact: true }).click();
+    // ‹ Home goes to /, which has no header or tab bar: the profile, with Account settings, and the folders.
+    await homeLink(page).click();
     await expect(page).toHaveURL("/");
     await expect(page.getByRole("banner")).toHaveCount(0);
     await expect(page.getByRole("navigation")).toHaveCount(0);
@@ -190,17 +216,18 @@ test("For Couples' apps and settings offer a group until there is one; leaving i
 }) => {
   await signUp(page, newUser(), "/signup?next=%2Fcalendar");
   await expect(viewHeading(page)).toHaveText("For Couples");
-  // No tabs yet: the tab bar has only Apps.
-  await expect(page.getByRole("banner")).toHaveCount(0);
-  await expect(tabBar(page, "Calendar").getByRole("button")).toHaveCount(0);
-  await expect(tabBar(page, "Calendar").getByRole("link", { name: "Apps", exact: true })).toBeVisible();
+  // No tabs yet: the top bar has ‹ Home, the app's name and Account.
+  await expect(topBar(page)).toContainText("Calendar");
+  expect(await linkNames(topBar(page))).toEqual(["Home", "Account"]);
+  await expect(page.getByRole("navigation")).toHaveCount(0);
   for (const [path, app] of [
     ["/tasks", "Tasks"],
     ["/recipes", "Recipes"],
   ]) {
     await page.goto(path);
     await expect(viewHeading(page)).toHaveText("For Couples");
-    await expect(tabBar(page, app).getByRole("button")).toHaveCount(0);
+    await expect(topBar(page)).toContainText(app);
+    await expect(page.getByRole("navigation")).toHaveCount(0);
   }
   await page.goto("/couples");
   await expect(viewHeading(page)).toHaveText("For Couples");
@@ -257,7 +284,7 @@ test("theme changes show on pages reached with the back button, and keep the vie
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
-  test("at 320px, the tabs are along the bottom (each its icon and name), with an Apps link and no top bar", async ({
+  test("at 320px, ‹ Home, the app's name and Account are in a top bar, and the tabs along the bottom (each its icon and name)", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 320, height: 740 });
@@ -266,12 +293,35 @@ test.describe("on a phone", () => {
     await expect(page).toHaveURL("/shows");
     expect((await page.request.post("/api/shared/spaces", { data: {} })).ok()).toBe(true);
 
+    // The top bar: at the top of the screen, ‹ Home on the left, the app's name in the middle, Account on the right, each at least 44px to tap.
+    async function expectTopBar(name: string) {
+      const bar = (await topBar(page).boundingBox())!;
+      expect(bar.y).toBe(0);
+      const home = (await homeLink(page).boundingBox())!;
+      const account = (await topBar(page).getByRole("link", { name: "Account", exact: true }).boundingBox())!;
+      const title = (await topBar(page).getByText(name, { exact: true }).boundingBox())!;
+      expect(home.x).toBeLessThan(title.x);
+      expect(title.x + title.width).toBeLessThan(account.x);
+      expect(Math.abs(title.x + title.width / 2 - 160)).toBeLessThanOrEqual(2);
+      for (const box of [home, account]) {
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.y + box.height).toBeLessThanOrEqual(bar.y + bar.height);
+      }
+    }
+
+    // One view: no tabs, so the view goes down to the bottom of the screen.
+    for (const app of oneView) {
+      await page.goto(app.path);
+      await expect(viewHeading(page)).toHaveText(app.name);
+      await expectTopBar(app.name);
+      await expect(page.getByRole("navigation")).toHaveCount(0);
+      await expectNoHorizontalScroll(page);
+    }
+
     for (const app of appViews) {
       await page.goto(app.path);
       await expect(viewHeading(page)).toHaveText(app.views[0]);
-
-      // The app's name in the top bar (the tabs say it to screen readers).
-      await expect(page.getByRole("banner")).toHaveCount(0);
+      await expectTopBar(app.name);
       // The tabs at the bottom of the screen, side by side, each at least 44px to tap, with an icon.
       const bar = (await tabBar(page, app.name).boundingBox())!;
       expect(Math.abs(bar.y + bar.height - 740)).toBeLessThanOrEqual(1);
@@ -290,7 +340,9 @@ test.describe("on a phone", () => {
       await tab(page, app.name, next).click();
       await expect(viewHeading(page)).toHaveText(next);
       await expectNoHorizontalScroll(page);
-      await expect(tabBar(page, app.name).getByRole("link", { name: "Apps", exact: true })).toBeInViewport();
+      // Only the app's own views along the bottom: ‹ Home and Account are at the top.
+      await expect(tabBar(page, app.name).getByRole("link")).toHaveCount(0);
+      await expect(homeLink(page)).toBeInViewport();
     }
   });
 });

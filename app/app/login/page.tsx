@@ -24,8 +24,6 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       // Where a password reset or change sends the user, logged out everywhere.
       intro={params.password === "changed" ? "Your password was changed. Log in with the new one." : undefined}
       form={<LoginForm next={next} />}
-      current="login"
-      next={next}
     >
       <p>
         No account yet? <Link href={authHref("/signup", next)}>Sign up</Link>

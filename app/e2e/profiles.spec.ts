@@ -301,3 +301,39 @@ test("Shows refreshes friend discovery after friendships change", async ({ page,
     await friend.context.close();
   }
 });
+
+test("‹ Back on a friend's profile goes back to where it was opened from, or to your profile when it was loaded there", async ({
+  page,
+  browser,
+}) => {
+  const me = await openProfile(page, "shows");
+  const friend = await otherPerson(browser);
+  try {
+    await page.request.post("/api/social/friends", { data: { username: friend.user.username } });
+    await friend.page.request.post(`/api/social/friends/${me.id}/accept`, { data: {} });
+    await page.reload();
+    const banner = page.getByRole("banner");
+    const back = banner.getByRole("link", { name: "Back", exact: true });
+
+    // Opened from the Friends list: Back is the browser's back, no page loaded and no entry added.
+    await page.getByRole("list", { name: "Your friends" }).getByRole("link").first().click();
+    await expect(page).toHaveURL(`/shows/profile/${friend.id}`);
+    await expect(banner).toContainText("Shows");
+    await expect(banner.getByRole("link", { name: "Home", exact: true })).toHaveCount(0);
+    await page.evaluate(() => Object.assign(window, { sameDocument: true }));
+    const entries = await page.evaluate(() => history.length);
+    await back.click();
+    await expect(page).toHaveURL("/shows/profile");
+    await expect(appTab(page, "Shows", "Profile")).toHaveAttribute("aria-current", "page");
+    expect(await page.evaluate(() => "sameDocument" in window)).toBe(true);
+    expect(await page.evaluate(() => history.length)).toBe(entries);
+
+    // Loaded there (a link from elsewhere, a reload): Back goes to your profile in Shows.
+    await page.goto(`/shows/profile/${friend.id}`);
+    await back.click();
+    await expect(page).toHaveURL("/shows/profile");
+    await expect(appTab(page, "Shows", "Profile")).toHaveAttribute("aria-current", "page");
+  } finally {
+    await friend.context.close();
+  }
+});

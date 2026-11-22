@@ -441,7 +441,7 @@ test("an acknowledged write leaving its view is drained before another journal o
   });
   await page.getByRole("button", { name: "250 ml", exact: true }).click();
   await received;
-  await page.getByRole("link", { name: "Apps", exact: true }).click();
+  await page.getByRole("banner").getByRole("link", { name: "Home", exact: true }).click();
   // Books is in the Trackers folder on home.
   await page.getByRole("main").getByRole("button", { name: "Trackers" }).click();
   await page.locator('main a[href="/books"]').click();

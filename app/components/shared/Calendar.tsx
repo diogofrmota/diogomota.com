@@ -377,7 +377,7 @@ export function Calendar({ space, userId }: { space: Space; userId: string }) {
   // One toolbar over the grid, so the grid gets the rest of the screen, all of
   // it together in the middle: the month with ‹ and › on either side of it,
   // then Month | Agenda and Add event.
-  // The tab bar's Calendar names the view; the h1 is for screen readers.
+  // The top bar's Calendar names the view; the h1 is for screen readers.
   return (
     <section
       className={`${styles.calendar} ${view === "agenda" ? styles.agendaView : ""}`}

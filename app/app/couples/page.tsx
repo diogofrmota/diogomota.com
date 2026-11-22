@@ -14,7 +14,7 @@ export const viewport = appViewport;
 // folder on home: the group's members, inviting your partner, the calendar's
 // import and subscription, recent activity and leaving. It was Calendar's
 // Settings tab (/shared/settings, which redirects here: next.config.ts). In the
-// frame of the pages around the apps, as /account is: Account and Apps.
+// frame of the pages around the apps, as /account is: ‹ Home and Account.
 // Without a group, creating or joining one.
 export default async function CouplesPage() {
   const { id } = await requireUser("/couples");

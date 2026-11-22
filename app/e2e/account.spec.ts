@@ -11,6 +11,7 @@ import {
   emailsTo,
   expect,
   formAlert,
+  homeLink,
   linkNames,
   logIn,
   logOut,
@@ -32,7 +33,7 @@ const profilePicture = (page: Page) =>
 /** What the last popup saved, said under the settings once it closes. */
 const notice = (page: Page, text: string) => page.getByRole("main").getByRole("status").filter({ hasText: text });
 
-test("Account's icon on / opens the settings: no top bar, only Apps in the tab bar, a row per setting, then Log out", async ({
+test("Account settings on / opens the settings: only ‹ Home in the top bar, a row per setting, then Log out", async ({
   page,
 }) => {
   const user = newUser();
@@ -47,16 +48,15 @@ test("Account's icon on / opens the settings: no top bar, only Apps in the tab b
   const title = page.getByRole("heading", { level: 1, name: "account" });
   await expect(title).toBeVisible();
   await expect(title).toHaveCSS("text-align", "center");
-  await expect(page.getByRole("banner")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Back to apps" })).toHaveCount(0);
-  // Only Apps: Account is the page itself.
-  const bar = page.getByRole("navigation", { name: "Account", exact: true });
-  expect(await linkNames(bar)).toEqual(["Apps"]);
-  await expect(bar.getByRole("link", { name: "Apps", exact: true })).not.toHaveAttribute("aria-current");
+  // Only ‹ Home, and no tabs: Account is the page itself.
+  const bar = page.getByRole("banner");
+  expect(await linkNames(bar)).toEqual(["Home"]);
+  await expect(page.getByRole("navigation")).toHaveCount(0);
 
   // Who is logged in: their settings, each with what it is now.
   await expect(page.getByRole("main")).toContainText(user.email);
-  await bar.getByRole("link", { name: "Apps", exact: true }).click();
+  await homeLink(page).click();
   await expect(page).toHaveURL("/");
 
   // Account: the profile picture in the middle, a row per setting with its
@@ -172,7 +172,7 @@ test("change username", async ({ page }) => {
   await page.goto("/privacy");
   await expect(accountButton(page, renamed)).toBeVisible();
   await page.goto("/shows");
-  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
+  await expect(homeLink(page)).toBeVisible();
 
   await logOut(page, renamed);
   await logIn(page, user.username, user.password);

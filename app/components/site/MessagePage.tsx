@@ -6,11 +6,11 @@ import ui from "@/components/common/ui.module.css";
 import type { Theme } from "@/lib/themes";
 import styles from "./MessagePage.module.css";
 
-/** Who is logged in, for the page's tab bar (Account and Home), or null. */
+/** Who is logged in, for the page's top bar (‹ Home and Account), or null. */
 export type MessagePageUser = { username: string; name: string | null; avatarUrl: string | null } | null;
 
 // A heading, one line of text and a way on (Retry first, when given), in the
-// apps' frame and look: the 404 page, in the user's theme with the tab bar,
+// apps' frame and look: the 404 page, in the user's theme with the top bar,
 // and the error page, in the default theme without one (`bare`: the server
 // that failed can't say who is logged in).
 export function MessagePage({

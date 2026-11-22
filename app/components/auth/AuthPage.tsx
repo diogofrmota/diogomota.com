@@ -1,27 +1,24 @@
 import Link from "next/link";
 import { getUser } from "@/auth";
 import { AppFrame } from "@/components/common/AppShell";
-import type { LauncherTab } from "@/components/common/HeaderTabs";
 import { LinkPending } from "@/components/common/LinkPending";
 import ui from "@/components/common/ui.module.css";
 import { defaultTheme } from "@/lib/themes";
 import styles from "./AuthPage.module.css";
 
 // Frame for /login, /signup, the password reset pages and an invite, in the
-// apps' frame and look, with the tab bar of the pages around the apps (Log in,
-// Sign up and Home, this page's tab marked; Account and Home logged in), then a
-// centered column with the form in a card (its button as wide as the card: the
-// page's one action) and a few lines under it. In the default theme, unless
-// the user is logged in (the reset pages and invites are open then too): then
-// in theirs.
+// apps' frame and look, with the top bar of the pages around the apps (‹ Home,
+// to the front page logged out; and Account logged in), then a centered column
+// with the form in a card (its button as wide as the card: the page's one
+// action) and a few lines under it, where Log in and Sign up link to each
+// other. In the default theme, unless the user is logged in (the reset pages
+// and invites are open then too): then in theirs.
 export async function AuthPage({
   title,
   intro,
   form,
   children,
   action,
-  current,
-  next,
 }: {
   title: string;
   /** A line between the title and the form. */
@@ -31,10 +28,6 @@ export async function AuthPage({
   children?: React.ReactNode;
   /** The page's action as a button, for a page without a form (an expired reset link). */
   action?: { href: string; label: string };
-  /** /login or /signup: its tab in the tab bar is the current one. */
-  current?: Extract<LauncherTab, "login" | "signup">;
-  /** Where the tab bar's Log in and Sign up return to. */
-  next?: string | null;
 }) {
   const user = await getUser();
   return (
@@ -43,8 +36,6 @@ export async function AuthPage({
       username={user?.username ?? null}
       name={user?.name}
       avatarUrl={user?.avatarUrl}
-      current={current}
-      next={next}
     >
       <div className={styles.column}>
         <h1 className={`${ui.heading} ${styles.title}`}>{title}</h1>

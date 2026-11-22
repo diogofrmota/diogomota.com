@@ -148,7 +148,8 @@ test("unknown URLs get a 404 page in the apps' look, and a page that fails to re
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)).toBe(
     "rgb(230, 230, 230)",
   );
-  expect(await linkNames(page.getByRole("navigation", { name: "Account" }))).toEqual(["Log in", "Sign up", "Apps"]);
+  // Logged out, the top bar has only ‹ Home, to the front page.
+  expect(await linkNames(page.getByRole("banner"))).toEqual(["Home"]);
   await page.getByRole("main").getByRole("link", { name: "Go home" }).click();
   await expect(page).toHaveURL("/");
 
@@ -156,7 +157,7 @@ test("unknown URLs get a 404 page in the apps' look, and a page that fails to re
   await page.goto(`/test/error?id=${randomUUID()}`);
   await expect(page.getByRole("heading", { level: 1, name: "Something went wrong" })).toBeVisible();
   await expect(page).toHaveTitle("something went wrong · diogo mota");
-  // In the apps' look, without a tab bar: the server that failed can't say who is logged in.
+  // In the apps' look, without a top bar: the server that failed can't say who is logged in.
   await expect(page.locator("[data-theme]")).toHaveAttribute("data-theme", "minimal-neutrals");
   await expect(page.getByRole("navigation")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Go home" })).toHaveAttribute("href", "/");

@@ -7,3 +7,5 @@
 **What it is:** one tab bar (`TabBar` and, on `/apps` and `/account`, `LauncherTabs`, in `components/common/HeaderTabs.tsx`): under 48rem fixed along the bottom, each tab its icon over its name; from 48rem the same tabs across the top as the page's header, each its icon beside its name. Apps is its last tab. There is no other top bar in the apps, `/apps` or `/account`.
 
 **Costs:** the bottom 60 px of a phone's screen; what sits at the bottom (the Undo message) goes over it.
+
+**Update, 2026-11-22:** the tabs are only an app's own views, and only when it has more than one; Apps is gone from them. ‹ Home, the app's name and Account are in a top bar on every page of the apps' frame ([0024](0024-a-top-bar-with-home.md)).

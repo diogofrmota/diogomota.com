@@ -1,13 +1,13 @@
 import type { Page } from "@playwright/test";
 import { apps, appsOf, folders } from "../lib/apps";
 import { siteTagline } from "../lib/site";
-import { expect, linkNames, newUser, signUp, test } from "./fixtures";
+import { expect, homeLink, linkNames, newUser, signUp, test } from "./fixtures";
 import { mockBase, otherPerson, userId } from "./shows";
 
 // Home (docs/decisions/0014, 0016, 0023). Logged out, the website's front
 // page: its header, what the site is, Sign up, the apps in three groups (an
 // app's icon opens its login prompt), How it works, How to add to Home Screen,
-// and its footer. Logged in, with no tab bar: who is here (the picture, the
+// and its footer. Logged in, with no top bar: who is here (the picture, the
 // name, the username and Account settings), then the apps in three folders,
 // each opening in a popup, with what is waiting in each.
 
@@ -20,7 +20,6 @@ const appGroup = (page: Page, title: string) =>
 /** An app's icon on the front page, which opens its login prompt. */
 const appIcon = (page: Page, name: string) =>
   page.getByRole("main").getByRole("region", { name: "The apps" }).getByRole("link", { name, exact: true });
-const tabBar = (page: Page) => page.getByRole("navigation", { name: "Account" });
 const siteNav = (page: Page) => page.getByRole("banner").getByRole("navigation", { name: "Site" });
 
 test("logged out, home is the website's front page (/apps redirects to it): what the site is, the apps in groups, How it works, How to add to Home Screen", async ({
@@ -162,8 +161,8 @@ test("the website's header: the mark goes home, Apps opens a menu of them, then 
   page,
 }) => {
   await page.goto("/");
-  // The website's header, not the apps' tab bar.
-  await expect(tabBar(page)).toHaveCount(0);
+  // The website's header, not the apps' top bar.
+  await expect(homeLink(page)).toHaveCount(0);
   const header = page.getByRole("banner");
   await expect(header.getByRole("link", { name: "diogomota" })).toHaveAttribute("href", "/");
   await expect(header.getByRole("button", { name: "Menu" })).toBeHidden();
@@ -205,11 +204,11 @@ test("the website's header: the mark goes home, Apps opens a menu of them, then 
   await expect(page).toHaveURL("/about");
   await expect(siteNav(page).getByRole("link", { name: "About" })).toHaveAttribute("aria-current", "page");
 
-  // Log in leaves the website for the login page, in the apps' frame, whose Apps comes back.
+  // Log in leaves the website for the login page, in the apps' frame, whose ‹ Home comes back.
   await page.getByRole("banner").getByRole("link", { name: "Log in" }).click();
   await expect(page).toHaveURL("/login");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Log in");
-  await tabBar(page).getByRole("link", { name: "Apps" }).click();
+  await homeLink(page).click();
   await expect(page).toHaveURL("/");
 });
 
@@ -269,24 +268,25 @@ test.describe("on a phone", () => {
   });
 });
 
-test("the login pages keep the apps' tab bar: Log in, Sign up (each its own icon) and Apps", async ({ page }) => {
+test("the login pages have the apps' top bar, with only ‹ Home (to the front page); Log in and Sign up link to each other", async ({
+  page,
+}) => {
   await page.goto("/login");
-  const bar = tabBar(page);
-  expect(await linkNames(bar)).toEqual(["Log in", "Sign up", "Apps"]);
-  // No top bar and no Back to apps: the tab bar, with Log in current.
-  await expect(page.getByRole("banner")).toHaveCount(0);
+  // Logged out: ‹ Home and nothing else, no tabs and no Back to apps.
+  expect(await linkNames(page.getByRole("banner"))).toEqual(["Home"]);
+  await expect(page.getByRole("navigation")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Back to apps" })).toHaveCount(0);
-  await expect(bar.getByRole("link", { name: "Log in" })).toHaveAttribute("aria-current", "page");
-  const icons = await bar
-    .getByRole("link")
-    .evaluateAll((links) => links.flatMap((link) => link.querySelector("svg")?.innerHTML ?? []));
-  expect(icons).toHaveLength(3);
-  expect(new Set(icons).size).toBe(3);
 
-  await bar.getByRole("link", { name: "Sign up" }).click();
+  const main = page.getByRole("main");
+  await main.getByRole("link", { name: "Sign up" }).click();
   await expect(page).toHaveURL("/signup");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Create your account");
-  await expect(bar.getByRole("link", { name: "Sign up" })).toHaveAttribute("aria-current", "page");
+  expect(await linkNames(page.getByRole("banner"))).toEqual(["Home"]);
+  await main.getByRole("link", { name: "Log in" }).click();
+  await expect(page).toHaveURL("/login");
+  await homeLink(page).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("banner").getByRole("link", { name: "diogomota" })).toBeVisible();
 
   // From an app's login prompt, the title says which app.
   await page.goto("/signup?next=%2Fshows");

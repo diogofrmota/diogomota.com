@@ -4,9 +4,10 @@
    from them. */
 
 .shell {
-  /* None without a tab bar (`bare`: / logged in, the error page); .withNav
-     sets it where the tab bar is the header. */
+  /* None without a top bar (`bare`: / logged in, the error page), or a tab
+     bar along the bottom of a phone; .withTopBar and .withTabs set them. */
   --top-bar-height: 0px;
+  --bottom-bar: 0px;
 
   /* The design system's scales, the same in every theme (the colors are the
      theme's, themes.module.css). Every module takes its sizes from these. */
@@ -205,9 +206,9 @@
   opacity: 1;
 }
 
-/* The page under the top bar or the tab bar (a header on a wide screen, along
-   the bottom on a phone: .withNav), clear of the notch or status bar (the safe
-   area, on a phone with nothing over the page) and of the home indicator. */
+/* The page under the top bar (.withTopBar), or clear of the notch or status
+   bar (the safe area) without one, and clear of the tabs along the bottom of a
+   phone (.withTabs) and of the home indicator. */
 .main {
   --main-padding-top: calc(1.5rem + env(safe-area-inset-top));
   --main-padding-bottom: calc(env(safe-area-inset-bottom) + 1.5rem);
@@ -267,16 +268,134 @@
   }
 }
 
-/* The tab bar of the apps, /apps and /account (HeaderTabs). On a phone, fixed
-   along the bottom, within reach of a thumb: each tab its icon over its name,
-   clear of the home indicator. --bottom-bar is its height, for what sits at
-   the bottom of the screen too (the Undo message). */
-.withNav {
-  --top-bar-height: 0px;
+/* The top bar of the apps and the pages around them (HeaderTabs' TopBar),
+   sticky at the top, clear of the notch or status bar. On a phone, ‹ Home on
+   the left, the app's name in the middle and the user's picture on the right.
+   The app's tabs are inside it but fixed along the bottom of the screen
+   (.tabBar), so nothing on the bar may make it their containing block: no
+   transform, filter or backdrop-filter. --top-bar-height is its height, which
+   the calendar fits under. */
+.withTopBar {
+  --top-bar-height: calc(3rem + env(safe-area-inset-top));
+}
+
+.withTopBar .main {
+  --main-padding-top: 1.25rem;
+}
+
+.topBar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--top-bar-height);
+  padding: env(safe-area-inset-top) max(var(--space-2), env(safe-area-inset-right)) 0
+    max(var(--space-2), env(safe-area-inset-left));
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+/* On a phone, ‹ Home and the app's name are cells of the bar's grid: Home on
+   the left, the name in the middle. */
+.lead {
+  display: contents;
+}
+
+/* ‹ Home (‹ Back on a friend's profile), in the accent, as a phone's back is. */
+.back {
+  grid-column: 1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-height);
+  padding: 0 var(--space-2) 0 var(--space-1);
+  border-radius: var(--radius-md);
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+
+.back svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+.back:active {
+  scale: var(--press);
+}
+
+@media (hover: hover) {
+  .back:hover {
+    background: var(--accent-soft);
+  }
+}
+
+.title {
+  grid-column: 2;
+  overflow: hidden;
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.trail {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+}
+
+/* Account: the user's profile picture, or their initials, a 44px target. */
+.account {
+  display: grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  transition: scale var(--duration-fast) var(--ease-out);
+}
+
+.account:active {
+  scale: var(--press);
+}
+
+.account .navAvatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-xs);
+}
+
+@media (hover: hover) {
+  .account:hover .navAvatar {
+    outline: 2px solid var(--accent-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back:active,
+  .account:active {
+    scale: none;
+  }
+}
+
+/* An app's tabs (HeaderTabs), when it has more than one view. On a phone,
+   fixed along the bottom, within reach of a thumb: each tab its icon over its
+   name, clear of the home indicator. --bottom-bar is its height, for what sits
+   at the bottom of the screen too (the Undo message). */
+.withTabs {
   --bottom-bar: 3.75rem;
 }
 
-.withNav .main {
+.withTabs .main {
   --main-padding-bottom: calc(var(--bottom-bar) + env(safe-area-inset-bottom) + 1.5rem);
 }
 
@@ -303,8 +422,7 @@
   list-style: none;
 }
 
-.tabBar button,
-.tabBar a {
+.tabBar button {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -333,28 +451,17 @@
   height: 1.5rem;
 }
 
-.tabBar :is(button, a)[aria-current="page"] {
+.tabBar button[aria-current="page"] {
   color: var(--accent);
   font-weight: var(--weight-semibold);
 }
 
-/* Account's icon: the user's profile picture, or their initial. */
-.tabBar .navAvatar {
-  display: grid;
-  place-items: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
 @media (hover: hover) {
-  .tabBar :is(button, a):hover {
+  .tabBar button:hover {
     color: var(--text);
   }
 
-  .tabBar :is(button, a)[aria-current="page"]:hover {
+  .tabBar button[aria-current="page"]:hover {
     color: var(--accent);
   }
 }
@@ -366,27 +473,49 @@
   display: none;
 }
 
-/* On a wider screen, the same tabs across the top, as the page's header: in
-   the middle, each its icon beside its name, all as wide, the current one in
-   the accent and underlined along the bar's edge (not bold: nothing moves).
-   --top-bar-height is its height, which the calendar fits under. */
+/* On a wider screen, one bar across the top, as the page's header: ‹ Home and
+   the app's name on the left, the tabs in the middle (each its icon beside its
+   name, all as wide, the current one in the accent and underlined along the
+   bar's edge; not bold: nothing moves), and Account on the right. */
 @media (min-width: 48rem) {
-  .withNav {
+  .withTopBar {
     --top-bar-height: 3.5rem;
+  }
+
+  .withTabs {
     --bottom-bar: 0px;
   }
 
-  .withNav .main {
+  .withTopBar .main,
+  .withTabs .main {
+    --main-padding-top: 2rem;
     --main-padding-bottom: 2rem;
   }
 
+  .topBar {
+    gap: var(--space-4);
+    padding: 0 max(var(--space-4), env(safe-area-inset-right)) 0 max(var(--space-4), env(safe-area-inset-left));
+  }
+
+  .lead {
+    display: flex;
+    grid-column: 1;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .back {
+    font-size: var(--text-sm);
+  }
+
   .tabBar {
-    position: sticky;
-    top: 0;
-    bottom: auto;
-    padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+    position: static;
+    grid-column: 2;
+    align-self: stretch;
+    padding: 0;
     border-top: 0;
-    border-bottom: 1px solid var(--border);
+    background: none;
   }
 
   .tabBar ul {
@@ -394,11 +523,10 @@
     justify-content: center;
     gap: var(--space-1);
     max-width: none;
-    height: var(--top-bar-height);
+    height: 100%;
   }
 
-  .tabBar button,
-  .tabBar a {
+  .tabBar button {
     flex-direction: row;
     gap: var(--space-2);
     padding: 0 var(--space-3);
@@ -410,13 +538,7 @@
     height: var(--icon-md);
   }
 
-  .tabBar .navAvatar {
-    width: 1.375rem;
-    height: 1.375rem;
-    font-size: var(--text-xs);
-  }
-
-  .tabBar :is(button, a)[aria-current="page"] {
+  .tabBar button[aria-current="page"] {
     font-weight: var(--weight-medium);
   }
 
@@ -427,21 +549,6 @@
     height: 2px;
     border-radius: 2px 2px 0 0;
     background: var(--accent);
-  }
-}
-
-/* A link in the tab bar gives a little when pressed, as its buttons do. */
-.tabBar a {
-  transition: scale var(--duration-fast) var(--ease-out);
-}
-
-.tabBar a:active {
-  scale: var(--press);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tabBar a:active {
-    scale: none;
   }
 }
 

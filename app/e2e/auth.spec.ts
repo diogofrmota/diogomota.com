@@ -1,5 +1,16 @@
 import { siteTagline } from "../lib/site";
-import { accountButton, expect, formAlert, logIn, logOut, newUser, openFromHome, signUp, test } from "./fixtures";
+import {
+  accountButton,
+  expect,
+  formAlert,
+  homeLink,
+  logIn,
+  logOut,
+  newUser,
+  openFromHome,
+  signUp,
+  test,
+} from "./fixtures";
 
 const wrongCredentials = "Wrong username/email or password.";
 const signUpConflict =
@@ -22,7 +33,7 @@ test("sign up logs the new user in, home, whose icons go straight into the apps;
 
   await openFromHome(page, "Shows");
   await expect(page).toHaveURL("/shows");
-  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
+  await expect(homeLink(page)).toBeVisible();
   // With a session the spaces endpoint returns the user's current group.
   expect(await (await page.request.get("/api/shared/spaces")).json()).toEqual({ data: null });
 
@@ -150,7 +161,7 @@ test("logged out, the apps and Account send home, with the app's login prompt, a
   await page.getByLabel("Password", { exact: true }).fill(user.password);
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL("/shows");
-  await expect(page.getByRole("link", { name: "Apps", exact: true })).toBeVisible();
+  await expect(homeLink(page)).toBeVisible();
 });
 
 test("Remember me, on to start with, keeps the session for 30 days; off, its cookie ends when the browser closes", async ({

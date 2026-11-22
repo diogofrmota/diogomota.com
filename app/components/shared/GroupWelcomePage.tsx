@@ -8,8 +8,8 @@ import { CouplesWelcome } from "./CouplesWelcome";
 
 /**
  * An app of For Couples with its own data (Recipes), before there is a group:
- * creating or joining one, in the app's frame with only Apps in its tab bar,
- * as Calendar and Tasks show it. Once in one, the page is loaded again, with
+ * creating or joining one, in the app's frame with its name in the top bar and
+ * no tabs yet, as Calendar and Tasks show it. Once in one, the page is loaded again, with
  * the app (its server render reads the group).
  */
 export function GroupWelcomePage({

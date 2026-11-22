@@ -51,7 +51,7 @@ export default async function JoinPage({ params }: PageProps<"/join/[code]">) {
   if (!session) {
     const next = `/join/${code}`;
     return (
-      <AuthPage title={title} intro={intro} next={next}>
+      <AuthPage title={title} intro={intro}>
         <p className={ui.actions}>
           {/* As everywhere: Log in plain and first, Sign up filled after it. */}
           <Link href={authHref("/login", next)} className={ui.button}>

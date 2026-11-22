@@ -8,7 +8,7 @@ import styles from "./ProfileHeader.module.css";
 /**
  * The top of /, logged in: who is here, in the middle. Their profile picture
  * (or initials), their name (their username without one), "(@username)", and
- * Account settings, the way to /account (home has no tab bar).
+ * Account settings, the way to /account (home has no top bar).
  */
 export function ProfileHeader({
   username,
