@@ -1,6 +1,16 @@
 import { rm } from "node:fs/promises";
 import path from "node:path";
 
+// Where the profile pictures and the recipes' photos are, for lib/avatars.ts
+// and lib/recipe-photos.ts too. This file is also the CLI's
+// (scripts/cleanup-media.mjs), so it imports nothing from lib/. Outside the
+// build's file tracing (turbopackIgnore): they are where files are written
+// while the app runs, not a part of the app.
+export const avatarDir = () =>
+  process.env.AVATAR_DIR || path.join(/* turbopackIgnore: true */ process.cwd(), "data", "avatars");
+export const recipePhotoDir = () =>
+  process.env.RECIPE_PHOTO_DIR || path.join(/* turbopackIgnore: true */ process.cwd(), "data", "recipe-photos");
+
 /** @param {import('pg').Pool} pool */
 export async function cleanupMediaJobs(pool) {
   const db = await pool.connect();
@@ -11,16 +21,15 @@ export async function cleanupMediaJobs(pool) {
     );
     for (const job of rows) {
       try {
-        const avatarDir = process.env.AVATAR_DIR || path.join(process.cwd(), "data", "avatars");
-        const photoDir = process.env.RECIPE_PHOTO_DIR || path.join(process.cwd(), "data", "recipe-photos");
         // A job without a user is a deleted group's recipe photos (lib/recipe-groups.ts):
         // no profile picture goes with them.
         for (const id of job.user_id ? [job.user_id, ...job.photo_ids] : job.photo_ids) {
           if (!/^[a-f0-9-]{36}$/i.test(id)) throw new Error("Invalid media id");
         }
-        if (job.user_id) await rm(path.join(avatarDir, `${job.user_id}.webp`), { force: true });
+        if (job.user_id) await rm(path.join(avatarDir(), `${job.user_id}.webp`), { force: true });
         for (const id of job.photo_ids)
-          for (const suffix of ["", "-thumb"]) await rm(path.join(photoDir, `${id}${suffix}.webp`), { force: true });
+          for (const suffix of ["", "-thumb"])
+            await rm(path.join(recipePhotoDir(), `${id}${suffix}.webp`), { force: true });
         await db.query("DELETE FROM media_cleanup_jobs WHERE id = $1", [job.id]);
       } catch {
         await db.query(

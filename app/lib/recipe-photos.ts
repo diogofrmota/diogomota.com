@@ -3,6 +3,7 @@ import { mkdir, readFile, rm } from "node:fs/promises";
 import { writeAtomically } from "./write-atomically";
 import path from "node:path";
 import sharp from "sharp";
+import { recipePhotoDir as photoDir } from "../scripts/media-cleanup.mjs";
 import { HttpError } from "./http";
 import { isUuid } from "./schemas";
 import { maxImagePixels } from "./upload-body";
@@ -23,12 +24,6 @@ import { maxImagePixels } from "./upload-body";
 // The largest file accepted is photoMaxBytes (lib/recipe-types.ts).
 const largeSide = 1600;
 const thumb = { width: 640, height: 480 };
-
-// Outside the build's file tracing (turbopackIgnore): it is where photos are
-// written while the app runs, not a part of the app.
-function photoDir(): string {
-  return process.env.RECIPE_PHOTO_DIR || path.join(/* turbopackIgnore: true */ process.cwd(), "data", "recipe-photos");
-}
 
 /** A photo's file. Only ever called with a UUID, so the name can't leave the folder. */
 function photoFile(id: string, size: "large" | "thumb"): string {

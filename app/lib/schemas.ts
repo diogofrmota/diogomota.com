@@ -10,11 +10,15 @@ import { repeats } from "./task-types";
 
 const uuidPattern = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
+/** A UUID, in lower case; anything else is refused with `message`. */
+const uuidWith = (message: string) =>
+  z
+    .string({ error: message })
+    .regex(uuidPattern, { error: message })
+    .transform((id) => id.toLowerCase());
+
 /** An id the client chose, or none (the server picks one). */
-export const uuid = z
-  .string({ error: "Invalid id." })
-  .regex(uuidPattern, { error: "Invalid id." })
-  .transform((id) => id.toLowerCase());
+export const uuid = uuidWith("Invalid id.");
 
 export const isUuid = (value: unknown): value is string => typeof value === "string" && uuidPattern.test(value);
 
@@ -48,17 +52,8 @@ const wholeNumber = (min: number, max: number, message: string) =>
  * the end of another list of the space with `listId`.
  */
 export const moveInput = z.object({
-  beforeId: z
-    .string({ error: "Invalid position." })
-    .regex(uuidPattern, { error: "Invalid position." })
-    .transform((id) => id.toLowerCase())
-    .nullable()
-    .default(null),
-  listId: z
-    .string({ error: "List not found." })
-    .regex(uuidPattern, { error: "List not found." })
-    .transform((id) => id.toLowerCase())
-    .optional(),
+  beforeId: uuidWith("Invalid position.").nullable().default(null),
+  listId: uuidWith("List not found.").optional(),
 });
 
 // --- Shared: spaces ----------------------------------------------------------
@@ -195,7 +190,7 @@ export const friendRequest = z.object({ username: z.unknown().optional() });
 
 /** Recommending a title to a friend. */
 export const recommendInput = z.object({
-  friendId: z.string({ error: "Choose a friend." }).regex(uuidPattern, { error: "Choose a friend." }),
+  friendId: uuidWith("Choose a friend."),
   type: mediaTypeSchema,
   tmdbId,
 });

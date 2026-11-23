@@ -61,19 +61,19 @@ export function inSpace<T>(userId: string, fn: (db: PoolClient, space: Space) =>
   });
 }
 
-/** The user's space, or null without one; with `id`, 404 unless it is that one. */
-export function readSpace(userId: string, id?: string): Promise<Space | null> {
-  return transaction(async (db) => {
-    const spaceId = await spaceIdOf(db, userId, "SHARE");
-    if (id && spaceId !== id) throw new HttpError("Group not found.", 404);
-    return spaceId ? loadSpace(db, spaceId, "SHARE") : null;
-  });
-}
-
 /** Authorize and read within the caller's transaction; keep locks through data reads. */
 export async function readSpaceInTransaction(db: PoolClient, userId: string): Promise<Space | null> {
   const spaceId = await spaceIdOf(db, userId, "SHARE");
   return spaceId ? loadSpace(db, spaceId, "SHARE") : null;
+}
+
+/** The user's space, or null without one; with `id`, 404 unless it is that one. */
+export function readSpace(userId: string, id?: string): Promise<Space | null> {
+  return transaction(async (db) => {
+    const space = await readSpaceInTransaction(db, userId);
+    if (id && space?.id !== id) throw new HttpError("Group not found.", 404);
+    return space;
+  });
 }
 
 const groupFull = () => new HttpError(`This group is full (${groupSize} people).`, 409);

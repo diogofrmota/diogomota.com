@@ -2,7 +2,16 @@ import { describe, expect, test } from "vitest";
 import { appViewFromUrl, appViewUrl } from "@/hooks/useAppView";
 import { homeViews, viewFromParams } from "@/lib/app-views";
 import { safeNextPath } from "@/lib/next-path";
-import { eventInput, inviteCodeOf, joinInput, libraryPatch, taskCreate, taskPatch } from "@/lib/schemas";
+import {
+  eventInput,
+  inviteCodeOf,
+  joinInput,
+  libraryPatch,
+  moveInput,
+  recommendInput,
+  taskCreate,
+  taskPatch,
+} from "@/lib/schemas";
 
 describe("the APIs' schemas", () => {
   const event = {
@@ -42,6 +51,21 @@ describe("the APIs' schemas", () => {
     expect(taskPatch.parse({ assigneeIds: [] })).toEqual({ assigneeIds: [] });
     expect(taskPatch.safeParse({ assigneeIds: ["not-a-person-id"] }).success).toBe(false);
     expect(taskPatch.safeParse({ assigneeIds: Array(11).fill(person) }).success).toBe(false);
+  });
+
+  test("ids are UUIDs, in lower case, each with its own message for anything else", () => {
+    const upper = event.assigneeIds[0].toUpperCase();
+    const message = (result: { success: boolean; error?: { issues: { message: string }[] } }) =>
+      result.error?.issues[0].message;
+    expect(moveInput.parse({})).toEqual({ beforeId: null });
+    expect(moveInput.parse({ beforeId: upper, listId: upper })).toEqual({
+      beforeId: event.assigneeIds[0],
+      listId: event.assigneeIds[0],
+    });
+    expect(message(moveInput.safeParse({ beforeId: "first" }))).toBe("Invalid position.");
+    expect(message(moveInput.safeParse({ listId: 7 }))).toBe("List not found.");
+    expect(message(recommendInput.safeParse({ friendId: "ana", type: "tv", tmdbId: 1 }))).toBe("Choose a friend.");
+    expect(recommendInput.parse({ friendId: upper, type: "tv", tmdbId: 1 }).friendId).toBe(event.assigneeIds[0]);
   });
 
   test("an invite code is read in any case and with spaces around it", () => {

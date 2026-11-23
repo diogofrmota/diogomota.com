@@ -22,24 +22,27 @@ function feedOf(token: string): CalendarFeed {
 
 const newToken = () => randomBytes(24).toString("base64url");
 
-/** The user's feed, made the first time it is asked for. */
-export async function calendarFeed(userId: string): Promise<CalendarFeed> {
+/** Makes the user's feed with a new token or, if they have one, changes it with `update`. */
+async function saveFeed(
+  userId: string,
+  update: "token = calendar_feeds.token" | "token = EXCLUDED.token, created_at = now()",
+): Promise<CalendarFeed> {
   const { rows } = await query<{ token: string }>(
     `INSERT INTO calendar_feeds (user_id, token) VALUES ($1, $2)
-     ON CONFLICT (user_id) DO UPDATE SET token = calendar_feeds.token RETURNING token`,
+     ON CONFLICT (user_id) DO UPDATE SET ${update} RETURNING token`,
     [userId, newToken()],
   );
   return feedOf(rows[0].token);
 }
 
+/** The user's feed, made the first time it is asked for. */
+export function calendarFeed(userId: string): Promise<CalendarFeed> {
+  return saveFeed(userId, "token = calendar_feeds.token");
+}
+
 /** A new link for the user's feed; the old one stops working. */
-export async function newCalendarFeed(userId: string): Promise<CalendarFeed> {
-  const { rows } = await query<{ token: string }>(
-    `INSERT INTO calendar_feeds (user_id, token) VALUES ($1, $2)
-     ON CONFLICT (user_id) DO UPDATE SET token = EXCLUDED.token, created_at = now() RETURNING token`,
-    [userId, newToken()],
-  );
-  return feedOf(rows[0].token);
+export function newCalendarFeed(userId: string): Promise<CalendarFeed> {
+  return saveFeed(userId, "token = EXCLUDED.token, created_at = now()");
 }
 
 /** How often calendar apps are asked to check again. */

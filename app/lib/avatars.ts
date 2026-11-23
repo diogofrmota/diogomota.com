@@ -3,6 +3,7 @@ import { mkdir, readFile, rm } from "node:fs/promises";
 import { writeAtomically } from "./write-atomically";
 import path from "node:path";
 import sharp from "sharp";
+import { avatarDir } from "../scripts/media-cleanup.mjs";
 import { HttpError } from "./http";
 import { isUuid } from "./schemas";
 import { maxImagePixels } from "./upload-body";
@@ -22,12 +23,6 @@ import { clearAvatarUpdated, setAvatarUpdated } from "./users";
 
 /** The side of the square that is saved, in pixels. */
 const side = 512;
-
-// Outside the build's file tracing (turbopackIgnore): it is where pictures are
-// written while the app runs, not a part of the app.
-function avatarDir(): string {
-  return process.env.AVATAR_DIR || path.join(/* turbopackIgnore: true */ process.cwd(), "data", "avatars");
-}
 
 /** The file of a user's picture. Only ever called with a UUID, so the name can't leave the folder. */
 function avatarFile(userId: string): string {
