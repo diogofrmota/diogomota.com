@@ -16,7 +16,7 @@ async function add(page: Page, title: Title, status: "watching" | "planned" | "c
 
 /** Sends a friend request through the API (the other one then accepts it). */
 async function befriend(page: Page, other: { user: { username: string } }) {
-  expect((await page.request.post("/api/shows/friends", { data: { username: other.user.username } })).status()).toBe(
+  expect((await page.request.post("/api/social/friends", { data: { username: other.user.username } })).status()).toBe(
     201,
   );
 }
@@ -87,7 +87,7 @@ test("a title's panel: its genres, the friends who have it, More like this, Reco
   try {
     await befriend(page, ana);
     const meId = await userId(me.username);
-    expect((await ana.page.request.post(`/api/shows/friends/${meId}/accept`, { data: {} })).ok()).toBe(true);
+    expect((await ana.page.request.post(`/api/social/friends/${meId}/accept`, { data: {} })).ok()).toBe(true);
     await add(ana.page, harbor, "watching");
 
     await page.goto(`/shows/discover?p=title:tv:${harbor.tmdbId}`);
@@ -141,7 +141,7 @@ test("a friend's profile has what you both want to watch", async ({ page, browse
   try {
     await befriend(page, ana);
     expect(
-      (await ana.page.request.post(`/api/shows/friends/${await userId(me.username)}/accept`, { data: {} })).ok(),
+      (await ana.page.request.post(`/api/social/friends/${await userId(me.username)}/accept`, { data: {} })).ok(),
     ).toBe(true);
     await add(page, harbor, "planned");
     await add(ana.page, harbor, "planned");

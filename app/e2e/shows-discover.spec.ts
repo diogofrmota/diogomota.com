@@ -577,12 +577,12 @@ test("Added by Friends shows the titles in accepted friends' libraries", async (
   expect(await friends("tv")).toEqual([]);
 
   // The first asked me and I accepted; I asked the second, who hasn't answered.
-  expect((await people[0].page.request.post("/api/shows/friends", { data: { username: me.username } })).status()).toBe(
+  expect((await people[0].page.request.post("/api/social/friends", { data: { username: me.username } })).status()).toBe(
     201,
   );
-  expect((await page.request.post(`/api/shows/friends/${people[0].id}/accept`, { data: {} })).status()).toBe(200);
+  expect((await page.request.post(`/api/social/friends/${people[0].id}/accept`, { data: {} })).status()).toBe(200);
   expect(
-    (await page.request.post("/api/shows/friends", { data: { username: people[1].user.username } })).status(),
+    (await page.request.post("/api/social/friends", { data: { username: people[1].user.username } })).status(),
   ).toBe(201);
 
   await tab(page, "Discover").click();
@@ -606,7 +606,7 @@ test("Added by Friends shows the titles in accepted friends' libraries", async (
 
   // Once accepted, the second friend's titles count too. The ones most friends
   // have come first (Paper Moons, in both libraries), then by title.
-  expect((await people[1].page.request.post(`/api/shows/friends/${meId}/accept`, { data: {} })).status()).toBe(200);
+  expect((await people[1].page.request.post(`/api/social/friends/${meId}/accept`, { data: {} })).status()).toBe(200);
   const titles = async (type: string) => (await friends(type)).map((title: { title: string }) => title.title);
   expect(await titles("movie")).toEqual(["Paper Moons", "Northern Line"]);
   expect(await titles("tv")).toEqual(["Harbor Lights", "The Quiet Orchard"]);

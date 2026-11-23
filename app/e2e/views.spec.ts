@@ -322,11 +322,13 @@ test("Shows: every view and dialog, each closed with Back @smoke", async ({ page
   await friend.page.request.post("/api/shows/library", {
     data: { type: "tv", tmdbId: mockBase + 101, status: "watching" },
   });
-  expect((await page.request.post("/api/shows/friends", { data: { username: friend.user.username } })).status()).toBe(
+  expect((await page.request.post("/api/social/friends", { data: { username: friend.user.username } })).status()).toBe(
     201,
   );
-  expect((await friend.page.request.post(`/api/shows/friends/${myId}/accept`, { data: {} })).status()).toBe(200);
-  expect((await asker.page.request.post("/api/shows/friends", { data: { username: me.username } })).status()).toBe(201);
+  expect((await friend.page.request.post(`/api/social/friends/${myId}/accept`, { data: {} })).status()).toBe(200);
+  expect((await asker.page.request.post("/api/social/friends", { data: { username: me.username } })).status()).toBe(
+    201,
+  );
 
   expect(
     (

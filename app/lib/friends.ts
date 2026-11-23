@@ -3,17 +3,16 @@ import { DatabaseError } from "pg";
 import { NAME_MAX, USERNAME_MAX, usernameError, usernameHint } from "./account-rules";
 import { query } from "./db";
 import { friendRequestLimit, userSearchLimit } from "./rate-limit";
-import type { FriendProfile } from "./show-types";
 import type { FriendsState, PeopleSearch, Person, PersonMatch } from "./social-types";
 import { HttpError } from "./http";
 import { isUuid } from "./schemas";
-import { bothPlanned, sharedLibrary } from "./shows";
 import { avatarUrlSql } from "./users";
 
 // Site-wide friendships, managed in Social: one row per pair of users (001_initial.sql),
 // user_id sent the request and friend_id received it. Pending until the
 // receiver accepts; declining, cancelling and removing delete the row, so either
-// can ask again later. Only accepted friends see each other's libraries.
+// can ask again later. Only accepted friends see each other's libraries
+// (lib/social.ts, socialPerson).
 
 // Both directions of the pair $1, $2.
 const pair = "((f.user_id = $1 AND f.friend_id = $2) OR (f.user_id = $2 AND f.friend_id = $1))";
@@ -186,23 +185,4 @@ export async function removeFriend(userId: string, friendId: string): Promise<Fr
   ]);
   if (!rowCount) throw new HttpError(notFriends, 404);
   return readFriends(userId);
-}
-
-const onlyFriends = "Only friends can see each other's libraries.";
-
-/**
- * A friend's profile: what they're watching, what they've completed, their
- * favourites and their stats. Anyone else, or an id nobody has, is a 404.
- */
-export async function readFriend(userId: string, friendId: string): Promise<FriendProfile> {
-  const {
-    rows: [friend],
-  } = await query<Person>(
-    `SELECT u.id, u.username, ${avatarUrlSql("u")} AS "avatarUrl", u.name
-     FROM friendships f JOIN users u ON u.id = $2 WHERE f.status = 'accepted' AND ${pair}`,
-    [userId, personId(friendId, onlyFriends)],
-  );
-  if (!friend) throw new HttpError(onlyFriends, 404);
-  const [library, planned] = await Promise.all([sharedLibrary(friend.id), bothPlanned(userId, friend.id)]);
-  return { ...friend, ...library, bothPlanned: planned };
 }

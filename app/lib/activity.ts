@@ -73,22 +73,7 @@ export async function spaceActivity(db: PoolClient, spaceId: string, limit = 30)
   return toItems(rows);
 }
 
-/** What the user's accepted friends did in Shows lately, newest first. */
-export async function friendsActivity(userId: string, limit = 30): Promise<ActivityItem[]> {
-  const { rows } = await getPool().query<Row>(
-    `WITH friends AS (
-       SELECT friend_id AS id FROM friendships WHERE user_id = $1 AND status = 'accepted'
-       UNION ALL SELECT user_id FROM friendships WHERE friend_id = $1 AND status = 'accepted'
-     )
-     SELECT ${itemColumns} FROM activity a JOIN users u ON u.id = a.user_id JOIN shows s ON s.id = a.show_id
-     WHERE a.user_id IN (SELECT id FROM friends) AND a.created_at > now() - interval '${keepFor}'
-     ORDER BY a.created_at DESC, a.id LIMIT $2`,
-    [userId, limit],
-  );
-  return toItems(rows);
-}
-
-/** Accepted friends' Shows and Books activity only; never Shared activity. */
+/** Accepted friends' Shows and Books activity only, newest first; never Shared activity. */
 export async function socialActivity(userId: string, limit = 30): Promise<ActivityItem[]> {
   const { rows } = await getPool().query<Row>(
     `WITH friends AS (

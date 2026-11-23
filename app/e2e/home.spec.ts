@@ -543,13 +543,15 @@ test("badges: Tasks' due for you, Recipes' to buy, Shows' friend requests and ne
 
   // Shows: a friend request waiting, then a friend's recommendation, which Discover then shows.
   const friend = await otherPerson(browser);
-  expect((await friend.page.request.post("/api/shows/friends", { data: { username: me.username } })).ok()).toBe(true);
+  expect((await friend.page.request.post("/api/social/friends", { data: { username: me.username } })).ok()).toBe(true);
   await page.reload();
   await expect(folder("Trackers")).toHaveAccessibleName("Trackers, 1 waiting");
   await expect(await icon("Trackers", "Shows")).toHaveAccessibleName("Shows, 1 new");
   await page.keyboard.press("Escape");
 
-  expect((await page.request.post("/api/shows/friends", { data: { username: friend.user.username } })).ok()).toBe(true);
+  expect((await page.request.post("/api/social/friends", { data: { username: friend.user.username } })).ok()).toBe(
+    true,
+  );
   const recommended = await friend.page.request.post("/api/shows/recommendations", {
     data: { friendId: meId, type: "tv", tmdbId: mockBase + 103 },
   });

@@ -1,7 +1,6 @@
 // Types and helpers of the Shows app, for both the server and the browser.
 
 import type { Named } from "./names";
-import type { Person } from "./social-types";
 
 export type MediaType = "tv" | "movie";
 export const mediaTypes: readonly MediaType[] = ["tv", "movie"];
@@ -244,14 +243,6 @@ export function libraryStats(items: readonly StatsItem[]): LibraryStats {
 /** Hours with at most one decimal, e.g. "1,234.5". */
 export const formatHours = (minutes: number) =>
   (Math.round(minutes / 6) / 10).toLocaleString("en-GB", { maximumFractionDigits: 1 });
-
-/** A friend's profile: what they're watching, what they've completed, their favourites and their stats. */
-export type FriendProfile = Person & {
-  stats: LibraryStats;
-  items: FriendItem[];
-  /** Titles you have both planned: something to watch together. */
-  bothPlanned: TitleSummary[];
-};
 
 /**
  * Merges lists of recommendations (TMDB's, one per title of the user's) into one

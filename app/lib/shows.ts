@@ -237,10 +237,9 @@ async function refreshTitles(titles: Pick<TitleSummary, "type" | "tmdbId">[]) {
   }
 }
 
-// A user's library titles that match `where` (a fixed SQL condition on us,
-// never anything from a request), the latest added or changed first. Stale
-// titles are fetched from TMDB again after the response.
-async function libraryItems(userId: string, where = "true"): Promise<LibraryItem[]> {
+// A user's library titles, the latest added or changed first. Stale titles are
+// fetched from TMDB again after the response.
+async function libraryItems(userId: string): Promise<LibraryItem[]> {
   const { rows } = await query<LibraryItem & { stale: boolean }>(
     `SELECT s.type, s.tmdb_id AS "tmdbId", s.title, s.year, s.poster_url AS "posterPath",
        s.vote_average::float8 AS rating, s.runtime, s.episode_runtime AS "episodeRuntime",
@@ -249,7 +248,7 @@ async function libraryItems(userId: string, where = "true"): Promise<LibraryItem
          'currentEpisode', us.current_episode, 'isFavourite', us.is_favourite) AS library,
        s.last_updated < now() - interval '${refreshAfter}' AS stale
      FROM user_shows us JOIN shows s ON s.id = us.show_id
-     WHERE us.user_id = $1 AND (${where}) ORDER BY us.updated_at DESC, us.id`,
+     WHERE us.user_id = $1 ORDER BY us.updated_at DESC, us.id`,
     [userId],
   );
   const stale = rows.filter((row) => row.stale);
@@ -273,19 +272,9 @@ export function readLibrary(userId: string): Promise<LibraryItem[]> {
   return libraryItems(userId);
 }
 
-/**
- * What a friend sees of a user's library: the titles they're watching or have
- * completed and their favourites, with the stats of the whole library.
- * Social includes planned titles too; the legacy Shows API keeps its original subset.
- */
-export async function sharedLibrary(
-  userId: string,
-  includePlanned = false,
-): Promise<{ stats: LibraryStats; items: FriendItem[] }> {
-  const items = await libraryItems(
-    userId,
-    includePlanned ? undefined : "us.status IN ('watching', 'completed') OR us.is_favourite",
-  );
+/** What a friend sees of a user's library (lib/social.ts, their profile): every title, and its stats. */
+export async function sharedLibrary(userId: string): Promise<{ stats: LibraryStats; items: FriendItem[] }> {
+  const items = await libraryItems(userId);
   return {
     stats: libraryStats(items),
     // Only these fields: the entry's id stays private.

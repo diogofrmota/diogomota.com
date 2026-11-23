@@ -34,7 +34,7 @@ export async function socialPerson(viewerId: string, targetId: string): Promise<
 export async function readSocialProfile(viewerId: string, targetId = viewerId): Promise<SocialProfile> {
   const person = await socialPerson(viewerId, targetId);
   const [shows, books, planned] = await Promise.all([
-    sharedLibrary(person.id, true),
+    sharedLibrary(person.id),
     listBooks(person.id),
     person.id === viewerId ? Promise.resolve([]) : bothPlanned(viewerId, person.id),
   ]);

@@ -30,20 +30,22 @@ test("only accepted friends can read a library through the API, and every friend
   const friend = await otherPerson(browser);
   const stranger = await otherPerson(browser);
   await addTitle(friend.page, orchard, "watching", { currentSeason: 1, currentEpisode: 2 }); // 2 × 45 minutes
-  const profileOf = (from: Page, id: string) => from.request.get(`/api/shows/friends/${id}`);
+  const profileOf = (from: Page, id: string) => from.request.get(`/api/social/profiles/${id}`);
   const post = (from: Page, path: string, data: object = {}, headers: Record<string, string> = {}) =>
-    from.request.post(`/api/shows/friends${path}`, { data, headers });
-  const remove = (from: Page, id: string) => from.request.delete(`/api/shows/friends/${id}`);
+    from.request.post(`/api/social/friends${path}`, { data, headers });
+  const remove = (from: Page, id: string) => from.request.delete(`/api/social/friends/${id}`);
   const person = (who: { id: string; user: TestUser }) => named(who.id, who.user);
   const noOne = { friends: [], incoming: [], outgoing: [] };
+  const noBooks = { stats: { wantToRead: 0, currentlyReading: 0, finished: 0, pagesRead: 0 }, items: [] };
 
-  // Nobody's library before a request is accepted, and never a stranger's, my
-  // own, or that of an id nobody has.
-  for (const id of [friend.id, stranger.id, meId, randomUUID(), "not-an-id"]) {
+  // Nobody's library before a request is accepted, and never a stranger's or
+  // that of an id nobody has; my own profile is mine.
+  for (const id of [friend.id, stranger.id, randomUUID(), "not-an-id"]) {
     const response = await profileOf(page, id);
     expect(response.status(), id).toBe(404);
-    expect((await response.json()).error).toBe("Only friends can see each other's libraries.");
+    expect((await response.json()).error).toBe("Profile not found.");
   }
+  expect((await profileOf(page, meId)).status()).toBe(200);
 
   // A request: still not.
   const request = await post(page, "", { username: friend.user.username });
@@ -75,13 +77,15 @@ test("only accepted friends can read a library through the API, and every friend
   expect(friendProfile.status()).toBe(200);
   expect((await friendProfile.json()).data).toMatchObject({
     ...person(friend),
-    stats: { tvCompleted: 0, moviesCompleted: 0, episodesWatched: 2, minutesWatched: 90 },
-    items: [{ title: "The Quiet Orchard", library: { status: "watching", currentSeason: 1, currentEpisode: 2 } }],
+    shows: {
+      stats: { tvCompleted: 0, moviesCompleted: 0, episodesWatched: 2, minutesWatched: 90 },
+      items: [{ title: "The Quiet Orchard", library: { status: "watching", currentSeason: 1, currentEpisode: 2 } }],
+    },
   });
   expect((await (await profileOf(friend.page, meId)).json()).data).toEqual({
     ...named(meId, me),
-    stats: { tvCompleted: 0, moviesCompleted: 0, episodesWatched: 0, minutesWatched: 0 },
-    items: [],
+    shows: { stats: { tvCompleted: 0, moviesCompleted: 0, episodesWatched: 0, minutesWatched: 0 }, items: [] },
+    books: noBooks,
     // What both have Planned: nothing here.
     bothPlanned: [],
   });
@@ -137,23 +141,23 @@ test("only accepted friends can read a library through the API, and every friend
   }
   // Unknown endpoints, other sites and bodies that aren't JSON.
   expect((await post(page, `/${friend.id}/befriend`)).status()).toBe(404);
-  // A friend is read (GET) and removed (DELETE), not posted to.
+  // A friend is removed (DELETE), not posted to; their profile is /api/social/profiles.
   expect((await post(page, `/${friend.id}`)).status()).toBe(405);
-  expect((await page.request.get(`/api/shows/friends/${friend.id}/library`)).status()).toBe(404);
+  expect((await page.request.get(`/api/social/friends/${friend.id}/library`)).status()).toBe(404);
   // The list is read and posted to, not deleted.
-  expect((await page.request.delete("/api/shows/friends")).status()).toBe(405);
+  expect((await page.request.delete("/api/social/friends")).status()).toBe(405);
   expect((await post(page, "", { username: friend.user.username }, { Origin: "https://evil.example" })).status()).toBe(
     403,
   );
   expect((await post(page, `/${meId}/accept`, {}, { Origin: "https://evil.example" })).status()).toBe(403);
   expect(
     (
-      await page.request.delete(`/api/shows/friends/${stranger.id}`, { headers: { Origin: "https://evil.example" } })
+      await page.request.delete(`/api/social/friends/${stranger.id}`, { headers: { Origin: "https://evil.example" } })
     ).status(),
   ).toBe(403);
   expect(
     (
-      await page.request.post("/api/shows/friends", { data: "username=x", headers: { "Content-Type": "text/plain" } })
+      await page.request.post("/api/social/friends", { data: "username=x", headers: { "Content-Type": "text/plain" } })
     ).status(),
   ).toBe(415);
   expect((await friendsState(page)).friends).toEqual([person(stranger)]);
@@ -161,9 +165,11 @@ test("only accepted friends can read a library through the API, and every friend
   // Logged out: 401.
   const anonymous = await playwright.request.newContext({ baseURL });
   expect((await anonymous.get("/api/shows/friends")).status()).toBe(401);
-  expect((await anonymous.get(`/api/shows/friends/${friend.id}`)).status()).toBe(401);
-  expect((await anonymous.post("/api/shows/friends", { data: { username: friend.user.username } })).status()).toBe(401);
-  expect((await anonymous.delete(`/api/shows/friends/${friend.id}`)).status()).toBe(401);
+  expect((await anonymous.get(`/api/social/profiles/${friend.id}`)).status()).toBe(401);
+  expect((await anonymous.post("/api/social/friends", { data: { username: friend.user.username } })).status()).toBe(
+    401,
+  );
+  expect((await anonymous.delete(`/api/social/friends/${friend.id}`)).status()).toBe(401);
   await anonymous.dispose();
 
   // Each request says whether a username exists: at most 20 per 15 minutes.
