@@ -11,8 +11,6 @@ import type { Space } from "./space-types";
 
 // A space's events. Every function runs in inSpace's transaction (lib/spaces.ts),
 // with the space's rows locked for sharing, so its members can't change halfway.
-// Events have no notes any more: events.notes stays, unread, for the previous
-// release, and goes in a later migration (README.md, Migrations).
 
 type EventFields = z.output<typeof eventInput>;
 

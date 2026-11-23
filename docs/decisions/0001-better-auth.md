@@ -6,4 +6,4 @@
 
 **What it is:** `app/auth.ts`, mapped onto `users` (with the username plugin), `accounts` (the bcrypt hashes, so every existing password works), `sessions` (read on every request) and `verifications` (reset tokens, hashed). The forms stay server actions with the site's own validation and rate limits; Better Auth's same endpoints over HTTP are switched off (`disabledPaths`).
 
-**Costs:** moving logged everyone out once. Better Auth checks the schema when it starts, so every column it doesn't write must be nullable or have a default. `users.password_hash` is kept in step by a trigger until the contract migration, so a rollback to an Auth.js image still works.
+**Costs:** moving logged everyone out once. Better Auth checks the schema when it starts, so every column it doesn't write must be nullable or have a default. `users.password_hash` was kept in step by a trigger until the contract migration (`030_contract.sql`), so a rollback to an Auth.js image worked until then.

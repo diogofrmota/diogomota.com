@@ -4,6 +4,6 @@
 
 **Why:** a personal 1–5 rating was rarely set and cluttered every card and panel; what friends want to know is what the others watch and finish.
 
-**What it is:** cards and panels show TMDB's average; `user_shows.rating` stays, unread, until the contract migration.
+**What it is:** cards and panels show TMDB's average; `user_shows.rating` stayed, unread, until the contract migration (`030_contract.sql`) dropped it.
 
 **Costs:** For You can't learn from what someone disliked.
