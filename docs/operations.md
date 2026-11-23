@@ -438,6 +438,8 @@ docker compose exec -T app node scripts/cleanup-media.mjs
 
 A job with no `user_id` (migration `029_couples_groups.sql`) is a For Couples group's recipe photos, queued when its last member left: it removes only those photos, never a profile picture. An image from before 029 can't run such a job: it counts an attempt and leaves it for the next release to finish.
 
+Migration `033_recipes_without_owner.sql` queues one such job, if there were any photos: those of the recipes it deletes, which had neither a group nor a user (left by an image from before 029 deleting an account or a group). After the deploy that applies it, the command above clears it. Until then the files only take up space; the next account deletion, or a group deleted with photos, also works through pending jobs.
+
 The command reports the remaining count and exits nonzero while jobs remain. Repeat until zero; missing files are safe to retry. Do not re-create a deleted account to retry cleanup. This command is an operations instruction, not something to run against ordinary/production data during development tests.
 
 Browser rollout requires an additional boundary: close or refresh old-version app tabs before making further offline changes; an already-open old client does not understand the new journal format. Since 2026-11-23 the client no longer imports a pre-v2.0.0 snapshot (`diogomota-cache:<user>`): it leaves it untouched, and **Download pending changes** includes it. Do not clear browser storage, delete those journals, or manually replay recurring completions without reconciling their occurrence. Pending journals are not tied to APP_VERSION; disposable query snapshots are.

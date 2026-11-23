@@ -240,4 +240,3 @@ The rollback holds until the next push to `main`, or a run with an empty `image_
 - [ ] Optional: the offsite backup (`docs/operations.md`, Offsite backup): pick a provider, `rclone config`, save the crypt passwords, set `OFFSITE_DEST` in `infra/offsite-backup.sh`, uncomment its line in `infra/crontab`, push, then `crontab infra/crontab` on the VPS
 - [ ] Every month: the check in `docs/operations.md` (Monthly check)
 - [ ] DMARC: after a few weeks of clean reports, the TXT `_dmarc` record at Porkbun from `v=DMARC1; p=none;` to `v=DMARC1; p=quarantine; adkim=r; aspf=r;` (docs/operations.md, Email)
-- [ ] A release after For Couples (`029_couples_groups.sql`): a contract migration deleting the recipes and shopping lines with neither `space_id` nor `user_id` (an account deleted by an older release), their photos' files queued in `media_cleanup_jobs`, with its `-- contract:` comment

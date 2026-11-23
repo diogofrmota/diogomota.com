@@ -204,3 +204,44 @@ it("deleting an account deletes what it kept outside a group; a partner's deleti
   expect((await listShopping(owner)).map((item) => item.text)).toEqual(["stays too"]);
   expect((await getPool().query("SELECT user_id FROM recipes WHERE id = $1", [made.id])).rows[0].user_id).toBeNull();
 });
+
+it("033 deletes the recipes and lines with neither a group nor a user, and queues their photos' files", async () => {
+  const owner = await person();
+  const mine = await parked(owner, "Parked", ["parked line"]);
+  const { partner } = await couple();
+  const groups = await createRecipe(partner, recipe("The group's"));
+  // Without the one who added it, it is still the group's.
+  await deleteAccountData(partner);
+  const migration = await readFile(
+    new URL("../../db/migrations/033_recipes_without_owner.sql", import.meta.url),
+    "utf8",
+  );
+  const db = await getPool().connect();
+  // In a transaction, rolled back after: the other files' rows stay as they are.
+  try {
+    await db.query("BEGIN");
+    // What an image from before 029 left behind: nobody's.
+    const orphan = randomUUID();
+    const photo = randomUUID();
+    await db.query("INSERT INTO recipes (id, title) VALUES ($1, 'Nobody''s')", [orphan]);
+    await db.query("INSERT INTO recipe_photos (id, recipe_id, position, width, height) VALUES ($1, $2, 0, 10, 10)", [
+      photo,
+      orphan,
+    ]);
+    await db.query("INSERT INTO shopping_items (text, position) VALUES ('nobody''s line', 0)");
+    await db.query(migration);
+
+    const count = async (sql: string, params: unknown[] = []) => (await db.query(sql, params)).rowCount;
+    expect(await count("SELECT 1 FROM recipes WHERE id = $1", [orphan])).toBe(0);
+    expect(await count("SELECT 1 FROM recipe_photos WHERE id = $1", [photo])).toBe(0);
+    expect(await count("SELECT 1 FROM shopping_items WHERE text = 'nobody''s line'")).toBe(0);
+    expect(await count("SELECT 1 FROM media_cleanup_jobs WHERE user_id IS NULL AND $1 = ANY(photo_ids)", [photo])).toBe(
+      1,
+    );
+    expect(await count("SELECT 1 FROM recipes WHERE id = ANY($1)", [[mine, groups.id]])).toBe(2);
+    expect(await count("SELECT 1 FROM shopping_items WHERE user_id = $1", [owner])).toBe(1);
+  } finally {
+    await db.query("ROLLBACK");
+    db.release();
+  }
+});
