@@ -55,7 +55,7 @@ const recipe = (title: string) => ({
   isFavourite: false,
 });
 
-/** A recipe and lines of the list kept outside a group, as before groups had them (or a release before this one wrote). */
+/** A recipe and lines of the list kept outside a group, as before groups had them. */
 async function parked(userId: string, title: string, lines: string[]) {
   const id = randomUUID();
   await getPool().query("INSERT INTO recipes (id, user_id, title) VALUES ($1, $2, $3)", [id, userId, title]);
@@ -154,16 +154,6 @@ it("both see and change the group's recipes, photos and list; nobody else does",
   expect(await refusal(listRecipes(alone))).toEqual({ status: 403, message: "Join or create a group first." });
   // Creating with the group's id from another group is refused, not a copy.
   expect(await refusal(createRecipe(other.owner, { ...recipe("Copy"), id: made.id }))).toMatchObject({ status: 409 });
-});
-
-it("rows written without a group while in one (a release before this one) are adopted by their user's next request", async () => {
-  const { owner, partner } = await couple();
-  const late = await parked(owner, "Written by the old release", ["late line"]);
-  // Not the partner's to adopt: only its user's request brings it in.
-  expect((await listRecipes(partner)).map((r) => r.id)).toEqual([]);
-  expect((await listRecipes(owner)).map((r) => r.id)).toEqual([late]);
-  expect((await listRecipes(partner)).map((r) => r.id)).toEqual([late]);
-  expect((await listShopping(partner)).map((item) => item.text)).toEqual(["late line"]);
 });
 
 it("leaving keeps the recipes with the group; the last one out deletes them, and their photos' files, not their picture", async () => {

@@ -190,10 +190,6 @@ async function leave(db: PoolClient, userId: string, space: Space): Promise<bool
     "DELETE FROM event_assignees WHERE user_id = $1 AND event_id IN (SELECT id FROM events WHERE space_id = $2)",
     [userId, space.id],
   );
-  await db.query(
-    "UPDATE tasks SET assignee_id = NULL WHERE assignee_id = $1 AND list_id IN (SELECT id FROM task_lists WHERE space_id = $2)",
-    [userId, space.id],
-  );
   await db.query("UPDATE users SET space_id = NULL, space_color = NULL, space_joined_at = NULL WHERE id = $1", [
     userId,
   ]);

@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
 import { expect, test, newUser, signUp, accountSetting } from "./fixtures";
-import { userId, mockBase } from "./shows";
+import { userId } from "./shows";
 import { isolatedNginx, photoMultipart } from "./nginx";
 import { seedLargeDataset } from "./large-dataset";
 
@@ -183,59 +183,6 @@ test("multi-year data measurements and quota failure keep pending operations rec
     .toBe(true);
 });
 
-test("legacy queues from an old release migrate by app and Shows additions resume with reconciliation @smoke", async ({
-  page,
-}) => {
-  const user = newUser();
-  await signUp(page, user);
-  await expect(page).toHaveURL("/");
-  const id = await userId(user.username);
-  const mutation = (key: string[], variables: object) => ({
-    mutationKey: key,
-    state: {
-      context: null,
-      data: null,
-      error: null,
-      failureCount: 0,
-      failureReason: null,
-      isPaused: true,
-      status: "pending",
-      variables,
-      submittedAt: Date.now(),
-    },
-  });
-  const snapshot = {
-    timestamp: 1,
-    buster: "v0-before-patch",
-    clientState: {
-      queries: [],
-      mutations: [
-        mutation(["fitness", "change"], { kind: "goals", fields: { waterMl: 3000 } }),
-        mutation(["shows", "library-add"], { title: { type: "movie", tmdbId: mockBase + 1 }, status: "planned" }),
-      ],
-    },
-  };
-  await page.evaluate(({ id, snapshot }) => localStorage.setItem(`diogomota-cache:${id}`, JSON.stringify(snapshot)), {
-    id,
-    snapshot,
-  });
-  await page.goto("/books");
-  await expect(page.getByRole("navigation", { name: "Books", exact: true })).toBeVisible();
-  await page.goto("/shows");
-  await expect.poll(async () => (await (await page.request.get("/api/shows/library")).json()).data.length).toBe(1);
-  await page.reload();
-  expect((await (await page.request.get("/api/shows/library")).json()).data).toHaveLength(1);
-  await page.goto("/fitness");
-  await expect.poll(async () => (await (await page.request.get("/api/fitness")).json()).data.goals.waterMl).toBe(3000);
-  await page.reload();
-  expect(
-    await page.evaluate(
-      (id) => JSON.parse(localStorage.getItem(`diogomota-cache:${id}`)!).clientState.mutations.length,
-      id,
-    ),
-  ).toBe(2);
-});
-
 test("successful password logout clears other tabs and private documents; failed validation preserves queues @smoke", async ({
   page,
   context,
@@ -341,28 +288,6 @@ test("production nginx and Next accept bounded photos; reject oversized, chunked
   } finally {
     await nginx.cleanup();
   }
-});
-
-test("logout upgrades a legacy worker without a cleanup handler before completing local cleanup @smoke", async ({
-  page,
-}) => {
-  await signUp(page, newUser());
-  await expect(page).toHaveURL("/");
-  await page.goto("/account");
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.register("/api/test/legacy-worker", { scope: "/" });
-  });
-  await expect
-    .poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL.includes("/api/test/legacy-worker")))
-    .toBe(true);
-  await page.evaluate(async () => {
-    const cache = await caches.open("diogomota-offline-v1");
-    await cache.put(location.origin + "/fitness", new Response("PRIVATE_LEGACY_DOCUMENT"));
-  });
-  await page.getByRole("button", { name: "Log out", exact: true }).click();
-  await expect(page).toHaveURL("/");
-  expect(await page.evaluate(async () => !!(await caches.match(location.origin + "/fitness")))).toBe(false);
-  expect(await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL.endsWith("/sw.js"))).toBe(true);
 });
 
 test("unsupported journals remain unchanged, pause editing, and can be downloaded for recovery @smoke", async ({

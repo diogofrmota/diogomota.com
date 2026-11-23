@@ -15,8 +15,9 @@ export type Task = {
   notes: string;
   /** YYYY-MM-DD, a calendar date without a time zone. */
   dueDate: string | null;
+  /** The first of assigneeIds (lib/tasks.ts): a task had one assignee before 021. */
   assigneeId: string | null;
-  /** Optional for tasks cached by a previous release. */
+  /** Who it's for. The server always sends them; a task just added on this device has none yet (useTasks). */
   assigneeIds?: string[];
   isComplete: boolean;
   /** Ticked off, a repeating task comes back with its next due date (nextDue) instead of moving to Done. */

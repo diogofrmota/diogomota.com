@@ -14,8 +14,13 @@ import { applyTaskFields, moveBefore, type Task, type TaskList } from "./task-ty
 // the ids of what they create (taskCreate, listInput), so they can keep working
 // with it before the response arrives (optimistic updates).
 
+// Who a task is for is task_assignees (021_task_assignees.sql); assigneeId, from
+// when a task had one, is the first of them. tasks.assignee_id is neither read
+// nor written any more, and goes in a contract migration (README.md, To-do).
 const columns = `id, list_id AS "listId", title, coalesce(notes, '') AS notes, due_date::text AS "dueDate",
-  assignee_id AS "assigneeId", ARRAY(SELECT user_id FROM task_assignees WHERE task_id = tasks.id ORDER BY user_id) AS "assigneeIds", is_complete AS "isComplete", repeat`;
+  (SELECT user_id FROM task_assignees WHERE task_id = tasks.id ORDER BY user_id LIMIT 1) AS "assigneeId",
+  ARRAY(SELECT user_id FROM task_assignees WHERE task_id = tasks.id ORDER BY user_id) AS "assigneeIds",
+  is_complete AS "isComplete", repeat`;
 
 /** Today in the calendar's time zone, for due dates. */
 const today = () => localParts(new Date()).date;
@@ -133,20 +138,11 @@ export async function addTask(
   const assigneeIds = input.assigneeIds ?? (input.assigneeId ? [input.assigneeId] : []);
   checkAssignees(space, assigneeIds);
   const { rows } = await db.query<Task>(
-    `INSERT INTO tasks (id, list_id, title, notes, due_date, assignee_id, is_complete, repeat, position)
-     SELECT $1::uuid, $2::uuid, $3::text, nullif($4::text, ''), $5::date, $6::uuid, $7::boolean, $8::text,
+    `INSERT INTO tasks (id, list_id, title, notes, due_date, is_complete, repeat, position)
+     SELECT $1::uuid, $2::uuid, $3::text, nullif($4::text, ''), $5::date, $6::boolean, $7::text,
        coalesce(max(position) + 1, 0)
      FROM tasks WHERE list_id = $2 ON CONFLICT (id) DO NOTHING RETURNING ${columns}`,
-    [
-      input.id ?? randomUUID(),
-      list.id,
-      input.title,
-      input.notes,
-      input.dueDate,
-      assigneeIds[0] ?? null,
-      input.isComplete,
-      input.repeat,
-    ],
+    [input.id ?? randomUUID(), list.id, input.title, input.notes, input.dueDate, input.isComplete, input.repeat],
   );
   if (!rows[0]) throw new HttpError("Could not create the task. Try again.", 409);
   await saveAssignees(db, rows[0].id, assigneeIds);
@@ -157,7 +153,8 @@ export async function addTask(
     key: `task:${rows[0].id}`,
     data: { title: input.title, list: list.name },
   });
-  return { ...rows[0], assigneeIds };
+  // Its assignees were saved after the insert's RETURNING read them.
+  return { ...rows[0], assigneeIds, assigneeId: assigneeIds[0] ?? null };
 }
 
 /**
@@ -190,10 +187,10 @@ export async function updateTask(
   checkAssignees(space, assigneeIds);
   const reopened = current.isComplete && !task.isComplete;
   const { rows } = await db.query<Task>(
-    `UPDATE tasks SET title = $2, notes = nullif($3, ''), due_date = $4, assignee_id = $5, is_complete = $6, repeat = $7,
-       position = CASE WHEN $8 THEN (SELECT coalesce(max(position) + 1, 0) FROM tasks WHERE list_id = $9) ELSE position END
+    `UPDATE tasks SET title = $2, notes = nullif($3, ''), due_date = $4, is_complete = $5, repeat = $6,
+       position = CASE WHEN $7 THEN (SELECT coalesce(max(position) + 1, 0) FROM tasks WHERE list_id = $8) ELSE position END
      WHERE id = $1 RETURNING ${columns}`,
-    [id, task.title, task.notes, task.dueDate, task.assigneeId, task.isComplete, task.repeat, reopened, current.listId],
+    [id, task.title, task.notes, task.dueDate, task.isComplete, task.repeat, reopened, current.listId],
   );
   if (fields.assigneeIds !== undefined || fields.assigneeId !== undefined) await saveAssignees(db, id, assigneeIds);
   if (fields.isComplete && !current.isComplete) {
@@ -205,7 +202,8 @@ export async function updateTask(
       data: { title: task.title, list: current.list },
     });
   }
-  return { ...rows[0], assigneeIds };
+  // Its assignees, if they changed, were saved after the update's RETURNING read them.
+  return { ...rows[0], assigneeIds, assigneeId: assigneeIds[0] ?? null };
 }
 
 export async function deleteTask(db: PoolClient, space: Space, userId: string, id: string): Promise<null> {

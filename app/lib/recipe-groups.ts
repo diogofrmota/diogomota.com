@@ -3,9 +3,11 @@ import type { PoolClient } from "pg";
 
 // Recipes in a group (docs/decisions/0023): the recipes and the shopping list
 // are the group's, as its calendar and tasks are. A user's rows without a
-// group ("parked": from before groups had them, from before they were in one,
-// or written by a release before this one) come into the group the user is in
-// when they create or join one, and on their next Recipes request in it. These
+// group ("parked": from before groups had them, or from before they were in
+// one) come into the group the user is in when they create or join one. (Until
+// 2026-11-23 every Recipes request adopted them too, for rows written by an
+// image from before 029 (older than v2.0.2) rolled back to; rolling back that far now
+// leaves its new recipes parked until their user creates or joins a group.) These
 // take the caller's transaction, in which the user's and the group's rows are
 // already locked (lib/spaces.ts, Locking), and import neither lib/spaces.ts nor
 // lib/recipes.ts, which both use them.

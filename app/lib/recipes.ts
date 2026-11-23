@@ -4,7 +4,7 @@ import type { PoolClient } from "pg";
 import type { z } from "zod";
 import { query } from "./db";
 import { HttpError } from "./http";
-import { adoptParked, lockShopping } from "./recipe-groups";
+import { lockShopping } from "./recipe-groups";
 import { removePhotoFiles, savePhotoFiles, type ProcessedPhoto } from "./recipe-photos";
 import { recipeLimits, type Recipe, type ShoppingItem } from "./recipe-types";
 import { isUuid, type recipeCreate, type recipePatch, type shoppingAdd, type shoppingPatch } from "./schemas";
@@ -30,14 +30,10 @@ const notFound = () => new HttpError("Recipe not found.", 404);
 
 /**
  * Runs `fn` with the user's group, its rows share-locked for the transaction
- * (lib/spaces.ts, inSpace), once the user's parked recipes are in it
- * (lib/recipe-groups.ts). Without a group: 403.
+ * (lib/spaces.ts, inSpace). Without a group: 403.
  */
 function inGroup<T>(userId: string, fn: (db: PoolClient, spaceId: string) => Promise<T>): Promise<T> {
-  return inSpace(userId, async (db, space) => {
-    await adoptParked(db, userId, space.id);
-    return fn(db, space.id);
-  });
+  return inSpace(userId, (db, space) => fn(db, space.id));
 }
 
 /** The group's recipes, the newest first. */

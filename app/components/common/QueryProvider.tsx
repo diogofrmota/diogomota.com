@@ -48,30 +48,8 @@ export async function clearOfflineData(preservePending = false) {
     if (!preservePending && key.startsWith("diogomota-cache:")) localStorage.removeItem(key);
   await clearOfflineQueryCache();
   if ("serviceWorker" in navigator) {
-    let registration = await navigator.serviceWorker.getRegistration();
-    if (registration) {
-      // The first fixed release can still be controlled by the old worker,
-      // which has no cleanup message handler. Activate the current script
-      // before asking it to acknowledge and drain account cache writes.
-      registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-      await registration.update();
-      const installing = registration.installing ?? registration.waiting;
-      if (installing && installing.state !== "activated")
-        await new Promise<void>((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error("Worker activation timed out")), 10000);
-          installing.addEventListener("statechange", () => {
-            if (installing.state === "activated") {
-              clearTimeout(timeout);
-              resolve();
-            }
-            if (installing.state === "redundant") {
-              clearTimeout(timeout);
-              reject(new Error("Worker activation failed"));
-            }
-          });
-        });
-    }
-    const worker = registration?.active;
+    // The worker acknowledges once its pending cache writes are done and its caches are gone (public/sw.js).
+    const worker = (await navigator.serviceWorker.getRegistration())?.active;
     if (worker)
       await new Promise<void>((resolve, reject) => {
         const channel = new MessageChannel();

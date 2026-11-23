@@ -1,6 +1,5 @@
 import type { OfflineNotice } from "./offline-notice";
 import type { PersistedClient, Persister } from "@tanstack/react-query-persist-client";
-import { applyTaskFields, type TaskList } from "./task-types";
 import { browserQueryStore, type OfflineQueryStore } from "./offline-query-cache";
 
 export const offlineFormat = "operations-v1";
@@ -60,9 +59,6 @@ export function offlinePersister(
       try {
         const pending = storage.getItem(`${key}:pending`);
         const raw = storage.getItem(key);
-        // Only the base journal owns migration. Additional tabs must never
-        // independently import and replay the same legacy operation.
-        const legacy = slot ? null : storage.getItem(`diogomota-cache:${user}`);
         const fallback = !raw && slot ? storage.getItem(offlineKey(user, app)) : null;
         let cached;
         try {
@@ -77,42 +73,6 @@ export function offlinePersister(
           if (journal.format !== offlineFormat || !Array.isArray(journal.mutations))
             throw new Error("Unsupported queue");
           mutations = journal.mutations;
-        } else if (legacy) {
-          const old: PersistedClient = JSON.parse(legacy);
-          if (!Array.isArray(old.clientState?.mutations)) throw new Error("Unreadable legacy queue");
-          mutations = old.clientState.mutations.filter((m) => m.mutationKey?.[0] === app);
-          if (app === "shared") {
-            const lists = structuredClone(
-              old.clientState.queries.find((q) => q.queryKey[0] === "shared" && q.queryKey[1] === "tasks")?.state
-                .data ?? [],
-            ) as TaskList[];
-            for (const mutation of mutations) {
-              const change = mutation.state.variables as {
-                kind?: string;
-                id?: string;
-                fields?: { isComplete?: boolean; expectedDueDate?: string | null };
-                today?: string;
-              };
-              if (change.kind !== "updateTask" || !change.fields) continue;
-              const task = lists.flatMap((list) => list.tasks).find((task) => task.id === change.id);
-              if (change.fields.isComplete && change.fields.expectedDueDate === undefined) {
-                // The previous cache contains the state before pending changes.
-                // Without it, completion cannot safely identify an occurrence.
-                if (!task) throw new Error("Legacy completion requires recovery");
-                if (task.repeat) change.fields.expectedDueDate = task.dueDate;
-              }
-              if (task && change.today) Object.assign(task, applyTaskFields(task, change.fields, change.today));
-            }
-          }
-          if (
-            old.clientState.mutations.some(
-              (m) => !["shared", "shows", "recipes", "fitness", "books"].includes(String(m.mutationKey?.[0])),
-            )
-          )
-            warn({
-              message: "Some older pending changes need recovery. Their original offline snapshot has been retained.",
-              offerRecovery: true,
-            });
         }
         if (mutations.some((m) => !m.mutationKey || !supported(m.mutationKey)))
           throw new Error("Unsupported operation");
@@ -132,9 +92,9 @@ export function offlinePersister(
               cached?.version === version && Date.now() - cached.timestamp <= week ? cached.clientState.queries : [],
           },
         };
-        // The empty journal is also a migration marker; never reimport a
-        // completed legacy operation. Keep the original for rollback/recovery.
-        if (!(await save(value))) throw new Error("Could not commit queue migration");
+        // Written back at once: a journal this device can't write pauses
+        // editing now, before a change is made that couldn't be kept.
+        if (!(await save(value))) throw new Error("Could not write the restored queue");
         return value;
       } catch {
         blocked = true;
