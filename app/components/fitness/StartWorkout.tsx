@@ -1,12 +1,13 @@
 "use client";
 import { ChevronRightIcon, DumbbellIcon, PlusIcon } from "@/components/common/icons";
+import { useOpenAfterClose } from "@/components/common/OpenAfterClose";
 import { Spinner } from "@/components/common/Spinner";
 import { Button } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
 import { useAppView } from "@/hooks/useAppView";
 import { datePlus } from "@/lib/calendar";
 import { isDay, routineLine, shortDate, type Routine } from "@/lib/fitness-types";
-import { useFitness, useOpenAfterClose, useStartWorkout } from "./fitness-data";
+import { useFitness, useStartWorkout } from "./fitness-data";
 import { Sheet } from "./Sheet";
 import styles from "./Fitness.module.css";
 

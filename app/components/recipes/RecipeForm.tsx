@@ -1,6 +1,7 @@
 "use client";
 import { useId, useRef, useState, type FormEvent } from "react";
 import { CloseIcon, PlusIcon } from "@/components/common/icons";
+import { useOpenAfterClose } from "@/components/common/OpenAfterClose";
 import { Spinner } from "@/components/common/Spinner";
 import { Alert, Button } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
@@ -18,7 +19,7 @@ import {
   type RecipeChange,
   type RecipeFields,
 } from "@/lib/recipe-types";
-import { useOpenAfterClose, useRecipes } from "./recipes-data";
+import { useRecipes } from "./recipes-data";
 import { Sheet } from "./Sheet";
 import styles from "./Recipes.module.css";
 

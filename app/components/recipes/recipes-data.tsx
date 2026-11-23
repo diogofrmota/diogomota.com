@@ -194,11 +194,6 @@ export type RecipesData = {
 
 const RecipesContext = createContext<RecipesData | null>(null);
 
-export const AfterCloseContext = createContext<(panel: string) => void>(() => {});
-
-/** Opens `panel` once the top panel has closed: a new recipe's page, in its form's place (RecipesApp). */
-export const useOpenAfterClose = () => useContext(AfterCloseContext);
-
 export function useRecipes(): RecipesData {
   const data = useContext(RecipesContext);
   if (!data) throw new Error("useRecipes must be used inside a RecipesProvider");

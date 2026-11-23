@@ -350,80 +350,22 @@
 
 /* --- Dialogs --------------------------------------------------------------- */
 
-/* The content fills the dialog, so a click on the dialog itself is on the backdrop (components/common/Dialog). */
+/* Recipes' sheets: their width, their body's and header's layout (components/common/Sheet.module.css has the rest). */
 .dialog {
-  margin: auto;
   width: min(40rem, calc(100% - 2rem));
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow-lg);
 }
 .dialog.wide {
   width: min(60rem, calc(100% - 2rem));
 }
-.dialog[open] {
-  display: flex;
-  flex-direction: column;
-}
-.dialog::backdrop {
-  background: #0008;
-}
 .dialogBody {
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: var(--space-6);
 }
 .dialogHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
-.dialogHeader h2 {
-  margin: var(--space-2) 0 0;
-  font-size: var(--text-xl);
-  letter-spacing: var(--tracking-tight);
-  line-height: var(--leading-tight);
-  overflow-wrap: anywhere;
-  text-wrap: balance;
-}
+/* A recipe's page: a larger title. Two classes, so it wins over the sheet's own. */
 .wide .dialogHeader h2 {
   font-size: var(--text-2xl);
-}
-/* The ×: a round button with a drawn cross. */
-.close {
-  flex-shrink: 0;
-  display: inline-grid;
-  place-items: center;
-  width: var(--control-height);
-  height: var(--control-height);
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--hover);
-  color: var(--muted);
-  cursor: pointer;
-  transition: scale var(--duration-fast) var(--ease-out);
-}
-.close:active {
-  scale: var(--press);
-}
-.close svg {
-  width: var(--icon-md);
-  height: var(--icon-md);
-}
-@media (hover: hover) {
-  .close:hover {
-    background: var(--border);
-    color: var(--text);
-  }
 }
 
 /* --- A recipe's page ---------------------------------------------------------- */
@@ -1120,12 +1062,6 @@
   }
 }
 
-@media (max-width: 47.99rem) {
-  .dialogBody {
-    padding: var(--space-4);
-  }
-}
-
 /* Last, so it wins over the rules above. */
 @media (prefers-reduced-motion: reduce) {
   .cardItem,
@@ -1138,7 +1074,6 @@
   .card,
   .cover img,
   .cardHeart,
-  .close,
   .photoActions button,
   .tagChips button,
   .knownTags button,
@@ -1149,7 +1084,6 @@
   }
   .card:active,
   .cardHeart:active,
-  .close:active,
   .photoActions button:active,
   .tagChips button:active,
   .knownTags button:active,

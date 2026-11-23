@@ -256,11 +256,6 @@ export type FitnessContextValue = {
 
 const FitnessContext = createContext<FitnessContextValue | null>(null);
 
-export const AfterCloseContext = createContext<(panel: string) => void>(() => {});
-
-/** Opens `panel` once the top panel has closed: a workout, in the place of the dialog that started it (FitnessApp). */
-export const useOpenAfterClose = () => useContext(AfterCloseContext);
-
 export function useFitness(): FitnessContextValue {
   const value = useContext(FitnessContext);
   if (!value) throw new Error("useFitness must be used inside a FitnessProvider");

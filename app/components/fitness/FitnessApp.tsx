@@ -1,14 +1,15 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { AppShell } from "@/components/common/AppShell";
 import { ChartIcon, DumbbellIcon, PulseIcon } from "@/components/common/icons";
+import { OpenAfterCloseProvider, useOpenQueuedPanel } from "@/components/common/OpenAfterClose";
 import { QueryProvider } from "@/components/common/QueryProvider";
 import { UndoToast } from "@/components/common/Undo";
 import { useAppView } from "@/hooks/useAppView";
 import type { AppViewState } from "@/lib/app-views";
 import type { Theme } from "@/lib/themes";
 import { GoalsDialog, SupplementsDialog } from "./DailyDialogs";
-import { AfterCloseContext, FitnessProvider, setupFitness, useFitness } from "./fitness-data";
+import { FitnessProvider, setupFitness, useFitness } from "./fitness-data";
 import { ProgressView } from "./ProgressView";
 import { RoutineForm } from "./RoutineForm";
 import { RunForm } from "./RunForm";
@@ -51,19 +52,10 @@ function Panel({ panel }: { panel: string }) {
   }
 }
 
-type Queued = { panel: string; after: string | undefined };
-
-function Panels({ queuedRef }: { queuedRef: React.RefObject<Queued | null> }) {
-  const { panels, openPanel } = useAppView();
+function Panels() {
+  const { panels } = useAppView();
   const { undo } = useFitness();
-  const top = panels.at(-1);
-  // Once the panel that asked for it has closed.
-  useEffect(() => {
-    const queued = queuedRef.current;
-    if (!queued || top === queued.after) return;
-    queuedRef.current = null;
-    openPanel(queued.panel);
-  }, [top, openPanel, queuedRef]);
+  useOpenQueuedPanel();
   // An exercise's or a supplement's Undo is in its dialog while that is open (the page's can't be reached behind it).
   const pendingId = undo.pending?.id ?? "";
   const undoInDialog =
@@ -92,7 +84,6 @@ export function FitnessApp({
   initial: AppViewState;
   version: string;
 }) {
-  const queuedRef = useRef<Queued | null>(null);
   const tabs = useMemo(
     () => [
       { id: "today", label: "Today", icon: <PulseIcon />, view: <TodayView /> },
@@ -104,7 +95,7 @@ export function FitnessApp({
   return (
     <QueryProvider app="fitness" userId={user.id} version={version} setup={setupFitness}>
       <FitnessProvider>
-        <OpenAfterClose queuedRef={queuedRef}>
+        <OpenAfterCloseProvider>
           <AppShell
             name="Fitness"
             basePath="/fitness"
@@ -114,30 +105,10 @@ export function FitnessApp({
             theme={theme}
             tabs={tabs}
           >
-            <Panels queuedRef={queuedRef} />
+            <Panels />
           </AppShell>
-        </OpenAfterClose>
+        </OpenAfterCloseProvider>
       </FitnessProvider>
     </QueryProvider>
   );
-}
-
-/** Lets a dialog ask for a panel to open in its place, once it has closed. */
-function OpenAfterClose({
-  queuedRef,
-  children,
-}: {
-  queuedRef: React.RefObject<Queued | null>;
-  children: React.ReactNode;
-}) {
-  // The panel on top when it was asked: the one that is closing. Read from the
-  // URL, as AppShell's state is inside it, below this.
-  const openAfterClose = useCallback(
-    (panel: string) => {
-      const open = new URLSearchParams(window.location.search).getAll("p");
-      queuedRef.current = { panel, after: open.at(-1) };
-    },
-    [queuedRef],
-  );
-  return <AfterCloseContext value={openAfterClose}>{children}</AfterCloseContext>;
 }

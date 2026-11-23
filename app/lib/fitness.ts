@@ -1,7 +1,7 @@
 import "server-only";
 import { query, transaction } from "./db";
 import { randomUUID } from "node:crypto";
-import type { PoolClient } from "pg";
+import type { PoolClient, QueryResultRow } from "pg";
 import type { z } from "zod";
 import {
   defaultGoals,
@@ -78,24 +78,72 @@ export async function readFitness(userId: string): Promise<FitnessData> {
   };
 }
 
-/** Sets the columns given (`columns` maps each field to its column), and updated_at; false when no row is the user's. */
-async function updateRow(
-  table: string,
+/** One kind of the user's own rows: its table and columns (constants, never from a request) and its 404. */
+type Owned = { table: string; columns: string; notFound: () => HttpError };
+
+const routines: Owned = {
+  table: "fitness_routines",
+  columns: routineColumns,
+  notFound: () => new HttpError("Routine not found.", 404),
+};
+const workouts: Owned = {
+  table: "fitness_workouts",
+  columns: workoutColumns,
+  notFound: () => new HttpError("Workout not found.", 404),
+};
+const runs: Owned = {
+  table: "fitness_runs",
+  columns: runColumns,
+  notFound: () => new HttpError("Run not found.", 404),
+};
+const supplements: Owned = {
+  table: "fitness_supplements",
+  columns: supplementColumns,
+  notFound: () => new HttpError("Supplement not found.", 404),
+};
+
+/** One of the user's rows of `kind`; a 404 for anyone else's, or an id nobody has. */
+async function readOwned<T extends QueryResultRow>(kind: Owned, userId: string, id: string): Promise<T> {
+  if (!isUuid(id)) throw kind.notFound();
+  const { rows } = await query<T>(`SELECT ${kind.columns} FROM ${kind.table} WHERE id = $1 AND user_id = $2`, [
+    id,
+    userId,
+  ]);
+  if (!rows[0]) throw kind.notFound();
+  return rows[0];
+}
+
+/**
+ * Sets the fields of `patch` that `fields` maps to a column, and updated_at,
+ * and answers with the row; a 404 for anyone else's.
+ */
+async function updateOwned<T extends QueryResultRow>(
+  kind: Owned,
   userId: string,
   id: string,
   patch: Record<string, unknown>,
-  columns: Record<string, string>,
-): Promise<boolean> {
-  const fields = Object.entries(patch).filter(([key, value]) => value !== undefined && key in columns);
-  const sets = fields.map(([key], i) => `${columns[key]} = $${i + 3}`);
+  fields: Record<string, string>,
+): Promise<T> {
+  if (!isUuid(id)) throw kind.notFound();
+  const changed = Object.entries(patch).filter(([key, value]) => value !== undefined && key in fields);
+  const sets = changed.map(([key], i) => `${fields[key]} = $${i + 3}`);
   sets.push("updated_at = now()");
-  const values = fields.map(([key, value]) => (columns[key] === "exercises" ? JSON.stringify(value) : value));
-  const { rowCount } = await query(`UPDATE ${table} SET ${sets.join(", ")} WHERE id = $1 AND user_id = $2`, [
+  const values = changed.map(([key, value]) => (fields[key] === "exercises" ? JSON.stringify(value) : value));
+  const { rowCount } = await query(`UPDATE ${kind.table} SET ${sets.join(", ")} WHERE id = $1 AND user_id = $2`, [
     id,
     userId,
     ...values,
   ]);
-  return !!rowCount;
+  if (!rowCount) throw kind.notFound();
+  return readOwned<T>(kind, userId, id);
+}
+
+/** Deletes one of the user's rows of `kind`; a 404 for anyone else's. */
+async function deleteOwned(kind: Owned, userId: string, id: string): Promise<null> {
+  if (!isUuid(id)) throw kind.notFound();
+  const { rowCount } = await query(`DELETE FROM ${kind.table} WHERE id = $1 AND user_id = $2`, [id, userId]);
+  if (!rowCount) throw kind.notFound();
+  return null;
 }
 
 /** A create sent twice is answered with what is there; someone else's id is refused. */
@@ -105,18 +153,6 @@ const alreadyTaken = (what: string) => (error: unknown) => {
 
 // --- Routines ---------------------------------------------------------------------
 
-const routineNotFound = () => new HttpError("Routine not found.", 404);
-
-async function readRoutine(userId: string, id: string): Promise<Routine> {
-  if (!isUuid(id)) throw routineNotFound();
-  const { rows } = await query<Routine>(
-    `SELECT ${routineColumns} FROM fitness_routines WHERE id = $1 AND user_id = $2`,
-    [id, userId],
-  );
-  if (!rows[0]) throw routineNotFound();
-  return rows[0];
-}
-
 export async function createRoutine(userId: string, input: z.output<typeof routineCreate>): Promise<Routine> {
   const id = input.id ?? randomUUID();
   await query(
@@ -124,41 +160,19 @@ export async function createRoutine(userId: string, input: z.output<typeof routi
      ON CONFLICT (id) DO NOTHING`,
     [id, userId, input.name, JSON.stringify(input.exercises), input.notes],
   );
-  return readRoutine(userId, id).catch(alreadyTaken("routine"));
+  return readOwned<Routine>(routines, userId, id).catch(alreadyTaken("routine"));
 }
 
-export async function updateRoutine(
-  userId: string,
-  id: string,
-  patch: z.output<typeof routinePatch>,
-): Promise<Routine> {
-  if (!isUuid(id)) throw routineNotFound();
-  const columns = { name: "name", exercises: "exercises", notes: "notes" };
-  if (!(await updateRow("fitness_routines", userId, id, patch, columns))) throw routineNotFound();
-  return readRoutine(userId, id);
+export function updateRoutine(userId: string, id: string, patch: z.output<typeof routinePatch>): Promise<Routine> {
+  return updateOwned<Routine>(routines, userId, id, patch, { name: "name", exercises: "exercises", notes: "notes" });
 }
 
 /** Deletes a routine; the workouts started from it stay, from no routine. */
-export async function deleteRoutine(userId: string, id: string): Promise<null> {
-  if (!isUuid(id)) throw routineNotFound();
-  const { rowCount } = await query("DELETE FROM fitness_routines WHERE id = $1 AND user_id = $2", [id, userId]);
-  if (!rowCount) throw routineNotFound();
-  return null;
+export function deleteRoutine(userId: string, id: string): Promise<null> {
+  return deleteOwned(routines, userId, id);
 }
 
 // --- Workouts ---------------------------------------------------------------------
-
-const workoutNotFound = () => new HttpError("Workout not found.", 404);
-
-async function readWorkout(userId: string, id: string): Promise<Workout> {
-  if (!isUuid(id)) throw workoutNotFound();
-  const { rows } = await query<Workout>(
-    `SELECT ${workoutColumns} FROM fitness_workouts WHERE id = $1 AND user_id = $2`,
-    [id, userId],
-  );
-  if (!rows[0]) throw workoutNotFound();
-  return rows[0];
-}
 
 /** Adds a workout; a routine that isn't the user's (or is gone) is left off it. */
 export async function createWorkout(userId: string, input: z.output<typeof workoutCreate>): Promise<Workout> {
@@ -169,40 +183,19 @@ export async function createWorkout(userId: string, input: z.output<typeof worko
      ON CONFLICT (id) DO NOTHING`,
     [id, userId, input.date, input.name, input.routineId, JSON.stringify(input.exercises), input.notes],
   );
-  return readWorkout(userId, id).catch(alreadyTaken("workout"));
+  return readOwned<Workout>(workouts, userId, id).catch(alreadyTaken("workout"));
 }
 
-export async function updateWorkout(
-  userId: string,
-  id: string,
-  patch: z.output<typeof workoutPatch>,
-): Promise<Workout> {
-  if (!isUuid(id)) throw workoutNotFound();
-  const columns = { date: "date", name: "name", exercises: "exercises", notes: "notes" };
-  if (!(await updateRow("fitness_workouts", userId, id, patch, columns))) throw workoutNotFound();
-  return readWorkout(userId, id);
+export function updateWorkout(userId: string, id: string, patch: z.output<typeof workoutPatch>): Promise<Workout> {
+  const fields = { date: "date", name: "name", exercises: "exercises", notes: "notes" };
+  return updateOwned<Workout>(workouts, userId, id, patch, fields);
 }
 
-export async function deleteWorkout(userId: string, id: string): Promise<null> {
-  if (!isUuid(id)) throw workoutNotFound();
-  const { rowCount } = await query("DELETE FROM fitness_workouts WHERE id = $1 AND user_id = $2", [id, userId]);
-  if (!rowCount) throw workoutNotFound();
-  return null;
+export function deleteWorkout(userId: string, id: string): Promise<null> {
+  return deleteOwned(workouts, userId, id);
 }
 
 // --- Runs ---------------------------------------------------------------------------
-
-const runNotFound = () => new HttpError("Run not found.", 404);
-
-async function readRun(userId: string, id: string): Promise<Run> {
-  if (!isUuid(id)) throw runNotFound();
-  const { rows } = await query<Run>(`SELECT ${runColumns} FROM fitness_runs WHERE id = $1 AND user_id = $2`, [
-    id,
-    userId,
-  ]);
-  if (!rows[0]) throw runNotFound();
-  return rows[0];
-}
 
 export async function createRun(userId: string, input: z.output<typeof runCreate>): Promise<Run> {
   const id = input.id ?? randomUUID();
@@ -211,26 +204,19 @@ export async function createRun(userId: string, input: z.output<typeof runCreate
      ON CONFLICT (id) DO NOTHING`,
     [id, userId, input.date, input.distanceM, input.durationS, input.notes],
   );
-  return readRun(userId, id).catch(alreadyTaken("run"));
+  return readOwned<Run>(runs, userId, id).catch(alreadyTaken("run"));
 }
 
-export async function updateRun(userId: string, id: string, patch: z.output<typeof runPatch>): Promise<Run> {
-  if (!isUuid(id)) throw runNotFound();
-  const columns = { date: "date", distanceM: "distance_m", durationS: "duration_s", notes: "notes" };
-  if (!(await updateRow("fitness_runs", userId, id, patch, columns))) throw runNotFound();
-  return readRun(userId, id);
+export function updateRun(userId: string, id: string, patch: z.output<typeof runPatch>): Promise<Run> {
+  const fields = { date: "date", distanceM: "distance_m", durationS: "duration_s", notes: "notes" };
+  return updateOwned<Run>(runs, userId, id, patch, fields);
 }
 
-export async function deleteRun(userId: string, id: string): Promise<null> {
-  if (!isUuid(id)) throw runNotFound();
-  const { rowCount } = await query("DELETE FROM fitness_runs WHERE id = $1 AND user_id = $2", [id, userId]);
-  if (!rowCount) throw runNotFound();
-  return null;
+export function deleteRun(userId: string, id: string): Promise<null> {
+  return deleteOwned(runs, userId, id);
 }
 
 // --- Supplements -------------------------------------------------------------------
-
-const supplementNotFound = () => new HttpError("Supplement not found.", 404);
 
 /** Adds a supplement, up to fitnessLimits.supplements; one sent twice is answered as it is. */
 export async function createSupplement(userId: string, input: z.output<typeof supplementCreate>): Promise<Supplement> {
@@ -258,11 +244,8 @@ export async function createSupplement(userId: string, input: z.output<typeof su
 }
 
 /** Deletes a supplement; the days it was taken on forget it. */
-export async function deleteSupplement(userId: string, id: string): Promise<null> {
-  if (!isUuid(id)) throw supplementNotFound();
-  const { rowCount } = await query("DELETE FROM fitness_supplements WHERE id = $1 AND user_id = $2", [id, userId]);
-  if (!rowCount) throw supplementNotFound();
-  return null;
+export function deleteSupplement(userId: string, id: string): Promise<null> {
+  return deleteOwned(supplements, userId, id);
 }
 
 // --- Days and goals -------------------------------------------------------------------
