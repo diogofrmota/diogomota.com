@@ -1,3 +1,4 @@
+import type { OfflineNotice } from "./offline-notice";
 import type { PersistedClient, Persister } from "@tanstack/react-query-persist-client";
 import { applyTaskFields, type TaskList } from "./task-types";
 import { browserQueryStore, type OfflineQueryStore } from "./offline-query-cache";
@@ -14,7 +15,7 @@ export function offlinePersister(
   app: string,
   version: string,
   supported: (key: readonly unknown[]) => boolean,
-  warn: (message: string) => void,
+  warn: (notice: OfflineNotice) => void,
   active: () => boolean = () => true,
   slot = "",
   queryStore: OfflineQueryStore | undefined = browserQueryStore(),
@@ -37,11 +38,17 @@ export function offlinePersister(
           if (active()) storage.removeItem(key);
         } else storage.setItem(key, JSON.stringify(snapshot));
       } catch {
-        warn("Offline views could not be saved. Pending changes are still saved on this device.");
+        warn({
+          message: "Offline views could not be saved. Pending changes are still saved on this device.",
+          offerRecovery: true,
+        });
       }
       return true;
     } catch {
-      warn("Changes could not be saved on this device. Keep this tab open and reconnect before leaving.");
+      warn({
+        message: "Changes could not be saved on this device. Keep this tab open and reconnect before leaving.",
+        offerRecovery: true,
+      });
       return false;
     }
   };
@@ -61,7 +68,7 @@ export function offlinePersister(
         try {
           cached = (await queryStore?.get(key)) ?? (slot ? await queryStore?.get(offlineKey(user, app)) : undefined);
         } catch {
-          warn("Offline views could not be loaded. Pending changes are still retained.");
+          warn({ message: "Offline views could not be loaded. Pending changes are still retained." });
         }
         cached ??= raw ? JSON.parse(raw) : fallback ? JSON.parse(fallback) : undefined;
         let mutations: PersistedClient["clientState"]["mutations"] = [];
@@ -102,7 +109,10 @@ export function offlinePersister(
               (m) => !["shared", "shows", "recipes", "fitness", "books"].includes(String(m.mutationKey?.[0])),
             )
           )
-            warn("Some older pending changes need recovery. Their original offline snapshot has been retained.");
+            warn({
+              message: "Some older pending changes need recovery. Their original offline snapshot has been retained.",
+              offerRecovery: true,
+            });
         }
         if (mutations.some((m) => !m.mutationKey || !supported(m.mutationKey)))
           throw new Error("Unsupported operation");
@@ -128,7 +138,11 @@ export function offlinePersister(
         return value;
       } catch {
         blocked = true;
-        warn("The offline queue needs recovery. It has been retained unchanged; editing is paused to protect it.");
+        warn({
+          message: "The offline queue needs recovery. It has been retained unchanged; editing is paused to protect it.",
+          pauseEditing: true,
+          offerRecovery: true,
+        });
         throw new Error("Offline queue requires recovery");
       }
     },

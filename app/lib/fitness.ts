@@ -1,8 +1,8 @@
 import "server-only";
+import { query, transaction } from "./db";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import type { z } from "zod";
-import { query } from "./db";
 import {
   defaultGoals,
   emptyDay,
@@ -30,7 +30,6 @@ import {
   type workoutCreate,
   type workoutPatch,
 } from "./schemas";
-import { transaction } from "./spaces";
 
 // The Fitness app's data: each user's own routines, workouts, runs,
 // supplements, daily log and goals. Nobody else sees them, so every query is

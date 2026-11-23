@@ -1,6 +1,6 @@
 import "server-only";
-import { getPool } from "./db";
-import { leaveSpaceInTransaction, transaction } from "./spaces";
+import { getPool, transaction } from "./db";
+import { leaveSpaceInTransaction } from "./spaces";
 import { cleanupMediaJobs } from "../scripts/media-cleanup.mjs";
 
 /** Called only after the account action's session and password checks. */

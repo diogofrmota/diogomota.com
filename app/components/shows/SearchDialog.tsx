@@ -5,7 +5,8 @@ import { Dialog } from "@/components/common/Dialog";
 import { SearchIcon } from "@/components/common/icons";
 import { useAppView } from "@/hooks/useAppView";
 import type { TitleSummary } from "@/lib/show-types";
-import { useDebounced, useOpenTitle, useShowsData } from "./shows-data";
+import { useDebounced } from "@/hooks/useDebounced";
+import { useOpenTitle, useShowsData } from "./shows-data";
 import { LoadError, SkeletonGrid, TitleGrid } from "./TitleGrid";
 import styles from "./Shows.module.css";
 

@@ -6,7 +6,7 @@ import { CheckIcon } from "@/components/common/icons";
 import { PersonName } from "@/components/common/PersonName";
 import { NAME_MAX, usernameHint, USERNAME_MAX } from "@/lib/account-rules";
 import type { FriendsState, PeopleSearch, PersonMatch } from "@/lib/social-types";
-import { useDebounced } from "../shows/shows-data";
+import { useDebounced } from "@/hooks/useDebounced";
 import { socialRequest } from "./social-data";
 import styles from "../shows/Shows.module.css";
 

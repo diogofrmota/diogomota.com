@@ -127,6 +127,9 @@ const linted = formatted.filter((file) => code.test(file));
 const typecheck = appFiles.some((file) => /\.(ts|tsx)$/.test(file));
 
 const unit = importing(filesIn("test", ".test.ts"));
+// This test invokes the CLI in a subprocess rather than importing it.
+if (appFiles.includes("scripts/test-affected.mjs") && !unit.includes("test/test-affected.test.ts"))
+  unit.push("test/test-affected.test.ts");
 const integration = new Set(importing(filesIn("integration", ".test.ts")));
 // What integration tests use without importing it.
 if (otherFiles.some((file) => file.startsWith("nginx/"))) integration.add("integration/logging.test.ts");
@@ -139,13 +142,19 @@ if (otherFiles.some((file) => file.startsWith("db/migrations/")))
 const parts = [
   {
     name: "Books",
-    files: [/^app\/books\//, /^app\/api\/books\//, /^components\/books\//, /^lib\/book/],
+    files: [/^app\/books\//, /^app\/api\/books\//, /^components\/books\//, /^lib\/book/, /^hooks\/useDebounced\./],
     specs: ["books", "profiles"],
     views: ["Books shelves and panels"],
   },
   {
     name: "Shows",
-    files: [/^app\/shows\//, /^app\/api\/shows\//, /^components\/shows\//, /^lib\/(shows|show-types|tmdb|tmdb-mock)\./],
+    files: [
+      /^app\/shows\//,
+      /^app\/api\/shows\//,
+      /^components\/shows\//,
+      /^lib\/(shows|show-types|tmdb|tmdb-mock)\./,
+      /^hooks\/useDebounced\./,
+    ],
     specs: ["shows-home", "shows-discover", "shows-features", "shows-profile"],
     views: ["Shows: every view"],
   },
@@ -154,6 +163,7 @@ const parts = [
     files: [
       /^app\/api\/social\//,
       /^components\/social\//,
+      /^hooks\/useDebounced\./,
       /^lib\/(social|social-types|friends|activity|activity-types)\./,
     ],
     specs: ["profiles", "shows-profile", "shows-features"],
@@ -177,6 +187,8 @@ const parts = [
       /^app\/recipes\//,
       /^app\/api\/recipes\//,
       /^components\/recipes\//,
+      /^components\/common\/Sheet\./,
+      /^lib\/write-atomically\./,
       /^lib\/(recipes|recipe-types|recipe-photos|recipe-groups)\./,
     ],
     specs: ["recipes", "spaces"],
@@ -184,7 +196,13 @@ const parts = [
   },
   {
     name: "Fitness",
-    files: [/^app\/fitness\//, /^app\/api\/fitness\//, /^components\/fitness\//, /^lib\/(fitness|fitness-types)\./],
+    files: [
+      /^app\/fitness\//,
+      /^app\/api\/fitness\//,
+      /^components\/fitness\//,
+      /^lib\/(fitness|fitness-types)\./,
+      /^components\/common\/Sheet\./,
+    ],
     specs: ["fitness"],
     views: ["Fitness: every view"],
   },
@@ -194,6 +212,7 @@ const parts = [
       /^app\/account\//,
       /^app\/api\/(account|avatars)\//,
       /^components\/account\//,
+      /^lib\/write-atomically\./,
       /^lib\/(accounts|account-rules|account-deletion|avatars|users|names)\./,
     ],
     specs: ["account"],
@@ -244,10 +263,10 @@ const parts = [
   {
     name: "offline",
     files: [
-      /^lib\/(offline-client|offline-query-cache|offline-storage)\./,
+      /^lib\/(offline-client|offline-query-cache|offline-storage|offline-notice)\./,
       /^components\/common\/(OfflineSupport|QueryProvider)\./,
       /^public\/sw\.js$/,
-      /^lib\/upload-body\./,
+      /^lib\/(upload-body|write-atomically)\./,
     ],
     specs: [],
     views: [],

@@ -4,7 +4,7 @@ import { Dialog } from "@/components/common/Dialog";
 import { SearchIcon } from "@/components/common/icons";
 import { Alert } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
-import { useDebounced } from "@/components/shows/shows-data";
+import { useDebounced } from "@/hooks/useDebounced";
 import shows from "@/components/shows/Shows.module.css";
 import { SkeletonGrid } from "@/components/shows/TitleGrid";
 import { useAppView } from "@/hooks/useAppView";

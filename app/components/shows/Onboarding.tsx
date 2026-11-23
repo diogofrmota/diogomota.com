@@ -21,7 +21,8 @@ import {
   useTitleStatus,
 } from "./AddToLibrary";
 import { useLibrary } from "./library";
-import { useDebounced, useShowsData } from "./shows-data";
+import { useDebounced } from "@/hooks/useDebounced";
+import { useShowsData } from "./shows-data";
 import { cardSizes, LoadError, Poster, SkeletonGrid, titleFacts } from "./TitleGrid";
 import styles from "./Shows.module.css";
 

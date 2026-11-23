@@ -1,6 +1,6 @@
 import "server-only";
-import { randomBytes } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
+import { writeAtomically } from "./write-atomically";
 import path from "node:path";
 import sharp from "sharp";
 import { AVATAR_MAX_BYTES } from "./account-rules";
@@ -79,15 +79,7 @@ export async function saveAvatar(userId: string, input: Buffer): Promise<string>
   const file = avatarFile(userId);
   const picture = await compress(input);
   await mkdir(path.dirname(file), { recursive: true });
-  // Written beside it, then renamed over it: a picture being read is never half written.
-  const temp = `${file}.${randomBytes(6).toString("hex")}.tmp`;
-  try {
-    await writeFile(temp, picture);
-    await rename(temp, file);
-  } catch (error) {
-    await rm(temp, { force: true });
-    throw error;
-  }
+  await writeAtomically(file, picture);
   const url = await setAvatarUpdated(userId);
   if (!url) {
     // The account was deleted meanwhile.

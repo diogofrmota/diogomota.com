@@ -1,6 +1,6 @@
 "use client";
 import { useQuery, type QueryClient } from "@tanstack/react-query";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { useAppView } from "@/hooks/useAppView";
 import { apiRequest, type ApiError } from "@/lib/api-request";
 import { titleKey, type MediaType, type TitleSummary } from "@/lib/show-types";
@@ -52,16 +52,6 @@ export function useShowsData<T>(path: string | null, reuse = true, staleMs = 10 
     loading: path !== null && query.data === undefined && !error,
     retry: () => void query.refetch(),
   };
-}
-
-/** `value`, once it has stayed the same for `ms` milliseconds. */
-export function useDebounced<T>(value: T, ms: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), ms);
-    return () => clearTimeout(timer);
-  }, [value, ms]);
-  return debounced;
 }
 
 // The cards' titles by key, so a detail panel can show what the card showed

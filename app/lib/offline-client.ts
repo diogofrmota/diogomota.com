@@ -1,3 +1,4 @@
+import type { OfflineNotice } from "./offline-notice";
 import { QueryClient, onlineManager, type Query, type Mutation } from "@tanstack/react-query";
 import { persistQueryClient, persistQueryClientSave, type Persister } from "@tanstack/react-query-persist-client";
 import { offlineFormat, offlineKey, offlinePersister } from "./offline-storage";
@@ -17,7 +18,7 @@ export function openOfflineClient(
   version: string,
   setup: ((client: QueryClient) => void) | undefined,
   opened: (owner: { client: QueryClient; persister: Persister }) => void,
-  warn: (message: string) => void,
+  warn: (notice: OfflineNotice) => void,
   validSession: () => boolean,
   takeInitialClient?: () => QueryClient | undefined,
 ) {
@@ -47,7 +48,10 @@ export function openOfflineClient(
         JSON.parse(localStorage.getItem(`${offlineKey(user, app, slot)}:pending`) ?? "null")?.mutations?.length > 0
       );
     } catch {
-      warn("An older offline journal needs recovery and has been retained unchanged.");
+      warn({
+        message: "An older offline journal needs recovery and has been retained unchanged.",
+        offerRecovery: true,
+      });
       return false;
     }
   };
@@ -175,7 +179,7 @@ export function openOfflineClient(
         })
         .catch(() => {
           claimed(false);
-          warn("Offline storage could not start. Reload to try again.");
+          warn({ message: "Offline storage could not start. Reload to try again." });
         })
         .finally(() => {
           held.delete(slot);
@@ -199,7 +203,13 @@ export function openOfflineClient(
         return;
       }
     if (!disposed && (await claim(crypto.randomUUID(), true))) await scan();
-  })().catch(() => warn("Offline storage is unavailable. Editing is paused to protect your changes."));
+  })().catch(() =>
+    warn({
+      message: "Offline storage is unavailable. Editing is paused to protect your changes.",
+      pauseEditing: true,
+      offerRecovery: true,
+    }),
+  );
   const changed = () => {
     void scan();
   };

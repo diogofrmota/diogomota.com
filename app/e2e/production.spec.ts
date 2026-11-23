@@ -392,6 +392,45 @@ test("unsupported journals remain unchanged, pause editing, and can be downloade
   expect((await (await page.request.get("/api/fitness")).json()).data.days).toEqual([]);
 });
 
+test("offline journal discovery failure pauses editing and offers the retained changes for download @smoke", async ({
+  page,
+}) => {
+  const user = newUser();
+  await signUp(page, user);
+  await expect(page).toHaveURL("/");
+  const id = await userId(user.username);
+  const key = `diogomota-cache:${id}:fitness:v1:pending`;
+  const raw = JSON.stringify({
+    format: "operations-v1",
+    mutations: [
+      { mutationKey: ["fitness", "change"], state: { status: "pending", variables: { privateValue: "recover-me" } } },
+    ],
+  });
+  await page.evaluate(({ key, raw }) => localStorage.setItem(key, raw), { key, raw });
+  // Fail before a journal is claimed, in the outer initialization catch. The
+  // warning starts "Editing is paused"; recovery must not depend on its case.
+  await page.addInitScript(() => {
+    const getItem = Storage.prototype.getItem;
+    Storage.prototype.getItem = function (key: string) {
+      if (this === sessionStorage && key.startsWith("diogomota-journal:"))
+        throw new DOMException("Session storage unavailable", "SecurityError");
+      return getItem.call(this, key);
+    };
+  });
+  await page.goto("/fitness");
+  await expect(page.getByRole("alert").filter({ hasText: "Offline storage is unavailable" })).toHaveText(
+    "Offline storage is unavailable. Editing is paused to protect your changes.",
+  );
+  await expect(page.getByRole("button", { name: "250 ml", exact: true })).toHaveCount(0);
+  expect(await page.evaluate((key) => localStorage.getItem(key), key)).toBe(raw);
+  const downloaded = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download pending changes" }).click();
+  const download = await downloaded;
+  const recovered = JSON.parse(await readFile((await download.path())!, "utf8"));
+  expect(recovered.entries[key]).toBe(raw);
+  expect((await (await page.request.get("/api/fitness")).json()).data.days).toEqual([]);
+});
+
 test("browsers without Web Locks retain connected use and explicitly reject offline edits @smoke", async ({
   page,
   context,

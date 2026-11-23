@@ -1,10 +1,10 @@
 import { getSession } from "@/auth";
-import { query } from "@/lib/db";
+import { query, transaction } from "@/lib/db";
 import { listBooks } from "@/lib/books";
 import { listEvents } from "@/lib/events";
 import { readFitness } from "@/lib/fitness";
 import { exportRecipes } from "@/lib/recipes";
-import { readSpaceInTransaction, transaction } from "@/lib/spaces";
+import { readSpaceInTransaction } from "@/lib/spaces";
 import { readLists } from "@/lib/tasks";
 
 // GET /api/account/export: everything the site keeps about you, as a JSON file

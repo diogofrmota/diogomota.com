@@ -1,9 +1,8 @@
 import "server-only";
+import { query, transaction } from "./db";
 import { randomBytes } from "node:crypto";
 import { calendarIcs } from "./calendar";
-import { query } from "./db";
 import { listEvents } from "./events";
-import { transaction } from "./spaces";
 import { memberName } from "./names";
 import type { Space } from "./space-types";
 import { avatarUrlSql } from "./users";

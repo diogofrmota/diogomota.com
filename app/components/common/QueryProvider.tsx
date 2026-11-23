@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider, IsRestoringProvider, MutationCache, dehydrate } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import type { OfflineNotice } from "@/lib/offline-notice";
 import { offlinePersister } from "@/lib/offline-storage";
 
 import { openOfflineClient } from "@/lib/offline-client";
@@ -130,7 +131,7 @@ export function QueryProvider({
     client: QueryClient;
     persister?: ReturnType<typeof offlinePersister>;
   }>();
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState<OfflineNotice>();
   const [stopped, setStopped] = useState(false);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -182,9 +183,10 @@ export function QueryProvider({
           setEditable(true);
           setReady(true);
           setOwner({ id: ++clientSequence, client });
-          setMessage(
-            "Offline saving is unavailable in this browser. Changes require a connection; existing pending changes have been retained.",
-          );
+          setNotice({
+            message:
+              "Offline saving is unavailable in this browser. Changes require a connection; existing pending changes have been retained.",
+          });
         });
       } else {
         dispose = openOfflineClient(
@@ -197,7 +199,7 @@ export function QueryProvider({
             setReady(true);
             setOwner({ ...value, id: value.client === preview ? 0 : ++clientSequence });
           },
-          setMessage,
+          setNotice,
           () => active && localStorage.getItem(transitionKey) === generation,
           () => preview,
         );
@@ -213,10 +215,10 @@ export function QueryProvider({
   }, [userId, app, version, setup, preview, setEditable]);
 
   if (stopped) return <p role="status">Session ended. Clearing this device&apos;s data…</p>;
-  if (message.includes("editing is paused"))
+  if (notice?.pauseEditing)
     return (
       <main>
-        <p role="alert">{message}</p>
+        <p role="alert">{notice.message}</p>
         <button type="button" onClick={() => recoveryCopy(userId, owner?.client)}>
           Download pending changes
         </button>
@@ -224,8 +226,8 @@ export function QueryProvider({
     );
   return (
     <>
-      {message && <p role="alert">{message}</p>}
-      {(message.includes("recovery") || message.includes("could not be saved")) && (
+      {notice && <p role="alert">{notice.message}</p>}
+      {notice?.offerRecovery && (
         <button type="button" onClick={() => recoveryCopy(userId, owner?.client)}>
           Download pending changes
         </button>

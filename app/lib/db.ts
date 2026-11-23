@@ -1,4 +1,4 @@
-import { Pool, type QueryResult, type QueryResultRow } from "pg";
+import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from "pg";
 
 // Reuse one pool across dev hot reloads instead of opening a new one per reload.
 const globalForDb = globalThis as typeof globalThis & { pgPool?: Pool };
@@ -38,4 +38,23 @@ export function query<T extends QueryResultRow = QueryResultRow>(
   params?: unknown[],
 ): Promise<QueryResult<T>> {
   return getPool().query<T>(text, params);
+}
+
+/**
+ * Runs `fn` in a transaction, committed when it returns and rolled back when it
+ * throws.
+ */
+export async function transaction<T>(fn: (db: PoolClient) => Promise<T>): Promise<T> {
+  const db = await getPool().connect();
+  try {
+    await db.query("BEGIN");
+    const result = await fn(db);
+    await db.query("COMMIT");
+    return result;
+  } catch (error) {
+    await db.query("ROLLBACK");
+    throw error;
+  } finally {
+    db.release();
+  }
 }

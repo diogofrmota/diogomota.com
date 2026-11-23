@@ -3,7 +3,7 @@ import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import { recordActivity } from "./activity";
 import { cleanupMediaJobs } from "../scripts/media-cleanup.mjs";
-import { getPool } from "./db";
+import { getPool, transaction } from "./db";
 import { HttpError } from "./http";
 import { adoptParked, removeGroupRecipes } from "./recipe-groups";
 import { groupSize, memberColors, type Invite, type InvitePreview, type Space } from "./space-types";
@@ -12,25 +12,6 @@ import { avatarUrlSql } from "./users";
 // A space is a group of two in For Couples (docs/decisions/0006, 0023): its
 // calendar, task lists, recipes and shopping list. "Space" in the code, "group"
 // in what people read.
-
-/**
- * Runs `fn` in a transaction, committed when it returns and rolled back when it
- * throws.
- */
-export async function transaction<T>(fn: (db: PoolClient) => Promise<T>): Promise<T> {
-  const db = await getPool().connect();
-  try {
-    await db.query("BEGIN");
-    const result = await fn(db);
-    await db.query("COMMIT");
-    return result;
-  } catch (error) {
-    await db.query("ROLLBACK");
-    throw error;
-  } finally {
-    db.release();
-  }
-}
 
 // Locking. Every request of For Couples' apps locks the rows it depends on,
 // always the user's row, then the space's, then (Recipes' shopping list) the

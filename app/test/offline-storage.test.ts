@@ -59,7 +59,7 @@ describe("durable offline snapshots", () => {
     await p.removeClient();
     await p.persistClient(snapshot());
     expect(local.getItem(key)).toBe(original);
-    expect(warn).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.objectContaining({ pauseEditing: true, offerRecovery: true }));
   });
   it("writes pending operations before large caches and reports quota failure", async () => {
     const local = storage();
@@ -71,12 +71,19 @@ describe("durable offline snapshots", () => {
     };
     await offlinePersister(local, "A", "fitness", "1", () => true, warn).persistClient(snapshot("fitness"));
     expect(local.getItem(`${offlineKey("A", "fitness")}:pending`)).toContain("pending");
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Pending changes are still saved"));
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("Pending changes are still saved"),
+        offerRecovery: true,
+      }),
+    );
     local.setItem = () => {
       throw new Error("QuotaExceededError");
     };
     await offlinePersister(local, "A", "fitness", "1", () => true, warn).persistClient(snapshot("fitness"));
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Keep this tab open"));
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringContaining("Keep this tab open"), offerRecovery: true }),
+    );
   });
   it("does not recreate data after the session writer has stopped", async () => {
     const local = storage();
@@ -189,7 +196,12 @@ describe("durable offline snapshots", () => {
     await persister.persistClient(snapshot("fitness"));
     expect(queryStore.put).toHaveBeenCalled();
     expect((await persister.restoreClient())?.clientState.mutations).toHaveLength(1);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Pending changes are still saved"));
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("Pending changes are still saved"),
+        offerRecovery: true,
+      }),
+    );
   });
 
   it("restores an uncertain in-flight delivery as paused so TanStack actually resumes it", async () => {
