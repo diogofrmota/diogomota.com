@@ -54,6 +54,11 @@ export const recipeLimits = {
   shoppingItems: 500,
 } as const;
 
+/** The largest photo file accepted, before lib/recipe-photos.ts makes it smaller: as a profile picture's. nginx lets 21 MB through. */
+export const photoMaxBytes = 20 * 1024 * 1024;
+/** The answer to a larger one: from proxy.ts, before it is read, or from its route once read (chunked, without a length). */
+export const photoTooBig = `That photo is over ${photoMaxBytes / 1024 / 1024} MB. Try a smaller one.`;
+
 /** The servings a new recipe starts with. */
 export const defaultServings = 4;
 

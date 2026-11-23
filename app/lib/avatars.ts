@@ -3,7 +3,9 @@ import { mkdir, readFile, rm } from "node:fs/promises";
 import { writeAtomically } from "./write-atomically";
 import path from "node:path";
 import sharp from "sharp";
-import { AVATAR_MAX_BYTES } from "./account-rules";
+import { HttpError } from "./http";
+import { isUuid } from "./schemas";
+import { maxImagePixels } from "./upload-body";
 import { clearAvatarUpdated, setAvatarUpdated } from "./users";
 
 // Profile pictures, set in /account. Each is a file on the server's own disk,
@@ -18,21 +20,8 @@ import { clearAvatarUpdated, setAvatarUpdated } from "./users";
 // without its metadata (such as where it was taken). That's 20–60 KB, from a
 // phone photo of several megabytes.
 
-/** The largest file accepted, before it is made smaller (lib/account-rules.ts). */
-export const avatarMaxBytes = AVATAR_MAX_BYTES;
-/** The most pixels a picture may have: a 64-megapixel phone photo, with room to spare. */
-const maxPixels = 70_000_000;
 /** The side of the square that is saved, in pixels. */
 const side = 512;
-
-export class AvatarError extends Error {
-  constructor(
-    message: string,
-    public status = 400,
-  ) {
-    super(message);
-  }
-}
 
 // Outside the build's file tracing (turbopackIgnore): it is where pictures are
 // written while the app runs, not a part of the app.
@@ -42,8 +31,7 @@ function avatarDir(): string {
 
 /** The file of a user's picture. Only ever called with a UUID, so the name can't leave the folder. */
 function avatarFile(userId: string): string {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId))
-    throw new AvatarError("Not found.", 404);
+  if (!isUuid(userId)) throw new HttpError("Not found.", 404);
   return path.join(avatarDir(), `${userId.toLowerCase()}.webp`);
 }
 
@@ -51,26 +39,26 @@ function avatarFile(userId: string): string {
  * Makes a profile picture of `input`: turned upright (as its EXIF says), cut
  * to a square around what stands out in it (sharp's "attention" strategy,
  * which favours faces and detail over a plain middle), 512 px a side, WebP.
- * sharp leaves the metadata out. Throws AvatarError for anything it can't read.
+ * sharp leaves the metadata out. Throws a 400 HttpError for anything it can't read.
  */
 async function compress(input: Buffer): Promise<Buffer> {
   let size: { width?: number; height?: number };
   try {
     size = await sharp(input).metadata();
   } catch {
-    throw new AvatarError("That file isn't a picture that can be read. Try a JPEG, PNG or WebP.");
+    throw new HttpError("That file isn't a picture that can be read. Try a JPEG, PNG or WebP.");
   }
-  if ((size.width ?? 0) * (size.height ?? 0) > maxPixels) {
-    throw new AvatarError("That picture has too many pixels. Try a smaller one.");
+  if ((size.width ?? 0) * (size.height ?? 0) > maxImagePixels) {
+    throw new HttpError("That picture has too many pixels. Try a smaller one.");
   }
   try {
-    return await sharp(input, { limitInputPixels: maxPixels, failOn: "error" })
+    return await sharp(input, { limitInputPixels: maxImagePixels, failOn: "error" })
       .rotate()
       .resize(side, side, { fit: "cover", position: sharp.strategy.attention })
       .webp({ quality: 82 })
       .toBuffer();
   } catch {
-    throw new AvatarError("That file isn't a picture that can be read. Try a JPEG, PNG or WebP.");
+    throw new HttpError("That file isn't a picture that can be read. Try a JPEG, PNG or WebP.");
   }
 }
 
@@ -84,7 +72,7 @@ export async function saveAvatar(userId: string, input: Buffer): Promise<string>
   if (!url) {
     // The account was deleted meanwhile.
     await rm(file, { force: true });
-    throw new AvatarError("Please log in again.", 401);
+    throw new HttpError("Please log in again.", 401);
   }
   return url;
 }
@@ -100,7 +88,7 @@ export async function readAvatar(userId: string): Promise<Buffer | null> {
   try {
     return await readFile(avatarFile(userId));
   } catch (error) {
-    if (error instanceof AvatarError || (error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (error instanceof HttpError || (error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;
   }
 }

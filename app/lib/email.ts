@@ -3,6 +3,22 @@ import { testHooksEnabled } from "./test-hooks";
 
 export type Email = { to: string; subject: string; text: string; html: string; replyTo?: string };
 
+export function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
+}
+
+/** An email's HTML: these lines (HTML, their text escaped) on white, in the system's font, plain on purpose. */
+export function emailHtml(lines: string[]): string {
+  return [
+    "<!doctype html>",
+    '<html lang="en">',
+    `<body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:#111111;background:#ffffff;">`,
+    ...lines,
+    "</body>",
+    "</html>",
+  ].join("\n");
+}
+
 // With test hooks on, emails land here instead of being sent; the e2e tests read
 // them from /api/test/outbox. One list across dev hot reloads, like the pg pool.
 const globalForOutbox = globalThis as typeof globalThis & { testOutbox?: Email[] };

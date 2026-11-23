@@ -7,13 +7,14 @@ import { CheckIcon, CloseIcon, SendIcon } from "@/components/common/icons";
 import { PersonName } from "@/components/common/PersonName";
 import { Alert, Button, Notice } from "@/components/common/ui";
 import ui from "@/components/common/ui.module.css";
-import type { FriendsState, LibraryEntry } from "@/lib/show-types";
+import type { FriendsState } from "@/lib/social-types";
 import {
   addStatuses,
   formatRuntime,
   progressOf,
   statusNames,
   titleKey,
+  type LibraryEntry,
   type LibraryItem,
   type LibraryStatus,
   type TitleDetail,

@@ -2,8 +2,6 @@
 
 import type { Named } from "./names";
 import type { Person } from "./social-types";
-// Compatibility exports for existing Shows consumers; Social owns these types.
-export type { PersonMatch, PeopleSearch, Person, FriendsState } from "./social-types";
 
 export type MediaType = "tv" | "movie";
 export const mediaTypes: readonly MediaType[] = ["tv", "movie"];

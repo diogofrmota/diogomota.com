@@ -3,6 +3,7 @@ import { z } from "./zod";
 import { query } from "./db";
 import { apiRoute, HttpError, type ApiContext } from "./http";
 import { showsRequestLimit } from "./rate-limit";
+import { isUuid } from "./schemas";
 import { avatarUrlSql } from "./users";
 import { bothPlanned, sharedLibrary } from "./shows";
 import { listBooks } from "./books";
@@ -16,7 +17,7 @@ export function socialRoute<Schema extends z.ZodType = z.ZodType<Record<string, 
 }
 
 export async function socialPerson(viewerId: string, targetId: string): Promise<Person> {
-  if (!z.uuid().safeParse(targetId).success) throw new HttpError("Profile not found.", 404);
+  if (!isUuid(targetId)) throw new HttpError("Profile not found.", 404);
   const {
     rows: [person],
   } = await query<Person>(

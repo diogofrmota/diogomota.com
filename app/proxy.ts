@@ -1,16 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { homeWithNext } from "@/lib/next-path";
+import { photoMaxBytes, photoTooBig } from "@/lib/recipe-types";
 
 // Keeps logged-out users out of the apps and account settings: pages redirect
 // to home (which offers to log in and come back), API routes answer 401.
 // The pages, routes and actions behind it check the session again themselves.
 export async function proxy(request: NextRequest) {
+  // A recipe photo that is too large (with the form around it) is refused before it is read.
   if (
     /^\/api\/recipes\/[^/]+\/photos$/.test(request.nextUrl.pathname) &&
-    Number(request.headers.get("content-length")) > 20 * 1024 * 1024 + 64 * 1024
+    Number(request.headers.get("content-length")) > photoMaxBytes + 64 * 1024
   )
-    return Response.json({ error: "That photo is over 20 MB. Try a smaller one." }, { status: 413 });
+    return Response.json({ error: photoTooBig }, { status: 413 });
   const session = await auth.api.getSession({ headers: request.headers });
   if (session) return NextResponse.next();
 

@@ -15,18 +15,11 @@ export const footballResponse = z.object({
   ),
 });
 
-export type BenficaMatch = {
-  id: number;
-  kickoff: string;
-  confirmedTime: boolean;
-  home: boolean;
-  homeTeam: string;
-  awayTeam: string;
-  competition: string;
-};
-export type BenficaSchedule = { matches: BenficaMatch[]; updatedAt: string; stale: boolean };
+/** What the calendar import needs of a game (lib/events.ts, importBenficaGames). */
+export type BenficaMatch = { kickoff: string; homeTeam: string; awayTeam: string };
+export type BenficaSchedule = { matches: BenficaMatch[]; updatedAt: string };
 
-/** Scheduled fixtures only; cancelled/finished games and other teams never become stadium days. */
+/** Scheduled fixtures only; cancelled/finished games and other teams never become calendar events. */
 export function upcomingBenficaMatches(response: z.infer<typeof footballResponse>, now = Date.now()): BenficaMatch[] {
   return response.matches
     .filter(
@@ -36,13 +29,9 @@ export function upcomingBenficaMatches(response: z.infer<typeof footballResponse
         (match.homeTeam.id === benficaTeamId || match.awayTeam.id === benficaTeamId),
     )
     .map((match) => ({
-      id: match.id,
       kickoff: match.utcDate,
-      confirmedTime: match.status === "TIMED",
-      home: match.homeTeam.id === benficaTeamId,
       homeTeam: match.homeTeam.shortName || match.homeTeam.name || "Opponent to be confirmed",
       awayTeam: match.awayTeam.shortName || match.awayTeam.name || "Opponent to be confirmed",
-      competition: match.competition.name,
     }))
     .sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
 }

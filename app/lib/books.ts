@@ -1,8 +1,8 @@
 import "server-only";
 import { query, transaction } from "./db";
-import { z } from "./zod";
 import { recordActivity } from "./activity";
 import { HttpError } from "./http";
+import { isUuid } from "./schemas";
 import { normalizeProgress, type Book, type BookInput } from "./book-types";
 
 const columns = `id, catalog_id AS "catalogId", title, author, cover_id AS "coverId",
@@ -15,7 +15,7 @@ export async function listBooks(userId: string): Promise<Book[]> {
 }
 
 export async function saveBook(userId: string, input: BookInput, id?: string): Promise<Book> {
-  if (id && !z.uuid().safeParse(id).success) throw new HttpError("Book not found.", 404);
+  if (id && !isUuid(id)) throw new HttpError("Book not found.", 404);
   const book = normalizeProgress(input);
   const values = [
     userId,
@@ -76,7 +76,7 @@ export async function saveBook(userId: string, input: BookInput, id?: string): P
 }
 
 export async function deleteBook(userId: string, id: string) {
-  if (!z.uuid().safeParse(id).success) throw new HttpError("Book not found.", 404);
+  if (!isUuid(id)) throw new HttpError("Book not found.", 404);
   const result = await query("DELETE FROM books WHERE user_id=$1 AND id=$2 RETURNING id", [userId, id]);
   if (!result.rowCount) throw new HttpError("Book not found.", 404);
 }

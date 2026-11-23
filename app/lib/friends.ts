@@ -6,6 +6,7 @@ import { friendRequestLimit, userSearchLimit } from "./rate-limit";
 import type { FriendProfile } from "./show-types";
 import type { FriendsState, PeopleSearch, Person, PersonMatch } from "./social-types";
 import { HttpError } from "./http";
+import { isUuid } from "./schemas";
 import { bothPlanned, sharedLibrary } from "./shows";
 import { avatarUrlSql } from "./users";
 
@@ -17,11 +18,9 @@ import { avatarUrlSql } from "./users";
 // Both directions of the pair $1, $2.
 const pair = "((f.user_id = $1 AND f.friend_id = $2) OR (f.user_id = $2 AND f.friend_id = $1))";
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 // A user id from the path; anything else is answered like a stranger's.
 function personId(value: string, notFound: string): string {
-  if (!uuidPattern.test(value)) throw new HttpError(notFound, 404);
+  if (!isUuid(value)) throw new HttpError(notFound, 404);
   return value.toLowerCase();
 }
 

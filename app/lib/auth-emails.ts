@@ -1,11 +1,7 @@
-import type { Email } from "./email";
+import { emailHtml, escapeHtml, type Email } from "./email";
 
 // The account emails (auth.ts): plain on purpose, a short text version plus
 // minimal HTML with the same words.
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
-}
 
 function accountEmail({
   name,
@@ -24,16 +20,13 @@ function accountEmail({
 }): Omit<Email, "to"> {
   const text = [`Hi ${name},`, "", `${intro} ${action}:`, "", link, "", outro].join("\n");
   const href = escapeHtml(link);
-  const html = `<!doctype html>
-<html lang="en">
-<body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:#111111;background:#ffffff;">
-<p>Hi ${escapeHtml(name)},</p>
-<p>${escapeHtml(intro)}</p>
-<p><a href="${href}" style="color:#111111;">${escapeHtml(action)}</a></p>
-<p style="color:#555555;font-size:14px;">Or open this link: ${href}</p>
-<p>${escapeHtml(outro)}</p>
-</body>
-</html>`;
+  const html = emailHtml([
+    `<p>Hi ${escapeHtml(name)},</p>`,
+    `<p>${escapeHtml(intro)}</p>`,
+    `<p><a href="${href}" style="color:#111111;">${escapeHtml(action)}</a></p>`,
+    `<p style="color:#555555;font-size:14px;">Or open this link: ${href}</p>`,
+    `<p>${escapeHtml(outro)}</p>`,
+  ]);
   return { subject, text, html };
 }
 

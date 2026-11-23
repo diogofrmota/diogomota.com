@@ -1,5 +1,8 @@
 import { HttpError } from "./http";
 
+/** The most pixels an uploaded picture or photo may have: a 64-megapixel phone photo, with room to spare. */
+export const maxImagePixels = 70_000_000;
+
 /** Bound multipart bodies even without Content-Length (chunked requests).
  * The bound stays below Next's proxy buffer, so truncation cannot turn a
  * too-large request into an ambiguous malformed-form response. */

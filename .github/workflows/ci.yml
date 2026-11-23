@@ -83,8 +83,7 @@ jobs:
         working-directory: app
     env:
       NEXT_TELEMETRY_DISABLED: 1
-      # The tests' own server (playwright.config.ts).
-      AUTH_URL: http://localhost:3100
+      # scripts/run-e2e.mjs sets the server's own AUTH_URL, AUTH_SECRET and database.
       # One of two fixed values, never user input: the @smoke tests on the
       # desktop, or everything (both projects).
       E2E_ARGS: ${{ inputs.e2e == 'all' && ' ' || '--grep @smoke --project=desktop' }}
@@ -100,8 +99,6 @@ jobs:
           cache-dependency-path: app/package-lock.json
 
       - run: npm ci
-      - name: A secret for this run's sessions
-        run: echo "AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
       - run: npx playwright install --with-deps chromium
       # A production build (scripts/run-e2e.mjs builds it), so no route waits
       # to compile, with its service worker for production.spec.ts.

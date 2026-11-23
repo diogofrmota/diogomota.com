@@ -1,6 +1,6 @@
 import "server-only";
 import { HttpError } from "./http";
-import { footballResponse, upcomingBenficaMatches, type BenficaSchedule } from "./football-types";
+import { benficaTeamId, footballResponse, upcomingBenficaMatches, type BenficaSchedule } from "./football-types";
 import { testHooksEnabled } from "./test-hooks";
 
 const ttl = 15 * 60_000;
@@ -13,7 +13,7 @@ async function loadSchedule(): Promise<BenficaSchedule> {
   if (!token) throw new HttpError("Benfica fixtures are not connected yet. Please contact Diogo.", 503);
   try {
     const response = await fetch(
-      "https://api.football-data.org/v4/teams/1903/matches?status=SCHEDULED,TIMED&limit=100",
+      `https://api.football-data.org/v4/teams/${benficaTeamId}/matches?status=SCHEDULED,TIMED&limit=100`,
       {
         headers: { "X-Auth-Token": token },
         signal: AbortSignal.timeout(10_000),
@@ -28,12 +28,12 @@ async function loadSchedule(): Promise<BenficaSchedule> {
       throw new Error("Fixture provider unavailable");
     }
     const body = footballResponse.parse(await response.json());
-    cached = { matches: upcomingBenficaMatches(body), updatedAt: new Date().toISOString(), stale: false };
+    cached = { matches: upcomingBenficaMatches(body), updatedAt: new Date().toISOString() };
     return cached;
   } catch (error) {
     // Shared backoff avoids exhausting the provider's quota during an outage.
     retryAfter = Date.now() + 60_000;
-    if (cached && Date.now() - Date.parse(cached.updatedAt) < 24 * 60 * 60_000) return { ...cached, stale: true };
+    if (cached && Date.now() - Date.parse(cached.updatedAt) < 24 * 60 * 60_000) return cached;
     if (error instanceof HttpError) throw error;
     throw new HttpError("Could not load Benfica fixtures. Please try again shortly.", 502);
   }
@@ -50,14 +50,12 @@ function testSchedule(): BenficaSchedule {
     date.setUTCDate(date.getUTCDate() + days);
     return date.toISOString();
   };
-  const match = { confirmedTime: true, competition: "Liga Portugal" };
   return {
     matches: [
-      { ...match, id: 1, kickoff: day(2, 20), home: true, homeTeam: "Benfica", awayTeam: "Sporting CP" },
-      { ...match, id: 2, kickoff: day(9, 18), home: false, homeTeam: "FC Porto", awayTeam: "Benfica" },
+      { kickoff: day(2, 20), homeTeam: "Benfica", awayTeam: "Sporting CP" },
+      { kickoff: day(9, 18), homeTeam: "FC Porto", awayTeam: "Benfica" },
     ],
     updatedAt: new Date().toISOString(),
-    stale: false,
   };
 }
 
@@ -67,7 +65,7 @@ export function benficaSchedule(): Promise<BenficaSchedule> {
   const age = cached ? Date.now() - Date.parse(cached.updatedAt) : Infinity;
   if (cached && age < ttl) return Promise.resolve(cached);
   if (Date.now() < retryAfter) {
-    if (cached && age < 24 * 60 * 60_000) return Promise.resolve({ ...cached, stale: true });
+    if (cached && age < 24 * 60 * 60_000) return Promise.resolve(cached);
     throw new HttpError("The fixture service is busy. Please try again in a minute.", 503);
   }
   pending ??= loadSchedule().finally(() => {

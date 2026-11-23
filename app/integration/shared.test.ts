@@ -68,17 +68,7 @@ it("retains independent task patches when the first transaction holds its result
 
 it("concurrent fixture imports create one event and report accurate counts", async () => {
   const { id } = await fixture();
-  const matches = [
-    {
-      id: 123,
-      kickoff: "2026-12-01T20:00:00Z",
-      confirmedTime: true,
-      home: true,
-      homeTeam: "Benfica",
-      awayTeam: "Opponent",
-      competition: "League",
-    },
-  ];
+  const matches = [{ kickoff: "2026-12-01T20:00:00Z", homeTeam: "Benfica", awayTeam: "Opponent" }];
   // Both transactions already hold shared membership locks, as two members do.
   let arrivals = 0;
   let release!: () => void;

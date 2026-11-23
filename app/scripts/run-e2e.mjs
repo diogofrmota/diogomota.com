@@ -288,7 +288,6 @@ try {
     AUTH_SECRET: randomBytes(32).toString("hex"),
     RESEND_API_KEY: "",
     TMDB_READ_TOKEN: "",
-    FOOTBALL_DATA_TOKEN: "",
     E2E_PRODUCTION: production ? "1" : "0",
     AUTH_URL: "http://localhost:3100",
     NEXT_TELEMETRY_DISABLED: "1",

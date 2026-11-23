@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 describe("Benfica fixtures", () => {
-  test("orders future games, identifies home games and does not invent unconfirmed kickoff times", () => {
+  test("keeps Benfica's future scheduled games, in kickoff order", () => {
     const response = footballResponse.parse({
       matches: [
         match(2, "2026-12-01T00:00:00Z", "SCHEDULED", false),
@@ -51,9 +51,9 @@ describe("Benfica fixtures", () => {
         { ...match(7, "2026-11-26T20:00:00Z"), homeTeam: { id: 123 }, awayTeam: { id: 456 } },
       ],
     });
-    expect(upcomingBenficaMatches(response, now)).toMatchObject([
-      { id: 1, home: true, confirmedTime: true },
-      { id: 2, home: false, confirmedTime: false },
+    expect(upcomingBenficaMatches(response, now)).toEqual([
+      { kickoff: "2026-11-20T20:00:00Z", homeTeam: "Benfica", awayTeam: "Sporting" },
+      { kickoff: "2026-12-01T00:00:00Z", homeTeam: "Sporting", awayTeam: "Benfica" },
     ]);
   });
 
@@ -73,7 +73,8 @@ describe("Benfica fixtures", () => {
     expect(JSON.stringify(a)).not.toContain("test-token");
     vi.advanceTimersByTime(16 * 60_000);
     fetcher.mockResolvedValue(Response.json({}, { status: 429 }));
-    expect(await benficaSchedule()).toMatchObject({ stale: true, matches: a.matches });
+    // The provider is busy: the schedule kept from before, for up to a day.
+    expect(await benficaSchedule()).toEqual(a);
     await benficaSchedule();
     expect(fetcher).toHaveBeenCalledTimes(2);
   });

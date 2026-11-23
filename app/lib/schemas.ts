@@ -39,6 +39,10 @@ const title = (max: number, what: string) =>
     .min(1, { error: `Enter ${what} between 1 and ${max} characters.` })
     .max(max, { error: `Enter ${what} between 1 and ${max} characters.` });
 
+/** A whole number from `min` to `max`, with one message for anything else. */
+const wholeNumber = (min: number, max: number, message: string) =>
+  z.number({ error: message }).int({ error: message }).min(min, { error: message }).max(max, { error: message });
+
 /**
  * Moving a list or a task before another one, or to the end (null); a task to
  * the end of another list of the space with `listId`.
@@ -166,13 +170,12 @@ export const taskPatch = z.object({ ...taskFields, expectedDueDate: taskFields.d
 
 export const mediaTypeSchema = z.enum(["tv", "movie"], { error: "Choose TV shows or movies." });
 
+/** A TMDB id: a positive whole number that fits the database's integer. */
+const tmdbId = wholeNumber(1, 2 ** 31 - 1, "Title not found.");
+
 export const libraryAdd = z.object({
   type: mediaTypeSchema,
-  tmdbId: z
-    .number({ error: "Title not found." })
-    .int({ error: "Title not found." })
-    .positive({ error: "Title not found." })
-    .lt(2 ** 31, { error: "Title not found." }),
+  tmdbId,
   status: z.enum(["planned", "watching", "completed"], { error: "Add it as Watching, Planned or Completed." }),
 });
 
@@ -194,11 +197,7 @@ export const friendRequest = z.object({ username: z.unknown().optional() });
 export const recommendInput = z.object({
   friendId: z.string({ error: "Choose a friend." }).regex(uuidPattern, { error: "Choose a friend." }),
   type: mediaTypeSchema,
-  tmdbId: z
-    .number({ error: "Title not found." })
-    .int({ error: "Title not found." })
-    .positive({ error: "Title not found." })
-    .lt(2 ** 31, { error: "Title not found." }),
+  tmdbId,
 });
 
 /** Discover showed the recommendations of TV shows or movies the user was sent. */
@@ -221,11 +220,7 @@ const recipeLines = (maxLines: number, maxLength: number, what: string, whats: s
 
 const recipeFields = {
   title: title(recipeLimits.title, "a title"),
-  servings: z
-    .number({ error: `Enter how many it serves, from 1 to ${recipeLimits.servings}.` })
-    .int({ error: `Enter how many it serves, from 1 to ${recipeLimits.servings}.` })
-    .min(1, { error: `Enter how many it serves, from 1 to ${recipeLimits.servings}.` })
-    .max(recipeLimits.servings, { error: `Enter how many it serves, from 1 to ${recipeLimits.servings}.` }),
+  servings: wholeNumber(1, recipeLimits.servings, `Enter how many it serves, from 1 to ${recipeLimits.servings}.`),
   ingredients: recipeLines(recipeLimits.ingredients, recipeLimits.ingredient, "ingredient", "ingredients"),
   steps: recipeLines(recipeLimits.steps, recipeLimits.step, "step", "steps"),
   notes: z
@@ -297,10 +292,6 @@ export const shoppingRemove = z.object({
 });
 
 // --- Fitness -------------------------------------------------------------------
-
-/** A whole number from `min` to `max`, with one message for anything else. */
-const wholeNumber = (min: number, max: number, message: string) =>
-  z.number({ error: message }).int({ error: message }).min(min, { error: message }).max(max, { error: message });
 
 const fitnessDate = z
   .string({ error: "Enter a date as dd/mm/yyyy." })

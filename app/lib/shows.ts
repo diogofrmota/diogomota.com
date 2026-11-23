@@ -45,11 +45,10 @@ import {
 // is next opened or added.
 const refreshAfter = "7 days";
 
-// A copy without genres (from before 020_genres_recommendations.sql) is fetched again too.
 const showColumns = `id, type, tmdb_id AS "tmdbId", title, year, poster_url AS "posterPath",
   vote_average::float8 AS rating, coalesce(overview, '') AS overview, coalesce(genres, '{}') AS genres, runtime,
   episode_runtime AS "episodeRuntime", episodes_per_season AS "episodesPerSeason",
-  (last_updated < now() - interval '${refreshAfter}' OR genres IS NULL) AS stale`;
+  last_updated < now() - interval '${refreshAfter}' AS stale`;
 const entryColumns = `id, status, current_season AS "currentSeason",
   current_episode AS "currentEpisode", is_favourite AS "isFavourite"`;
 // The same, of user_shows as "us", in a statement that has shows too.
@@ -248,7 +247,7 @@ async function libraryItems(userId: string, where = "true"): Promise<LibraryItem
        s.episodes_per_season AS "episodesPerSeason",
        json_build_object('id', us.id, 'status', us.status, 'currentSeason', us.current_season,
          'currentEpisode', us.current_episode, 'isFavourite', us.is_favourite) AS library,
-       (s.last_updated < now() - interval '${refreshAfter}' OR s.genres IS NULL) AS stale
+       s.last_updated < now() - interval '${refreshAfter}' AS stale
      FROM user_shows us JOIN shows s ON s.id = us.show_id
      WHERE us.user_id = $1 AND (${where}) ORDER BY us.updated_at DESC, us.id`,
     [userId],

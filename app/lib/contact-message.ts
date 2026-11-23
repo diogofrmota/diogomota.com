@@ -1,14 +1,10 @@
 import "server-only";
 import { headers } from "next/headers";
 import { emailError, nameError, normalizeEmail, normalizeName } from "@/lib/account-rules";
-import { sendEmail } from "@/lib/email";
+import { emailHtml, escapeHtml, sendEmail } from "@/lib/email";
 import type { FormState } from "@/lib/form-state";
 import { clientIp, contactLimit } from "@/lib/rate-limit";
 import { CONTACT_MESSAGE_MAX, contactEmail } from "@/lib/site";
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
-}
 
 /** What makes one kind of message: /about's Get in touch, or /report-bug. */
 export type MessageKind = {
@@ -66,13 +62,10 @@ export async function sendContactForm(formData: FormData, kind: MessageKind): Pr
       replyTo: email,
       subject: kind.subject(name),
       text: [...details, "", message].join("\n"),
-      html: `<!doctype html>
-<html lang="en">
-<body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:#111111;background:#ffffff;">
-${details.map((line) => `<p style="margin:0 0 4px;color:#555555;font-size:14px;">${escapeHtml(line)}</p>`).join("\n")}
-<p style="margin-top:16px;white-space:pre-wrap;">${escapeHtml(message)}</p>
-</body>
-</html>`,
+      html: emailHtml([
+        ...details.map((line) => `<p style="margin:0 0 4px;color:#555555;font-size:14px;">${escapeHtml(line)}</p>`),
+        `<p style="margin-top:16px;white-space:pre-wrap;">${escapeHtml(message)}</p>`,
+      ]),
     });
   } catch (error) {
     console.error(`Couldn't send a message from ${kind.from}`, error);
