@@ -6,15 +6,7 @@ import { Alert, Button } from "@/components/common/ui";
 import { undoSeconds } from "@/components/common/Undo";
 import ui from "@/components/common/ui.module.css";
 import type { Space } from "@/lib/space-types";
-import {
-  taskAssignees,
-  repeatNames,
-  repeats,
-  type Repeat,
-  type Task,
-  type TaskFields,
-  type TaskList,
-} from "@/lib/task-types";
+import { repeatNames, repeats, type Repeat, type Task, type TaskFields, type TaskList } from "@/lib/task-types";
 import { datePlus, localParts } from "@/lib/calendar";
 import { MaskedField } from "./MaskedField";
 import { MemberPicker } from "./MemberPicker";
@@ -73,7 +65,7 @@ export function TaskDialog({
 }) {
   const [dueDate, setDueDate] = useState(task.dueDate ?? "");
   const today = localParts(new Date()).date;
-  const [assignees, setAssignees] = useState(() => taskAssignees(task));
+  const [assignees, setAssignees] = useState(task.assigneeIds);
   const [error, setError] = useState("");
   function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

@@ -163,6 +163,7 @@ export function useTasks() {
           notes: "",
           dueDate: null,
           assigneeId: null,
+          assigneeIds: [],
           isComplete: false,
           repeat: null,
         };

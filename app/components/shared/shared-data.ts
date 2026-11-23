@@ -95,7 +95,8 @@ export function applyTaskChange(lists: TaskList[], change: TaskChange): TaskList
     case "moveList":
       return moveBefore(lists, change.id, change.beforeId) ?? lists;
     case "addTask": {
-      const { task } = change;
+      // One queued by an older release has no assigneeIds: it was for nobody.
+      const task = { ...change.task, assigneeIds: change.task.assigneeIds ?? [] };
       return lists.map((l) =>
         l.id === task.listId && !l.tasks.some((t) => t.id === task.id) ? { ...l, tasks: [...l.tasks, task] } : l,
       );

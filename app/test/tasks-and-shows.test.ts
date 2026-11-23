@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { applyTaskChange } from "@/components/shared/shared-data";
 import {
   hasEpisode,
   libraryStats,
@@ -8,9 +9,9 @@ import {
   type LibraryItem,
   type TitleSummary,
 } from "@/lib/show-types";
-import { applyTaskFields, moveBefore, nextDue, taskAssignees, type Task } from "@/lib/task-types";
+import { applyTaskFields, moveBefore, nextDue, type Task } from "@/lib/task-types";
 
-test("task assignment handles cached single assignments, multiple people, and clearing everyone", () => {
+test("task assignment handles several people, clearing everyone, and a queued single assignee", () => {
   const task: Task = {
     id: "task",
     listId: "list",
@@ -18,17 +19,25 @@ test("task assignment handles cached single assignments, multiple people, and cl
     notes: "",
     dueDate: null,
     assigneeId: "ana",
+    assigneeIds: ["ana"],
     isComplete: false,
     repeat: null,
   };
-  expect(taskAssignees(task)).toEqual(["ana"]);
   const shared = applyTaskFields(task, { assigneeIds: ["ana", "diogo", "ana"] }, "2026-11-13");
-  expect(taskAssignees(shared)).toEqual(["ana", "diogo"]);
+  expect(shared.assigneeIds).toEqual(["ana", "diogo"]);
   expect(applyTaskFields(shared, { assigneeIds: [] }, "2026-11-13")).toMatchObject({
     assigneeId: null,
     assigneeIds: [],
   });
-  expect(taskAssignees(applyTaskFields(shared, { assigneeId: "diogo" }, "2026-11-13"))).toEqual(["diogo"]);
+  // A change queued offline by an older release names one assignee.
+  expect(applyTaskFields(shared, { assigneeId: "diogo" }, "2026-11-13").assigneeIds).toEqual(["diogo"]);
+});
+
+test("a task added offline by an older release, without assigneeIds, shows as for nobody", () => {
+  const queued = { id: "task", listId: "list", title: "Milk", notes: "", dueDate: null, assigneeId: null };
+  const task = { ...queued, isComplete: false, repeat: null } as Task;
+  const [list] = applyTaskChange([{ id: "list", name: "Groceries", tasks: [] }], { kind: "addTask", task });
+  expect(list.tasks[0].assigneeIds).toEqual([]);
 });
 
 describe("repeating tasks", () => {
@@ -56,6 +65,7 @@ describe("repeating tasks", () => {
       notes: "",
       dueDate: "2026-11-09",
       assigneeId: null,
+      assigneeIds: [],
       isComplete: false,
       repeat: "weekly",
     };

@@ -6,7 +6,7 @@ import { memberName } from "@/lib/names";
 import { GripIcon, RepeatIcon, TrashIcon } from "@/components/common/icons";
 import { dateLabel, datePlus } from "@/lib/calendar";
 import type { Space } from "@/lib/space-types";
-import { taskAssignees, repeatNames, type Task } from "@/lib/task-types";
+import { repeatNames, type Task } from "@/lib/task-types";
 import { useSortableItem } from "./Sortable";
 import styles from "./Tasks.module.css";
 
@@ -107,7 +107,7 @@ export function TaskRow({
   sortable,
 }: RowProps & { sortable?: ReturnType<typeof useSortableItem> }) {
   const swipe = useSwipe(onDelete);
-  const members = space.members.filter((m) => taskAssignees(task).includes(m.id));
+  const members = space.members.filter((m) => task.assigneeIds.includes(m.id));
   const due = task.dueDate && dueText(task.dueDate, today, task.isComplete);
   return (
     <li

@@ -15,8 +15,8 @@ import { applyTaskFields, moveBefore, type Task, type TaskList } from "./task-ty
 // with it before the response arrives (optimistic updates).
 
 // Who a task is for is task_assignees (021_task_assignees.sql); assigneeId, from
-// when a task had one, is the first of them. tasks.assignee_id is neither read
-// nor written any more, and goes in a contract migration (README.md, To-do).
+// when a task had one, is the first of them, and a change queued offline by an
+// older release may still send it (taskCreate, taskPatch).
 const columns = `id, list_id AS "listId", title, coalesce(notes, '') AS notes, due_date::text AS "dueDate",
   (SELECT user_id FROM task_assignees WHERE task_id = tasks.id ORDER BY user_id LIMIT 1) AS "assigneeId",
   ARRAY(SELECT user_id FROM task_assignees WHERE task_id = tasks.id ORDER BY user_id) AS "assigneeIds",
@@ -183,7 +183,7 @@ export async function updateTask(
     if (fields.expectedDueDate !== current.dueDate) return current;
   }
   const task = applyTaskFields(current, fields, today());
-  const assigneeIds = task.assigneeIds ?? [];
+  const { assigneeIds } = task;
   checkAssignees(space, assigneeIds);
   const reopened = current.isComplete && !task.isComplete;
   const { rows } = await db.query<Task>(

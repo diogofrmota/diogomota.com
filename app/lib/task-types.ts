@@ -17,8 +17,8 @@ export type Task = {
   dueDate: string | null;
   /** The first of assigneeIds (lib/tasks.ts): a task had one assignee before 021. */
   assigneeId: string | null;
-  /** Who it's for. The server always sends them; a task just added on this device has none yet (useTasks). */
-  assigneeIds?: string[];
+  /** Who it's for (task_assignees). */
+  assigneeIds: string[];
   isComplete: boolean;
   /** Ticked off, a repeating task comes back with its next due date (nextDue) instead of moving to Done. */
   repeat: Repeat | null;
@@ -28,10 +28,6 @@ export type TaskList = { id: string; name: string; tasks: Task[] };
 export type TaskFields = Partial<
   Pick<Task, "title" | "notes" | "dueDate" | "assigneeId" | "assigneeIds" | "isComplete" | "repeat">
 > & { expectedDueDate?: string | null };
-
-export function taskAssignees(task: Pick<Task, "assigneeId" | "assigneeIds">): string[] {
-  return task.assigneeIds ?? (task.assigneeId ? [task.assigneeId] : []);
-}
 
 function addPeriod(date: string, repeat: Repeat): string {
   const value = new Date(`${date}T12:00:00Z`);
